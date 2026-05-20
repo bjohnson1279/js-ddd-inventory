@@ -42,7 +42,7 @@ An Express.js API for a retail inventory system built using Domain-Driven Design
 
 ### Docker Setup (with PostgreSQL)
 
-The easiest way to run the application with a persistent database is using Docker Compose.
+The easiest way to run the application with a persistent database and the setup web app is using Docker Compose.
 
 1. **Run with Docker Compose**:
    ```bash
@@ -51,9 +51,12 @@ The easiest way to run the application with a persistent database is using Docke
 
 This will start:
 - A PostgreSQL 16 database container.
-- The inventory application container, connected to the database.
+- The inventory application container (API) on port `5000`.
+- The **Inventory Setup Web App** on port `3000`.
 
-The application will automatically initialize the required database tables on startup.
+### Initial Inventory Setup
+
+Once the containers are running, navigate to `http://localhost:3000` to access the setup web app. This tool allows you to initialize your inventory with your first stock counts across any SKU and location.
 
 ## Environment Variables
 
