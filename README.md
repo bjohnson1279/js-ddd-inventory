@@ -17,6 +17,8 @@ An Express.js API for a retail inventory system built using Domain-Driven Design
 
 ## Setup Instructions
 
+### Standard Setup
+
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/bjohnson1279/js-ddd-inventory.git
@@ -28,28 +30,44 @@ An Express.js API for a retail inventory system built using Domain-Driven Design
    npm install
    ```
 
-3. **Environment Configuration**:
-   Create a `.env` file in the root directory (optional, but required for full Shopify integration):
-   ```env
-   PORT=5000
-   SHOPIFY_API_SECRET=your_api_secret
-   SHOPIFY_SHOP_URL=your-shop.myshopify.com
-   SHOPIFY_ACCESS_TOKEN=your_access_token
-   ```
-
-4. **Build the project**:
+3. **Build the project**:
    ```bash
    npm run build
    ```
 
-5. **Run the application**:
-   - Development mode: `npm run dev`
-   - Production mode: `npm run start`
-
-6. **Run tests**:
+4. **Run the application (In-Memory)**:
    ```bash
-   node node_modules/jest/bin/jest.js
+   npm run dev
    ```
+
+### Docker Setup (with PostgreSQL)
+
+The easiest way to run the application with a persistent database is using Docker Compose.
+
+1. **Run with Docker Compose**:
+   ```bash
+   docker-compose up --build
+   ```
+
+This will start:
+- A PostgreSQL 16 database container.
+- The inventory application container, connected to the database.
+
+The application will automatically initialize the required database tables on startup.
+
+## Environment Variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `PORT` | The port the server listens on | `5000` |
+| `DB_HOST` | PostgreSQL host (set this to enable Postgres) | - |
+| `DB_PORT` | PostgreSQL port | `5432` |
+| `DB_USER` | PostgreSQL user | `postgres` |
+| `DB_PASSWORD` | PostgreSQL password | `password` |
+| `DB_NAME` | PostgreSQL database name | `inventory` |
+| `SHOPIFY_API_SECRET` | Shopify App API Secret | - |
+| `SHOPIFY_SHOP_URL` | Shopify Shop URL | - |
+| `SHOPIFY_ACCESS_TOKEN` | Shopify Admin Access Token | - |
 
 ## Project Structure
 

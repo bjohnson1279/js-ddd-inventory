@@ -1,14 +1,17 @@
 import { Request, Response } from 'express';
 import { DispatchStock } from '../../../application/useCases/DispatchStock';
 import { ShopifyWebhookSecurity } from '../../shopify/ShopifyWebhookSecurity';
+import { IInventoryRepository } from '../../../domain/repositories/IInventoryRepository';
 
 export class ShopifyWebhookController {
   constructor(
-    private readonly dispatchStock: DispatchStock,
     private readonly security: ShopifyWebhookSecurity
   ) {}
 
   public async handleOrderCreated(req: Request, res: Response): Promise<void> {
+    const repository = req.app.get("repository") as IInventoryRepository;
+    const dispatchStock = new DispatchStock(repository);
+    
     const hmac = req.get('X-Shopify-Hmac-Sha256');
     const topic = req.get('X-Shopify-Topic');
 
@@ -17,11 +20,6 @@ export class ShopifyWebhookController {
       return;
     }
 
-    // Shopify webhooks send the raw body. 
-    // In Express with bodyParser.json(), req.body is already parsed.
-    // To validate HMAC properly, we usually need the raw body.
-    // For this implementation, we'll assume req.body is accessible as a string 
-    // or we've handled it in a middleware.
     const rawBody = JSON.stringify(req.body); 
 
     if (!this.security.validateHmac(rawBody, hmac)) {
@@ -41,7 +39,7 @@ export class ShopifyWebhookController {
       for (const item of lineItems) {
         if (item.sku) {
           // We skip publishing back to Shopify because this change originated from Shopify
-          await this.dispatchStock.execute(item.sku, item.quantity, true);
+          await dispatchStock.execute(item.sku, item.quantity, true);
         }
       }
 
