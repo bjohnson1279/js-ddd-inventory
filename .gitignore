@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+C:\Users\johns\.gemini\tmp\
+C:\Users\johns\.gemini\
+memory/
+jest.config.js
+# Ignore auto-generated or OS specific files
+Thumbs.db
+desktop.ini
