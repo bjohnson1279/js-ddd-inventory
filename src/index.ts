@@ -1,17 +1,22 @@
 import express from "express";
 import cors from "cors";
-import { InMemoryInventoryRepository } from "./infrastructure/database/InMemoryInventoryRepository";
+import { PrismaInventoryRepository } from "./infrastructure/database/PrismaInventoryRepository";
 import { PostgresInventoryRepository } from "./infrastructure/database/PostgresInventoryRepository";
 import { IInventoryRepository } from "./domain/repositories/IInventoryRepository";
 import inventoryRoutes from "./infrastructure/http/routes/inventory.routes";
 import shopifyRoutes from "./infrastructure/http/routes/shopify.routes";
 import onboardingRoutes from "./infrastructure/http/routes/onboarding.routes";
+import { DomainEventDispatcher } from "./domain/events/DomainEventDispatcher";
+import { alertPurchasingOnStockDepleted } from "./application/eventHandlers/AlertPurchasingOnStockDepleted";
 
 const app = express();
 const port = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
+
+// Register Domain Event Handlers
+DomainEventDispatcher.register("StockDepletedEvent", alertPurchasingOnStockDepleted);
 
 const start = async () => {
   let repository: IInventoryRepository;
@@ -28,8 +33,8 @@ const start = async () => {
     await pgRepo.initialize();
     repository = pgRepo;
   } else {
-    console.log("Initializing In-Memory Repository...");
-    repository = new InMemoryInventoryRepository();
+    console.log("Initializing Prisma Repository (SQLite)...");
+    repository = new PrismaInventoryRepository();
   }
 
   // Inject repository into app for routes to use (simple way given the current structure)

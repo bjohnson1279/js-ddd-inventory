@@ -1,6 +1,7 @@
 import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
 import { InventoryItem } from "../../domain/aggregates/InventoryItem";
 import { SKU } from "../../domain/valueObjects/SKU";
+import { DomainEventDispatcher } from "../../domain/events/DomainEventDispatcher";
 
 export class InMemoryInventoryRepository implements IInventoryRepository {
   private readonly items: Map<string, InventoryItem> = new Map();
@@ -16,6 +17,8 @@ export class InMemoryInventoryRepository implements IInventoryRepository {
 
   async save(item: InventoryItem): Promise<void> {
     this.items.set(item.sku.getValue(), item);
+    await DomainEventDispatcher.dispatch(item.getDomainEvents());
+    item.clearDomainEvents();
   }
 
   async hasAnyEntries(variantId: string, locationId: string): Promise<boolean> {

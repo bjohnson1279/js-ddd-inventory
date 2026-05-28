@@ -1,3 +1,6 @@
+import { InvalidQuantityException } from "../exceptions/InvalidQuantityException";
+import { InsufficientStockException } from "../exceptions/InsufficientStockException";
+
 export class Quantity {
   private readonly value: number;
 
@@ -7,10 +10,10 @@ export class Quantity {
 
   public static create(value: number): Quantity {
     if (!Number.isInteger(value)) {
-      throw new Error("Quantity must be an integer");
+      throw new InvalidQuantityException("Quantity must be an integer");
     }
     if (value < 0) {
-      throw new Error("Quantity cannot be negative");
+      throw new InvalidQuantityException("Quantity cannot be negative");
     }
     return new Quantity(value);
   }
@@ -25,7 +28,7 @@ export class Quantity {
 
   public subtract(amount: Quantity): Quantity {
     if (this.value < amount.getValue()) {
-      throw new Error("Insufficient quantity");
+      throw new InsufficientStockException("Insufficient quantity");
     }
     return new Quantity(this.value - amount.getValue());
   }

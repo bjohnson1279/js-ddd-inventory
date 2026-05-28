@@ -4,6 +4,7 @@ import { DispatchStock } from "../../../application/useCases/DispatchStock";
 import { GetStockLevel } from "../../../application/useCases/GetStockLevel";
 import { PerformFullStoreCount } from "../../../application/useCases/PerformFullStoreCount";
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
+import { DomainException } from "../../../domain/exceptions/DomainException";
 
 export class InventoryController {
   static async receive(req: Request, res: Response) {
@@ -14,7 +15,11 @@ export class InventoryController {
       await receiveStock.execute(sku, amount);
       res.status(200).json({ message: "Stock received successfully" });
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        res.status(500).json({ error: error.message });
+      }
     }
   }
 
@@ -26,7 +31,11 @@ export class InventoryController {
       await dispatchStock.execute(sku, amount);
       res.status(200).json({ message: "Stock dispatched successfully" });
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        res.status(500).json({ error: error.message });
+      }
     }
   }
 
@@ -38,7 +47,11 @@ export class InventoryController {
       const quantity = await getStockLevel.execute(sku);
       res.status(200).json({ sku, quantity });
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        res.status(500).json({ error: error.message });
+      }
     }
   }
 
@@ -53,7 +66,11 @@ export class InventoryController {
       await performFullStoreCount.execute(counts);
       res.status(200).json({ message: "Store count performed successfully" });
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        res.status(500).json({ error: error.message });
+      }
     }
   }
 }
