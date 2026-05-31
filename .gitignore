@@ -13,3 +13,9 @@ jest.config.js
 # Ignore auto-generated or OS specific files
 Thumbs.db
 desktop.ini
+
+# Local DB & CLI
+dev.db
+dev.db-journal
+.antigravitycli/
+

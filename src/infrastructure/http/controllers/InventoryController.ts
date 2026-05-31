@@ -73,4 +73,20 @@ export class InventoryController {
       }
     }
   }
+
+  static async list(req: Request, res: Response) {
+    try {
+      const repository = req.app.get("repository") as IInventoryRepository;
+      const items = await repository.findAll();
+      res.status(200).json(
+        items.map((item) => ({
+          id: item.id,
+          sku: item.sku.getValue(),
+          quantity: item.quantity.getValue(),
+        }))
+      );
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
 }

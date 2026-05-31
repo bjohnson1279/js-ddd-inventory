@@ -4,11 +4,132 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
 }
 
 model InventoryModel {
   id       String @id
   sku      String @unique
   quantity Int
+}
+
+model BarcodeAssignmentModel {
+  id           String   @id
+  variantId    String
+  barcodeValue String   @unique
+  symbology    String
+  source       String
+  isPrimary    Boolean  @default(false)
+  assignedAt   DateTime @default(now())
+}
+
+model ProductModel {
+  id          String                @id
+  name        String
+  variants    ProductVariantModel[]
+}
+
+model ProductVariantModel {
+  id         String       @id
+  productId  String
+  sku        String       @unique
+  attributes String       // Serialized variant attributes JSON string (e.g. [{"name":"size","value":"M"}])
+  product    ProductModel @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model SerializedItemModel {
+  id           String                  @id
+  serialNumber String
+  sku          String
+  status       String
+  locationId   String
+  tenantId     String
+  registeredAt DateTime                @default(now())
+  transitions  StatusTransitionModel[]
+
+  @@unique([serialNumber, tenantId])
+}
+
+model StatusTransitionModel {
+  id               String              @id
+  serializedItemId String
+  fromStatus       String
+  toStatus         String
+  reason           String?
+  transitionedAt   DateTime
+  actorId          String
+  referenceId      String?
+  serializedItem   SerializedItemModel @relation(fields: [serializedItemId], references: [id], onDelete: Cascade)
+}
+
+model KitModel {
+  id         String               @id
+  sku        String               @unique
+  name       String
+  components KitComponentModel[]
+}
+
+model KitComponentModel {
+  id        String   @id
+  kitId     String
+  variantId String
+  quantity  Int
+  kit       KitModel @relation(fields: [kitId], references: [id], onDelete: Cascade)
+}
+
+model InventoryCostLayerModel {
+  id                String   @id
+  variantId         String
+  locationId        String?
+  tenantId          String
+  originalQuantity  Int
+  remainingQuantity Int
+  unitCostCents     Int
+  receivedAt        DateTime
+  purchaseOrderId   String
+  isConsumed        Boolean  @default(false)
+}
+
+model JournalEntryModel {
+  id               String             @id
+  tenantId         String
+  entryDate        DateTime
+  description      String
+  referenceId      String?
+  accountingMethod String
+  lines            JournalLineModel[]
+}
+
+model JournalLineModel {
+  id              String            @id
+  journalEntryId  String
+  accountCode     String
+  accountName     String
+  accountCategory String
+  debitOrCredit   String
+  amountCents     Int
+  memo            String?
+  journalEntry    JournalEntryModel @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+}
+
+model TenantConfigModel {
+  tenantId         String @id
+  accountingMethod String
+  costingMethod    String
+  currencyCode     String
+  fiscalYearStart  String
+}
+
+model ProcessedWebhookModel {
+  id          String   @id
+  processedAt DateTime @default(now())
+}
+
+model OutboxEventModel {
+  id          String    @id @default(uuid())
+  eventName   String
+  payload     String
+  occurredOn  DateTime
+  processedAt DateTime?
+  attempts    Int       @default(0)
+  lastError   String?
 }

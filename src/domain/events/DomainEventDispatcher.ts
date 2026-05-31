@@ -15,18 +15,22 @@ export class DomainEventDispatcher {
   }
 
   public static async dispatch(events: IDomainEvent[]): Promise<void> {
+    const errors: any[] = [];
     for (const event of events) {
       const eventHandlers = this.handlers.get(event.eventName);
       if (eventHandlers) {
         for (const handler of eventHandlers) {
-          // Catch errors so one failing handler doesn't prevent others from running
           try {
             await handler(event);
           } catch (error) {
             console.error(`Error handling domain event ${event.eventName}:`, error);
+            errors.push(error);
           }
         }
       }
+    }
+    if (errors.length > 0) {
+      throw new Error(errors[0].message || String(errors[0]));
     }
   }
 
