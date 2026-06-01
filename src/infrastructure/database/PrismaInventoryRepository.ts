@@ -4,6 +4,7 @@ import { SKU } from "../../domain/valueObjects/SKU";
 import { Quantity } from "../../domain/valueObjects/Quantity";
 import { DomainEventDispatcher } from "../../domain/events/DomainEventDispatcher";
 import { IOutboxRepository } from "../../domain/repositories/IOutboxRepository";
+import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 
 export class PrismaInventoryRepository implements IInventoryRepository {
@@ -42,7 +43,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     const events = item.getDomainEvents();
 
     if (this.outboxRepository) {
-      await this.prisma.$transaction(async (tx) => {
+      await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         await tx.inventoryModel.upsert({
           where: { sku: item.sku.getValue() },
           update: { quantity: item.quantity.getValue() },
