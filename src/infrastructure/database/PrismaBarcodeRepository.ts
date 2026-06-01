@@ -4,6 +4,7 @@ import { Barcode } from "../../domain/barcode/valueObjects/Barcode";
 import { BarcodeSymbology } from "../../domain/barcode/enums/BarcodeSymbology";
 import { BarcodeSource } from "../../domain/barcode/enums/BarcodeSource";
 import { DomainEventDispatcher } from "../../domain/events/DomainEventDispatcher";
+import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 
 export class PrismaBarcodeRepository implements IBarcodeRepository {
@@ -39,7 +40,7 @@ export class PrismaBarcodeRepository implements IBarcodeRepository {
   async saveSet(set: VariantBarcodeSet): Promise<void> {
     const assignments = set.all();
 
-    await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.barcodeAssignmentModel.deleteMany({
         where: { variantId: set.variantId },
       });

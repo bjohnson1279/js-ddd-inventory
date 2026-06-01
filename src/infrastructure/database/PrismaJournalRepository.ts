@@ -7,6 +7,7 @@ import { DebitCredit } from "../../domain/accounting/enums/DebitCredit";
 import { AccountingMethod } from "../../domain/accounting/enums/AccountingMethod";
 import { IOutboxRepository } from "../../domain/repositories/IOutboxRepository";
 import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreatedEvent";
+import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 
 export class PrismaJournalRepository implements IJournalRepository {
@@ -17,7 +18,7 @@ export class PrismaJournalRepository implements IJournalRepository {
   ) {}
 
   async save(entry: JournalEntry): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.journalEntryModel.upsert({
         where: { id: entry.id },
         update: {
