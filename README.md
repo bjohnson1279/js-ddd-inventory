@@ -71,6 +71,9 @@ Once the containers are running, navigate to `http://localhost:3000` to access t
 | `SHOPIFY_API_SECRET` | Shopify App API Secret | - |
 | `SHOPIFY_SHOP_URL` | Shopify Shop URL | - |
 | `SHOPIFY_ACCESS_TOKEN` | Shopify Admin Access Token | - |
+| `QUICKBOOKS_REALM_ID` | QuickBooks Company ID | - |
+| `QUICKBOOKS_ACCESS_TOKEN` | QuickBooks API Access Token | - |
+| `QUICKBOOKS_ENVIRONMENT` | Set to 'production' for live sync | `sandbox` |
 
 ## Project Structure
 
