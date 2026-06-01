@@ -20,6 +20,9 @@ describe("QuickBooks Online Journal Sync", () => {
   let spyConsoleLog: jest.SpyInstance;
 
   beforeEach(() => {
+    process.env.QUICKBOOKS_REALM_ID = "test-realm-id";
+    process.env.QUICKBOOKS_ACCESS_TOKEN = "test-access-token";
+
     outboxRepo = new InMemoryOutboxRepository();
     journalRepo = new InMemoryJournalRepository(outboxRepo);
     costLayerRepo = new InMemoryCostLayerRepository();
@@ -31,11 +34,21 @@ describe("QuickBooks Online Journal Sync", () => {
     DomainEventDispatcher.register("JournalEntryCreatedEvent", syncJournalToQuickBooks);
 
     spyConsoleLog = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
+      })
+    ) as jest.Mock;
   });
 
   afterEach(() => {
     DomainEventDispatcher.clearHandlers();
     spyConsoleLog.mockRestore();
+    jest.restoreAllMocks();
+    delete process.env.QUICKBOOKS_REALM_ID;
+    delete process.env.QUICKBOOKS_ACCESS_TOKEN;
   });
 
   it("should write JournalEntryCreatedEvent to outbox on stock received and sync to QBO", async () => {
@@ -72,5 +85,17 @@ describe("QuickBooks Online Journal Sync", () => {
     expect(calls.some(c => c.includes("Syncing transaction outbox event to QBO API"))).toBe(true);
     expect(calls.some(c => c.includes("DocNumber"))).toBe(true);
     expect(calls.some(c => c.includes("250"))).toBe(true); // check decimal mapping
+
+    // Verify fetch was called with correct parameters
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    const [fetchUrl, fetchOptions] = (global.fetch as jest.Mock).mock.calls[0];
+
+    expect(fetchUrl).toBe("https://sandbox-quickbooks.api.intuit.com/v3/company/test-realm-id/journalentry");
+    expect(fetchOptions.method).toBe("POST");
+    expect(fetchOptions.headers["Authorization"]).toBe("Bearer test-access-token");
+
+    const body = JSON.parse(fetchOptions.body);
+    expect(body.DocNumber).toMatch(/^JE-/);
+    expect(body.Line[0].Amount).toBe(250);
   });
 });

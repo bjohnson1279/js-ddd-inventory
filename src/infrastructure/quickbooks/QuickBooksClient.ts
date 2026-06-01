@@ -1,9 +1,17 @@
 import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreatedEvent";
 
 export class QuickBooksClient {
+  private readonly baseUrl: string;
+
   constructor(
-    private readonly sandboxMode: boolean = true
-  ) {}
+    private readonly realmId: string,
+    private readonly accessToken: string,
+    sandboxMode: boolean = true
+  ) {
+    this.baseUrl = sandboxMode
+      ? "https://sandbox-quickbooks.api.intuit.com/v3/company"
+      : "https://quickbooks.api.intuit.com/v3/company";
+  }
 
   public async publishJournalEntry(event: JournalEntryCreatedEvent): Promise<void> {
     // Map lines to QuickBooks API Schema
@@ -33,11 +41,25 @@ export class QuickBooksClient {
       }
     };
 
+    const url = `${this.baseUrl}/${this.realmId}/journalentry`;
+
     console.log("\n[QUICKBOOKS ONLINE INTEGRATION] Syncing transaction outbox event to QBO API...");
-    console.log(`[QUICKBOOKS ONLINE INTEGRATION] URL: https://sandbox-quickbooks.api.intuit.com/v3/company/sandbox_co/journalentry`);
+    console.log(`[QUICKBOOKS ONLINE INTEGRATION] URL: ${url}`);
     console.log(`[QUICKBOOKS ONLINE INTEGRATION] Payload:\n${JSON.stringify(qboPayload, null, 2)}\n`);
 
-    // In a real production setup, we would execute:
-    // await fetch("https://quickbooks.api.intuit.com/v3/company/...", { method: "POST", body: JSON.stringify(qboPayload), ... })
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${this.accessToken}`,
+        "Accept": "application/json"
+      },
+      body: JSON.stringify(qboPayload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`QuickBooks API error (${response.status}): ${errorText}`);
+    }
   }
 }
