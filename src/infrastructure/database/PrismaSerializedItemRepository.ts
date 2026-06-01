@@ -5,6 +5,7 @@ import { SerializedItemStatus } from "../../domain/serial/enums/SerializedItemSt
 import { StatusTransition } from "../../domain/serial/valueObjects/StatusTransition";
 import { SerialNumberNotFoundException } from "../../domain/serial/exceptions/SerialNumberNotFoundException";
 import { DomainEventDispatcher } from "../../domain/events/DomainEventDispatcher";
+import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 
 export class PrismaSerializedItemRepository implements ISerializedItemRepository {
@@ -113,7 +114,7 @@ export class PrismaSerializedItemRepository implements ISerializedItemRepository
   }
 
   async save(item: SerializedItem): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.serializedItemModel.upsert({
         where: { id: item.id },
         update: {

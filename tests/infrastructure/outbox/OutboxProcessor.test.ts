@@ -63,6 +63,9 @@ describe("Transactional Outbox Pattern", () => {
   });
 
   it("should record failures and increment attempts if handling throws an error", async () => {
+    // Suppress expected console.error logs for this test
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
     const item = InventoryItem.create("item-1", SKU.create("SKU-TEST"), Quantity.create(1));
     item.dispatchStock(Quantity.create(1));
     await inventoryRepo.save(item);
@@ -80,5 +83,7 @@ describe("Transactional Outbox Pattern", () => {
     expect(outboxRepo.entries[0].processedAt).toBeNull();
     expect(outboxRepo.entries[0].attempts).toBe(1);
     expect(outboxRepo.entries[0].lastError).toBe("Test handler failure");
+
+    consoleSpy.mockRestore();
   });
 });
