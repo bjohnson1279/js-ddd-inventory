@@ -9,6 +9,10 @@ export class ShopifyWebhookSecurity {
       .update(body, 'utf8')
       .digest('base64');
     
-    return hash === hmac;
+    try {
+      return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(hmac));
+    } catch (e) {
+      return false;
+    }
   }
 }
