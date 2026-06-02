@@ -35,22 +35,30 @@ export class InventoryService {
       throw new Error("Cannot sell a kit with no components.");
     }
 
-    // --- Pass 1: validate all components upfront ---
-    for (const component of kit.components) {
-      const needed = component.quantity * kitQuantity;
-      await this.assertSufficientStock(component.variantId, needed);
-    }
+    // --- Pass 1: Fetch and validate all components concurrently ---
+    const itemsWithNeeds = await Promise.all(
+      kit.components.map(async (component) => {
+        const needed = component.quantity * kitQuantity;
+        const sku = SKU.create(component.variantId);
+        const item = await this.inventoryRepository.findBySku(sku);
+        const available = item ? item.quantity.getValue() : 0;
 
-    // --- Pass 2: write ledger entries for each component ---
-    for (const component of kit.components) {
-      const sku = SKU.create(component.variantId);
-      const needed = component.quantity * kitQuantity;
+        if (available < needed) {
+          throw new InsufficientInventoryException(component.variantId, available, needed);
+        }
 
-      const item = await this.inventoryRepository.findBySku(sku);
-      if (!item) {
-        throw new Error(`Item with SKU ${component.variantId} not found in inventory.`);
-      }
+        if (!item) {
+          throw new Error(`Item with SKU ${component.variantId} not found in inventory.`);
+        }
 
+        return { item, needed };
+      })
+    );
+
+    // --- Pass 2: Deduct stock and save ---
+    // Note: If saving needs to be transactional, that should be handled by a UoW or repository method.
+    // Assuming sequential saves as per previous implementation logic for now, but skipping re-fetches.
+    for (const { item, needed } of itemsWithNeeds) {
       item.dispatchStock(Quantity.create(needed));
       await this.inventoryRepository.save(item);
     }
