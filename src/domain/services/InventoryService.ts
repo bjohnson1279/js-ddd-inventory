@@ -4,6 +4,8 @@ import { SKU } from "../valueObjects/SKU";
 import { Quantity } from "../valueObjects/Quantity";
 import { InsufficientInventoryException } from "../exceptions/InsufficientInventoryException";
 
+import { InventoryItem } from "../aggregates/InventoryItem";
+
 export class InventoryService {
   constructor(private readonly inventoryRepository: IInventoryRepository) {}
 
@@ -14,9 +16,13 @@ export class InventoryService {
     actorId: string
   ): Promise<void> {
     const sku = SKU.create(variantId);
-    await this.assertSufficientStock(variantId, quantity);
-
     const item = await this.inventoryRepository.findBySku(sku);
+
+    const available = item ? item.quantity.getValue() : 0;
+    if (available < quantity) {
+      throw new InsufficientInventoryException(variantId, available, quantity);
+    }
+
     if (!item) {
       throw new Error(`Item with SKU ${variantId} not found in inventory.`);
     }
@@ -35,34 +41,35 @@ export class InventoryService {
       throw new Error("Cannot sell a kit with no components.");
     }
 
-    // --- Pass 1: validate all components upfront ---
+    // --- Pass 1: validate all components upfront and cache items ---
+    const cachedItems = new Map<string, InventoryItem>();
+
     for (const component of kit.components) {
       const needed = component.quantity * kitQuantity;
-      await this.assertSufficientStock(component.variantId, needed);
+      const sku = SKU.create(component.variantId);
+      const item = await this.inventoryRepository.findBySku(sku);
+
+      const available = item ? item.quantity.getValue() : 0;
+      if (available < needed) {
+        throw new InsufficientInventoryException(component.variantId, available, needed);
+      }
+
+      if (item) {
+        cachedItems.set(component.variantId, item);
+      }
     }
 
     // --- Pass 2: write ledger entries for each component ---
     for (const component of kit.components) {
-      const sku = SKU.create(component.variantId);
       const needed = component.quantity * kitQuantity;
+      const item = cachedItems.get(component.variantId);
 
-      const item = await this.inventoryRepository.findBySku(sku);
       if (!item) {
         throw new Error(`Item with SKU ${component.variantId} not found in inventory.`);
       }
 
       item.dispatchStock(Quantity.create(needed));
       await this.inventoryRepository.save(item);
-    }
-  }
-
-  private async assertSufficientStock(variantId: string, needed: number): Promise<void> {
-    const sku = SKU.create(variantId);
-    const item = await this.inventoryRepository.findBySku(sku);
-    const available = item ? item.quantity.getValue() : 0;
-
-    if (available < needed) {
-      throw new InsufficientInventoryException(variantId, available, needed);
     }
   }
 }
