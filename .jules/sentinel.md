@@ -6,3 +6,5 @@
 ## 2026-06-03 - Removed Hardcoded Secret Fallback
 **Vulnerability:** The Shopify webhook handler was falling back to a hardcoded secret (`'dummy_secret'`) if `SHOPIFY_API_SECRET` was missing.
 **Learning:** Hardcoded default secrets are a critical vulnerability, as attackers discovering the default can forge requests. Applications must fail securely and crash at startup if critical security configurations are missing. Never rely on default values for secrets.
+- Restricted CORS to process.env.FRONTEND_URL || 'http://localhost:3000' to prevent overly permissive cross-origin requests.
+Logged removal of sensitive data (QuickBooks payload) from logs. Always check unit tests when modifying console.log statements as they might be spied on.
