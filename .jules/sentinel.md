@@ -2,4 +2,5 @@
 **Vulnerability:** The Shopify webhook signature validation (`src/infrastructure/shopify/ShopifyWebhookSecurity.ts`) used strict string equality (`===`) to compare HMAC hashes.
 **Learning:** String equality operators exit early when characters mismatch, which exposes timing information. An attacker can use this timing side-channel to forge valid webhook signatures, bypassing security and allowing unauthorized operations.
 **Prevention:** Always use constant-time comparison functions, like Node.js's `crypto.timingSafeEqual`, when comparing cryptographic hashes, signatures, or passwords to prevent timing attacks. When using `crypto.timingSafeEqual`, wrap it in a `try...catch` block since it throws an error if buffer lengths differ.
+- Restricted CORS to process.env.FRONTEND_URL || 'http://localhost:3000' to prevent overly permissive cross-origin requests.
 Logged removal of sensitive data (QuickBooks payload) from logs. Always check unit tests when modifying console.log statements as they might be spied on.
