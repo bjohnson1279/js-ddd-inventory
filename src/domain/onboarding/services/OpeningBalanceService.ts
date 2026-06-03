@@ -38,19 +38,20 @@ export class OpeningBalanceService {
       })
     );
 
+    const itemMap = new Map<string, InventoryItem>();
+
     // --- Post ledger entries ---
     // In this simplified implementation, we update/create InventoryItems.
     // In a full implementation, we would append to a ledger.
     for (const { item, sku, inventoryItem: existingItem } of itemsData) {
-      let inventoryItem = existingItem;
+      const skuValue = sku.getValue();
+      let inventoryItem = itemMap.get(skuValue) || existingItem;
 
-      if (!inventoryItem) {
-        inventoryItem = InventoryItem.create(
-          Date.now().toString() + Math.random(),
-          sku,
-          Quantity.create(0)
-        );
-      }
+      inventoryItem ??= InventoryItem.create(
+        Date.now().toString() + Math.random(),
+        sku,
+        Quantity.create(0)
+      );
 
       inventoryItem.reconcileCount(Quantity.create(item.quantity));
 
