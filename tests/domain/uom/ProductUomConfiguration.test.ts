@@ -1,13 +1,22 @@
 import { ProductUomConfiguration } from "../../../src/domain/uom/aggregates/ProductUomConfiguration";
 import { StandardUnits } from "../../../src/domain/uom/services/StandardUnits";
+import { IncompatibleUnitsException } from "../../../src/domain/uom/exceptions/IncompatibleUnitsException";
 
 describe("ProductUomConfiguration", () => {
-  it("should throw an error when adding a conversion rule for the base unit", () => {
-    const each = StandardUnits.each();
-    const config = new ProductUomConfiguration("config-1", "variant-1", each);
+  describe("addConversionRule", () => {
+    it("should throw IncompatibleUnitsException when adding a conversion rule for an incompatible unit", () => {
+      const gram = StandardUnits.gram();
+      const config = new ProductUomConfiguration("config-1", "variant-1", gram);
 
-    expect(() => {
-      config.addConversionRule(each, 1);
-    }).toThrow("Cannot add a conversion rule for the base unit itself.");
+      const milliliter = StandardUnits.milliliter();
+
+      expect(() => {
+        config.addConversionRule(milliliter, 1, "ml to g");
+      }).toThrow(IncompatibleUnitsException);
+
+      expect(() => {
+        config.addConversionRule(milliliter, 1, "ml to g");
+      }).toThrow(`Cannot convert between ${milliliter.category} and ${gram.category} units.`);
+    });
   });
 });

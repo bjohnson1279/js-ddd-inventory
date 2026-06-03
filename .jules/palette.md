@@ -1,3 +1,3 @@
-## 2024-10-26 - Interactive Table Rows Keyboard Accessibility
-**Learning:** The app frequently uses `<tr>` elements with `onClick` handlers for selection (e.g., in Barcodes, Serials, and Kits directories) but omits `tabIndex`, `role`, and `onKeyDown`. This makes critical record selection completely inaccessible to keyboard and screen reader users.
-**Action:** When implementing custom interactive rows or lists, always add `role="button"`, `tabIndex={0}`, and an `onKeyDown` handler to support `Enter` and `Space` key activation, alongside clear `:focus-visible` styling.
+## 2026-06-03 - Empty State Actionability
+**Learning:** Empty states without direct calls-to-action (CTAs) create unnecessary friction, even when instructions ("Go to Onboarding") are provided in text. Users might not know where to look for the mentioned section.
+**Action:** Always include actionable buttons in empty states that navigate directly to the solution or next logical step, utilizing existing button styles.
