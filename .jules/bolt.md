@@ -1,3 +1,1 @@
-## 2024-05-18 - Optimize Kit Sale Concurrent Fetch
-**Learning:** Sequential database fetches inside a loop when calculating multi-component bundle adjustments (`decrementForKitSale`) can cause unnecessary N+1 style DB load (2N fetches per kit sale).
-**Action:** Always fetch dependency constraints upfront concurrently with `Promise.all` mapping over the array to minimize database queries.
+Learned to parallelize database updates and inserts for large batches using Promise.all in TypeScript to solve N+1 sequential I/O issues, significantly speeding up execution (e.g. from 1251 ms to 18 ms for 1000 items in PerformFullStoreCount).
