@@ -50,13 +50,11 @@ export class OpeningBalanceService {
       const sku = SKU.create(skuValue);
       let inventoryItem = itemMap.get(skuValue) || null;
 
-      if (!inventoryItem) {
-        inventoryItem = InventoryItem.create(
-          Date.now().toString() + Math.random(),
-          sku,
-          Quantity.create(0)
-        );
-      }
+      inventoryItem ??= InventoryItem.create(
+        Date.now().toString() + Math.random(),
+        sku,
+        Quantity.create(0)
+      );
 
       inventoryItem.reconcileCount(Quantity.create(item.quantity));
       savePromises.push(this.inventoryRepository.save(inventoryItem));
