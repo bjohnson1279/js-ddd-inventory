@@ -37,18 +37,16 @@ export class OpeningBalanceService {
     const fetchPromises = items.map(item => this.inventoryRepository.findBySku(SKU.create(item.variantId)));
     const fetchedItems = await Promise.all(fetchPromises);
 
-    const itemMap = new Map<string, InventoryItem | null>();
-    items.forEach((item, index) => {
-        itemMap.set(item.variantId, fetchedItems[index]);
-    });
-
     // --- Pass 3: Post ledger entries ---
-    const savePromises: Promise<void>[] = [];
+    // In this simplified implementation, we update/create InventoryItems.
+    // In a full implementation, we would append to a ledger.
+    const itemMap = new Map<string, InventoryItem>();
 
-    for (const item of items) {
+    items.forEach((item, index) => {
       const skuValue = item.variantId;
       const sku = SKU.create(skuValue);
-      let inventoryItem = itemMap.get(skuValue) || null;
+      
+      let inventoryItem = itemMap.get(skuValue) || fetchedItems[index];
 
       inventoryItem ??= InventoryItem.create(
         Date.now().toString() + Math.random(),
@@ -57,9 +55,15 @@ export class OpeningBalanceService {
       );
 
       inventoryItem.reconcileCount(Quantity.create(item.quantity));
-      savePromises.push(this.inventoryRepository.save(inventoryItem));
-    }
+      itemMap.set(skuValue, inventoryItem);
+    });
 
-    await Promise.all(savePromises);
+    const uniqueItemsToSave = Array.from(itemMap.values());
+
+    if (this.inventoryRepository.saveMany && uniqueItemsToSave.length > 0) {
+       await this.inventoryRepository.saveMany(uniqueItemsToSave);
+    } else {
+       await Promise.all(uniqueItemsToSave.map(item => this.inventoryRepository.save(item)));
+    }
   }
 }
