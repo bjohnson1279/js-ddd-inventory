@@ -860,7 +860,10 @@ function App() {
                   ) : (
                     <tr>
                       <td colSpan={5} style={{ textAlign: "center", color: "var(--text-muted)" }}>
-                        No inventory matches. Go to Onboarding to populate stock levels.
+                        <p style={{ margin: "0 0 10px 0" }}>No inventory matches. Go to Onboarding to populate stock levels.</p>
+                        <button className="btn btn-primary btn-xs" onClick={() => setActiveTab("onboarding")}>
+                          Go to Onboarding Setup
+                        </button>
                       </td>
                     </tr>
                   )}
