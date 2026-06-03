@@ -28,6 +28,21 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     );
   }
 
+  async findBySkus(skus: SKU[]): Promise<InventoryItem[]> {
+    const records = await this.prisma.inventoryModel.findMany({
+      where: {
+        sku: { in: skus.map(s => s.getValue()) }
+      }
+    });
+    return records.map((record: { id: string; sku: string; quantity: number }) =>
+      InventoryItem.create(
+        record.id,
+        SKU.create(record.sku),
+        Quantity.create(record.quantity)
+      )
+    );
+  }
+
   async findAll(): Promise<InventoryItem[]> {
     const records = await this.prisma.inventoryModel.findMany();
     return records.map((record: { id: string; sku: string; quantity: number }) => 
@@ -73,6 +88,43 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     }
 
     item.clearDomainEvents();
+  }
+
+  async saveMany(items: InventoryItem[]): Promise<void> {
+    const allEvents = items.flatMap(item => item.getDomainEvents());
+
+    if (this.outboxRepository) {
+      await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        for (const item of items) {
+          await tx.inventoryModel.upsert({
+            where: { sku: item.sku.getValue() },
+            update: { quantity: item.quantity.getValue() },
+            create: {
+              id: item.id,
+              sku: item.sku.getValue(),
+              quantity: item.quantity.getValue()
+            }
+          });
+        }
+        for (const event of allEvents) {
+          await this.outboxRepository!.save(event, tx);
+        }
+      });
+    } else {
+      await this.prisma.$transaction(
+        items.map(item => this.prisma.inventoryModel.upsert({
+          where: { sku: item.sku.getValue() },
+          update: { quantity: item.quantity.getValue() },
+          create: {
+            id: item.id,
+            sku: item.sku.getValue(),
+            quantity: item.quantity.getValue()
+          }
+        }))
+      );
+      await DomainEventDispatcher.dispatch(allEvents);
+    }
+    items.forEach(item => item.clearDomainEvents());
   }
 
   async hasAnyEntries(variantId: string, locationId: string): Promise<boolean> {
