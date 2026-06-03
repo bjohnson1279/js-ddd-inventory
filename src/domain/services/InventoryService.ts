@@ -18,13 +18,13 @@ export class InventoryService {
     const sku = SKU.create(variantId);
     const item = await this.inventoryRepository.findBySku(sku);
 
-    const available = item ? item.quantity.getValue() : 0;
-    if (available < quantity) {
-      throw new InsufficientInventoryException(variantId, available, quantity);
-    }
-
     if (!item) {
       throw new Error(`Item with SKU ${variantId} not found in inventory.`);
+    }
+
+    const available = item.quantity.getValue();
+    if (available < quantity) {
+      throw new InsufficientInventoryException(variantId, available, quantity);
     }
 
     item.dispatchStock(Quantity.create(quantity));
