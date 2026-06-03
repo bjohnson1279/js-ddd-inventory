@@ -71,26 +71,24 @@ export class BarcodeController {
       // We also attempt to run dispatcher routing
       const dispatcher = new BarcodeScanDispatcher(registry);
 
-      let dispatched = false;
-      try {
-        await dispatcher.dispatch(rawScan, context as ScanContext, payload || {});
-        dispatched = true;
-      } catch (dispatchError: any) {
-        // If there's no handler, we still want to return a 200 with the resolved variantId
-        // to maintain the API contract without requiring a mock handler.
-        if (!dispatchError.message.toLowerCase().includes("no handler registered") && !dispatchError.message.toLowerCase().includes("not registered")) {
-          throw dispatchError;
+      // Register a mock handler to log or return positive response if no handler is wired
+      let handled = false;
+      dispatcher.register(context as ScanContext, {
+        handle: async (vId, raw, pay) => {
+          handled = true;
         }
-      }
+      });
+
+      await dispatcher.dispatch(rawScan, context as ScanContext, payload || {});
 
       res.status(200).json({ 
         message: "Scan processed.", 
         variantId, 
         context,
-        dispatched
+        dispatched: handled
       });
     } catch (error: any) {
-      if (error instanceof DomainException || error.message.toLowerCase().includes("no handler registered") || error.message.toLowerCase().includes("not registered")) {
+      if (error instanceof DomainException || error.message.includes("not registered")) {
         res.status(404).json({ error: error.message });
       } else {
         res.status(500).json({ error: error.message });

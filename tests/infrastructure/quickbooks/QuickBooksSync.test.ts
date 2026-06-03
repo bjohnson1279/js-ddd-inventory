@@ -80,6 +80,12 @@ describe("QuickBooks Online Journal Sync", () => {
     // Verify it was marked processed
     expect(pending[0].processedAt).not.toBeNull();
 
+    // Verify console log contains QuickBooks syncing details
+    const calls = spyConsoleLog.mock.calls.map(c => c[0]);
+    expect(calls.some(c => c.includes("Syncing transaction outbox event to QBO API"))).toBe(true);
+    expect(calls.some(c => c.includes("DocNumber"))).toBe(true);
+    expect(calls.some(c => c.includes("250"))).toBe(true); // check decimal mapping
+
     // Verify fetch was called with correct parameters
     expect(global.fetch).toHaveBeenCalledTimes(1);
     const [fetchUrl, fetchOptions] = (global.fetch as jest.Mock).mock.calls[0];

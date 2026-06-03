@@ -18,52 +18,39 @@ export class OpeningBalanceService {
     }
 
     // --- Pass 1: Guard against duplicate opening balances ---
-    const checkPromises = onboarding.getItems().map(async (item) => {
-      const exists = await this.inventoryRepository.hasAnyEntries(
-        item.variantId,
-        onboarding.locationId
-      );
-      if (exists) {
+    for (const item of onboarding.getItems()) {
+      if (
+        await this.inventoryRepository.hasAnyEntries(
+          item.variantId,
+          onboarding.locationId
+        )
+      ) {
         throw new Error(
           `Opening balance conflict for variant ${item.variantId} at location ${onboarding.locationId}`
         );
       }
-    });
+    }
 
-    await Promise.all(checkPromises);
-
-    // --- Pass 2: Fetch all necessary items concurrently ---
-    const items = onboarding.getItems();
-    const fetchPromises = items.map(item => this.inventoryRepository.findBySku(SKU.create(item.variantId)));
-    const fetchedItems = await Promise.all(fetchPromises);
-
-    // --- Pass 3: Post ledger entries ---
+    // --- Pass 2: Post ledger entries ---
     // In this simplified implementation, we update/create InventoryItems.
     // In a full implementation, we would append to a ledger.
-    const itemMap = new Map<string, InventoryItem>();
+    for (const item of onboarding.getItems()) {
+      // Assuming variantId is used as SKU for simplicity in this draft
+      const sku = SKU.create(item.variantId);
+      let inventoryItem = await this.inventoryRepository.findBySku(sku);
 
-    items.forEach((item, index) => {
-      const skuValue = item.variantId;
-      const sku = SKU.create(skuValue);
-      
-      let inventoryItem = itemMap.get(skuValue) || fetchedItems[index];
-
-      inventoryItem ??= InventoryItem.create(
-        Date.now().toString() + Math.random(),
-        sku,
-        Quantity.create(0)
-      );
+      if (!inventoryItem) {
+        inventoryItem = InventoryItem.create(
+          Date.now().toString() + Math.random(),
+          sku,
+          Quantity.create(0)
+        );
+      }
 
       inventoryItem.reconcileCount(Quantity.create(item.quantity));
-      itemMap.set(skuValue, inventoryItem);
-    });
+      await this.inventoryRepository.save(inventoryItem);
 
-    const uniqueItemsToSave = Array.from(itemMap.values());
-
-    if (this.inventoryRepository.saveMany && uniqueItemsToSave.length > 0) {
-       await this.inventoryRepository.saveMany(uniqueItemsToSave);
-    } else {
-       await Promise.all(uniqueItemsToSave.map(item => this.inventoryRepository.save(item)));
+      // In a real system, we'd also record the unit cost and emit events
     }
   }
 }
