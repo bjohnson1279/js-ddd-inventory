@@ -1,4 +1,9 @@
+## Performance Insights
+
+* **N+1 Writes in Loops:** Avoid sequential `await repository.save(item)` inside loops when processing multiple items (e.g., in `PerformFullStoreCount`). This creates significant I/O latency.
+* **Optimization Strategy:** Collect items in an array and save them in batches (e.g., using Promise.all on chunks of 20 items) to execute database writes concurrently without exhausting the database connection pool or causing transaction deadlocks.
 Optimized sequential database saves inside loops by executing them concurrently with Promise.all. This reduced execution time of 100 layer updates from ~545ms to ~7ms.
+
 ## 2024-05-18 - Optimize Kit Sale Concurrent Fetch
 **Learning:** Sequential database fetches inside a loop when calculating multi-component bundle adjustments (`decrementForKitSale`) can cause unnecessary N+1 style DB load (2N fetches per kit sale).
 **Action:** Always fetch dependency constraints upfront concurrently with `Promise.all` mapping over the array to minimize database queries.

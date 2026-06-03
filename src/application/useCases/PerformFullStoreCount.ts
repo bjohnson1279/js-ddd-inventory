@@ -20,6 +20,8 @@ export class PerformFullStoreCount {
       countMap.set(item.sku, item.count);
     }
 
+    const itemsToSave: InventoryItem[] = [];
+
     // Process all existing items
     const existingItemsPromises = allExistingItems.map(item => {
       const skuStr = item.sku.getValue();
@@ -34,17 +36,17 @@ export class PerformFullStoreCount {
         item.reconcileCount(Quantity.create(0));
       }
       
-      return this.inventoryRepository.save(item);
-    });
-    await Promise.all(existingItemsPromises);
+      savePromises.push(this.inventoryRepository.save(item));
+    }
 
     // Any items remaining in countMap are NEW items we didn't have in the repository before
     const newItemsPromises = Array.from(countMap.entries()).map(([skuStr, count]) => {
       const sku = SKU.create(skuStr);
       const quantity = Quantity.create(count);
       const newItem = InventoryItem.create(Date.now().toString() + Math.random().toString(), sku, quantity);
-      return this.inventoryRepository.save(newItem);
-    });
-    await Promise.all(newItemsPromises);
+      savePromises.push(this.inventoryRepository.save(newItem));
+    }
+
+    await Promise.all(savePromises);
   }
 }
