@@ -19,3 +19,4 @@ dev.db
 dev.db-journal
 .antigravitycli/
 
+coverage/

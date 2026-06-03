@@ -18,39 +18,48 @@ export class OpeningBalanceService {
     }
 
     // --- Pass 1: Guard against duplicate opening balances ---
-    for (const item of onboarding.getItems()) {
-      if (
-        await this.inventoryRepository.hasAnyEntries(
-          item.variantId,
-          onboarding.locationId
-        )
-      ) {
+    const checkPromises = onboarding.getItems().map(async (item) => {
+      const exists = await this.inventoryRepository.hasAnyEntries(
+        item.variantId,
+        onboarding.locationId
+      );
+      if (exists) {
         throw new Error(
           `Opening balance conflict for variant ${item.variantId} at location ${onboarding.locationId}`
         );
       }
-    }
+    });
 
-    // --- Pass 2: Post ledger entries ---
-    // In this simplified implementation, we update/create InventoryItems.
-    // In a full implementation, we would append to a ledger.
-    for (const item of onboarding.getItems()) {
-      // Assuming variantId is used as SKU for simplicity in this draft
-      const sku = SKU.create(item.variantId);
-      let inventoryItem = await this.inventoryRepository.findBySku(sku);
+    await Promise.all(checkPromises);
 
-      if (!inventoryItem) {
-        inventoryItem = InventoryItem.create(
-          Date.now().toString() + Math.random(),
-          sku,
-          Quantity.create(0)
-        );
-      }
+    // --- Pass 2: Fetch all necessary items concurrently ---
+    const items = onboarding.getItems();
+    const fetchPromises = items.map(item => this.inventoryRepository.findBySku(SKU.create(item.variantId)));
+    const fetchedItems = await Promise.all(fetchPromises);
+
+    const itemMap = new Map<string, InventoryItem | null>();
+    items.forEach((item, index) => {
+        itemMap.set(item.variantId, fetchedItems[index]);
+    });
+
+    // --- Pass 3: Post ledger entries ---
+    const savePromises: Promise<void>[] = [];
+
+    for (const item of items) {
+      const skuValue = item.variantId;
+      const sku = SKU.create(skuValue);
+      let inventoryItem = itemMap.get(skuValue) || null;
+
+      inventoryItem ??= InventoryItem.create(
+        Date.now().toString() + Math.random(),
+        sku,
+        Quantity.create(0)
+      );
 
       inventoryItem.reconcileCount(Quantity.create(item.quantity));
-      await this.inventoryRepository.save(inventoryItem);
-
-      // In a real system, we'd also record the unit cost and emit events
+      savePromises.push(this.inventoryRepository.save(inventoryItem));
     }
+
+    await Promise.all(savePromises);
   }
 }

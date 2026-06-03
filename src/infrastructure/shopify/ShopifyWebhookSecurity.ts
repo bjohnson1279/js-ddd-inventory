@@ -1,9 +1,13 @@
 import * as crypto from 'crypto';
 
 export class ShopifyWebhookSecurity {
-  constructor(private readonly apiSecret: string) {}
+  constructor(private readonly apiSecret?: string) {}
 
   public validateHmac(body: string, hmac: string): boolean {
+    if (!this.apiSecret) {
+      return false; // Fail securely if no secret is configured
+    }
+
     const hash = crypto
       .createHmac('sha256', this.apiSecret)
       .update(body, 'utf8')
