@@ -17,27 +17,32 @@ export class OpeningBalanceService {
       );
     }
 
-    // --- Pass 1: Guard against duplicate opening balances ---
-    for (const item of onboarding.getItems()) {
-      if (
-        await this.inventoryRepository.hasAnyEntries(
+    // --- Concurrent Fetch: Fetch existence check and current inventory for all items ---
+    const itemsData = await Promise.all(
+      onboarding.getItems().map(async (item) => {
+        const hasEntries = await this.inventoryRepository.hasAnyEntries(
           item.variantId,
           onboarding.locationId
-        )
-      ) {
-        throw new Error(
-          `Opening balance conflict for variant ${item.variantId} at location ${onboarding.locationId}`
         );
-      }
-    }
 
-    // --- Pass 2: Post ledger entries ---
+        if (hasEntries) {
+          throw new Error(
+            `Opening balance conflict for variant ${item.variantId} at location ${onboarding.locationId}`
+          );
+        }
+
+        const sku = SKU.create(item.variantId);
+        const inventoryItem = await this.inventoryRepository.findBySku(sku);
+
+        return { item, sku, inventoryItem };
+      })
+    );
+
+    // --- Post ledger entries ---
     // In this simplified implementation, we update/create InventoryItems.
     // In a full implementation, we would append to a ledger.
-    for (const item of onboarding.getItems()) {
-      // Assuming variantId is used as SKU for simplicity in this draft
-      const sku = SKU.create(item.variantId);
-      let inventoryItem = await this.inventoryRepository.findBySku(sku);
+    for (const { item, sku, inventoryItem: existingItem } of itemsData) {
+      let inventoryItem = existingItem;
 
       if (!inventoryItem) {
         inventoryItem = InventoryItem.create(
@@ -48,9 +53,20 @@ export class OpeningBalanceService {
       }
 
       inventoryItem.reconcileCount(Quantity.create(item.quantity));
-      await this.inventoryRepository.save(inventoryItem);
+
+      // Keep track of new items in case there are multiple entries for the same SKU
+      // in the same onboarding payload
+      itemMap.set(skuValue, inventoryItem);
 
       // In a real system, we'd also record the unit cost and emit events
+    }
+
+    const uniqueItemsToSave = Array.from(itemMap.values());
+
+    if (this.inventoryRepository.saveMany && uniqueItemsToSave.length > 0) {
+       await this.inventoryRepository.saveMany(uniqueItemsToSave);
+    } else {
+       await Promise.all(uniqueItemsToSave.map(item => this.inventoryRepository.save(item)));
     }
   }
 }
