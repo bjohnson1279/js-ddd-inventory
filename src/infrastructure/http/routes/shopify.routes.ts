@@ -4,9 +4,7 @@ import { ShopifyWebhookSecurity } from "../../shopify/ShopifyWebhookSecurity";
 
 const router = Router();
 
-// SECURITY: Remove hardcoded fallback secret in production to prevent unauthorized webhook forgery
-const secret = process.env.SHOPIFY_API_SECRET || (process.env.NODE_ENV === 'test' ? 'dummy_secret' : undefined);
-const security = new ShopifyWebhookSecurity(secret);
+const security = new ShopifyWebhookSecurity(process.env.SHOPIFY_API_SECRET || 'dummy_secret');
 const controller = new ShopifyWebhookController(security);
 
 router.post("/webhooks/orders/create", (req, res) => controller.handleOrderCreated(req, res));

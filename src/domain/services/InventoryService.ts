@@ -68,17 +68,8 @@ export class InventoryService {
         throw new Error(`Item with SKU ${component.variantId} not found in inventory.`);
       }
 
-        return { item, needed };
-      })
-    );
-
-    // --- Pass 2: Deduct stock and save concurrently ---
-    // Note: If saving needs to be transactional, that should be handled by a UoW or repository method.
-    await Promise.all(
-      itemsWithNeeds.map(async ({ item, needed }) => {
-        item.dispatchStock(Quantity.create(needed));
-        await this.inventoryRepository.save(item);
-      })
-    );
+      item.dispatchStock(Quantity.create(needed));
+      await this.inventoryRepository.save(item);
+    }
   }
 }

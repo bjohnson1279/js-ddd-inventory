@@ -292,14 +292,6 @@ select.form-control option {
 }
 
 /* Action Buttons */
-.btn:focus-visible,
-.tab-btn:focus-visible,
-.clickable-row:focus-visible,
-.btn-refresh:focus-visible {
-  outline: 2px solid var(--accent-color-light);
-  outline-offset: 2px;
-}
-
 .btn {
   display: inline-flex;
   align-items: center;
@@ -309,6 +301,7 @@ select.form-control option {
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: var(--sans-font);
   border: none;
 }

@@ -1,5 +1,4 @@
 process.env.NODE_ENV = "test";
-process.env.SHOPIFY_API_SECRET = "test_secret";
 
 import request from "supertest";
 import { app, setupApp } from "../../../src/index";
@@ -122,7 +121,7 @@ describe("E2E Integration Test Suite", () => {
       };
 
       const rawBody = JSON.stringify(payload);
-      const hmac = crypto.createHmac("sha256", "test_secret").update(rawBody, "utf8").digest("base64");
+      const hmac = crypto.createHmac("sha256", "dummy_secret").update(rawBody, "utf8").digest("base64");
 
       const response = await request(app)
         .post("/api/shopify/webhooks/orders/create")
@@ -147,7 +146,7 @@ describe("E2E Integration Test Suite", () => {
       };
 
       const rawBody = JSON.stringify(payload);
-      const hmac = crypto.createHmac("sha256", "test_secret").update(rawBody, "utf8").digest("base64");
+      const hmac = crypto.createHmac("sha256", "dummy_secret").update(rawBody, "utf8").digest("base64");
 
       // First webhook call
       const response1 = await request(app)

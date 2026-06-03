@@ -860,10 +860,7 @@ function App() {
                   ) : (
                     <tr>
                       <td colSpan={5} style={{ textAlign: "center", color: "var(--text-muted)" }}>
-                        <p style={{ margin: "0 0 10px 0" }}>No inventory matches. Go to Onboarding to populate stock levels.</p>
-                        <button className="btn btn-primary btn-xs" onClick={() => setActiveTab("onboarding")}>
-                          Go to Onboarding Setup
-                        </button>
+                        No inventory matches. Go to Onboarding to populate stock levels.
                       </td>
                     </tr>
                   )}
@@ -1103,16 +1100,8 @@ function App() {
                         <tr
                           key={idx}
                           className="clickable-row"
-                          role="button"
-                          tabIndex={0}
                           onClick={() => {
                             setScanValue(b.barcodeValue);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              setScanValue(b.barcodeValue);
-                            }
                           }}
                           title="Click to populate simulator scan input"
                         >
@@ -1281,16 +1270,8 @@ function App() {
                         <tr
                           key={idx}
                           className="clickable-row"
-                          role="button"
-                          tabIndex={0}
                           onClick={() => {
                             handleFetchSerialHistory(s.serialNumber);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              handleFetchSerialHistory(s.serialNumber);
-                            }
                           }}
                           style={serialQuery === s.serialNumber ? { background: "rgba(255, 255, 255, 0.05)" } : {}}
                         >
@@ -1459,16 +1440,8 @@ function App() {
                         <tr
                           key={idx}
                           className="clickable-row"
-                          role="button"
-                          tabIndex={0}
                           onClick={() => {
                             setSellKitSku(kit.sku);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              setSellKitSku(kit.sku);
-                            }
                           }}
                           style={sellKitSku === kit.sku ? { background: "rgba(255, 255, 255, 0.05)" } : {}}
                         >
