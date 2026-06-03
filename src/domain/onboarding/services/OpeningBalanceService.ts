@@ -17,26 +17,25 @@ export class OpeningBalanceService {
       );
     }
 
-    // --- Concurrent Fetch: Fetch existence check and current inventory for all items ---
-    const itemsData = await Promise.all(
-      onboarding.getItems().map(async (item) => {
-        const hasEntries = await this.inventoryRepository.hasAnyEntries(
-          item.variantId,
-          onboarding.locationId
+    // --- Pass 1: Guard against duplicate opening balances ---
+    const checkPromises = onboarding.getItems().map(async (item) => {
+      const exists = await this.inventoryRepository.hasAnyEntries(
+        item.variantId,
+        onboarding.locationId
+      );
+      if (exists) {
+        throw new Error(
+          `Opening balance conflict for variant ${item.variantId} at location ${onboarding.locationId}`
         );
+      }
+    });
 
-        if (hasEntries) {
-          throw new Error(
-            `Opening balance conflict for variant ${item.variantId} at location ${onboarding.locationId}`
-          );
-        }
+    await Promise.all(checkPromises);
 
-        const sku = SKU.create(item.variantId);
-        const inventoryItem = await this.inventoryRepository.findBySku(sku);
-
-        return { item, sku, inventoryItem };
-      })
-    );
+    // --- Pass 2: Fetch all necessary items concurrently ---
+    const items = onboarding.getItems();
+    const fetchPromises = items.map(item => this.inventoryRepository.findBySku(SKU.create(item.variantId)));
+    const fetchedItems = await Promise.all(fetchPromises);
 
     // --- Post ledger entries ---
     // In this simplified implementation, we update/create InventoryItems.
@@ -47,21 +46,22 @@ export class OpeningBalanceService {
       const skuValue = sku.getValue();
       let inventoryItem = existingItem;
 
-      if (!inventoryItem) {
-        inventoryItem = InventoryItem.create(
-          Date.now().toString() + Math.random(),
-          sku,
-          Quantity.create(0)
-        );
-      }
+    // --- Pass 3: Post ledger entries ---
+    const savePromises: Promise<void>[] = [];
+
+    for (const item of items) {
+      const skuValue = item.variantId;
+      const sku = SKU.create(skuValue);
+      let inventoryItem = itemMap.get(skuValue) || null;
+
+      inventoryItem ??= InventoryItem.create(
+        Date.now().toString() + Math.random(),
+        sku,
+        Quantity.create(0)
+      );
 
       inventoryItem.reconcileCount(Quantity.create(item.quantity));
-
-      // Keep track of new items in case there are multiple entries for the same SKU
-      // in the same onboarding payload
-      itemMap.set(skuValue, inventoryItem);
-
-      // In a real system, we'd also record the unit cost and emit events
+      savePromises.push(this.inventoryRepository.save(inventoryItem));
     }
 
     const uniqueItemsToSave = Array.from(itemMap.values());
