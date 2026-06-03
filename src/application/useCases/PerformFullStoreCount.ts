@@ -21,7 +21,7 @@ export class PerformFullStoreCount {
     }
 
     // Process all existing items
-    allExistingItems.forEach(item => {
+    for (const item of allExistingItems) {
       const skuStr = item.sku.getValue();
       const countedQty = countMap.get(skuStr);
       
@@ -38,7 +38,7 @@ export class PerformFullStoreCount {
     }
 
     // Any items remaining in countMap are NEW items we didn't have in the repository before
-    Array.from(countMap.entries()).forEach(([skuStr, count]) => {
+    for (const [skuStr, count] of countMap.entries()) {
       const sku = SKU.create(skuStr);
       const quantity = Quantity.create(count);
       const newItem = InventoryItem.create(Date.now().toString() + Math.random().toString(), sku, quantity);
