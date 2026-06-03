@@ -41,7 +41,10 @@ export class OpeningBalanceService {
     // --- Post ledger entries ---
     // In this simplified implementation, we update/create InventoryItems.
     // In a full implementation, we would append to a ledger.
+    const itemMap = new Map<string, InventoryItem>();
+
     for (const { item, sku, inventoryItem: existingItem } of itemsData) {
+      const skuValue = sku.getValue();
       let inventoryItem = existingItem;
 
       if (!inventoryItem) {
@@ -64,7 +67,7 @@ export class OpeningBalanceService {
     const uniqueItemsToSave = Array.from(itemMap.values());
 
     if (this.inventoryRepository.saveMany && uniqueItemsToSave.length > 0) {
-       await this.inventoryRepository.saveMany(uniqueItemsToSave);
+       await this.inventoryRepository.saveMany(uniqueItemsToSave as InventoryItem[]);
     } else {
        await Promise.all(uniqueItemsToSave.map(item => this.inventoryRepository.save(item)));
     }
