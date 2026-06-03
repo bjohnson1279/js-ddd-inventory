@@ -55,13 +55,14 @@ export class InventoryService {
       })
     );
 
-    // --- Pass 2: Deduct stock and save ---
+    // --- Pass 2: Deduct stock and save concurrently ---
     // Note: If saving needs to be transactional, that should be handled by a UoW or repository method.
-    // Assuming sequential saves as per previous implementation logic for now, but skipping re-fetches.
-    for (const { item, needed } of itemsWithNeeds) {
-      item.dispatchStock(Quantity.create(needed));
-      await this.inventoryRepository.save(item);
-    }
+    await Promise.all(
+      itemsWithNeeds.map(async ({ item, needed }) => {
+        item.dispatchStock(Quantity.create(needed));
+        await this.inventoryRepository.save(item);
+      })
+    );
   }
 
   private async assertSufficientStock(variantId: string, needed: number): Promise<void> {
