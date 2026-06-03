@@ -40,4 +40,8 @@ describe("Barcode Value Object", () => {
 
     expect(() => new Barcode(BarcodeSymbology.QR, "")).toThrow(/empty/i);
   });
+
+  it("should throw an error for unsupported barcode symbology", () => {
+    expect(() => new Barcode("INVALID_SYMBOLOGY" as BarcodeSymbology, "123")).toThrow(/Unsupported symbology/i);
+  });
 });
