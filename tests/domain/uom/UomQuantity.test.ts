@@ -1,10 +1,12 @@
 import { UomQuantity } from "../../../src/domain/uom/valueObjects/UomQuantity";
 import { UnitOfMeasure } from "../../../src/domain/uom/valueObjects/UnitOfMeasure";
 import { UomCategory } from "../../../src/domain/uom/enums/UomCategory";
+import { StandardUnits } from "../../../src/domain/uom/services/StandardUnits";
 
 describe("UomQuantity", () => {
   const discreteUnit = new UnitOfMeasure("Each", "ea", UomCategory.Discrete);
   const continuousUnit = new UnitOfMeasure("Gram", "g", UomCategory.Weight);
+  const each = StandardUnits.each();
 
   describe("Constructor", () => {
     it("should create a quantity with a valid positive amount", () => {
