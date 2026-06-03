@@ -20,7 +20,7 @@ export class PerformFullStoreCount {
       countMap.set(item.sku, item.count);
     }
 
-    const savePromises: Promise<void>[] = [];
+    const itemsToSave: InventoryItem[] = [];
 
     // Process all existing items
     for (const item of allExistingItems) {
