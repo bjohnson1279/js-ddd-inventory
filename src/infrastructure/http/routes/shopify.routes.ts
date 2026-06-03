@@ -5,7 +5,7 @@ import { ShopifyWebhookSecurity } from "../../shopify/ShopifyWebhookSecurity";
 const router = Router();
 
 // SECURITY: Remove hardcoded fallback secret in production to prevent unauthorized webhook forgery
-const secret = process.env.NODE_ENV === 'test' ? 'dummy_secret' : process.env.SHOPIFY_API_SECRET;
+const secret = process.env.SHOPIFY_API_SECRET || (process.env.NODE_ENV === 'test' ? 'dummy_secret' : undefined);
 const security = new ShopifyWebhookSecurity(secret);
 const controller = new ShopifyWebhookController(security);
 
