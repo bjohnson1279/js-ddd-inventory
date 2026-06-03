@@ -53,9 +53,20 @@ export class OpeningBalanceService {
       }
 
       inventoryItem.reconcileCount(Quantity.create(item.quantity));
-      await this.inventoryRepository.save(inventoryItem);
+
+      // Keep track of new items in case there are multiple entries for the same SKU
+      // in the same onboarding payload
+      itemMap.set(skuValue, inventoryItem);
 
       // In a real system, we'd also record the unit cost and emit events
+    }
+
+    const uniqueItemsToSave = Array.from(itemMap.values());
+
+    if (this.inventoryRepository.saveMany && uniqueItemsToSave.length > 0) {
+       await this.inventoryRepository.saveMany(uniqueItemsToSave);
+    } else {
+       await Promise.all(uniqueItemsToSave.map(item => this.inventoryRepository.save(item)));
     }
   }
 }
