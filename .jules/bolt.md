@@ -10,3 +10,4 @@ Replaced sequential saves with `Promise.all` + `.map`. This simple refactor redu
 
 **Date:** $(date +%Y-%m-%d)
 **Location:** \`src/domain/services/InventoryService.ts\`
+Learned to parallelize database updates and inserts for large batches using Promise.all in TypeScript to solve N+1 sequential I/O issues, significantly speeding up execution (e.g. from 1251 ms to 18 ms for 1000 items in PerformFullStoreCount).
