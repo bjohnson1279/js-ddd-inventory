@@ -17,48 +17,32 @@ export class OpeningBalanceService {
       );
     }
 
-    const items = onboarding.getItems();
+    // --- Concurrent Fetch: Fetch existence check and current inventory for all items ---
+    const itemsData = await Promise.all(
+      onboarding.getItems().map(async (item) => {
+        const hasEntries = await this.inventoryRepository.hasAnyEntries(
+          item.variantId,
+          onboarding.locationId
+        );
 
-    // --- Pass 1: Guard against duplicate opening balances ---
-    await Promise.all(
-      items.map(async (item) => {
-        if (
-          await this.inventoryRepository.hasAnyEntries(
-            item.variantId,
-            onboarding.locationId
-          )
-        ) {
+        if (hasEntries) {
           throw new Error(
             `Opening balance conflict for variant ${item.variantId} at location ${onboarding.locationId}`
           );
         }
+
+        const sku = SKU.create(item.variantId);
+        const inventoryItem = await this.inventoryRepository.findBySku(sku);
+
+        return { item, sku, inventoryItem };
       })
     );
 
-    // --- Pass 2: Post ledger entries ---
-    // Pre-fetch all relevant inventory items at once to avoid N+1 query issue
-    const skus = items.map(item => SKU.create(item.variantId));
-    let existingItems: InventoryItem[] = [];
-    if (this.inventoryRepository.findBySkus) {
-      existingItems = await this.inventoryRepository.findBySkus(skus);
-    } else {
-      // Fallback for repositories that don't support findBySkus
-      existingItems = (await Promise.all(
-        skus.map(sku => this.inventoryRepository.findBySku(sku))
-      )).filter((item): item is InventoryItem => item !== null);
-    }
-
-    const itemMap = new Map<string, InventoryItem>();
-    existingItems.forEach(item => {
-      itemMap.set(item.sku.getValue(), item);
-    });
-
+    // --- Post ledger entries ---
     // In this simplified implementation, we update/create InventoryItems.
     // In a full implementation, we would append to a ledger.
-    for (const item of items) {
-      const skuValue = item.variantId;
-      const sku = SKU.create(skuValue);
-      let inventoryItem = itemMap.get(skuValue);
+    for (const { item, sku, inventoryItem: existingItem } of itemsData) {
+      let inventoryItem = existingItem;
 
       if (!inventoryItem) {
         inventoryItem = InventoryItem.create(
