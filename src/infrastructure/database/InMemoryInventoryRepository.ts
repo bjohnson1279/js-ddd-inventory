@@ -33,6 +33,12 @@ export class InMemoryInventoryRepository implements IInventoryRepository {
     item.clearDomainEvents();
   }
 
+  async saveMany(items: InventoryItem[]): Promise<void> {
+    for (const item of items) {
+      await this.save(item);
+    }
+  }
+
   async hasAnyEntries(variantId: string, locationId: string): Promise<boolean> {
     // In memory we don't track location yet, so we just check if variant exists
     return this.items.has(variantId);
