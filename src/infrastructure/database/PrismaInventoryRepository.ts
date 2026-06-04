@@ -89,6 +89,46 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     item.clearDomainEvents();
   }
 
+  async saveMany(items: InventoryItem[]): Promise<void> {
+    if (items.length === 0) return;
+
+    const allEvents = items.flatMap(item => item.getDomainEvents());
+
+    if (this.outboxRepository) {
+      await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        await Promise.all(items.map(item => tx.inventoryModel.upsert({
+          where: { sku: item.sku.getValue() },
+          update: { quantity: item.quantity.getValue() },
+          create: {
+            id: item.id,
+            sku: item.sku.getValue(),
+            quantity: item.quantity.getValue()
+          }
+        })));
+
+        for (const event of allEvents) {
+          await this.outboxRepository!.save(event, tx);
+        }
+      });
+    } else {
+      await Promise.all(items.map(item => this.prisma.inventoryModel.upsert({
+        where: { sku: item.sku.getValue() },
+        update: { quantity: item.quantity.getValue() },
+        create: {
+          id: item.id,
+          sku: item.sku.getValue(),
+          quantity: item.quantity.getValue()
+        }
+      })));
+
+      await DomainEventDispatcher.dispatch(allEvents);
+    }
+
+    for (const item of items) {
+      item.clearDomainEvents();
+    }
+  }
+
   async hasAnyEntries(variantId: string, locationId: string): Promise<boolean> {
     const record = await this.prisma.inventoryModel.findUnique({
       where: { sku: variantId }
