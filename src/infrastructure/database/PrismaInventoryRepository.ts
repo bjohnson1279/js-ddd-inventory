@@ -28,6 +28,20 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     );
   }
 
+  async findBySkus(skus: SKU[]): Promise<InventoryItem[]> {
+    const records = await this.prisma.inventoryModel.findMany({
+      where: { sku: { in: skus.map(s => s.getValue()) } }
+    });
+
+    return records.map((record: { id: string; sku: string; quantity: number }) =>
+      InventoryItem.create(
+        record.id,
+        SKU.create(record.sku),
+        Quantity.create(record.quantity)
+      )
+    );
+  }
+
   async findAll(): Promise<InventoryItem[]> {
     const records = await this.prisma.inventoryModel.findMany();
     return records.map((record: { id: string; sku: string; quantity: number }) => 

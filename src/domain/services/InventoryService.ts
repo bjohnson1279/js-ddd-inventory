@@ -44,18 +44,32 @@ export class InventoryService {
     // --- Pass 1: validate all components upfront and cache items ---
     const cachedItems = new Map<string, InventoryItem>();
 
+    // Optimize: Batch fetch all components at once if repository supports it
+    if (this.inventoryRepository.findBySkus) {
+      const skus = kit.components.map(c => SKU.create(c.variantId));
+      const items = await this.inventoryRepository.findBySkus(skus);
+      for (const item of items) {
+        cachedItems.set(item.sku.getValue(), item);
+      }
+    }
+
     for (const component of kit.components) {
       const needed = component.quantity * kitQuantity;
-      const sku = SKU.create(component.variantId);
-      const item = await this.inventoryRepository.findBySku(sku);
+
+      let item = cachedItems.get(component.variantId);
+      if (!item && !this.inventoryRepository.findBySkus) {
+         // Fallback: fetch individually if batch fetch isn't supported
+         const sku = SKU.create(component.variantId);
+         const fetchedItem = await this.inventoryRepository.findBySku(sku);
+         if (fetchedItem) {
+           item = fetchedItem;
+           cachedItems.set(component.variantId, item);
+         }
+      }
 
       const available = item ? item.quantity.getValue() : 0;
       if (available < needed) {
         throw new InsufficientInventoryException(component.variantId, available, needed);
-      }
-
-      if (item) {
-        cachedItems.set(component.variantId, item);
       }
     }
 
