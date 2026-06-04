@@ -9,6 +9,15 @@ export class ShopifyWebhookSecurity {
       .update(body, 'utf8')
       .digest('base64');
     
-    return hash === hmac;
+    const hashBuffer = Buffer.from(hash, 'utf8');
+    const hmacBuffer = Buffer.from(hmac, 'utf8');
+
+    // Use timingSafeEqual to prevent timing attacks.
+    // Lengths must match before comparing, otherwise timingSafeEqual throws.
+    if (hashBuffer.length !== hmacBuffer.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(hashBuffer, hmacBuffer);
   }
 }
