@@ -291,6 +291,17 @@ select.form-control option {
   color: var(--text-primary);
 }
 
+.btn:focus-visible,
+.tab-btn:focus-visible,
+.btn-refresh:focus-visible {
+  outline: 2px solid var(--accent-color-light);
+  outline-offset: 3px;
+}
+
+button:focus:not(:focus-visible) {
+  outline: none;
+}
+
 /* Action Buttons */
 .btn {
   display: inline-flex;

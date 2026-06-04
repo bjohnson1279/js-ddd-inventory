@@ -1,0 +1,3 @@
+## 2024-06-04 - Keyboard Focus & Tab Accessibility
+**Learning:** Adding `:focus-visible` alone is not enough for custom navigation interfaces. Custom tab components must use semantic HTML attributes (`role="tablist"`, `role="tab"`, and `aria-selected`) to be fully interpretable by screen readers. Furthermore, using `:focus:not(:focus-visible) { outline: none; }` provides a robust pattern to deliver highly visible focus rings for keyboard users without compromising the aesthetic experience for mouse click users.
+**Action:** Always implement semantic ARIA roles (`tablist`, `tab`, `aria-selected`) alongside `focus-visible` CSS rings when creating non-native navigation tab patterns.
