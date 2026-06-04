@@ -61,7 +61,7 @@ export class OpeningBalanceService {
     }
 
     const itemsBySku = new Map(existingItems.map((item) => [item.sku.getValue(), item]));
-    const itemsToSave: InventoryItem[] = [];
+    const itemsToSave = new Map<string, InventoryItem>();
 
     // In this simplified implementation, we update/create InventoryItems.
     // In a full implementation, we would append to a ledger.
