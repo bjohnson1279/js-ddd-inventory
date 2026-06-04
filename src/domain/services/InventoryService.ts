@@ -74,6 +74,7 @@ export class InventoryService {
     }
 
     // --- Pass 2: write ledger entries for each component ---
+    const itemsToSave: InventoryItem[] = [];
     for (const component of kit.components) {
       const needed = component.quantity * kitQuantity;
       const item = cachedItems.get(component.variantId);
@@ -83,7 +84,16 @@ export class InventoryService {
       }
 
       item.dispatchStock(Quantity.create(needed));
-      await this.inventoryRepository.save(item);
+      itemsToSave.push(item);
+    }
+
+    if (this.inventoryRepository.saveMany) {
+      await this.inventoryRepository.saveMany(itemsToSave);
+    } else {
+      // Fallback: sequential saves
+      for (const item of itemsToSave) {
+        await this.inventoryRepository.save(item);
+      }
     }
   }
 }
