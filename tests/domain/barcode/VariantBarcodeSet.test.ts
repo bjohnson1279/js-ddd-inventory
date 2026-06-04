@@ -90,4 +90,11 @@ describe("VariantBarcodeSet Aggregate", () => {
 
     expect(() => set.revoke(assign1.id)).toThrow(/Cannot revoke the primary barcode/);
   });
+
+  it("should throw Error when revoking an unknown assignment", () => {
+    const set = new VariantBarcodeSet("VAR-1");
+    const nonExistentId = "NON-EXISTENT-ID";
+
+    expect(() => set.revoke(nonExistentId)).toThrow(`Assignment ${nonExistentId} not found.`);
+  });
 });
