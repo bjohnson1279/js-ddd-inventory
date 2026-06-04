@@ -677,28 +677,28 @@ function App() {
           <h1>DDD INVENTORY PORTAL</h1>
           <p>Event-Driven Inventory Engine & Double-Entry Accounting Hub</p>
         </div>
-        <nav className="nav-tabs">
-          <button className={`tab-btn ${activeTab === "overview" ? "active" : ""}`} onClick={() => setActiveTab("overview")}>
+        <nav className="nav-tabs" role="tablist" aria-label="Main Navigation">
+          <button role="tab" aria-selected={activeTab === "overview"} className={`tab-btn ${activeTab === "overview" ? "active" : ""}`} onClick={() => setActiveTab("overview")}>
             <Icons.Dashboard />
             <span>Overview</span>
           </button>
-          <button className={`tab-btn ${activeTab === "onboarding" ? "active" : ""}`} onClick={() => setActiveTab("onboarding")}>
+          <button role="tab" aria-selected={activeTab === "onboarding"} className={`tab-btn ${activeTab === "onboarding" ? "active" : ""}`} onClick={() => setActiveTab("onboarding")}>
             <Icons.Onboarding />
             <span>Onboarding</span>
           </button>
-          <button className={`tab-btn ${activeTab === "barcodes" ? "active" : ""}`} onClick={() => setActiveTab("barcodes")}>
+          <button role="tab" aria-selected={activeTab === "barcodes"} className={`tab-btn ${activeTab === "barcodes" ? "active" : ""}`} onClick={() => setActiveTab("barcodes")}>
             <Icons.Barcode />
             <span>Barcodes</span>
           </button>
-          <button className={`tab-btn ${activeTab === "serials" ? "active" : ""}`} onClick={() => setActiveTab("serials")}>
+          <button role="tab" aria-selected={activeTab === "serials"} className={`tab-btn ${activeTab === "serials" ? "active" : ""}`} onClick={() => setActiveTab("serials")}>
             <Icons.Serial />
             <span>Serials</span>
           </button>
-          <button className={`tab-btn ${activeTab === "kits" ? "active" : ""}`} onClick={() => setActiveTab("kits")}>
+          <button role="tab" aria-selected={activeTab === "kits"} className={`tab-btn ${activeTab === "kits" ? "active" : ""}`} onClick={() => setActiveTab("kits")}>
             <Icons.Kit />
             <span>Kitting</span>
           </button>
-          <button className={`tab-btn ${activeTab === "bookkeeping" ? "active" : ""}`} onClick={() => setActiveTab("bookkeeping")}>
+          <button role="tab" aria-selected={activeTab === "bookkeeping"} className={`tab-btn ${activeTab === "bookkeeping" ? "active" : ""}`} onClick={() => setActiveTab("bookkeeping")}>
             <Icons.Bookkeeping />
             <span>Ledger</span>
           </button>
