@@ -1,4 +1,4 @@
-## 2026-06-04 - Fix Timing Attack in Webhook HMAC Validation
-**Vulnerability:** The Shopify webhook signature validation in `ShopifyWebhookSecurity.ts` used a standard string equality operator (`hash === hmac`).
-**Learning:** Using simple string comparison for cryptographic hashes enables timing attacks, where an attacker can theoretically infer the correct HMAC by observing response times, bypassing webhook authenticity checks.
-**Prevention:** Always use `crypto.timingSafeEqual` for comparing cryptographic signatures. Remember to compare buffer lengths first, as `timingSafeEqual` throws an error if lengths differ, which could cause an application crash or information leakage.
+## 2025-02-14 - Fix Hardcoded Fallback Secret for Shopify Webhook
+**Vulnerability:** A hardcoded fallback string ('dummy_secret') was used for `ShopifyWebhookSecurity` if the `SHOPIFY_API_SECRET` environment variable was not set.
+**Learning:** Hardcoded secrets and fallback secrets in production code present a significant security vulnerability, enabling attackers to bypass authentication or cryptographic validation. In this case, malicious actors could easily forge webhooks by generating HMAC signatures with the well-known fallback secret.
+**Prevention:** Never include fallback default strings for cryptographic keys or secrets. Rely exclusively on secure environment variables and implement "fail-fast" behavior: the application should explicitly throw an error or crash upon startup if essential security variables are missing, preventing it from running in an insecure state.
