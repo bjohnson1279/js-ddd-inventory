@@ -59,6 +59,20 @@ describe("VariantBarcodeSet Aggregate", () => {
     expect(() => set.assign(upc2, BarcodeSource.GS1)).toThrow(DuplicateBarcodeException);
   });
 
+  it("should throw DuplicateBarcodeException when assigning the exact same barcode instance twice", () => {
+    const set = new VariantBarcodeSet("VAR-1");
+    const upc = new Barcode(BarcodeSymbology.UPC_A, "012345678905");
+
+    set.assign(upc, BarcodeSource.Supplier);
+    expect(() => set.assign(upc, BarcodeSource.Supplier)).toThrow(DuplicateBarcodeException);
+  });
+
+  it("should throw an error when revoking a non-existent assignment", () => {
+    const set = new VariantBarcodeSet("VAR-1");
+
+    expect(() => set.revoke("non-existent-id")).toThrow("Assignment non-existent-id not found.");
+  });
+
   it("should revoke assignments and release domain events", () => {
     const set = new VariantBarcodeSet("VAR-1");
     const upc = new Barcode(BarcodeSymbology.UPC_A, "012345678905");
