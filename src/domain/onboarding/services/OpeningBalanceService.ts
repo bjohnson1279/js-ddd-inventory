@@ -79,7 +79,8 @@ export class OpeningBalanceService {
       }
 
       inventoryItem.reconcileCount(Quantity.create(item.quantity));
-      itemsToSave.push(inventoryItem);
+      itemsBySku.set(sku.getValue(), inventoryItem);
+      itemsToSave.set(sku.getValue(), inventoryItem);
 
       // In a real system, we'd also record the unit cost and emit events
     }
