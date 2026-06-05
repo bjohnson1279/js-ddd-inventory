@@ -55,6 +55,7 @@ const limiter = rateLimit({
 });
 
 app.use(cors({ origin: allowedOrigins }));
+app.set("trust proxy", 1);
 app.use(limiter);
 app.use(express.json());
 
