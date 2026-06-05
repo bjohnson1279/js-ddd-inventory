@@ -89,6 +89,55 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     item.clearDomainEvents();
   }
 
+  async saveMany(items: InventoryItem[]): Promise<void> {
+    if (items.length === 0) return;
+
+    if (this.outboxRepository) {
+      await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        const operations = items.map(item => tx.inventoryModel.upsert({
+          where: { sku: item.sku.getValue() },
+          update: { quantity: item.quantity.getValue() },
+          create: {
+            id: item.id,
+            sku: item.sku.getValue(),
+            quantity: item.quantity.getValue()
+          }
+        }));
+        await Promise.all(operations);
+
+        for (const item of items) {
+          const events = item.getDomainEvents();
+          for (const event of events) {
+            await this.outboxRepository!.save(event, tx);
+          }
+          item.clearDomainEvents();
+        }
+      });
+    } else {
+      await this.prisma.$transaction(
+        items.map(item => this.prisma.inventoryModel.upsert({
+          where: { sku: item.sku.getValue() },
+          update: { quantity: item.quantity.getValue() },
+          create: {
+            id: item.id,
+            sku: item.sku.getValue(),
+            quantity: item.quantity.getValue()
+          }
+        }))
+      );
+
+      const allEvents = items.flatMap(item => {
+        const events = item.getDomainEvents();
+        item.clearDomainEvents();
+        return events;
+      });
+
+      if (allEvents.length > 0) {
+        await DomainEventDispatcher.dispatch(allEvents);
+      }
+    }
+  }
+
   async hasAnyEntries(variantId: string, locationId: string): Promise<boolean> {
     const record = await this.prisma.inventoryModel.findUnique({
       where: { sku: variantId }
