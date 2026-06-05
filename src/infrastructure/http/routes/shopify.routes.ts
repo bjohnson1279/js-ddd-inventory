@@ -4,7 +4,11 @@ import { ShopifyWebhookSecurity } from "../../shopify/ShopifyWebhookSecurity";
 
 const router = Router();
 
-let controller: ShopifyWebhookController;
+if (!process.env.SHOPIFY_API_SECRET) {
+  throw new Error('SHOPIFY_API_SECRET is not defined');
+}
+const security = new ShopifyWebhookSecurity(process.env.SHOPIFY_API_SECRET);
+const controller = new ShopifyWebhookController(security);
 
 router.post("/webhooks/orders/create", (req, res) => {
   if (!controller) {
