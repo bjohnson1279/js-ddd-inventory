@@ -39,3 +39,8 @@
 **Vulnerability:** Found a hardcoded fallback secret ('dummy_secret') used for verifying Shopify webhooks if the environment variable was missing.
 **Learning:** Hardcoding secrets or providing weak fallbacks undermines webhook signature verification, allowing attackers to forge webhook requests and manipulate inventory.
 **Prevention:** Fail securely by explicitly checking for required security environment variables at startup and throwing an error if they are undefined, rather than providing fallback values.
+
+## 2026-06-05 - Missing Global API Rate Limiting
+**Vulnerability:** The application was missing a global rate limiter, allowing for potential DoS and brute-force attacks via unbounded API calls from single IPs.
+**Learning:** Default Express applications do not come with any built-in rate limiting protections, making them vulnerable by default.
+**Prevention:** Always implement a global rate limiter using libraries like `express-rate-limit`. Expose configuration to environment variables (e.g., `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX`) to provide deployment flexibility and allow different environments to scale limits appropriately.
