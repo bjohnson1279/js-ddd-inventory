@@ -42,7 +42,11 @@ import accountingRoutes from "./infrastructure/http/routes/accounting.routes";
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(cors({ origin: process.env.CORS_ORIGIN || "http://localhost:3000" }));
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(",").map(url => url.trim().replace(/\/$/, ""))
+  : ["http://localhost:3000"];
+
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
 // Register Domain Event Handlers
