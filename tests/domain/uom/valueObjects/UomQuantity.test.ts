@@ -37,6 +37,13 @@ describe("UomQuantity Value Object", () => {
     expect(result.amount).toBe(5);
   });
 
+  it("should allow subtraction resulting in exactly zero", () => {
+    const qty1 = new UomQuantity(10, discreteUnit);
+    const qty2 = new UomQuantity(10, discreteUnit);
+    const result = qty1.subtract(qty2);
+    expect(result.amount).toBe(0);
+  });
+
   it("should throw an error when resulting quantity would be negative", () => {
     const qty1 = new UomQuantity(5, discreteUnit);
     const qty2 = new UomQuantity(10, discreteUnit);
