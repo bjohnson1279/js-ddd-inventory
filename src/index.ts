@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import { rateLimit } from "express-rate-limit";
 import { PrismaInventoryRepository } from "./infrastructure/database/PrismaInventoryRepository";
 import { PrismaBarcodeRepository } from "./infrastructure/database/PrismaBarcodeRepository";
 import { PrismaSerializedItemRepository } from "./infrastructure/database/PrismaSerializedItemRepository";
@@ -46,7 +47,15 @@ const allowedOrigins = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(",").map(url => url.trim().replace(/\/$/, ""))
   : ["http://localhost:3000"];
 
+const limiter = rateLimit({
+  windowMs: process.env.RATE_LIMIT_WINDOW_MS ? parseInt(process.env.RATE_LIMIT_WINDOW_MS) : 15 * 60 * 1000, // 15 minutes default
+  limit: process.env.RATE_LIMIT_MAX ? parseInt(process.env.RATE_LIMIT_MAX) : 100, // Limit each IP to 100 requests per `window` default
+  standardHeaders: 'draft-7', // draft-6: `RateLimit-*` headers; draft-7: combined `RateLimit` header
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
 app.use(cors({ origin: allowedOrigins }));
+app.use(limiter);
 app.use(express.json());
 
 // Register Domain Event Handlers
