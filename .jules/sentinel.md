@@ -10,3 +10,7 @@
 **Vulnerability:** The application used a wildcard CORS policy (`app.use(cors())`), allowing any origin to access the API.
 **Learning:** Wildcard CORS policies in production APIs expose the application to cross-origin attacks, allowing malicious sites to make authorized requests on behalf of users.
 **Prevention:** Always explicitly define allowed origins in CORS configurations, typically restricting access to known frontend domains and providing an environment variable (e.g., `CORS_ORIGIN`) for flexibility.
+## 2026-06-05 - Sensitive Data Logging (Already Resolved)
+**Vulnerability:** Found an issue where sensitive API payload data could be logged via `console.log` in the QuickBooks integration (`QuickBooksClient.ts`), which would expose tenant and financial data.
+**Learning:** Production code must not contain verbose debug logging, especially for external API integrations containing financial or authentication payloads.
+**Prevention:** Utilize structured logging utilities with proper redaction capabilities for sensitive objects instead of generic `console.log`.
