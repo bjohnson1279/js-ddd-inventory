@@ -3,7 +3,6 @@ import { prisma } from "../../database/prisma";
 import { IBarcodeRepository } from "../../../domain/repositories/IBarcodeRepository";
 import { BarcodeRegistry } from "../../../domain/barcode/services/BarcodeRegistry";
 import { InternalBarcodeGenerator } from "../../../domain/barcode/services/InternalBarcodeGenerator";
-import { BarcodeScanDispatcher, ScanContext } from "../../../domain/barcode/services/BarcodeScanDispatcher";
 import { Barcode } from "../../../domain/barcode/valueObjects/Barcode";
 import { BarcodeSymbology } from "../../../domain/barcode/enums/BarcodeSymbology";
 import { BarcodeSource } from "../../../domain/barcode/enums/BarcodeSource";
@@ -68,27 +67,13 @@ export class BarcodeController {
       // If we just want to resolve the variantId
       const variantId = await registry.resolve(rawScan);
 
-      // We also attempt to run dispatcher routing
-      const dispatcher = new BarcodeScanDispatcher(registry);
-
-      // Register a mock handler to log or return positive response if no handler is wired
-      let handled = false;
-      dispatcher.register(context as ScanContext, {
-        handle: async (vId, raw, pay) => {
-          handled = true;
-        }
-      });
-
-      await dispatcher.dispatch(rawScan, context as ScanContext, payload || {});
-
       res.status(200).json({ 
         message: "Scan processed.", 
         variantId, 
-        context,
-        dispatched: handled
+        context
       });
     } catch (error: any) {
-      if (error instanceof DomainException || error.message.includes("not registered")) {
+      if (error instanceof DomainException) {
         res.status(404).json({ error: error.message });
       } else {
         res.status(500).json({ error: error.message });
