@@ -17,27 +17,58 @@ export class OpeningBalanceService {
       );
     }
 
+    const items = onboarding.getItems();
+
     // --- Pass 1: Guard against duplicate opening balances ---
-    for (const item of onboarding.getItems()) {
-      if (
-        await this.inventoryRepository.hasAnyEntries(
-          item.variantId,
-          onboarding.locationId
-        )
-      ) {
+    if (this.inventoryRepository.hasConflicts) {
+      const variantIds = items.map((item) => item.variantId);
+      const conflicts = await this.inventoryRepository.hasConflicts(
+        variantIds,
+        onboarding.locationId
+      );
+      if (conflicts.length > 0) {
         throw new Error(
-          `Opening balance conflict for variant ${item.variantId} at location ${onboarding.locationId}`
+          `Opening balance conflict for variant(s) ${conflicts.join(", ")} at location ${onboarding.locationId}`
         );
+      }
+    } else {
+      for (const item of items) {
+        if (
+          await this.inventoryRepository.hasAnyEntries(
+            item.variantId,
+            onboarding.locationId
+          )
+        ) {
+          throw new Error(
+            `Opening balance conflict for variant ${item.variantId} at location ${onboarding.locationId}`
+          );
+        }
       }
     }
 
     // --- Pass 2: Post ledger entries ---
+    // Pre-fetch items to avoid N+1 reads
+    const skus = items.map((item) => SKU.create(item.variantId));
+    let existingItems: InventoryItem[] = [];
+
+    if (this.inventoryRepository.findBySkus) {
+      existingItems = await this.inventoryRepository.findBySkus(skus);
+    } else {
+      for (const sku of skus) {
+        const item = await this.inventoryRepository.findBySku(sku);
+        if (item) existingItems.push(item);
+      }
+    }
+
+    const itemsBySku = new Map(existingItems.map((item) => [item.sku.getValue(), item]));
+    const itemsToSave = new Map<string, InventoryItem>();
+
     // In this simplified implementation, we update/create InventoryItems.
     // In a full implementation, we would append to a ledger.
-    for (const item of onboarding.getItems()) {
+    for (const item of items) {
       // Assuming variantId is used as SKU for simplicity in this draft
       const sku = SKU.create(item.variantId);
-      let inventoryItem = await this.inventoryRepository.findBySku(sku);
+      let inventoryItem = itemsBySku.get(sku.getValue());
 
       if (!inventoryItem) {
         inventoryItem = InventoryItem.create(
@@ -48,9 +79,20 @@ export class OpeningBalanceService {
       }
 
       inventoryItem.reconcileCount(Quantity.create(item.quantity));
-      await this.inventoryRepository.save(inventoryItem);
+      itemsBySku.set(sku.getValue(), inventoryItem);
+      itemsToSave.set(sku.getValue(), inventoryItem);
 
       // In a real system, we'd also record the unit cost and emit events
+    }
+
+    const itemsToSaveArray = Array.from(itemsToSave.values());
+
+    if (this.inventoryRepository.saveMany) {
+      await this.inventoryRepository.saveMany(itemsToSaveArray);
+    } else {
+      for (const item of itemsToSaveArray) {
+        await this.inventoryRepository.save(item);
+      }
     }
   }
 }
