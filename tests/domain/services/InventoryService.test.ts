@@ -73,4 +73,12 @@ describe("InventoryService Direct & Kit Sales", () => {
     const updatedB = await inventoryRepo.findBySku(SKU.create("COMP-B"));
     expect(updatedB?.quantity.getValue()).toBe(2);
   });
+
+  it("should throw an error when attempting to sell an empty kit", async () => {
+    const kit = new Kit("KIT-EMPTY", SKU.create("BUNDLE-EMPTY"), "Empty Kit");
+
+    await expect(service.decrementForKitSale(kit, 1, "SALE-EMPTY-1", "actor-1")).rejects.toThrow(
+      "Cannot sell a kit with no components."
+    );
+  });
 });
