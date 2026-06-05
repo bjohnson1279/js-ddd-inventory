@@ -10,3 +10,8 @@
 **Vulnerability:** Found a hardcoded fallback secret ('dummy_secret') used for verifying Shopify webhooks if the environment variable was missing.
 **Learning:** Hardcoding secrets or providing weak fallbacks undermines webhook signature verification, allowing attackers to forge webhook requests and manipulate inventory.
 **Prevention:** Fail securely by explicitly checking for required security environment variables at startup and throwing an error if they are undefined, rather than providing fallback values.
+
+## 2026-06-04 - Fix Overly Permissive CORS Policy
+**Vulnerability:** The Express app was using `app.use(cors())`, allowing cross-origin requests from any domain by default, potentially exposing authenticated APIs or private data to malicious websites.
+**Learning:** Using `cors()` without options defaults to `*` for origins. This is convenient for development but highly insecure for production as it bypasses the browser's Same-Origin Policy protections.
+**Prevention:** Always explicitly define the `origin` option in CORS configurations, typically using an environment variable like `CORS_ORIGIN` for environment-specific flexibility while defaulting to `http://localhost:3000` for local development.
