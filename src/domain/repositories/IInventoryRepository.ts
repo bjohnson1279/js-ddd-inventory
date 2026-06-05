@@ -9,4 +9,5 @@ export interface IInventoryRepository {
   saveMany?(items: InventoryItem[]): Promise<void>;
   // New method for opening balance conflict check
   hasAnyEntries(variantId: string, locationId: string): Promise<boolean>;
+  hasConflicts?(variantIds: string[], locationId: string): Promise<string[]>;
 }
