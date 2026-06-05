@@ -33,6 +33,32 @@ export class InMemoryInventoryRepository implements IInventoryRepository {
     item.clearDomainEvents();
   }
 
+  async saveMany(items: InventoryItem[]): Promise<void> {
+    if (items.length === 0) return;
+
+    for (const item of items) {
+      this.items.set(item.sku.getValue(), item);
+    }
+
+    if (this.outboxRepository) {
+      for (const item of items) {
+        const events = item.getDomainEvents();
+        for (const event of events) {
+          await this.outboxRepository.save(event);
+        }
+      }
+    } else {
+      const allEvents = items.flatMap(item => item.getDomainEvents());
+      if (allEvents.length > 0) {
+        await DomainEventDispatcher.dispatch(allEvents);
+      }
+    }
+
+    for (const item of items) {
+      item.clearDomainEvents();
+    }
+  }
+
   async hasAnyEntries(variantId: string, locationId: string): Promise<boolean> {
     // In memory we don't track location yet, so we just check if variant exists
     return this.items.has(variantId);
