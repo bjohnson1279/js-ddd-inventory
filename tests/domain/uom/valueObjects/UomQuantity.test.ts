@@ -1,24 +1,54 @@
 import { UomQuantity } from "../../../../src/domain/uom/valueObjects/UomQuantity";
-import { UnitOfMeasure } from "../../../../src/domain/uom/valueObjects/UnitOfMeasure";
-import { UomCategory } from "../../../../src/domain/uom/enums/UomCategory";
+import { StandardUnits } from "../../../../src/domain/uom/services/StandardUnits";
 
 describe("UomQuantity", () => {
-  const discreteUnit = new UnitOfMeasure("Each", "ea", UomCategory.Discrete);
+  const each = StandardUnits.each();
 
-  it("should create a valid UomQuantity with a positive amount", () => {
-    const quantity = new UomQuantity(10, discreteUnit);
-    expect(quantity.amount).toBe(10);
-    expect(quantity.unit).toBe(discreteUnit);
+  it("should create a UomQuantity with a valid positive amount", () => {
+    const qty = new UomQuantity(10, each);
+    expect(qty.amount).toBe(10);
+    expect(qty.unit.equals(each)).toBe(true);
   });
 
-  it("should create a valid UomQuantity with an amount of zero", () => {
-    const quantity = new UomQuantity(0, discreteUnit);
-    expect(quantity.amount).toBe(0);
+  it("should throw an error when created with a negative amount", () => {
+    expect(() => new UomQuantity(-5, each)).toThrow("Quantity amount cannot be negative.");
   });
 
-  it("should throw an error when initialized with a negative amount", () => {
-    expect(() => new UomQuantity(-5, discreteUnit)).toThrow(
-      "Quantity amount cannot be negative."
-    );
+  describe("add", () => {
+    it("should add two quantities with the same unit", () => {
+      const qty1 = new UomQuantity(10, each);
+      const qty2 = new UomQuantity(5, each);
+      const result = qty1.add(qty2);
+
+      expect(result.amount).toBe(15);
+      expect(result.unit.equals(each)).toBe(true);
+    });
+  });
+
+  describe("subtract", () => {
+    it("should subtract a smaller quantity from a larger one", () => {
+      const qty1 = new UomQuantity(10, each);
+      const qty2 = new UomQuantity(3, each);
+      const result = qty1.subtract(qty2);
+
+      expect(result.amount).toBe(7);
+      expect(result.unit.equals(each)).toBe(true);
+    });
+
+    it("should allow subtracting an equal quantity to reach zero", () => {
+      const qty1 = new UomQuantity(10, each);
+      const qty2 = new UomQuantity(10, each);
+      const result = qty1.subtract(qty2);
+
+      expect(result.amount).toBe(0);
+      expect(result.unit.equals(each)).toBe(true);
+    });
+
+    it("should throw an error when subtracting a larger quantity from a smaller one", () => {
+      const qty1 = new UomQuantity(5, each);
+      const qty2 = new UomQuantity(10, each);
+
+      expect(() => qty1.subtract(qty2)).toThrow("Resulting quantity would be negative.");
+    });
   });
 });

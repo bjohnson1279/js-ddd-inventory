@@ -28,4 +28,10 @@ export class InMemoryCostLayerRepository implements ICostLayerRepository {
   public async save(layer: InventoryCostLayer): Promise<void> {
     this.layers.set(layer.id, layer);
   }
+
+  public async saveMany(layers: InventoryCostLayer[]): Promise<void> {
+    for (const layer of layers) {
+      await this.save(layer);
+    }
+  }
 }
