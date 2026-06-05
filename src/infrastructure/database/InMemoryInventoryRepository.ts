@@ -34,8 +34,28 @@ export class InMemoryInventoryRepository implements IInventoryRepository {
   }
 
   async saveMany(items: InventoryItem[]): Promise<void> {
+    if (items.length === 0) return;
+
     for (const item of items) {
-      await this.save(item);
+      this.items.set(item.sku.getValue(), item);
+    }
+
+    if (this.outboxRepository) {
+      for (const item of items) {
+        const events = item.getDomainEvents();
+        for (const event of events) {
+          await this.outboxRepository.save(event);
+        }
+      }
+    } else {
+      const allEvents = items.flatMap(item => item.getDomainEvents());
+      if (allEvents.length > 0) {
+        await DomainEventDispatcher.dispatch(allEvents);
+      }
+    }
+
+    for (const item of items) {
+      item.clearDomainEvents();
     }
   }
 
