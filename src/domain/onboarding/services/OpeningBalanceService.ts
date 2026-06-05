@@ -85,10 +85,12 @@ export class OpeningBalanceService {
       // In a real system, we'd also record the unit cost and emit events
     }
 
+    const itemsToSaveArray = Array.from(itemsToSave.values());
+
     if (this.inventoryRepository.saveMany) {
-      await this.inventoryRepository.saveMany(itemsToSave);
+      await this.inventoryRepository.saveMany(itemsToSaveArray);
     } else {
-      for (const item of itemsToSave) {
+      for (const item of itemsToSaveArray) {
         await this.inventoryRepository.save(item);
       }
     }

@@ -17,6 +17,7 @@ describe("QuickBooks Online Journal Sync", () => {
   let costLayers: CostLayerService;
   let journalService: AccountingJournalService;
   let processor: OutboxProcessor;
+  let spyConsoleLog: jest.SpyInstance;
 
   beforeEach(() => {
     process.env.QUICKBOOKS_REALM_ID = "test-realm-id";
@@ -32,6 +33,8 @@ describe("QuickBooks Online Journal Sync", () => {
     DomainEventDispatcher.clearHandlers();
     DomainEventDispatcher.register("JournalEntryCreatedEvent", syncJournalToQuickBooks);
 
+    spyConsoleLog = jest.spyOn(console, "log").mockImplementation(() => {});
+
     global.fetch = jest.fn(() =>
       Promise.resolve({
         ok: true,
@@ -42,6 +45,7 @@ describe("QuickBooks Online Journal Sync", () => {
 
   afterEach(() => {
     DomainEventDispatcher.clearHandlers();
+    spyConsoleLog.mockRestore();
     jest.restoreAllMocks();
     delete process.env.QUICKBOOKS_REALM_ID;
     delete process.env.QUICKBOOKS_ACCESS_TOKEN;
@@ -75,6 +79,12 @@ describe("QuickBooks Online Journal Sync", () => {
 
     // Verify it was marked processed
     expect(pending[0].processedAt).not.toBeNull();
+
+    // Verify console log contains QuickBooks syncing details
+    const calls = spyConsoleLog.mock.calls.map(c => c[0]);
+    expect(calls.some(c => c.includes("Syncing transaction outbox event to QBO API"))).toBe(true);
+    expect(calls.some(c => c.includes("DocNumber"))).toBe(true);
+    expect(calls.some(c => c.includes("250"))).toBe(true); // check decimal mapping
 
     // Verify fetch was called with correct parameters
     expect(global.fetch).toHaveBeenCalledTimes(1);
