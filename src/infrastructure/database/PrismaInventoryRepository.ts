@@ -94,47 +94,46 @@ export class PrismaInventoryRepository implements IInventoryRepository {
 
     if (this.outboxRepository) {
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        for (const item of items) {
-          await tx.inventoryModel.upsert({
-            where: { sku: item.sku.getValue() },
-            update: { quantity: item.quantity.getValue() },
-            create: {
-              id: item.id,
-              sku: item.sku.getValue(),
-              quantity: item.quantity.getValue()
-            }
-          });
+        const operations = items.map(item => tx.inventoryModel.upsert({
+          where: { sku: item.sku.getValue() },
+          update: { quantity: item.quantity.getValue() },
+          create: {
+            id: item.id,
+            sku: item.sku.getValue(),
+            quantity: item.quantity.getValue()
+          }
+        }));
+        await Promise.all(operations);
 
+        for (const item of items) {
           const events = item.getDomainEvents();
           for (const event of events) {
             await this.outboxRepository!.save(event, tx);
           }
+          item.clearDomainEvents();
         }
       });
-      for (const item of items) {
-        item.clearDomainEvents();
-      }
     } else {
-      await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        for (const item of items) {
-          await tx.inventoryModel.upsert({
-            where: { sku: item.sku.getValue() },
-            update: { quantity: item.quantity.getValue() },
-            create: {
-              id: item.id,
-              sku: item.sku.getValue(),
-              quantity: item.quantity.getValue()
-            }
-          });
-        }
+      await this.prisma.$transaction(
+        items.map(item => this.prisma.inventoryModel.upsert({
+          where: { sku: item.sku.getValue() },
+          update: { quantity: item.quantity.getValue() },
+          create: {
+            id: item.id,
+            sku: item.sku.getValue(),
+            quantity: item.quantity.getValue()
+          }
+        }))
+      );
+
+      const allEvents = items.flatMap(item => {
+        const events = item.getDomainEvents();
+        item.clearDomainEvents();
+        return events;
       });
 
-      const allEvents = items.flatMap(item => item.getDomainEvents());
       if (allEvents.length > 0) {
         await DomainEventDispatcher.dispatch(allEvents);
-      }
-      for (const item of items) {
-        item.clearDomainEvents();
       }
     }
   }
