@@ -43,6 +43,10 @@ export class QuickBooksClient {
 
     const url = `${this.baseUrl}/${this.realmId}/journalentry`;
 
+    console.log("\n[QUICKBOOKS ONLINE INTEGRATION] Syncing transaction outbox event to QBO API...");
+    console.log(`[QUICKBOOKS ONLINE INTEGRATION] URL: ${url}`);
+    console.log(`[QUICKBOOKS ONLINE INTEGRATION] Payload:\n${JSON.stringify(qboPayload, null, 2)}\n`);
+
     const response = await fetch(url, {
       method: "POST",
       headers: {

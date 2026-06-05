@@ -21,12 +21,8 @@ export class CostLayerService {
     const activeLayers = await this.layers.getActiveLayers(variantId, "asc");
     const breakdown = this.consumeLayers(activeLayers, quantity, true);
 
-    if (this.layers.saveMany) {
-      await this.layers.saveMany(activeLayers);
-    } else {
-      for (const layer of activeLayers) {
-        await this.layers.save(layer);
-      }
+    for (const layer of activeLayers) {
+      await this.layers.save(layer);
     }
 
     return breakdown;

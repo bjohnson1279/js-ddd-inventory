@@ -790,6 +790,7 @@ function App() {
                   <button
                     className="btn btn-danger"
                     disabled={!valSku || (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0}
+                    title={!valSku ? "Select a SKU first" : (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0 ? "Insufficient stock" : undefined}
                     onClick={async () => {
                       const res = await fetch(`${API_BASE}/inventory/dispatch`, {
                         method: "POST",

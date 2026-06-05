@@ -62,6 +62,34 @@ export class PostgresInventoryRepository implements IInventoryRepository {
     ]);
   }
 
+  async saveMany(items: InventoryItem[]): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const query = `
+        INSERT INTO inventory_items (id, sku, quantity, shopify_inventory_item_id)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (sku) DO UPDATE SET
+          quantity = EXCLUDED.quantity,
+          shopify_inventory_item_id = EXCLUDED.shopify_inventory_item_id;
+      `;
+      for (const item of items) {
+        await client.query(query, [
+          item.id,
+          item.sku.getValue(),
+          item.quantity.getValue(),
+          item.shopifyInventoryItemId
+        ]);
+      }
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
+
   async hasAnyEntries(variantId: string, locationId: string): Promise<boolean> {
     // Note: For now, we use variantId as SKU in our simplified implementation
     const res = await this.pool.query('SELECT 1 FROM inventory_items WHERE sku = $1 LIMIT 1', [variantId]);

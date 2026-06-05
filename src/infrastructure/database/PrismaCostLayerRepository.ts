@@ -63,37 +63,4 @@ export class PrismaCostLayerRepository implements ICostLayerRepository {
       },
     });
   }
-
-  async saveMany(layers: InventoryCostLayer[]): Promise<void> {
-    if (layers.length === 0) return;
-
-    await this.prisma.$transaction(
-      layers.map((layer) =>
-        this.prisma.inventoryCostLayerModel.upsert({
-          where: { id: layer.id },
-          update: {
-            variantId: layer.variantId,
-            tenantId: layer.tenantId,
-            originalQuantity: layer.originalQuantity,
-            remainingQuantity: layer.remainingQuantity,
-            unitCostCents: layer.unitCostCents,
-            receivedAt: layer.receivedAt,
-            purchaseOrderId: layer.purchaseOrderId,
-            isConsumed: layer.isExhausted(),
-          },
-          create: {
-            id: layer.id,
-            variantId: layer.variantId,
-            tenantId: layer.tenantId,
-            originalQuantity: layer.originalQuantity,
-            remainingQuantity: layer.remainingQuantity,
-            unitCostCents: layer.unitCostCents,
-            receivedAt: layer.receivedAt,
-            purchaseOrderId: layer.purchaseOrderId,
-            isConsumed: layer.isExhausted(),
-          },
-        })
-      )
-    );
-  }
 }
