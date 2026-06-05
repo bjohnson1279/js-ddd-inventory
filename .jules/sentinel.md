@@ -10,3 +10,8 @@
 **Vulnerability:** The application used a wildcard CORS policy (`app.use(cors())`), allowing any origin to access the API.
 **Learning:** Wildcard CORS policies in production APIs expose the application to cross-origin attacks, allowing malicious sites to make authorized requests on behalf of users.
 **Prevention:** Always explicitly define allowed origins in CORS configurations, typically restricting access to known frontend domains and providing an environment variable (e.g., `CORS_ORIGIN`) for flexibility.
+
+## 2024-05-18 - Hardcoded Shopify API Secret Fallback
+**Vulnerability:** A hardcoded string fallback (`dummy_secret`) was used for `SHOPIFY_API_SECRET` webhook verification when the environment variable was missing.
+**Learning:** Hardcoded secrets and weak fallbacks allow attackers to easily spoof payloads if the environment variable is not explicitly provided during deployment.
+**Prevention:** Always throw an explicit error during initialization if critical security environment variables are missing, instead of silently degrading to an insecure fallback.
