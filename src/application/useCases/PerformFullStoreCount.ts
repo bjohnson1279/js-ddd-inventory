@@ -47,12 +47,11 @@ export class PerformFullStoreCount {
       itemsToSave.push(newItem);
     }
 
-    // ⚡ Bolt Performance: Use batch saveMany to prevent N+1 query connection pool exhaustion
-    // when saving the full store count. Falls back to Promise.all if saveMany is not implemented.
     if (this.inventoryRepository.saveMany) {
       await this.inventoryRepository.saveMany(itemsToSave);
     } else {
-      await Promise.all(itemsToSave.map(item => this.inventoryRepository.save(item)));
+      const savePromises: Promise<void>[] = itemsToSave.map(item => this.inventoryRepository.save(item));
+      await Promise.all(savePromises);
     }
   }
 }
