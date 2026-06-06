@@ -184,7 +184,7 @@ export class AccountingController {
     } catch (error: any) {
       if (
         error instanceof DomainException ||
-        error.message.includes("Insufficient")
+        (typeof error?.message === "string" && error.message.includes("Insufficient"))
       ) {
         res.status(400).json({ error: error.message });
       } else {
