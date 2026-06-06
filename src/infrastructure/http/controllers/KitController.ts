@@ -11,8 +11,17 @@ export class KitController {
     try {
       const { sku, name, components } = req.body;
 
-      if (!sku || !name || !Array.isArray(components) || components.length === 0) {
-        return res.status(400).json({ error: "Missing required fields (sku, name, components array)." });
+      if (
+        !sku ||
+        !name ||
+        !Array.isArray(components) ||
+        components.length === 0
+      ) {
+        return res
+          .status(400)
+          .json({
+            error: "Missing required fields (sku, name, components array).",
+          });
       }
 
       const id = Math.random().toString(36).substring(2, 11);
@@ -35,9 +44,12 @@ export class KitController {
         });
       });
 
-      res.status(201).json({ message: "Kit formula created successfully.", kitId: id, sku });
+      res
+        .status(201)
+        .json({ message: "Kit formula created successfully.", kitId: id, sku });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error(error);
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 
@@ -46,7 +58,9 @@ export class KitController {
       const { kitSku, quantity, saleId, actorId } = req.body;
 
       if (!kitSku || !quantity || !saleId || !actorId) {
-        return res.status(400).json({ error: "Missing required dispatch fields." });
+        return res
+          .status(400)
+          .json({ error: "Missing required dispatch fields." });
       }
 
       // Query database for kit composition
@@ -56,27 +70,45 @@ export class KitController {
       });
 
       if (!kitRecord) {
-        return res.status(404).json({ error: `Kit with SKU ${kitSku} not found.` });
+        return res
+          .status(404)
+          .json({ error: `Kit with SKU ${kitSku} not found.` });
       }
 
       // Reconstitute Kit aggregate
-      const kit = new Kit(kitRecord.id, SKU.create(kitRecord.sku), kitRecord.name);
+      const kit = new Kit(
+        kitRecord.id,
+        SKU.create(kitRecord.sku),
+        kitRecord.name,
+      );
       for (const comp of kitRecord.components) {
         kit.addComponent(comp.variantId, comp.quantity);
       }
 
       // Execute atomic sale via InventoryService
-      const inventoryRepo = req.app.get("inventoryRepository") as IInventoryRepository;
+      const inventoryRepo = req.app.get(
+        "inventoryRepository",
+      ) as IInventoryRepository;
       const service = new InventoryService(inventoryRepo);
 
       await service.decrementForKitSale(kit, quantity, saleId, actorId);
 
-      res.status(200).json({ message: "Kit sale dispatched successfully.", kitSku, quantity });
+      res
+        .status(200)
+        .json({
+          message: "Kit sale dispatched successfully.",
+          kitSku,
+          quantity,
+        });
     } catch (error: any) {
-      if (error instanceof DomainException || error.message.includes("Insufficient")) {
+      if (
+        error instanceof DomainException ||
+        (typeof error?.message === "string" && error.message.includes("Insufficient"))
+      ) {
         res.status(400).json({ error: error.message });
       } else {
-        res.status(500).json({ error: error.message });
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
       }
     }
   }
@@ -88,7 +120,8 @@ export class KitController {
       });
       res.status(200).json(records);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error(error);
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 }
