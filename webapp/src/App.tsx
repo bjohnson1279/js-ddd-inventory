@@ -976,7 +976,7 @@ function App() {
             </div>
           </form>
 
-          {onboardingMsg && <div className={`feedback-msg ${onboardingMsg.type}`}>{onboardingMsg.text}</div>}
+          {onboardingMsg && <div className={`feedback-msg ${onboardingMsg.type}`} role="status" aria-live="polite">{onboardingMsg.text}</div>}
         </div>
       )}
 
@@ -1062,7 +1062,7 @@ function App() {
               </button>
             </form>
 
-            {barcodeMsg && <div className={`feedback-msg ${barcodeMsg.type}`}>{barcodeMsg.text}</div>}
+            {barcodeMsg && <div className={`feedback-msg ${barcodeMsg.type}`} role="status" aria-live="polite">{barcodeMsg.text}</div>}
           </div>
 
           {/* Catalog Registry & Simulator */}
@@ -1233,7 +1233,7 @@ function App() {
               </button>
             </div>
 
-            {serialMsg && <div className={`feedback-msg ${serialMsg.type}`}>{serialMsg.text}</div>}
+            {serialMsg && <div className={`feedback-msg ${serialMsg.type}`} role="status" aria-live="polite">{serialMsg.text}</div>}
           </div>
 
           {/* Directory & audit timeline */}
@@ -1414,7 +1414,7 @@ function App() {
               </div>
             </form>
 
-            {kitMsg && <div className={`feedback-msg ${kitMsg.type}`}>{kitMsg.text}</div>}
+            {kitMsg && <div className={`feedback-msg ${kitMsg.type}`} role="status" aria-live="polite">{kitMsg.text}</div>}
           </div>
 
           {/* Active formulas & Dispatcher POS sales */}
@@ -1617,7 +1617,7 @@ function App() {
               </button>
 
               {tenantMsg && (
-                <div className={`feedback-msg ${tenantMsg.type}`} style={{ marginTop: "12px" }}>
+                <div className={`feedback-msg ${tenantMsg.type}`} role="status" aria-live="polite" style={{ marginTop: "12px" }}>
                   {tenantMsg.text}
                 </div>
               )}
@@ -1723,7 +1723,7 @@ function App() {
               )}
             </div>
             
-            {bookkeepingMsg && <div className={`feedback-msg ${bookkeepingMsg.type}`}>{bookkeepingMsg.text}</div>}
+            {bookkeepingMsg && <div className={`feedback-msg ${bookkeepingMsg.type}`} role="status" aria-live="polite">{bookkeepingMsg.text}</div>}
           </div>
           </div>
 
