@@ -78,7 +78,7 @@ export class SerialController {
     } catch (error: any) {
       if (
         error instanceof DomainException ||
-        error.message.includes("not found")
+        (typeof error?.message === "string" && error.message.includes("not found"))
       ) {
         res.status(400).json({ error: error.message });
       } else {
