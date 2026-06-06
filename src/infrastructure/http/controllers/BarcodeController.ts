@@ -115,7 +115,7 @@ export class BarcodeController {
     } catch (error: any) {
       if (
         error instanceof DomainException ||
-        error.message.includes("not registered")
+        (typeof error?.message === "string" && error.message.includes("not registered"))
       ) {
         res.status(404).json({ error: error.message });
       } else {
