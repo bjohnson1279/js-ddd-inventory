@@ -220,20 +220,12 @@ function App() {
   const fetchAllData = async () => {
     const start = performance.now();
     try {
-      const [invRes, barcodeRes, serialRes, kitRes, ledgerRes] = await Promise.all([
-        fetch(`${API_BASE}/inventory`),
-        fetch(`${API_BASE}/barcodes`),
-        fetch(`${API_BASE}/serials`),
-        fetch(`${API_BASE}/kits`),
-        fetch(`${API_BASE}/accounting/ledger?tenantId=${tenantId}`)
-      ]);
-
       const [invData, barcodeData, serialData, kitData, ledgerData] = await Promise.all([
-        invRes.ok ? invRes.json() : [],
-        barcodeRes.ok ? barcodeRes.json() : [],
-        serialRes.ok ? serialRes.json() : [],
-        kitRes.ok ? kitRes.json() : [],
-        ledgerRes.ok ? ledgerRes.json() : []
+        fetch(`${API_BASE}/inventory`).then(res => res.ok ? res.json() : []).catch(() => []),
+        fetch(`${API_BASE}/barcodes`).then(res => res.ok ? res.json() : []).catch(() => []),
+        fetch(`${API_BASE}/serials`).then(res => res.ok ? res.json() : []).catch(() => []),
+        fetch(`${API_BASE}/kits`).then(res => res.ok ? res.json() : []).catch(() => []),
+        fetch(`${API_BASE}/accounting/ledger?tenantId=${tenantId}`).then(res => res.ok ? res.json() : []).catch(() => [])
       ]);
 
       setInventoryList(invData);
