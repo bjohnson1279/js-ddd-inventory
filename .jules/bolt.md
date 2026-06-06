@@ -30,3 +30,6 @@
 ## 2024-06-05 - Batch Database Operations
 **Learning:** Calling independent database operations inside `Promise.all()` (like calling `.save()` inside an unbounded loop) causes database connection pool exhaustion when working with large payloads like store count events. Using `.saveMany()` is safer and more performant.
 **Action:** When updating multiple records in CQRS architectures, prefer batch repository methods like `saveMany` over bounding independent loops. Always implement fallback support for mocks that lack the batch method.
+## 2026-06-06 - [Optimize Sequential Fetching]
+**Learning:** In initial dashboard loading sequences or data valuation comparisons that query multiple independent endpoints, sequential `fetch` calls cause unnecessary request waterfalls and latency.
+**Action:** Use `Promise.all()` to run independent data-fetching requests concurrently to drastically reduce overall network time.

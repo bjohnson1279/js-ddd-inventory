@@ -220,32 +220,23 @@ function App() {
   const fetchAllData = async () => {
     const start = performance.now();
     try {
-      // 1. Fetch Inventory levels
-      const invRes = await fetch(`${API_BASE}/inventory`);
-      const invData = invRes.ok ? await invRes.json() : [];
+      const [invData, barcodeData, serialData, kitData, ledgerData] = await Promise.all([
+        fetch(`${API_BASE}/inventory`).then(res => res.ok ? res.json() : []).catch(() => []),
+        fetch(`${API_BASE}/barcodes`).then(res => res.ok ? res.json() : []).catch(() => []),
+        fetch(`${API_BASE}/serials`).then(res => res.ok ? res.json() : []).catch(() => []),
+        fetch(`${API_BASE}/kits`).then(res => res.ok ? res.json() : []).catch(() => []),
+        fetch(`${API_BASE}/accounting/ledger?tenantId=${tenantId}`).then(res => res.ok ? res.json() : []).catch(() => [])
+      ]);
+
       setInventoryList(invData);
-
-      // 2. Fetch Barcodes
-      const barcodeRes = await fetch(`${API_BASE}/barcodes`);
-      const barcodeData = barcodeRes.ok ? await barcodeRes.json() : [];
       setBarcodeList(barcodeData);
-
-      // 3. Fetch Serials
-      const serialRes = await fetch(`${API_BASE}/serials`);
-      const serialData = serialRes.ok ? await serialRes.json() : [];
       setSerialList(serialData);
 
-      // 4. Fetch Kits
-      const kitRes = await fetch(`${API_BASE}/kits`);
-      const kitData = kitRes.ok ? await kitRes.json() : [];
       setKitList(kitData);
       if (kitData.length > 0 && !sellKitSku) {
         setSellKitSku(kitData[0].sku);
       }
 
-      // 5. Fetch Ledger (Tenant Scoped)
-      const ledgerRes = await fetch(`${API_BASE}/accounting/ledger?tenantId=${tenantId}`);
-      const ledgerData = ledgerRes.ok ? await ledgerRes.json() : [];
       setJournalEntries(ledgerData);
 
       const end = performance.now();
@@ -300,11 +291,15 @@ function App() {
   const triggerValuationComparison = async (sku: string, qty: number) => {
     setComparisonData((prev) => ({ ...(prev || { fifo: 0, wac: 0 }), loading: true }));
     try {
-      const fifoRes = await fetch(`${API_BASE}/accounting/valuation/${sku}?quantity=${qty}&method=fifo&tenantId=${tenantId}`);
-      const wacRes = await fetch(`${API_BASE}/accounting/valuation/${sku}?quantity=${qty}&method=wac&tenantId=${tenantId}`);
+      const [fifoRes, wacRes] = await Promise.all([
+        fetch(`${API_BASE}/accounting/valuation/${sku}?quantity=${qty}&method=fifo&tenantId=${tenantId}`),
+        fetch(`${API_BASE}/accounting/valuation/${sku}?quantity=${qty}&method=wac&tenantId=${tenantId}`)
+      ]);
       
-      const fifoVal = fifoRes.ok ? await fifoRes.json() : null;
-      const wacVal = wacRes.ok ? await wacRes.json() : null;
+      const [fifoVal, wacVal] = await Promise.all([
+        fifoRes.ok ? fifoRes.json() : null,
+        wacRes.ok ? wacRes.json() : null
+      ]);
 
       setComparisonData({
         fifo: fifoVal ? fifoVal.totalCostCents / 100 : 0,
