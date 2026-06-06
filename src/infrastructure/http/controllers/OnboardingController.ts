@@ -10,13 +10,15 @@ export class OnboardingController {
       const { locationId, asOfDate, items, actorId } = req.body;
 
       if (!locationId || !asOfDate || !Array.isArray(items)) {
-        return res.status(400).json({ error: "Missing required onboarding data" });
+        return res
+          .status(400)
+          .json({ error: "Missing required onboarding data" });
       }
 
       const onboarding = new StockOnboarding(
         Date.now().toString(),
         locationId,
-        new Date(asOfDate)
+        new Date(asOfDate),
       );
 
       for (const item of items) {

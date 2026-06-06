@@ -8,15 +8,20 @@ import { DomainException } from "../../../domain/exceptions/DomainException";
 
 export class SerialController {
   private static getService(req: Request): SerializedInventoryService {
-    const serials = req.app.get("serializedItemRepository") as ISerializedItemRepository;
-    const inventory = req.app.get("inventoryRepository") as IInventoryRepository;
+    const serials = req.app.get(
+      "serializedItemRepository",
+    ) as ISerializedItemRepository;
+    const inventory = req.app.get(
+      "inventoryRepository",
+    ) as IInventoryRepository;
     return new SerializedInventoryService(serials, inventory);
   }
 
   static async register(req: Request, res: Response) {
     try {
       const service = SerialController.getService(req);
-      const { serialNumber, variantId, tenantId, locationId, actorId } = req.body;
+      const { serialNumber, variantId, tenantId, locationId, actorId } =
+        req.body;
 
       if (!serialNumber || !variantId || !locationId || !actorId) {
         return res.status(400).json({ error: "Missing registration fields." });
@@ -28,15 +33,22 @@ export class SerialController {
         variantId,
         tenantId || "DEFAULT",
         locationId,
-        actorId
+        actorId,
       );
 
-      res.status(201).json({ message: "Serial number registered.", id: item.id, serialNumber: item.serialNumber.value });
+      res
+        .status(201)
+        .json({
+          message: "Serial number registered.",
+          id: item.id,
+          serialNumber: item.serialNumber.value,
+        });
     } catch (error: any) {
       if (error instanceof DomainException) {
         res.status(400).json({ error: error.message, type: error.name });
       } else {
-        res.status(500).json({ error: error.message });
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
       }
     }
   }
@@ -44,7 +56,8 @@ export class SerialController {
   static async receive(req: Request, res: Response) {
     try {
       const service = SerialController.getService(req);
-      const { serialNumber, tenantId, locationId, purchaseOrderId, actorId } = req.body;
+      const { serialNumber, tenantId, locationId, purchaseOrderId, actorId } =
+        req.body;
 
       if (!serialNumber || !locationId || !purchaseOrderId || !actorId) {
         return res.status(400).json({ error: "Missing receipt parameters." });
@@ -56,15 +69,21 @@ export class SerialController {
         tenantId || "DEFAULT",
         locationId,
         purchaseOrderId,
-        actorId
+        actorId,
       );
 
-      res.status(200).json({ message: "Serial number received and stock incremented." });
+      res
+        .status(200)
+        .json({ message: "Serial number received and stock incremented." });
     } catch (error: any) {
-      if (error instanceof DomainException || error.message.includes("not found")) {
+      if (
+        error instanceof DomainException ||
+        error.message.includes("not found")
+      ) {
         res.status(400).json({ error: error.message });
       } else {
-        res.status(500).json({ error: error.message });
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
       }
     }
   }
@@ -79,19 +98,20 @@ export class SerialController {
       }
 
       const serial = new SerialNumber(serialNumber);
-      await service.sell(
-        serial,
-        tenantId || "DEFAULT",
-        saleId,
-        actorId
-      );
+      await service.sell(serial, tenantId || "DEFAULT", saleId, actorId);
 
-      res.status(200).json({ message: "Serial number sold and stock decremented." });
+      res
+        .status(200)
+        .json({ message: "Serial number sold and stock decremented." });
     } catch (error: any) {
-      if (error instanceof DomainException || error.message.includes("not found")) {
+      if (
+        error instanceof DomainException ||
+        error.message.includes("not found")
+      ) {
         res.status(400).json({ error: error.message });
       } else {
-        res.status(500).json({ error: error.message });
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
       }
     }
   }
@@ -110,12 +130,13 @@ export class SerialController {
         serial,
         tenantId || "DEFAULT",
         returnId,
-        actorId
+        actorId,
       );
 
       res.status(200).json({ message: "Serial return accepted." });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error(error);
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 
@@ -129,34 +150,38 @@ export class SerialController {
       }
 
       const serial = new SerialNumber(serialNumber);
-      await service.restock(
-        serial,
-        tenantId || "DEFAULT",
-        returnId,
-        actorId
-      );
+      await service.restock(serial, tenantId || "DEFAULT", returnId, actorId);
 
-      res.status(200).json({ message: "Serial number restocked and stock incremented." });
+      res
+        .status(200)
+        .json({ message: "Serial number restocked and stock incremented." });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error(error);
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 
   static async getHistory(req: Request, res: Response) {
     try {
-      const serials = req.app.get("serializedItemRepository") as ISerializedItemRepository;
+      const serials = req.app.get(
+        "serializedItemRepository",
+      ) as ISerializedItemRepository;
       const { serialNumber } = req.params;
       const tenantId = (req.query.tenantId as string) || "DEFAULT";
 
       if (!serialNumber) {
-        return res.status(400).json({ error: "Missing serial number parameter." });
+        return res
+          .status(400)
+          .json({ error: "Missing serial number parameter." });
       }
 
       const serial = new SerialNumber(serialNumber);
       const item = await serials.findBySerial(serial, tenantId);
 
       if (!item) {
-        return res.status(404).json({ error: `Serial number ${serialNumber} not registered.` });
+        return res
+          .status(404)
+          .json({ error: `Serial number ${serialNumber} not registered.` });
       }
 
       res.status(200).json({
@@ -175,7 +200,8 @@ export class SerialController {
         })),
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error(error);
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 
@@ -201,10 +227,11 @@ export class SerialController {
             referenceId: t.referenceId,
             occurredAt: t.transitionedAt,
           })),
-        }))
+        })),
       );
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error(error);
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 }

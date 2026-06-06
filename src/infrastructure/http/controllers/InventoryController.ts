@@ -18,7 +18,8 @@ export class InventoryController {
       if (error instanceof DomainException) {
         res.status(400).json({ error: error.message, type: error.name });
       } else {
-        res.status(500).json({ error: error.message });
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
       }
     }
   }
@@ -34,7 +35,8 @@ export class InventoryController {
       if (error instanceof DomainException) {
         res.status(400).json({ error: error.message, type: error.name });
       } else {
-        res.status(500).json({ error: error.message });
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
       }
     }
   }
@@ -50,7 +52,8 @@ export class InventoryController {
       if (error instanceof DomainException) {
         res.status(400).json({ error: error.message, type: error.name });
       } else {
-        res.status(500).json({ error: error.message });
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
       }
     }
   }
@@ -60,7 +63,9 @@ export class InventoryController {
       const repository = req.app.get("repository") as IInventoryRepository;
       const counts = req.body.counts;
       if (!Array.isArray(counts)) {
-        return res.status(400).json({ error: "Expected 'counts' to be an array" });
+        return res
+          .status(400)
+          .json({ error: "Expected 'counts' to be an array" });
       }
       const performFullStoreCount = new PerformFullStoreCount(repository);
       await performFullStoreCount.execute(counts);
@@ -69,7 +74,8 @@ export class InventoryController {
       if (error instanceof DomainException) {
         res.status(400).json({ error: error.message, type: error.name });
       } else {
-        res.status(500).json({ error: error.message });
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
       }
     }
   }
@@ -83,10 +89,11 @@ export class InventoryController {
           id: item.id,
           sku: item.sku.getValue(),
           quantity: item.quantity.getValue(),
-        }))
+        })),
       );
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error(error);
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 }

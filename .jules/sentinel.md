@@ -44,3 +44,8 @@
 **Vulnerability:** The application was missing a global rate limiter, allowing for potential DoS and brute-force attacks via unbounded API calls from single IPs.
 **Learning:** Default Express applications do not come with any built-in rate limiting protections, making them vulnerable by default.
 **Prevention:** Always implement a global rate limiter using libraries like `express-rate-limit`. Expose configuration to environment variables (e.g., `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX`) to provide deployment flexibility and allow different environments to scale limits appropriately.
+
+## 2026-06-06 - Secure Error Messages
+**Vulnerability:** Controller catch blocks were returning the raw `error.message` directly to the client on 500 errors.
+**Learning:** Passing internal error messages to the client on a 500 status code can unintentionally leak sensitive system details, internal paths, or unhandled states.
+**Prevention:** Always return a generic error message (like 'Internal server error') for 500 status codes to prevent information disclosure, and ensure the actual error details are logged securely server-side.

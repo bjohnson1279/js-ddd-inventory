@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 import { PrismaInventoryRepository } from "./infrastructure/database/PrismaInventoryRepository";
 import { PrismaBarcodeRepository } from "./infrastructure/database/PrismaBarcodeRepository";
@@ -54,6 +55,7 @@ const limiter = rateLimit({
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
+app.use(helmet());
 app.use(cors({ origin: allowedOrigins }));
 app.set("trust proxy", 1);
 app.use(limiter);
