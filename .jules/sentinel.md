@@ -49,3 +49,7 @@
 **Vulnerability:** Controller catch blocks were returning the raw `error.message` directly to the client on 500 errors.
 **Learning:** Passing internal error messages to the client on a 500 status code can unintentionally leak sensitive system details, internal paths, or unhandled states.
 **Prevention:** Always return a generic error message (like 'Internal server error') for 500 status codes to prevent information disclosure, and ensure the actual error details are logged securely server-side.
+## 2026-06-07 - Information Exposure in QuickBooks Client
+**Vulnerability:** Sensitive business data (journal entry payloads) and integration URLs were being logged to the console.
+**Learning:** Console logging of HTTP request payloads, especially those containing domain events or financial data, can inadvertently leak sensitive information to observability tools or local terminals.
+**Prevention:** Avoid verbose console logging in production services. If logging is necessary, ensure structured logs are used and payloads are sanitized/omitted.
