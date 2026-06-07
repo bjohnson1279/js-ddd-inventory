@@ -24,9 +24,9 @@ export class CostLayerService {
     if (this.layers.saveMany) {
       await this.layers.saveMany(activeLayers);
     } else {
-      for (const layer of activeLayers) {
-        await this.layers.save(layer);
-      }
+      await Promise.all(
+        activeLayers.map((layer) => this.layers.save(layer))
+      );
     }
 
     return breakdown;
