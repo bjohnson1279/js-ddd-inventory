@@ -28,9 +28,9 @@ export class ShopifyWebhookController {
       return;
     }
 
-    const rawBody = JSON.stringify(req.body);
+    const rawBody = (req as any).rawBody;
 
-    if (!this.security.validateHmac(rawBody, hmac)) {
+    if (!rawBody || !this.security.validateHmac(rawBody.toString("utf8"), hmac)) {
       res.status(401).send("Invalid HMAC signature");
       return;
     }
