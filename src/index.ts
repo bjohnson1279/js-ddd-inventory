@@ -59,7 +59,11 @@ app.use(helmet());
 app.use(cors({ origin: allowedOrigins }));
 app.set("trust proxy", 1);
 app.use(limiter);
-app.use(express.json());
+app.use(express.json({
+  verify: (req: any, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 
 // Register Domain Event Handlers
 DomainEventDispatcher.register("StockDepletedEvent", alertPurchasingOnStockDepleted);

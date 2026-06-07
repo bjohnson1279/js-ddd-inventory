@@ -53,3 +53,8 @@
 **Vulnerability:** Sensitive business data (journal entry payloads) and integration URLs were being logged to the console.
 **Learning:** Console logging of HTTP request payloads, especially those containing domain events or financial data, can inadvertently leak sensitive information to observability tools or local terminals.
 **Prevention:** Avoid verbose console logging in production services. If logging is necessary, ensure structured logs are used and payloads are sanitized/omitted.
+
+## 2026-06-07 - Fix Shopify Webhook Body Parsing for HMAC Validation
+**Vulnerability:** The `ShopifyWebhookController` used `JSON.stringify(req.body)` to reconstruct the raw payload for HMAC signature validation.
+**Learning:** Reconstructing the body from parsed JSON is flawed and alters the original buffer because JSON stringification may change ordering, spacing, or formatting from the original request. This can cause valid signatures to be rejected or obscure true forgery.
+**Prevention:** Always use the raw, unparsed HTTP request buffer for cryptographic signature validation by hooking into middleware mechanisms (like the `verify` option in `express.json()`) to capture and store the raw payload before it is parsed.
