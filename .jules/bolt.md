@@ -33,3 +33,7 @@
 ## 2026-06-06 - [Optimize Sequential Fetching]
 **Learning:** In initial dashboard loading sequences or data valuation comparisons that query multiple independent endpoints, sequential `fetch` calls cause unnecessary request waterfalls and latency.
 **Action:** Use `Promise.all()` to run independent data-fetching requests concurrently to drastically reduce overall network time.
+
+## 2026-06-07 - Resolve N+1 write in InventoryService Kit Sales
+**Learning:** Replaced bounded sequential reads over the loop with Promise.all batch write over the same data scope, and preserved atomicity and transactional integrity via Prisma.$transaction. Ensuring a fallback sequential implementation exists within the Domain Service guarantees interface backward compatibility for other components.
+**Action:** Utilize chunking and single transaction batches for multiple aggregate modifications, especially for domain operations mapping inputs 1:N items like "Kits".
