@@ -50,10 +50,21 @@ describe("UomQuantity Value Object", () => {
     expect(() => qty1.subtract(qty2)).toThrow("Resulting quantity would be negative.");
   });
 
+  it("should throw an error when subtracting a larger continuous quantity from a smaller one", () => {
+    const qty1 = new UomQuantity(1.5, continuousUnit);
+    const qty2 = new UomQuantity(1.6, continuousUnit);
+    expect(() => qty1.subtract(qty2)).toThrow("Resulting quantity would be negative.");
+  });
+
   it("should multiply quantity by a factor", () => {
     const qty = new UomQuantity(10, discreteUnit);
     const result = qty.multiplyBy(2.5);
     expect(result.amount).toBe(25);
+  });
+
+  it("should throw an error when multiplied by a negative factor", () => {
+    const qty = new UomQuantity(10, discreteUnit);
+    expect(() => qty.multiplyBy(-2)).toThrow("Quantity amount cannot be negative.");
   });
 
   describe("toBaseInteger()", () => {
