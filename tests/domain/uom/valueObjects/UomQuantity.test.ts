@@ -13,6 +13,11 @@ describe("UomQuantity Value Object", () => {
     expect(qty.unit.equals(discreteUnit)).toBe(true);
   });
 
+  it("should allow an amount of exactly zero", () => {
+    const qty = new UomQuantity(0, discreteUnit);
+    expect(qty.amount).toBe(0);
+  });
+
   it("should throw an error for negative amount", () => {
     expect(() => new UomQuantity(-5, discreteUnit)).toThrow("Quantity amount cannot be negative.");
   });
@@ -54,6 +59,11 @@ describe("UomQuantity Value Object", () => {
     const qty = new UomQuantity(10, discreteUnit);
     const result = qty.multiplyBy(2.5);
     expect(result.amount).toBe(25);
+  });
+
+  it("should throw an error when multiplied by a negative factor", () => {
+    const qty = new UomQuantity(10, discreteUnit);
+    expect(() => qty.multiplyBy(-2.5)).toThrow("Quantity amount cannot be negative.");
   });
 
   describe("toBaseInteger()", () => {
