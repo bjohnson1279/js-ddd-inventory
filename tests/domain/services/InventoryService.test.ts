@@ -34,6 +34,14 @@ describe("InventoryService Direct & Kit Sales", () => {
     );
   });
 
+  it("should throw an error if attempting to sell an empty kit", async () => {
+    const kit = new Kit("KIT-EMPTY", SKU.create("BUNDLE-EMPTY"), "Empty Kit");
+
+    await expect(service.decrementForKitSale(kit, 1, "SALE-EMPTY-KIT", "actor-1")).rejects.toThrow(
+      "Cannot sell a kit with no components."
+    );
+  });
+
   it("should decrement all component quantities for a kit sale", async () => {
     const compA = InventoryItem.create("1", SKU.create("COMP-A"), Quantity.create(10));
     const compB = InventoryItem.create("2", SKU.create("COMP-B"), Quantity.create(20));
