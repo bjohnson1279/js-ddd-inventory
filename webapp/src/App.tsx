@@ -1551,6 +1551,7 @@ function App() {
                   value={tenantCostingMethod}
                   onChange={(e) => setTenantCostingMethod(e.target.value)}
                   disabled={tenantAccountingMethod === "cash"}
+                  title={tenantAccountingMethod === "cash" ? "Costing methods do not apply to Cash Basis accounting" : undefined}
                 >
                   <option value="fifo">FIFO (First In, First Out)</option>
                   <option value="lifo">LIFO (Last In, First Out)</option>
