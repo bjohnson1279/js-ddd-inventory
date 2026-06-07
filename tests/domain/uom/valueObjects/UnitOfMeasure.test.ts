@@ -45,6 +45,11 @@ describe("UnitOfMeasure Value Object", () => {
     expect(uom1.isCompatibleWith(uom2)).toBe(false);
   });
 
+  it("should return true for isCompatibleWith when comparing the same instance", () => {
+    const uom = new UnitOfMeasure("Case", "cs", UomCategory.Discrete);
+    expect(uom.isCompatibleWith(uom)).toBe(true);
+  });
+
   it("should return correct string representation", () => {
     const uom = new UnitOfMeasure("Case", "cs", UomCategory.Discrete);
     expect(uom.toString()).toBe("Case (cs)");
