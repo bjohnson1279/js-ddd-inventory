@@ -75,6 +75,14 @@ describe("UomQuantity Value Object", () => {
         "Discrete quantity must be a whole number; got 10.5 ea."
       );
     });
+
+    it("should throw an error for non-whole discrete quantities resulting from math operations", () => {
+      const qty = new UomQuantity(10, discreteUnit);
+      const scaledQty = qty.multiplyBy(1.001);
+      expect(() => scaledQty.toBaseInteger()).toThrow(
+        `Discrete quantity must be a whole number; got ${10 * 1.001} ea.`
+      );
+    });
   });
 
   it("should convert to string representation", () => {
