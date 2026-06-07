@@ -6,6 +6,7 @@ import { IncompatibleUnitsException } from "../../../../src/domain/uom/exception
 describe("UomQuantity Value Object", () => {
   const discreteUnit = new UnitOfMeasure("Each", "ea", UomCategory.Discrete);
   const continuousUnit = new UnitOfMeasure("Gram", "g", UomCategory.Weight);
+  const volumeUnit = new UnitOfMeasure("Milliliter", "ml", UomCategory.Volume);
 
   it("should create a valid UomQuantity", () => {
     const qty = new UomQuantity(10, discreteUnit);
@@ -62,8 +63,15 @@ describe("UomQuantity Value Object", () => {
       expect(qty.toBaseInteger()).toBe(10);
     });
 
-    it("should throw an error when called on a non-discrete quantity", () => {
+    it("should throw an error when called on a continuous (Weight) quantity", () => {
       const qty = new UomQuantity(10, continuousUnit);
+      expect(() => qty.toBaseInteger()).toThrow(
+        "Use toBaseInteger() only for discrete quantities. Continuous quantities should be converted to their smallest unit (g, ml) first."
+      );
+    });
+
+    it("should throw an error when called on a continuous (Volume) quantity", () => {
+      const qty = new UomQuantity(10, volumeUnit);
       expect(() => qty.toBaseInteger()).toThrow(
         "Use toBaseInteger() only for discrete quantities. Continuous quantities should be converted to their smallest unit (g, ml) first."
       );
