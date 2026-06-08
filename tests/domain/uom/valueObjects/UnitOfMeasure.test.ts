@@ -19,6 +19,11 @@ describe("UnitOfMeasure Value Object", () => {
     expect(() => new UnitOfMeasure("Case", "  ", UomCategory.Discrete)).toThrow("UnitOfMeasure name and abbreviation must be non-empty.");
   });
 
+  it("should throw an error for empty name and abbreviation", () => {
+    expect(() => new UnitOfMeasure("", "", UomCategory.Discrete)).toThrow("UnitOfMeasure name and abbreviation must be non-empty.");
+    expect(() => new UnitOfMeasure("   ", "  ", UomCategory.Discrete)).toThrow("UnitOfMeasure name and abbreviation must be non-empty.");
+  });
+
   it("should return true for equals when name and category match", () => {
     const uom1 = new UnitOfMeasure("Case", "cs", UomCategory.Discrete);
     const uom2 = new UnitOfMeasure("Case", "c", UomCategory.Discrete); // different abbreviation
