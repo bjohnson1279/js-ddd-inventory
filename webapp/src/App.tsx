@@ -950,7 +950,7 @@ function App() {
                           <button
                             type="button"
                             className="btn btn-danger btn-xs"
-                            aria-label={`Remove onboarding row ${index + 1}`}
+                            aria-label={item.sku ? "Remove onboarding row for " + item.sku : "Remove onboarding row " + (index + 1)}
                             onClick={() => setOnboardingItems(onboardingItems.filter((_, i) => i !== index))}
                           >
                             Remove
