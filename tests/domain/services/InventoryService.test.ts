@@ -34,12 +34,20 @@ describe("InventoryService Direct & Kit Sales", () => {
     );
   });
 
-  it("should throw an error if attempting to sell an empty kit", async () => {
+  it("should throw an error if attempting to sell an empty kit without making repository calls", async () => {
     const kit = new Kit("KIT-EMPTY", SKU.create("BUNDLE-EMPTY"), "Empty Kit");
+
+    const findBySkuSpy = jest.spyOn(inventoryRepo, "findBySku");
+    const saveSpy = jest.spyOn(inventoryRepo, "save");
+    const saveManySpy = jest.spyOn(inventoryRepo, "saveMany");
 
     await expect(service.decrementForKitSale(kit, 1, "SALE-EMPTY-KIT", "actor-1")).rejects.toThrow(
       "Cannot sell a kit with no components."
     );
+
+    expect(findBySkuSpy).not.toHaveBeenCalled();
+    expect(saveSpy).not.toHaveBeenCalled();
+    expect(saveManySpy).not.toHaveBeenCalled();
   });
 
   it("should decrement all component quantities for a kit sale", async () => {
@@ -80,13 +88,5 @@ describe("InventoryService Direct & Kit Sales", () => {
 
     const updatedB = await inventoryRepo.findBySku(SKU.create("COMP-B"));
     expect(updatedB?.quantity.getValue()).toBe(2);
-  });
-
-  it("should throw an error when attempting to sell an empty kit", async () => {
-    const kit = new Kit("KIT-EMPTY", SKU.create("BUNDLE-EMPTY"), "Empty Kit");
-
-    await expect(service.decrementForKitSale(kit, 1, "SALE-EMPTY", "actor-1")).rejects.toThrow(
-      "Cannot sell a kit with no components."
-    );
   });
 });
