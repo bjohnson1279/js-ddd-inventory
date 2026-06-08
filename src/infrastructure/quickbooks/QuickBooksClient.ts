@@ -43,6 +43,7 @@ export class QuickBooksClient {
 
     const url = `${this.baseUrl}/${this.realmId}/journalentry`;
 
+    // TODO: Implement structured logging for API requests and payloads
     const response = await fetch(url, {
       method: "POST",
       headers: {

@@ -6,11 +6,17 @@ import { IncompatibleUnitsException } from "../../../../src/domain/uom/exception
 describe("UomQuantity Value Object", () => {
   const discreteUnit = new UnitOfMeasure("Each", "ea", UomCategory.Discrete);
   const continuousUnit = new UnitOfMeasure("Gram", "g", UomCategory.Weight);
+  const volumeUnit = new UnitOfMeasure("Milliliter", "ml", UomCategory.Volume);
 
   it("should create a valid UomQuantity", () => {
     const qty = new UomQuantity(10, discreteUnit);
     expect(qty.amount).toBe(10);
     expect(qty.unit.equals(discreteUnit)).toBe(true);
+  });
+
+  it("should allow an amount of exactly zero", () => {
+    const qty = new UomQuantity(0, discreteUnit);
+    expect(qty.amount).toBe(0);
   });
 
   it("should throw an error for negative amount", () => {
@@ -73,8 +79,15 @@ describe("UomQuantity Value Object", () => {
       expect(qty.toBaseInteger()).toBe(10);
     });
 
-    it("should throw an error when called on a non-discrete quantity", () => {
+    it("should throw an error when called on a continuous (Weight) quantity", () => {
       const qty = new UomQuantity(10, continuousUnit);
+      expect(() => qty.toBaseInteger()).toThrow(
+        "Use toBaseInteger() only for discrete quantities. Continuous quantities should be converted to their smallest unit (g, ml) first."
+      );
+    });
+
+    it("should throw an error when called on a continuous (Volume) quantity", () => {
+      const qty = new UomQuantity(10, volumeUnit);
       expect(() => qty.toBaseInteger()).toThrow(
         "Use toBaseInteger() only for discrete quantities. Continuous quantities should be converted to their smallest unit (g, ml) first."
       );
@@ -84,6 +97,21 @@ describe("UomQuantity Value Object", () => {
       const qty = new UomQuantity(10.5, discreteUnit);
       expect(() => qty.toBaseInteger()).toThrow(
         "Discrete quantity must be a whole number; got 10.5 ea."
+      );
+    });
+
+    it("should throw an error for non-whole discrete quantities less than 1", () => {
+      const qty = new UomQuantity(0.5, discreteUnit);
+      expect(() => qty.toBaseInteger()).toThrow(
+        "Discrete quantity must be a whole number; got 0.5 ea."
+      );
+    });
+
+    it("should throw an error for non-whole discrete quantities resulting from math operations", () => {
+      const qty = new UomQuantity(10, discreteUnit);
+      const scaledQty = qty.multiplyBy(1.001);
+      expect(() => scaledQty.toBaseInteger()).toThrow(
+        `Discrete quantity must be a whole number; got ${10 * 1.001} ea.`
       );
     });
   });

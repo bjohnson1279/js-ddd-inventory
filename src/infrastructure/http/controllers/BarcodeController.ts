@@ -94,17 +94,21 @@ export class BarcodeController {
       const variantId = await registry.resolve(rawScan);
 
       // We also attempt to run dispatcher routing
+      // The dispatcher is intentionally instantiated and dispatched here
+      // to route scans to appropriate workflow handlers if registered.
       const dispatcher = new BarcodeScanDispatcher(registry);
 
-      // Register a mock handler to log or return positive response if no handler is wired
       let handled = false;
-      dispatcher.register(context as ScanContext, {
-        handle: async (vId, raw, pay) => {
-          handled = true;
-        },
-      });
-
-      await dispatcher.dispatch(rawScan, context as ScanContext, payload || {});
+      try {
+        await dispatcher.dispatch(rawScan, context as ScanContext, payload || {});
+        handled = true;
+      } catch (err: any) {
+        // If no explicit handler is registered for this context, that's okay, we swallow the error
+        // to maintain backward compatibility with the previously mock-registered "handled" flow.
+        if (typeof err.message !== "string" || !err.message.includes("No handler registered")) {
+          throw err;
+        }
+      }
 
       res.status(200).json({
         message: "Scan processed.",
@@ -117,7 +121,7 @@ export class BarcodeController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("not registered"))
       ) {
-        res.status(404).json({ error: error.message });
+        res.status(404).json({ error: error instanceof DomainException ? error.message : "Not registered" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

@@ -34,6 +34,22 @@ describe("InventoryService Direct & Kit Sales", () => {
     );
   });
 
+  it("should throw an error if attempting to sell an empty kit without making repository calls", async () => {
+    const kit = new Kit("KIT-EMPTY", SKU.create("BUNDLE-EMPTY"), "Empty Kit");
+
+    const findBySkuSpy = jest.spyOn(inventoryRepo, "findBySku");
+    const saveSpy = jest.spyOn(inventoryRepo, "save");
+    const saveManySpy = jest.spyOn(inventoryRepo, "saveMany");
+
+    await expect(service.decrementForKitSale(kit, 1, "SALE-EMPTY-KIT", "actor-1")).rejects.toThrow(
+      "Cannot sell a kit with no components."
+    );
+
+    expect(findBySkuSpy).not.toHaveBeenCalled();
+    expect(saveSpy).not.toHaveBeenCalled();
+    expect(saveManySpy).not.toHaveBeenCalled();
+  });
+
   it("should decrement all component quantities for a kit sale", async () => {
     const compA = InventoryItem.create("1", SKU.create("COMP-A"), Quantity.create(10));
     const compB = InventoryItem.create("2", SKU.create("COMP-B"), Quantity.create(20));

@@ -59,6 +59,11 @@ app.use(helmet());
 app.use(cors({ origin: allowedOrigins }));
 app.set("trust proxy", 1);
 app.use(limiter);
+app.use("/api/shopify", express.json({
+  verify: (req: any, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 app.use(express.json());
 
 // Register Domain Event Handlers

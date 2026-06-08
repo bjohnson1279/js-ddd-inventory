@@ -6,3 +6,10 @@
 ## 2026-06-06 - ARIA Live Regions for Dynamic Feedback
 **Learning:** Dynamically rendered feedback messages (like success/error toasts) must include `role="status"` and `aria-live="polite"` to be announced by screen readers. Otherwise, visually impaired users may not realize an action succeeded or failed.
 **Action:** Always add ARIA live attributes to conditionally rendered feedback messages that appear without a page reload or focus change.
+## 2026-06-07 - Add tooltips to disabled selections
+**Learning:** Adding a `title` attribute to disabled `<select>` elements can provide immediate context to the user regarding why an option is unavailable, greatly improving accessibility and intuitiveness. While full tooltips via wrapping `<div>`s are more robust, standard HTML `title` attributes remain effective for standard inputs.
+**Action:** Always add native `title` attributes to dynamically disabled form controls matching the disabled state conditionally to ensure clear system feedback without relying solely on documentation or generic UI text.
+
+## 2024-06-08 - Contextual ARIA labels for dynamic lists
+**Learning:** Repeating action buttons in dynamic lists (like 'Remove' buttons on form rows) lack context for screen reader users when read in isolation. They just read as 'Remove button'.
+**Action:** Always provide a dynamic `aria-label` (e.g., `Remove item ${index + 1}` or incorporating the item name) to repeating action buttons to give immediate context on exactly which entity the action affects.

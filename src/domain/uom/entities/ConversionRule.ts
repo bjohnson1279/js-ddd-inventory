@@ -7,7 +7,7 @@ export class ConversionRule {
     public readonly factorToBase: number, // 1 Case = 24 Each → factorToBase = 24
     public readonly label: string | null = null // optional display label: "Case of 24"
   ) {
-    if (factorToBase <= 0) {
+    if (typeof factorToBase !== 'number' || Number.isNaN(factorToBase) || factorToBase <= 0) {
       throw new Error(`Conversion factor must be positive; got ${factorToBase}.`);
     }
 

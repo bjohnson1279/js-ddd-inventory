@@ -114,5 +114,16 @@ describe("Barcode Domain Services", () => {
         /No handler registered/
       );
     });
+
+    it("should throw error if dispatching to unregistered string context", async () => {
+      const set = await repository.findSetForVariant("VAR-123");
+      const barcode = new Barcode(BarcodeSymbology.UPC_A, "012345678905");
+      set.assign(barcode, BarcodeSource.Supplier);
+      await repository.saveSet(set);
+
+      await expect(dispatcher.dispatch("012345678905", "unknown_context" as ScanContext)).rejects.toThrow(
+        /No handler registered for scan context: unknown_context/
+      );
+    });
   });
 });

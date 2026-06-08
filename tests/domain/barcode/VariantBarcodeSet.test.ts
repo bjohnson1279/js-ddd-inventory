@@ -59,6 +59,17 @@ describe("VariantBarcodeSet Aggregate", () => {
     expect(() => set.assign(upc2, BarcodeSource.GS1)).toThrow(DuplicateBarcodeException);
   });
 
+  it("should throw DuplicateBarcodeException when assigning the same barcode instance twice", () => {
+    const set = new VariantBarcodeSet("VAR-1");
+    const upc = new Barcode(BarcodeSymbology.UPC_A, "012345678905");
+
+    set.assign(upc, BarcodeSource.Supplier);
+    expect(() => set.assign(upc, BarcodeSource.GS1)).toThrow(DuplicateBarcodeException);
+    expect(() => set.assign(upc, BarcodeSource.GS1)).toThrow(
+      "Barcode 012345678905 is already assigned to this variant."
+    );
+  });
+
   it("should revoke assignments and release domain events", () => {
     const set = new VariantBarcodeSet("VAR-1");
     const upc = new Barcode(BarcodeSymbology.UPC_A, "012345678905");
@@ -89,5 +100,25 @@ describe("VariantBarcodeSet Aggregate", () => {
     set.assign(internal, BarcodeSource.Internal);
 
     expect(() => set.revoke(assign1.id)).toThrow(/Cannot revoke the primary barcode/);
+  });
+
+  it("should throw Error when revoking a non-existent assignment", () => {
+    const set = new VariantBarcodeSet("VAR-1");
+    expect(() => set.revoke("NON_EXISTENT_ID")).toThrow("Assignment NON_EXISTENT_ID not found.");
+  });
+
+  it("should throw an error when attempting to revoke an unknown assignment from a populated set", () => {
+    const set = new VariantBarcodeSet("VAR-1");
+    const upc = new Barcode(BarcodeSymbology.UPC_A, "012345678905");
+    set.assign(upc, BarcodeSource.Supplier);
+
+    expect(() => set.revoke("unknown-id")).toThrow(/Assignment unknown-id not found/);
+  });
+
+  it("should throw an error when attempting to revoke an unknown assignment on a populated set", () => {
+    const set = new VariantBarcodeSet("VAR-1");
+    const upc = new Barcode(BarcodeSymbology.UPC_A, "012345678905");
+    set.assign(upc, BarcodeSource.Supplier);
+    expect(() => set.revoke("unknown-id")).toThrow(/Assignment unknown-id not found/);
   });
 });

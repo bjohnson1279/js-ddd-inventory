@@ -54,10 +54,13 @@ export class OpeningBalanceService {
     if (this.inventoryRepository.findBySkus) {
       existingItems = await this.inventoryRepository.findBySkus(skus);
     } else {
-      for (const sku of skus) {
+      const fetchPromises = skus.map(async (sku) => {
         const item = await this.inventoryRepository.findBySku(sku);
-        if (item) existingItems.push(item);
-      }
+        if (item) {
+          existingItems.push(item);
+        }
+      });
+      await Promise.all(fetchPromises);
     }
 
     const itemsBySku = new Map(existingItems.map((item) => [item.sku.getValue(), item]));

@@ -950,6 +950,7 @@ function App() {
                           <button
                             type="button"
                             className="btn btn-danger btn-xs"
+                            aria-label={item.sku ? "Remove onboarding row for " + item.sku : "Remove onboarding row " + (index + 1)}
                             onClick={() => setOnboardingItems(onboardingItems.filter((_, i) => i !== index))}
                           >
                             Remove
@@ -1396,6 +1397,7 @@ function App() {
                     <button
                       type="button"
                       className="btn btn-danger btn-xs"
+                      aria-label={comp.variantId ? "Remove component row for " + comp.variantId : "Remove component row " + (index + 1)}
                       onClick={() => setKitComponents(kitComponents.filter((_, i) => i !== index))}
                     >
                       Remove
@@ -1551,6 +1553,7 @@ function App() {
                   value={tenantCostingMethod}
                   onChange={(e) => setTenantCostingMethod(e.target.value)}
                   disabled={tenantAccountingMethod === "cash"}
+                  title={tenantAccountingMethod === "cash" ? "Costing methods do not apply to Cash Basis accounting" : undefined}
                 >
                   <option value="fifo">FIFO (First In, First Out)</option>
                   <option value="lifo">LIFO (Last In, First Out)</option>
