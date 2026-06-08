@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { StockOnboarding } from "../../../domain/onboarding/aggregates/StockOnboarding";
 import { OpeningBalanceService } from "../../../domain/onboarding/services/OpeningBalanceService";
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
+import { DomainException } from "../../../domain/exceptions/DomainException";
 
 export class OnboardingController {
   static async submit(req: Request, res: Response) {
@@ -32,8 +33,12 @@ export class OnboardingController {
 
       res.status(200).json({ message: "Initial inventory setup successful" });
     } catch (error: any) {
-      console.error("Onboarding submission failed:", error);
-      res.status(400).json({ error: error.message });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error("Onboarding submission failed:", error);
+        res.status(500).json({ error: "Internal server error" });
+      }
     }
   }
 }

@@ -186,7 +186,7 @@ export class AccountingController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("Insufficient"))
       ) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: error instanceof DomainException ? error.message : "Insufficient stock" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -252,7 +252,7 @@ export class AccountingController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("Insufficient"))
       ) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: error instanceof DomainException ? error.message : "Insufficient stock" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -322,7 +322,12 @@ export class AccountingController {
         costingMethod: config.costingMethod,
       });
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+      }
     }
   }
 }

@@ -58,3 +58,7 @@
 **Vulnerability:** The `ShopifyWebhookController` used `JSON.stringify(req.body)` to reconstruct the raw payload for HMAC signature validation.
 **Learning:** Reconstructing the body from parsed JSON is flawed and alters the original buffer because JSON stringification may change ordering, spacing, or formatting from the original request. This can cause valid signatures to be rejected or obscure true forgery.
 **Prevention:** Always use the raw, unparsed HTTP request buffer for cryptographic signature validation by hooking into middleware mechanisms (like the `verify` option in `express.json()`) to capture and store the raw payload before it is parsed.
+## 2026-06-08 - Secure Error Handling
+**Vulnerability:** API controllers leaking internal application state/exceptions to clients via generic error.message properties.
+**Learning:** Catch-all blocks that return generic error objects can inadvertently leak sensitive stack traces or database info.
+**Prevention:** Always check if an error is a safe domain exception before exposing its message, otherwise return a generic 500 error or static message.
