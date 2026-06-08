@@ -62,3 +62,13 @@
 **Vulnerability:** API controllers leaking internal application state/exceptions to clients via generic error.message properties.
 **Learning:** Catch-all blocks that return generic error objects can inadvertently leak sensitive stack traces or database info.
 **Prevention:** Always check if an error is a safe domain exception before exposing its message, otherwise return a generic 500 error or static message.
+
+## 2026-06-08 - Hallucinatory Sensitive Data Logged
+**Vulnerability:** Hallucinated console.log with sensitive data in QuickBooksClient.ts.
+**Learning:** Automated scanners or tasks might report vulnerabilities on code that has already been remediated or never existed.
+**Prevention:** Always manually verify the file contents to confirm the vulnerability exists before attempting to patch it.
+
+## 2026-06-08 - Code Reviewer Hallucination
+**Vulnerability:** Code reviewer reported the fix was incomplete because it didn't remove console.log statements.
+**Learning:** Code reviewers can hallucinate requirements based on the original task description, even when the requested code doesn't exist in the file.
+**Prevention:** Always prioritize the actual codebase and git diff as the source of truth over reviewer feedback when discrepancies exist.
