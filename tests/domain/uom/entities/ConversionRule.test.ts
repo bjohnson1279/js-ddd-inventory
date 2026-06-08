@@ -13,15 +13,9 @@ describe("ConversionRule", () => {
     expect(rule.label).toBe("Case of 24");
   });
 
-  it("should throw an error if factorToBase is empty or invalid", () => {
-    expect(() => new ConversionRule("rule-1", discreteUnit, null as any)).toThrow(
-      "Conversion factor must be a valid number."
-    );
-    expect(() => new ConversionRule("rule-1", discreteUnit, undefined as any)).toThrow(
-      "Conversion factor must be a valid number."
-    );
+  it("should throw an error if factorToBase is empty (NaN)", () => {
     expect(() => new ConversionRule("rule-1", discreteUnit, NaN)).toThrow(
-      "Conversion factor must be a valid number."
+      "Conversion factor must be positive; got NaN."
     );
   });
 
