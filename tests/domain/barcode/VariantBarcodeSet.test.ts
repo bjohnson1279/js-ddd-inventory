@@ -111,4 +111,11 @@ describe("VariantBarcodeSet Aggregate", () => {
     const set = new VariantBarcodeSet("VAR-1");
     expect(() => set.revoke("unknown-id")).toThrow(/Assignment unknown-id not found/);
   });
+
+  it("should throw an error when attempting to revoke an unknown assignment on a populated set", () => {
+    const set = new VariantBarcodeSet("VAR-1");
+    const upc = new Barcode(BarcodeSymbology.UPC_A, "012345678905");
+    set.assign(upc, BarcodeSource.Supplier);
+    expect(() => set.revoke("unknown-id")).toThrow(/Assignment unknown-id not found/);
+  });
 });
