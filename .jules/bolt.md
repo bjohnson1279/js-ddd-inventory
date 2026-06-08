@@ -40,3 +40,6 @@
 ## 2026-06-08 - Fixed N+1 fallback Write in CostLayerService
 **Learning:** Found an N+1 fetching and saving anti-pattern in the `consumeFifoLayers` fallback method in `CostLayerService`. When `saveMany` was unsupported, layers were being saved sequentially in a `for...of` loop.
 **Action:** Replaced bounded sequential writes over the fallback loop with `Promise.all` batch writes to execute independent queries concurrently, significantly reducing wait time.
+## 2026-06-08 - Replaced sequential fallback awaits with Promise.all
+**Learning:** Found sequential await statements inside fallback loops in `InventoryService` and `OpeningBalanceService`. This is a classic N+1 anti-pattern when bulk operations are unsupported.
+**Action:** Always replace unbatched sequential awaits inside iterative `for...of` loops with `Promise.all()` arrays for concurrency when the items are independent and safe to execute in parallel.

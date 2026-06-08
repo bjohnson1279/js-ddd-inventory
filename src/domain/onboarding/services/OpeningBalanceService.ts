@@ -54,10 +54,13 @@ export class OpeningBalanceService {
     if (this.inventoryRepository.findBySkus) {
       existingItems = await this.inventoryRepository.findBySkus(skus);
     } else {
-      for (const sku of skus) {
+      const fetchPromises = skus.map(async (sku) => {
         const item = await this.inventoryRepository.findBySku(sku);
-        if (item) existingItems.push(item);
-      }
+        if (item) {
+          existingItems.push(item);
+        }
+      });
+      await Promise.all(fetchPromises);
     }
 
     const itemsBySku = new Map(existingItems.map((item) => [item.sku.getValue(), item]));
@@ -90,9 +93,9 @@ export class OpeningBalanceService {
     if (this.inventoryRepository.saveMany) {
       await this.inventoryRepository.saveMany(itemsToSaveArray);
     } else {
-      for (const item of itemsToSaveArray) {
-        await this.inventoryRepository.save(item);
-      }
+      await Promise.all(
+        itemsToSaveArray.map((item) => this.inventoryRepository.save(item))
+      );
     }
   }
 }

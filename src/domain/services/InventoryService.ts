@@ -53,19 +53,23 @@ export class InventoryService {
       }
     }
 
+    if (!this.inventoryRepository.findBySkus) {
+      // Fallback: fetch individually concurrently if batch fetch isn't supported
+      const fetchPromises = kit.components
+        .filter((c) => !cachedItems.has(c.variantId))
+        .map(async (c) => {
+          const sku = SKU.create(c.variantId);
+          const fetchedItem = await this.inventoryRepository.findBySku(sku);
+          if (fetchedItem) {
+            cachedItems.set(c.variantId, fetchedItem);
+          }
+        });
+      await Promise.all(fetchPromises);
+    }
+
     for (const component of kit.components) {
       const needed = component.quantity * kitQuantity;
-
-      let item = cachedItems.get(component.variantId);
-      if (!item && !this.inventoryRepository.findBySkus) {
-         // Fallback: fetch individually if batch fetch isn't supported
-         const sku = SKU.create(component.variantId);
-         const fetchedItem = await this.inventoryRepository.findBySku(sku);
-         if (fetchedItem) {
-           item = fetchedItem;
-           cachedItems.set(component.variantId, item);
-         }
-      }
+      const item = cachedItems.get(component.variantId);
 
       const available = item ? item.quantity.getValue() : 0;
       if (available < needed) {
@@ -90,9 +94,9 @@ export class InventoryService {
     if (this.inventoryRepository.saveMany) {
       await this.inventoryRepository.saveMany(itemsToSave);
     } else {
-      for (const item of itemsToSave) {
-        await this.inventoryRepository.save(item);
-      }
+      await Promise.all(
+        itemsToSave.map((item) => this.inventoryRepository.save(item))
+      );
     }
   }
 }
