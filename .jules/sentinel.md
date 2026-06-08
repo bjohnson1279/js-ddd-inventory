@@ -62,3 +62,7 @@
 **Vulnerability:** API controllers leaking internal application state/exceptions to clients via generic error.message properties.
 **Learning:** Catch-all blocks that return generic error objects can inadvertently leak sensitive stack traces or database info.
 **Prevention:** Always check if an error is a safe domain exception before exposing its message, otherwise return a generic 500 error or static message.
+## 2024-11-20 - Hallucinatory CORS Vulnerability Report
+**Vulnerability:** Reported overly permissive CORS policy, but analysis confirmed the application already securely uses environment variables to specify allowed origins.
+**Learning:** Automated security reports or tasks may occasionally hallucinate or incorrectly flag secure implementations.
+**Prevention:** Always verify the actual codebase state and data flow before implementing assumed fixes to avoid introducing unnecessary changes or regressions.
