@@ -80,7 +80,7 @@ export class SerialController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("not found"))
       ) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: error instanceof DomainException ? error.message : "Not found" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -108,7 +108,7 @@ export class SerialController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("not found"))
       ) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: error instanceof DomainException ? error.message : "Not found" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

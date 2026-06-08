@@ -105,7 +105,7 @@ export class KitController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("Insufficient"))
       ) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: error instanceof DomainException ? error.message : "Insufficient stock" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
