@@ -1397,7 +1397,7 @@ function App() {
                     <button
                       type="button"
                       className="btn btn-danger btn-xs"
-                      aria-label={`Remove component row ${index + 1}`}
+                      aria-label={comp.variantId ? "Remove component row for " + comp.variantId : "Remove component row " + (index + 1)}
                       onClick={() => setKitComponents(kitComponents.filter((_, i) => i !== index))}
                     >
                       Remove
