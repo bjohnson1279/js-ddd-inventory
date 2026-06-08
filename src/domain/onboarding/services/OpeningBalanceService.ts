@@ -93,9 +93,9 @@ export class OpeningBalanceService {
     if (this.inventoryRepository.saveMany) {
       await this.inventoryRepository.saveMany(itemsToSaveArray);
     } else {
-      await Promise.all(
-        itemsToSaveArray.map((item) => this.inventoryRepository.save(item))
-      );
+      for (const item of itemsToSaveArray) {
+        await this.inventoryRepository.save(item);
+      }
     }
   }
 }
