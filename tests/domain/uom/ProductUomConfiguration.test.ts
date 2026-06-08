@@ -5,13 +5,13 @@ import { IncompatibleUnitsException } from '../../../src/domain/uom/exceptions/I
 
 describe('ProductUomConfiguration', () => {
   describe('addConversionRule', () => {
-    it('throws an error when trying to add a conversion rule for an incompatible unit category', () => {
-      const baseUnit = new UnitOfMeasure('Kilogram', 'kg', UomCategory.Weight);
-      const configuration = new ProductUomConfiguration('config-1', 'variant-1', baseUnit);
-      const incompatibleUnit = new UnitOfMeasure('Liter', 'l', UomCategory.Volume);
+    it('throws an error when trying to add a conversion rule for incompatible units', () => {
+      const weightUnit = new UnitOfMeasure('Gram', 'g', UomCategory.Weight);
+      const volumeUnit = new UnitOfMeasure('Liter', 'l', UomCategory.Volume);
+      const configuration = new ProductUomConfiguration('config-1', 'variant-1', weightUnit);
 
       expect(() => {
-        configuration.addConversionRule(incompatibleUnit, 1, 'Incompatible rule');
+        configuration.addConversionRule(volumeUnit, 1000);
       }).toThrow(new IncompatibleUnitsException('Cannot convert between volume and weight units.'));
     });
 
