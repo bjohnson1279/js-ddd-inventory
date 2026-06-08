@@ -62,3 +62,7 @@
 **Vulnerability:** API controllers leaking internal application state/exceptions to clients via generic error.message properties.
 **Learning:** Catch-all blocks that return generic error objects can inadvertently leak sensitive stack traces or database info.
 **Prevention:** Always check if an error is a safe domain exception before exposing its message, otherwise return a generic 500 error or static message.
+## 2024-03-22 - [Document Hallucinatory Hardcoded Fallback Secret]
+**Vulnerability:** Hallucinatory hardcoded secret
+**Learning:** Always verify the actual codebase state instead of blindly trusting automated task descriptions. In this case, the codebase already checked for the required environment variable and threw an error if missing.
+**Prevention:** Rely on `cat`, `read_file`, or similar tools to examine the source files directly before writing execution plans or making changes.
