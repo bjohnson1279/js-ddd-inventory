@@ -12,11 +12,7 @@ describe('ProductUomConfiguration', () => {
 
       expect(() => {
         configuration.addConversionRule(volumeUnit, 1000);
-      }).toThrow(IncompatibleUnitsException);
-
-      expect(() => {
-        configuration.addConversionRule(volumeUnit, 1000);
-      }).toThrow('Cannot convert between volume and weight units.');
+      }).toThrow(new IncompatibleUnitsException('Cannot convert between volume and weight units.'));
     });
 
     it('throws an error when trying to add a conversion rule for the base unit itself', () => {
