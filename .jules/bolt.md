@@ -43,3 +43,6 @@
 ## 2026-06-08 - Replaced sequential fallback awaits with Promise.all
 **Learning:** Found sequential await statements inside fallback loops in `InventoryService` and `OpeningBalanceService`. This is a classic N+1 anti-pattern when bulk operations are unsupported.
 **Action:** Replace unbatched sequential awaits inside iterative `for...of` loops with `Promise.all()` arrays for concurrency when the items are independent, safe to execute in parallel, and the dataset size is small/bounded to prevent database connection pool exhaustion.
+## 2026-06-08 - Hallucinatory N+1 Issue
+**Learning:** The reported N+1 issue in PerformFullStoreCount.ts was already resolved using a batch-saving pattern.
+**Action:** Always verify current codebase state against the task description.
