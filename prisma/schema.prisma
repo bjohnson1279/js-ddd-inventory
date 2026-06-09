@@ -158,3 +158,16 @@ model PurchaseOrderItemModel {
   unitCostCents    Int
   purchaseOrder    PurchaseOrderModel @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
 }
+
+model ReorderPolicyModel {
+  id              String   @id
+  sku             String
+  locationId      String
+  reorderPoint    Int
+  reorderQuantity Int
+  safetyStock     Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([sku, locationId])
+}

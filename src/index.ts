@@ -44,6 +44,11 @@ import purchaseOrderRoutes from "./infrastructure/http/routes/purchaseOrder.rout
 import { IPurchaseOrderRepository } from "./domain/repositories/IPurchaseOrderRepository";
 import { PrismaPurchaseOrderRepository } from "./infrastructure/database/PrismaPurchaseOrderRepository";
 import { InMemoryPurchaseOrderRepository } from "./infrastructure/database/InMemoryPurchaseOrderRepository";
+import reorderPolicyRoutes from "./infrastructure/http/routes/reorderPolicy.routes";
+import { IReorderPolicyRepository } from "./domain/repositories/IReorderPolicyRepository";
+import { PrismaReorderPolicyRepository } from "./infrastructure/database/PrismaReorderPolicyRepository";
+import { InMemoryReorderPolicyRepository } from "./infrastructure/database/InMemoryReorderPolicyRepository";
+import { ReorderPolicyService } from "./domain/procurement/services/ReorderPolicyService";
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -84,7 +89,9 @@ export const setupApp = (
   tenantConfigRepository?: ITenantConfigRepository,
   processedWebhookRepository?: IProcessedWebhookRepository,
   outboxRepository?: IOutboxRepository,
-  purchaseOrderRepository?: IPurchaseOrderRepository
+  purchaseOrderRepository?: IPurchaseOrderRepository,
+  reorderPolicyRepository?: IReorderPolicyRepository,
+  reorderPolicyService?: ReorderPolicyService
 ) => {
   app.set("inventoryRepository", inventoryRepository);
   app.set("barcodeRepository", barcodeRepository || new InMemoryBarcodeRepository());
@@ -95,6 +102,8 @@ export const setupApp = (
   app.set("processedWebhookRepository", processedWebhookRepository || new InMemoryProcessedWebhookRepository());
   app.set("outboxRepository", outboxRepository || new InMemoryOutboxRepository());
   app.set("purchaseOrderRepository", purchaseOrderRepository || new InMemoryPurchaseOrderRepository());
+  app.set("reorderPolicyRepository", reorderPolicyRepository || new InMemoryReorderPolicyRepository());
+  app.set("reorderPolicyService", reorderPolicyService || new ReorderPolicyService(app.get("reorderPolicyRepository"), app.get("purchaseOrderRepository")));
   
   // Legacy key for backwards compatibility
   app.set("repository", inventoryRepository);
@@ -107,6 +116,7 @@ export const setupApp = (
   app.use("/api/shopify", shopifyRoutes);
   app.use("/api/onboarding", onboardingRoutes);
   app.use("/api/purchase-orders", purchaseOrderRoutes);
+  app.use("/api/reorder-policies", reorderPolicyRoutes);
 };
 
 const start = async () => {
@@ -136,8 +146,10 @@ const start = async () => {
   const tenantConfigRepo = new PrismaTenantConfigRepository();
   const processedWebhookRepo = new PrismaProcessedWebhookRepository();
   const purchaseOrderRepo = new PrismaPurchaseOrderRepository();
+  const reorderPolicyRepo = new PrismaReorderPolicyRepository();
+  const reorderPolicyService = new ReorderPolicyService(reorderPolicyRepo, purchaseOrderRepo);
 
-  setupApp(repository, barcodeRepo, serialRepo, costLayerRepo, journalRepo, tenantConfigRepo, processedWebhookRepo, outboxRepo, purchaseOrderRepo);
+  setupApp(repository, barcodeRepo, serialRepo, costLayerRepo, journalRepo, tenantConfigRepo, processedWebhookRepo, outboxRepo, purchaseOrderRepo, reorderPolicyRepo, reorderPolicyService);
 
   const outboxProcessor = new OutboxProcessor(outboxRepo);
   outboxProcessor.start(3000);

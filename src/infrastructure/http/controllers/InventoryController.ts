@@ -28,7 +28,8 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId } = req.body;
-      const dispatchStock = new DispatchStock(repository);
+      const reorderPolicyService = req.app.get("reorderPolicyService");
+      const dispatchStock = new DispatchStock(repository, undefined, reorderPolicyService);
       await dispatchStock.execute(sku, amount, locationId);
       res.status(200).json({ message: "Stock dispatched successfully" });
     } catch (error: any) {

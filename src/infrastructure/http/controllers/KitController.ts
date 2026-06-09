@@ -89,7 +89,8 @@ export class KitController {
       const inventoryRepo = req.app.get(
         "inventoryRepository",
       ) as IInventoryRepository;
-      const service = new InventoryService(inventoryRepo);
+      const reorderPolicyService = req.app.get("reorderPolicyService");
+      const service = new InventoryService(inventoryRepo, reorderPolicyService);
 
       await service.decrementForKitSale(kit, quantity, saleId, actorId);
 

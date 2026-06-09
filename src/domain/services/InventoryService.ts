@@ -3,11 +3,14 @@ import { Kit } from "../kit/aggregates/Kit";
 import { SKU } from "../valueObjects/SKU";
 import { Quantity } from "../valueObjects/Quantity";
 import { InsufficientInventoryException } from "../exceptions/InsufficientInventoryException";
-
 import { InventoryItem } from "../aggregates/InventoryItem";
+import { ReorderPolicyService } from "../procurement/services/ReorderPolicyService";
 
 export class InventoryService {
-  constructor(private readonly inventoryRepository: IInventoryRepository) {}
+  constructor(
+    private readonly inventoryRepository: IInventoryRepository,
+    private readonly reorderPolicyService?: ReorderPolicyService
+  ) {}
 
   public async decrementForSale(
     variantId: string,
@@ -30,6 +33,10 @@ export class InventoryService {
 
     item.dispatchStock(Quantity.create(quantity));
     await this.inventoryRepository.save(item);
+
+    if (this.reorderPolicyService) {
+      await this.reorderPolicyService.checkPolicy(variantId, locationId, item.quantity.getValue());
+    }
   }
 
   public async decrementForKitSale(
@@ -99,6 +106,16 @@ export class InventoryService {
       await Promise.all(
         itemsToSave.map((item) => this.inventoryRepository.save(item))
       );
+    }
+
+    if (this.reorderPolicyService) {
+      for (const item of itemsToSave) {
+        await this.reorderPolicyService.checkPolicy(
+          item.sku.getValue(),
+          locationId,
+          item.quantity.getValue()
+        );
+      }
     }
   }
 }
