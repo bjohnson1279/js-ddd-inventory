@@ -136,3 +136,25 @@ model OutboxEventModel {
   attempts    Int       @default(0)
   lastError   String?
 }
+
+model PurchaseOrderModel {
+  id                  String                    @id
+  purchaseOrderNumber String                    @unique
+  vendorId            String
+  tenantId            String
+  status              String
+  locationId          String
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  items               PurchaseOrderItemModel[]
+}
+
+model PurchaseOrderItemModel {
+  id               String             @id
+  purchaseOrderId  String
+  variantId        String
+  quantity         Int
+  receivedQuantity Int                @default(0)
+  unitCostCents    Int
+  purchaseOrder    PurchaseOrderModel @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+}
