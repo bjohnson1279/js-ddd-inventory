@@ -46,3 +46,6 @@
 ## 2026-06-08 - Hallucinatory N+1 Issue
 **Learning:** The reported N+1 issue in PerformFullStoreCount.ts was already resolved using a batch-saving pattern.
 **Action:** Always verify current codebase state against the task description.
+## 2026-06-08 - Fixed N+1 fallback Write in OpeningBalanceService
+**Learning:** Found sequential fallback awaits (`await this.inventoryRepository.save(item)`) in a `for...of` loop in `OpeningBalanceService`.
+**Action:** Replaced bounded sequential writes over the fallback loop with `Promise.all` batch writes to execute independent queries concurrently, significantly reducing wait time.
