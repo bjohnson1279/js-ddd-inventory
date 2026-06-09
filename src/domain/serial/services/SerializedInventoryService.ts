@@ -51,11 +51,12 @@ export class SerializedInventoryService {
     item.receive(location, actorId, purchaseOrderId);
 
     const sku = SKU.create(item.variantId);
-    let invItem = await this.inventoryRepository.findBySku(sku);
+    let invItem = await this.inventoryRepository.findBySku(sku, item.locationId);
     if (!invItem) {
       invItem = InventoryItem.create(
         Math.random().toString(36).substring(2, 11),
         sku,
+        item.locationId,
         Quantity.create(0)
       );
     }
@@ -77,11 +78,12 @@ export class SerializedInventoryService {
     item.sell(saleId, actorId);
 
     const sku = SKU.create(item.variantId);
-    let invItem = await this.inventoryRepository.findBySku(sku);
+    let invItem = await this.inventoryRepository.findBySku(sku, item.locationId);
     if (!invItem) {
       invItem = InventoryItem.create(
         Math.random().toString(36).substring(2, 11),
         sku,
+        item.locationId,
         Quantity.create(0)
       );
     }
@@ -117,11 +119,12 @@ export class SerializedInventoryService {
     item.restock(actorId, returnId);
 
     const sku = SKU.create(item.variantId);
-    let invItem = await this.inventoryRepository.findBySku(sku);
+    let invItem = await this.inventoryRepository.findBySku(sku, item.locationId);
     if (!invItem) {
       invItem = InventoryItem.create(
         Math.random().toString(36).substring(2, 11),
         sku,
+        item.locationId,
         Quantity.create(0)
       );
     }
@@ -147,11 +150,12 @@ export class SerializedInventoryService {
 
     if (wasInStock) {
       const sku = SKU.create(item.variantId);
-      let invItem = await this.inventoryRepository.findBySku(sku);
+      let invItem = await this.inventoryRepository.findBySku(sku, item.locationId);
       if (!invItem) {
         invItem = InventoryItem.create(
           Math.random().toString(36).substring(2, 11),
           sku,
+          item.locationId,
           Quantity.create(0)
         );
       }
@@ -164,9 +168,9 @@ export class SerializedInventoryService {
   }
 
   public async isConsistentWithLedger(variantId: string): Promise<boolean> {
-    const sku = SKU.create(variantId);
-    const invItem = await this.inventoryRepository.findBySku(sku);
-    const ledgerQty = invItem ? invItem.quantity.getValue() : 0;
+    const allItems = await this.inventoryRepository.findAll();
+    const skuItems = allItems.filter(item => item.sku.getValue() === variantId);
+    const ledgerQty = skuItems.reduce((acc, item) => acc + item.quantity.getValue(), 0);
     const inStockCount = await this.serials.countByStatus(variantId, SerializedItemStatus.InStock);
 
     return ledgerQty === inStockCount;

@@ -52,10 +52,10 @@ export class OpeningBalanceService {
     let existingItems: InventoryItem[] = [];
 
     if (this.inventoryRepository.findBySkus) {
-      existingItems = await this.inventoryRepository.findBySkus(skus);
+      existingItems = await this.inventoryRepository.findBySkus(skus, onboarding.locationId);
     } else {
       const fetchPromises = skus.map(async (sku) => {
-        const item = await this.inventoryRepository.findBySku(sku);
+        const item = await this.inventoryRepository.findBySku(sku, onboarding.locationId);
         if (item) {
           existingItems.push(item);
         }
@@ -77,6 +77,7 @@ export class OpeningBalanceService {
         inventoryItem = InventoryItem.create(
           Date.now().toString() + Math.random(),
           sku,
+          onboarding.locationId,
           Quantity.create(0)
         );
       }

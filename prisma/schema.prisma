@@ -7,9 +7,12 @@ datasource db {
 }
 
 model InventoryModel {
-  id       String @id
-  sku      String @unique
-  quantity Int
+  id         String @id
+  sku        String
+  locationId String @default("default")
+  quantity   Int
+
+  @@unique([sku, locationId])
 }
 
 model BarcodeAssignmentModel {

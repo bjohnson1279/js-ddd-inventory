@@ -10,9 +10,9 @@ export class InventoryController {
   static async receive(req: Request, res: Response) {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
-      const { sku, amount } = req.body;
+      const { sku, amount, locationId } = req.body;
       const receiveStock = new ReceiveStock(repository);
-      await receiveStock.execute(sku, amount);
+      await receiveStock.execute(sku, amount, locationId);
       res.status(200).json({ message: "Stock received successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
@@ -27,9 +27,9 @@ export class InventoryController {
   static async dispatch(req: Request, res: Response) {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
-      const { sku, amount } = req.body;
+      const { sku, amount, locationId } = req.body;
       const dispatchStock = new DispatchStock(repository);
-      await dispatchStock.execute(sku, amount);
+      await dispatchStock.execute(sku, amount, locationId);
       res.status(200).json({ message: "Stock dispatched successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
@@ -45,9 +45,15 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku } = req.params;
+      const locationId = req.query.locationId as string || "default";
       const getStockLevel = new GetStockLevel(repository);
-      const quantity = await getStockLevel.execute(sku);
-      res.status(200).json({ sku, quantity });
+      const quantity = await getStockLevel.execute(sku, locationId);
+      
+      const responseBody: any = { sku, quantity };
+      if (req.query.locationId) {
+        responseBody.locationId = locationId;
+      }
+      res.status(200).json(responseBody);
     } catch (error: any) {
       if (error instanceof DomainException) {
         res.status(400).json({ error: error.message, type: error.name });
@@ -61,14 +67,14 @@ export class InventoryController {
   static async performCount(req: Request, res: Response) {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
-      const counts = req.body.counts;
+      const { counts, locationId } = req.body;
       if (!Array.isArray(counts)) {
         return res
           .status(400)
           .json({ error: "Expected 'counts' to be an array" });
       }
       const performFullStoreCount = new PerformFullStoreCount(repository);
-      await performFullStoreCount.execute(counts);
+      await performFullStoreCount.execute(counts, locationId);
       res.status(200).json({ message: "Store count performed successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {

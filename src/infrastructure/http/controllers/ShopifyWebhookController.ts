@@ -53,7 +53,7 @@ export class ShopifyWebhookController {
       for (const item of lineItems) {
         if (item.sku) {
           // We skip publishing back to Shopify because this change originated from Shopify
-          await dispatchStock.execute(item.sku, item.quantity, true);
+          await dispatchStock.execute(item.sku, item.quantity, "default", true);
         }
       }
 

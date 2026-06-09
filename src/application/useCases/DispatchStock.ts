@@ -9,11 +9,11 @@ export class DispatchStock {
     private readonly externalPublisher?: IExternalInventoryPublisher
   ) {}
 
-  async execute(skuStr: string, amount: number, skipPublishing: boolean = false): Promise<void> {
+  async execute(skuStr: string, amount: number, locationId: string = "default", skipPublishing: boolean = false): Promise<void> {
     const sku = SKU.create(skuStr);
     const quantityToSubtract = Quantity.create(amount);
 
-    const item = await this.inventoryRepository.findBySku(sku);
+    const item = await this.inventoryRepository.findBySku(sku, locationId);
 
     if (!item) {
       throw new Error("Item not found in inventory");

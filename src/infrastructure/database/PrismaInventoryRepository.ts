@@ -14,29 +14,46 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     private readonly outboxRepository?: IOutboxRepository
   ) {}
 
-  async findBySku(sku: SKU): Promise<InventoryItem | null> {
-    const record = await this.prisma.inventoryModel.findUnique({
-      where: { sku: sku.getValue() }
-    });
+  async findBySku(sku: SKU, locationId?: string): Promise<InventoryItem | null> {
+    let record;
+    if (locationId) {
+      record = await this.prisma.inventoryModel.findUnique({
+        where: {
+          sku_locationId: {
+            sku: sku.getValue(),
+            locationId
+          }
+        }
+      });
+    } else {
+      record = await this.prisma.inventoryModel.findFirst({
+        where: { sku: sku.getValue() }
+      });
+    }
 
     if (!record) return null;
 
     return InventoryItem.create(
       record.id,
       SKU.create(record.sku),
+      record.locationId,
       Quantity.create(record.quantity)
     );
   }
 
-  async findBySkus(skus: SKU[]): Promise<InventoryItem[]> {
+  async findBySkus(skus: SKU[], locationId: string = "default"): Promise<InventoryItem[]> {
     const records = await this.prisma.inventoryModel.findMany({
-      where: { sku: { in: skus.map(s => s.getValue()) } }
+      where: {
+        sku: { in: skus.map(s => s.getValue()) },
+        locationId
+      }
     });
 
-    return records.map((record: { id: string; sku: string; quantity: number }) =>
+    return records.map((record: { id: string; sku: string; locationId: string; quantity: number }) =>
       InventoryItem.create(
         record.id,
         SKU.create(record.sku),
+        record.locationId,
         Quantity.create(record.quantity)
       )
     );
@@ -44,10 +61,25 @@ export class PrismaInventoryRepository implements IInventoryRepository {
 
   async findAll(): Promise<InventoryItem[]> {
     const records = await this.prisma.inventoryModel.findMany();
-    return records.map((record: { id: string; sku: string; quantity: number }) => 
+    return records.map((record: { id: string; sku: string; locationId: string; quantity: number }) => 
       InventoryItem.create(
         record.id,
         SKU.create(record.sku),
+        record.locationId,
+        Quantity.create(record.quantity)
+      )
+    );
+  }
+
+  async findAllByLocation(locationId: string): Promise<InventoryItem[]> {
+    const records = await this.prisma.inventoryModel.findMany({
+      where: { locationId }
+    });
+    return records.map((record: { id: string; sku: string; locationId: string; quantity: number }) => 
+      InventoryItem.create(
+        record.id,
+        SKU.create(record.sku),
+        record.locationId,
         Quantity.create(record.quantity)
       )
     );
@@ -59,11 +91,17 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     if (this.outboxRepository) {
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         await tx.inventoryModel.upsert({
-          where: { sku: item.sku.getValue() },
+          where: {
+            sku_locationId: {
+              sku: item.sku.getValue(),
+              locationId: item.locationId
+            }
+          },
           update: { quantity: item.quantity.getValue() },
           create: {
             id: item.id,
             sku: item.sku.getValue(),
+            locationId: item.locationId,
             quantity: item.quantity.getValue()
           }
         });
@@ -74,11 +112,17 @@ export class PrismaInventoryRepository implements IInventoryRepository {
       });
     } else {
       await this.prisma.inventoryModel.upsert({
-        where: { sku: item.sku.getValue() },
+        where: {
+          sku_locationId: {
+            sku: item.sku.getValue(),
+            locationId: item.locationId
+          }
+        },
         update: { quantity: item.quantity.getValue() },
         create: {
           id: item.id,
           sku: item.sku.getValue(),
+          locationId: item.locationId,
           quantity: item.quantity.getValue()
         }
       });
@@ -95,11 +139,17 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     if (this.outboxRepository) {
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         const operations = items.map(item => tx.inventoryModel.upsert({
-          where: { sku: item.sku.getValue() },
+          where: {
+            sku_locationId: {
+              sku: item.sku.getValue(),
+              locationId: item.locationId
+            }
+          },
           update: { quantity: item.quantity.getValue() },
           create: {
             id: item.id,
             sku: item.sku.getValue(),
+            locationId: item.locationId,
             quantity: item.quantity.getValue()
           }
         }));
@@ -116,11 +166,17 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     } else {
       await this.prisma.$transaction(
         items.map(item => this.prisma.inventoryModel.upsert({
-          where: { sku: item.sku.getValue() },
+          where: {
+            sku_locationId: {
+              sku: item.sku.getValue(),
+              locationId: item.locationId
+            }
+          },
           update: { quantity: item.quantity.getValue() },
           create: {
             id: item.id,
             sku: item.sku.getValue(),
+            locationId: item.locationId,
             quantity: item.quantity.getValue()
           }
         }))
@@ -140,7 +196,12 @@ export class PrismaInventoryRepository implements IInventoryRepository {
 
   async hasAnyEntries(variantId: string, locationId: string): Promise<boolean> {
     const record = await this.prisma.inventoryModel.findUnique({
-      where: { sku: variantId }
+      where: {
+        sku_locationId: {
+          sku: variantId,
+          locationId: locationId
+        }
+      }
     });
     return record !== null;
   }

@@ -11,17 +11,42 @@ export class InMemoryInventoryRepository implements IInventoryRepository {
     private readonly outboxRepository?: IOutboxRepository
   ) {}
 
-  async findBySku(sku: SKU): Promise<InventoryItem | null> {
-    const item = this.items.get(sku.getValue());
-    return item ?? null;
+  async findBySku(sku: SKU, locationId?: string): Promise<InventoryItem | null> {
+    if (locationId) {
+      const item = this.items.get(`${sku.getValue()}:${locationId}`);
+      return item ?? null;
+    }
+    // Fallback: search for this SKU under any location
+    const skuStr = sku.getValue();
+    for (const [key, item] of this.items.entries()) {
+      if (key.startsWith(`${skuStr}:`)) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  async findBySkus(skus: SKU[], locationId: string = "default"): Promise<InventoryItem[]> {
+    const results: InventoryItem[] = [];
+    for (const sku of skus) {
+      const item = this.items.get(`${sku.getValue()}:${locationId}`);
+      if (item) {
+        results.push(item);
+      }
+    }
+    return results;
   }
 
   async findAll(): Promise<InventoryItem[]> {
     return Array.from(this.items.values());
   }
 
+  async findAllByLocation(locationId: string): Promise<InventoryItem[]> {
+    return Array.from(this.items.values()).filter(item => item.locationId === locationId);
+  }
+
   async save(item: InventoryItem): Promise<void> {
-    this.items.set(item.sku.getValue(), item);
+    this.items.set(`${item.sku.getValue()}:${item.locationId}`, item);
     const events = item.getDomainEvents();
     if (this.outboxRepository) {
       for (const event of events) {
@@ -37,7 +62,7 @@ export class InMemoryInventoryRepository implements IInventoryRepository {
     if (items.length === 0) return;
 
     for (const item of items) {
-      this.items.set(item.sku.getValue(), item);
+      this.items.set(`${item.sku.getValue()}:${item.locationId}`, item);
     }
 
     if (this.outboxRepository) {
@@ -60,7 +85,6 @@ export class InMemoryInventoryRepository implements IInventoryRepository {
   }
 
   async hasAnyEntries(variantId: string, locationId: string): Promise<boolean> {
-    // In memory we don't track location yet, so we just check if variant exists
-    return this.items.has(variantId);
+    return this.items.has(`${variantId}:${locationId}`);
   }
 }
