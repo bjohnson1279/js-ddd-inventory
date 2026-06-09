@@ -13,3 +13,7 @@
 ## 2024-06-08 - Contextual ARIA labels for dynamic lists
 **Learning:** Repeating action buttons in dynamic lists (like 'Remove' buttons on form rows) lack context for screen reader users when read in isolation. They just read as 'Remove button'.
 **Action:** Always provide a dynamic `aria-label` (e.g., `Remove item ${index + 1}` or incorporating the item name) to repeating action buttons to give immediate context on exactly which entity the action affects.
+
+## 2026-06-09 - Keyboard Accessibility for Interactive Table Rows
+**Learning:** Interactive table rows (<tr onClick={...}>) require explicit keyboard support (tabIndex, role='button', and onKeyDown for Enter/Space) and focus indicators to be accessible to screen readers and keyboard users.
+**Action:** Always pair onClick handlers on non-interactive elements with corresponding keyboard event handlers and semantic ARIA roles.

@@ -419,6 +419,15 @@ button:focus:not(:focus-visible) {
   background: rgba(255, 255, 255, 0.04) !important;
 }
 
+.clickable-row:focus-visible {
+  outline: 2px solid var(--accent-color-light);
+  outline-offset: -2px;
+}
+
+.clickable-row:focus-visible td {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
 .row-depleted td {
   opacity: 0.7;
 }
