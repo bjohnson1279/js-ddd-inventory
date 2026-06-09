@@ -11,8 +11,8 @@ export interface CountItemDTO {
 export class PerformFullStoreCount {
   constructor(private readonly inventoryRepository: IInventoryRepository) {}
 
-  async execute(countedItems: CountItemDTO[]): Promise<void> {
-    const allExistingItems = await this.inventoryRepository.findAll();
+  async execute(countedItems: CountItemDTO[], locationId: string = "default"): Promise<void> {
+    const allExistingItems = await this.inventoryRepository.findAllByLocation(locationId);
     
     // Map to quickly find counted items
     const countMap = new Map<string, number>();
@@ -43,7 +43,7 @@ export class PerformFullStoreCount {
     for (const [skuStr, count] of countMap.entries()) {
       const sku = SKU.create(skuStr);
       const quantity = Quantity.create(count);
-      const newItem = InventoryItem.create(Date.now().toString() + Math.random().toString(), sku, quantity);
+      const newItem = InventoryItem.create(Date.now().toString() + Math.random().toString(), sku, locationId, quantity);
       itemsToSave.push(newItem);
     }
 

@@ -12,7 +12,8 @@ export class ShopifyWebhookController {
     const processedWebhookRepo = req.app.get(
       "processedWebhookRepository",
     ) as IProcessedWebhookRepository;
-    const dispatchStock = new DispatchStock(repository);
+    const reorderPolicyService = req.app.get("reorderPolicyService");
+    const dispatchStock = new DispatchStock(repository, undefined, reorderPolicyService);
 
     const hmac = req.get("X-Shopify-Hmac-Sha256");
     const topic = req.get("X-Shopify-Topic");
@@ -53,7 +54,7 @@ export class ShopifyWebhookController {
       for (const item of lineItems) {
         if (item.sku) {
           // We skip publishing back to Shopify because this change originated from Shopify
-          await dispatchStock.execute(item.sku, item.quantity, true);
+          await dispatchStock.execute(item.sku, item.quantity, "default", true);
         }
       }
 

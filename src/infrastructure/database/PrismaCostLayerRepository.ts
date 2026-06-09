@@ -13,7 +13,8 @@ export class PrismaCostLayerRepository implements ICostLayerRepository {
       record.originalQuantity,
       record.unitCostCents,
       record.receivedAt,
-      record.purchaseOrderId
+      record.purchaseOrderId,
+      record.locationId
     );
 
     // Reconstitute the private remaining quantity field from the database
@@ -48,6 +49,7 @@ export class PrismaCostLayerRepository implements ICostLayerRepository {
         unitCostCents: layer.unitCostCents,
         receivedAt: layer.receivedAt,
         purchaseOrderId: layer.purchaseOrderId,
+        locationId: layer.locationId || null,
         isConsumed: layer.isExhausted(),
       },
       create: {
@@ -59,6 +61,7 @@ export class PrismaCostLayerRepository implements ICostLayerRepository {
         unitCostCents: layer.unitCostCents,
         receivedAt: layer.receivedAt,
         purchaseOrderId: layer.purchaseOrderId,
+        locationId: layer.locationId || null,
         isConsumed: layer.isExhausted(),
       },
     });
@@ -79,6 +82,7 @@ export class PrismaCostLayerRepository implements ICostLayerRepository {
             unitCostCents: layer.unitCostCents,
             receivedAt: layer.receivedAt,
             purchaseOrderId: layer.purchaseOrderId,
+            locationId: layer.locationId || null,
             isConsumed: layer.isExhausted(),
           },
           create: {
@@ -90,6 +94,7 @@ export class PrismaCostLayerRepository implements ICostLayerRepository {
             unitCostCents: layer.unitCostCents,
             receivedAt: layer.receivedAt,
             purchaseOrderId: layer.purchaseOrderId,
+            locationId: layer.locationId || null,
             isConsumed: layer.isExhausted(),
           },
         })

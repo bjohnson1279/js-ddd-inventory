@@ -7,9 +7,12 @@ datasource db {
 }
 
 model InventoryModel {
-  id       String @id
-  sku      String @unique
-  quantity Int
+  id         String @id
+  sku        String
+  locationId String @default("default")
+  quantity   Int
+
+  @@unique([sku, locationId])
 }
 
 model BarcodeAssignmentModel {
@@ -132,4 +135,39 @@ model OutboxEventModel {
   processedAt DateTime?
   attempts    Int       @default(0)
   lastError   String?
+}
+
+model PurchaseOrderModel {
+  id                  String                    @id
+  purchaseOrderNumber String                    @unique
+  vendorId            String
+  tenantId            String
+  status              String
+  locationId          String
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  items               PurchaseOrderItemModel[]
+}
+
+model PurchaseOrderItemModel {
+  id               String             @id
+  purchaseOrderId  String
+  variantId        String
+  quantity         Int
+  receivedQuantity Int                @default(0)
+  unitCostCents    Int
+  purchaseOrder    PurchaseOrderModel @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+}
+
+model ReorderPolicyModel {
+  id              String   @id
+  sku             String
+  locationId      String
+  reorderPoint    Int
+  reorderQuantity Int
+  safetyStock     Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([sku, locationId])
 }

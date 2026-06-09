@@ -10,15 +10,15 @@ export class ReceiveStock {
     private readonly externalPublisher?: IExternalInventoryPublisher
   ) {}
 
-  async execute(skuStr: string, amount: number): Promise<void> {
+  async execute(skuStr: string, amount: number, locationId: string = "default"): Promise<void> {
     const sku = SKU.create(skuStr);
     const quantityToAdd = Quantity.create(amount);
 
-    let item = await this.inventoryRepository.findBySku(sku);
+    let item = await this.inventoryRepository.findBySku(sku, locationId);
 
     if (!item) {
       // If item does not exist, create it with ID as a simple string for now
-      item = InventoryItem.create(Date.now().toString(), sku, Quantity.create(0));
+      item = InventoryItem.create(Date.now().toString(), sku, locationId, Quantity.create(0));
     }
 
     item.receiveStock(quantityToAdd);

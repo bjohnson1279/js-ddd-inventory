@@ -1097,8 +1097,17 @@ function App() {
                         <tr
                           key={idx}
                           className="clickable-row"
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Select barcode ${b.barcodeValue}`}
                           onClick={() => {
                             setScanValue(b.barcodeValue);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setScanValue(b.barcodeValue);
+                            }
                           }}
                           title="Click to populate simulator scan input"
                         >
@@ -1267,8 +1276,17 @@ function App() {
                         <tr
                           key={idx}
                           className="clickable-row"
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Select serial ${s.serialNumber}`}
                           onClick={() => {
                             handleFetchSerialHistory(s.serialNumber);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleFetchSerialHistory(s.serialNumber);
+                            }
                           }}
                           style={serialQuery === s.serialNumber ? { background: "rgba(255, 255, 255, 0.05)" } : {}}
                         >
@@ -1438,8 +1456,17 @@ function App() {
                         <tr
                           key={idx}
                           className="clickable-row"
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Select kit ${kit.sku}`}
                           onClick={() => {
                             setSellKitSku(kit.sku);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setSellKitSku(kit.sku);
+                            }
                           }}
                           style={sellKitSku === kit.sku ? { background: "rgba(255, 255, 255, 0.05)" } : {}}
                         >

@@ -52,10 +52,10 @@ export class OpeningBalanceService {
     let existingItems: InventoryItem[] = [];
 
     if (this.inventoryRepository.findBySkus) {
-      existingItems = await this.inventoryRepository.findBySkus(skus);
+      existingItems = await this.inventoryRepository.findBySkus(skus, onboarding.locationId);
     } else {
       const fetchPromises = skus.map(async (sku) => {
-        const item = await this.inventoryRepository.findBySku(sku);
+        const item = await this.inventoryRepository.findBySku(sku, onboarding.locationId);
         if (item) {
           existingItems.push(item);
         }
@@ -77,6 +77,7 @@ export class OpeningBalanceService {
         inventoryItem = InventoryItem.create(
           Date.now().toString() + Math.random(),
           sku,
+          onboarding.locationId,
           Quantity.create(0)
         );
       }
@@ -93,9 +94,9 @@ export class OpeningBalanceService {
     if (this.inventoryRepository.saveMany) {
       await this.inventoryRepository.saveMany(itemsToSaveArray);
     } else {
-      for (const item of itemsToSaveArray) {
-        await this.inventoryRepository.save(item);
-      }
+      // Opt: Fallback to concurrent batched execution instead of sequential awaits
+      // Expected impact: ~50-80% reduction in DB wait time for this loop
+      await Promise.all(itemsToSaveArray.map(item => this.inventoryRepository.save(item)));
     }
   }
 }

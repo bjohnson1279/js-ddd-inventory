@@ -7,19 +7,63 @@ import { StockDepletedEvent } from "../events/StockDepletedEvent";
 export class InventoryItem extends AggregateRoot {
   private readonly _id: string;
   private readonly _sku: SKU;
+  private readonly _locationId: string;
   private _quantity: Quantity;
   private _shopifyInventoryItemId?: string;
 
-  private constructor(id: string, sku: SKU, quantity: Quantity, shopifyInventoryItemId?: string) {
+  private constructor(id: string, sku: SKU, locationId: string, quantity: Quantity, shopifyInventoryItemId?: string) {
     super();
     this._id = id;
     this._sku = sku;
+    this._locationId = locationId;
     this._quantity = quantity;
     this._shopifyInventoryItemId = shopifyInventoryItemId;
   }
 
-  public static create(id: string, sku: SKU, quantity: Quantity, shopifyInventoryItemId?: string): InventoryItem {
-    return new InventoryItem(id, sku, quantity, shopifyInventoryItemId);
+  public static create(
+    id: string,
+    sku: SKU,
+    locationId: string,
+    quantity: Quantity,
+    shopifyInventoryItemId?: string
+  ): InventoryItem;
+
+  public static create(
+    id: string,
+    sku: SKU,
+    quantity: Quantity,
+    shopifyInventoryItemId?: string
+  ): InventoryItem;
+
+  public static create(
+    id: string,
+    sku: SKU,
+    arg3?: string | Quantity,
+    arg4?: Quantity | string,
+    arg5?: string
+  ): InventoryItem {
+    let locationId = "default";
+    let quantity = Quantity.create(0);
+    let shopifyInventoryItemId: string | undefined = undefined;
+
+    if (typeof arg3 === "string") {
+      locationId = arg3;
+      if (arg4 instanceof Quantity) {
+        quantity = arg4;
+      }
+      shopifyInventoryItemId = arg5;
+    } else if (arg3 instanceof Quantity) {
+      quantity = arg3;
+      if (typeof arg4 === "string") {
+        shopifyInventoryItemId = arg4;
+      }
+    }
+
+    return new InventoryItem(id, sku, locationId, quantity, shopifyInventoryItemId);
+  }
+
+  public get locationId(): string {
+    return this._locationId;
   }
 
   public get shopifyInventoryItemId(): string | undefined {
