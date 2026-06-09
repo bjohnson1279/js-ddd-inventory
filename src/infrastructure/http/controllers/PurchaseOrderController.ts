@@ -4,6 +4,7 @@ import { ReceivePurchaseOrder } from "../../../application/useCases/ReceivePurch
 import { IPurchaseOrderRepository } from "../../../domain/repositories/IPurchaseOrderRepository";
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
 import { ICostLayerRepository } from "../../../domain/repositories/ICostLayerRepository";
+import { DomainException } from "../../../domain/exceptions/DomainException";
 
 export class PurchaseOrderController {
   static async create(req: Request, res: Response) {
@@ -28,8 +29,12 @@ export class PurchaseOrderController {
         }))
       });
     } catch (error: any) {
-      console.error(error);
-      res.status(400).json({ error: error.message });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+      }
     }
   }
 
@@ -44,8 +49,12 @@ export class PurchaseOrderController {
       await poRepository.save(po);
       res.status(200).json({ message: "Purchase order approved successfully" });
     } catch (error: any) {
-      console.error(error);
-      res.status(400).json({ error: error.message });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+      }
     }
   }
 
@@ -60,8 +69,12 @@ export class PurchaseOrderController {
       await poRepository.save(po);
       res.status(200).json({ message: "Purchase order sent to vendor successfully" });
     } catch (error: any) {
-      console.error(error);
-      res.status(400).json({ error: error.message });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+      }
     }
   }
 
@@ -79,8 +92,12 @@ export class PurchaseOrderController {
       });
       res.status(200).json({ message: "Items received successfully" });
     } catch (error: any) {
-      console.error(error);
-      res.status(400).json({ error: error.message });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+      }
     }
   }
 

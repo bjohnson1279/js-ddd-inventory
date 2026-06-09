@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { IReorderPolicyRepository } from "../../../domain/repositories/IReorderPolicyRepository";
 import { ReorderPolicy } from "../../../domain/procurement/aggregates/ReorderPolicy";
 import { SKU } from "../../../domain/valueObjects/SKU";
+import { DomainException } from "../../../domain/exceptions/DomainException";
 
 export class ReorderPolicyController {
   static async createOrUpdate(req: Request, res: Response) {
@@ -29,8 +30,12 @@ export class ReorderPolicyController {
         safetyStock: policy.safetyStock
       });
     } catch (error: any) {
-      console.error(error);
-      res.status(400).json({ error: error.message });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+      }
     }
   }
 
