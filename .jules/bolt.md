@@ -37,15 +37,23 @@
 ## 2026-06-07 - Resolve N+1 write in InventoryService Kit Sales
 **Learning:** Replaced bounded sequential reads over the loop with Promise.all batch write over the same data scope, and preserved atomicity and transactional integrity via Prisma.$transaction. Ensuring a fallback sequential implementation exists within the Domain Service guarantees interface backward compatibility for other components.
 **Action:** Utilize chunking and single transaction batches for multiple aggregate modifications, especially for domain operations mapping inputs 1:N items like "Kits".
+
 ## 2026-06-08 - Fixed N+1 fallback Write in CostLayerService
 **Learning:** Found an N+1 fetching and saving anti-pattern in the `consumeFifoLayers` fallback method in `CostLayerService`. When `saveMany` was unsupported, layers were being saved sequentially in a `for...of` loop.
 **Action:** Replaced bounded sequential writes over the fallback loop with `Promise.all` batch writes to execute independent queries concurrently, significantly reducing wait time.
+
 ## 2026-06-08 - Replaced sequential fallback awaits with Promise.all
 **Learning:** Found sequential await statements inside fallback loops in `InventoryService` and `OpeningBalanceService`. This is a classic N+1 anti-pattern when bulk operations are unsupported.
 **Action:** Replace unbatched sequential awaits inside iterative `for...of` loops with `Promise.all()` arrays for concurrency when the items are independent, safe to execute in parallel, and the dataset size is small/bounded to prevent database connection pool exhaustion.
+
+## 2026-06-08 - N+1 Write in PerformFullStoreCount already optimized
+**Learning:** The reported performance issue regarding N+1 writes in `PerformFullStoreCount` was already optimized in the codebase by batching them into `itemsToSave` and using `saveMany`.
+**Action:** Always verify the actual codebase against the reported performance issues to avoid redundant work, as tasks may be hallucinatory or already resolved.
+
 ## 2026-06-08 - Hallucinatory N+1 Issue
 **Learning:** The reported N+1 issue in PerformFullStoreCount.ts was already resolved using a batch-saving pattern.
 **Action:** Always verify current codebase state against the task description.
+
 ## 2026-06-08 - Fixed N+1 fallback Write in OpeningBalanceService
 **Learning:** Found sequential fallback awaits (`await this.inventoryRepository.save(item)`) in a `for...of` loop in `OpeningBalanceService`.
 **Action:** Replaced bounded sequential writes over the fallback loop with `Promise.all` batch writes to execute independent queries concurrently, significantly reducing wait time.
