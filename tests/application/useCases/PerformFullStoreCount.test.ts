@@ -30,7 +30,7 @@ describe("PerformFullStoreCount Use Case", () => {
       { sku: "SKU-1", count: 12 },
       { sku: "SKU-2", count: 5 }
     ]);
-
+    expect(mockRepo.findAllByLocation).toHaveBeenCalledWith("default");
     expect(item1.quantity.getValue()).toBe(12);
     expect(item2.quantity.getValue()).toBe(5);
 
