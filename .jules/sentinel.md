@@ -93,3 +93,7 @@
 **Vulnerability:** Code reviewer reported the fix was incomplete because it didn't remove console.log statements.
 **Learning:** Code reviewers can hallucinate requirements based on the original task description, even when the requested code doesn't exist in the file.
 **Prevention:** Always prioritize the actual codebase and git diff as the source of truth over reviewer feedback when discrepancies exist.
+## 2024-05-24 - Replace Math.random with secure UUID
+**Vulnerability:** Used Math.random() to generate IDs in JournalEntry.ts.
+**Learning:** Math.random() is cryptographically insecure and predictable, making it unsuitable for ID generation.
+**Prevention:** Use crypto.randomUUID() or a similar secure library for unique identifiers.

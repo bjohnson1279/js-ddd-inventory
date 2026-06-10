@@ -6,6 +6,7 @@ import { AccountingMethod } from "../enums/AccountingMethod";
 import { CostingMethod } from "../enums/CostingMethod";
 import { AccountCode } from "../valueObjects/AccountCode";
 import { DebitCredit } from "../enums/DebitCredit";
+import { randomUUID } from "crypto";
 
 export class AccountingJournalService {
   constructor(
@@ -189,7 +190,7 @@ export class AccountingJournalService {
     lines: [AccountCode, number, DebitCredit, string][]
   ): Promise<JournalEntry> {
     const entry = new JournalEntry(
-      Math.random().toString(36).substring(2, 11),
+      randomUUID(),
       tenantId,
       date,
       description,
