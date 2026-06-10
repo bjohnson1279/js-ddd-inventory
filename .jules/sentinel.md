@@ -94,14 +94,8 @@
 **Learning:** Code reviewers can hallucinate requirements based on the original task description, even when the requested code doesn't exist in the file.
 **Prevention:** Always prioritize the actual codebase and git diff as the source of truth over reviewer feedback when discrepancies exist.
 
-## 2024-05-24 - Replace Math.random with secure UUID
+## 2026-06-10 - Insecure ID Generation
 
-**Vulnerability:** Used Math.random() to generate IDs in JournalEntry.ts.
-**Learning:** Math.random() is cryptographically insecure and predictable, making it unsuitable for ID generation.
-**Prevention:** Use crypto.randomUUID() or a similar secure library for unique identifiers.
-
-## 2026-06-10 - Fix insecure Math.random ID generation
-
-**Vulnerability:** Used Math.random() to generate IDs in KitController.
-**Learning:** Math.random is not cryptographically secure, leading to predictable IDs.
-**Prevention:** Use crypto.randomUUID() for secure ID generation.
+**Vulnerability:** Use of Math.random() to generate IDs (purchase orders, sales) in frontend.
+**Learning:** Math.random() is cryptographically weak and predictable, potentially leading to ID collisions or predictability attacks in business logic.
+**Prevention:** Always use a secure PRNG or a standard library like crypto.randomUUID() for generating unique identifiers.
