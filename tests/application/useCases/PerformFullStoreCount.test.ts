@@ -103,7 +103,7 @@ describe("PerformFullStoreCount Use Case", () => {
     await useCase.execute([
       { sku: "SKU-1", count: 10 }
     ]);
-
+    expect(mockRepo.findAllByLocation).toHaveBeenCalledWith("default");
     expect(mockRepo.save).toHaveBeenCalledTimes(1);
     expect(mockRepo.save).toHaveBeenCalledWith(item1);
   });
