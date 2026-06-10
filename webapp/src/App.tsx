@@ -354,7 +354,7 @@ function App() {
           body: JSON.stringify({
             variantId: sku,
             totalCostCents: qty * 10000, // assuming mock cost layers
-            purchaseOrderId: `RE-STOCK-${Math.floor(Math.random()*1000)}`,
+            purchaseOrderId: `RE-STOCK-${crypto.randomUUID()}`,
             supplierName: "Emergency Wholesaler",
             tenantId: tenantId,
             accountingMethod: tenantAccountingMethod,
@@ -429,7 +429,7 @@ function App() {
               variantId: data.variantId,
               quantity: 1,
               salePriceCents: 120000,
-              saleId: `POS-SALE-${Math.floor(Math.random()*1000)}`,
+              saleId: `POS-SALE-${crypto.randomUUID()}`,
               tenantId: tenantId,
               accountingMethod: tenantAccountingMethod,
               costingMethod: tenantCostingMethod
@@ -571,7 +571,7 @@ function App() {
         body: JSON.stringify({
           kitSku: sellKitSku,
           quantity: sellKitQty,
-          saleId: "KIT-SALE-" + Math.floor(Math.random() * 10000),
+          saleId: "KIT-SALE-" + crypto.randomUUID(),
           actorId: "cashier-2",
         }),
       });
@@ -801,7 +801,7 @@ function App() {
                             variantId: valSku,
                             quantity: 1,
                             salePriceCents: 10000,
-                            saleId: `MANUAL-${Math.floor(Math.random()*1000)}`,
+                            saleId: `MANUAL-${crypto.randomUUID()}`,
                             tenantId: tenantId,
                             accountingMethod: tenantAccountingMethod,
                             costingMethod: tenantCostingMethod
