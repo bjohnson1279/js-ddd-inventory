@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import crypto from "crypto";
 import { prisma } from "../../database/prisma";
 import { Kit } from "../../../domain/kit/aggregates/Kit";
 import { SKU } from "../../../domain/valueObjects/SKU";
@@ -24,7 +25,7 @@ export class KitController {
           });
       }
 
-      const id = Math.random().toString(36).substring(2, 11);
+      const id = crypto.randomUUID();
 
       // Save to database inside a transaction
       await prisma.$transaction(async (tx) => {
@@ -35,7 +36,7 @@ export class KitController {
             name,
             components: {
               create: components.map((c: any) => ({
-                id: Math.random().toString(36).substring(2, 11),
+                id: crypto.randomUUID(),
                 variantId: c.variantId,
                 quantity: c.quantity,
               })),
