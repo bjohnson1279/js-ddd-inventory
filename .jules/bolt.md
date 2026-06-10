@@ -57,3 +57,7 @@
 ## 2026-06-08 - Fixed N+1 fallback Write in OpeningBalanceService
 **Learning:** Found sequential fallback awaits (`await this.inventoryRepository.save(item)`) in a `for...of` loop in `OpeningBalanceService`.
 **Action:** Replaced bounded sequential writes over the fallback loop with `Promise.all` batch writes to execute independent queries concurrently, significantly reducing wait time.
+
+## 2026-06-08 - Optimized PrismaPurchaseOrderRepository items save
+**Learning:** Sequential awaited database calls (`await tx.purchaseOrderItemModel.upsert(...)`) inside a `for...of` loop within Prisma `$transaction` cause unnecessary N+1 round-trip wait time delays.
+**Action:** Replace `for...of` sequential waits with `Promise.all(items.map(...))` to execute the individual save statements concurrently within the transaction context, significantly reducing execution time.
