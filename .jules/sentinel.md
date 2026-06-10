@@ -93,3 +93,7 @@
 **Vulnerability:** Code reviewer reported the fix was incomplete because it didn't remove console.log statements.
 **Learning:** Code reviewers can hallucinate requirements based on the original task description, even when the requested code doesn't exist in the file.
 **Prevention:** Always prioritize the actual codebase and git diff as the source of truth over reviewer feedback when discrepancies exist.
+## 2026-06-10 - Fix insecure Math.random ID generation
+**Vulnerability:** Used Math.random() to generate IDs in KitController.
+**Learning:** Math.random is not cryptographically secure, leading to predictable IDs.
+**Prevention:** Use crypto.randomUUID() for secure ID generation.
