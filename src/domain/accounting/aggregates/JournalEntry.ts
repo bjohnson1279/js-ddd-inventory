@@ -2,7 +2,7 @@ import { JournalLine } from "../entities/JournalLine";
 import { AccountCode } from "../valueObjects/AccountCode";
 import { DebitCredit } from "../enums/DebitCredit";
 import { AccountingMethod } from "../enums/AccountingMethod";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 
 export class JournalEntry {
   private readonly _lines: JournalLine[] = [];
