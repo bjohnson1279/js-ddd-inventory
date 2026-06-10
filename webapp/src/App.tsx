@@ -746,7 +746,7 @@ function App() {
                           ? "Stock is completely out. Shopify webhook and POS transactions are currently blocked."
                           : "Stock is low. Consider restocking before composite kit allocations fail."}
                       </p>
-                      <button className="btn btn-primary btn-xs" aria-label={"Quick restock 15 units for " + item.sku} onClick={() => handleQuickRestock(item.sku, 15)}>
+                      <button className="btn btn-primary btn-xs" aria-label={"Quick Restock 15 Units for " + item.sku} onClick={() => handleQuickRestock(item.sku, 15)}>
                         📥 Quick Restock 15 Units
                       </button>
                     </div>
