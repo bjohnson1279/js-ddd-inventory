@@ -2,6 +2,7 @@ import { JournalLine } from "../entities/JournalLine";
 import { AccountCode } from "../valueObjects/AccountCode";
 import { DebitCredit } from "../enums/DebitCredit";
 import { AccountingMethod } from "../enums/AccountingMethod";
+import { randomUUID } from "node:crypto";
 
 export class JournalEntry {
   private readonly _lines: JournalLine[] = [];
@@ -26,7 +27,7 @@ export class JournalEntry {
     }
 
     const line = new JournalLine(
-      Math.random().toString(36).substring(2, 11),
+      randomUUID(),
       account,
       amountCents,
       type,
