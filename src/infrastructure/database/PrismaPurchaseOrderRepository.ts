@@ -78,8 +78,8 @@ export class PrismaPurchaseOrderRepository implements IPurchaseOrderRepository {
       });
 
       // Upsert Purchase Order Items
-      for (const item of po.items) {
-        await tx.purchaseOrderItemModel.upsert({
+      const itemOperations = po.items.map(item =>
+        tx.purchaseOrderItemModel.upsert({
           where: { id: item.id },
           update: {
             receivedQuantity: item.receivedQuantity,
@@ -94,8 +94,9 @@ export class PrismaPurchaseOrderRepository implements IPurchaseOrderRepository {
             receivedQuantity: item.receivedQuantity,
             unitCostCents: item.unitCostCents
           }
-        });
-      }
+        })
+      );
+      await Promise.all(itemOperations);
     });
   }
 }
