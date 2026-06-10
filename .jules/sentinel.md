@@ -93,7 +93,9 @@
 **Vulnerability:** Code reviewer reported the fix was incomplete because it didn't remove console.log statements.
 **Learning:** Code reviewers can hallucinate requirements based on the original task description, even when the requested code doesn't exist in the file.
 **Prevention:** Always prioritize the actual codebase and git diff as the source of truth over reviewer feedback when discrepancies exist.
+
 ## 2026-06-10 - Insecure ID Generation
+
 **Vulnerability:** Use of Math.random() to generate IDs (purchase orders, sales) in frontend.
 **Learning:** Math.random() is cryptographically weak and predictable, potentially leading to ID collisions or predictability attacks in business logic.
 **Prevention:** Always use a secure PRNG or a standard library like crypto.randomUUID() for generating unique identifiers.

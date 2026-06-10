@@ -746,7 +746,7 @@ function App() {
                           ? "Stock is completely out. Shopify webhook and POS transactions are currently blocked."
                           : "Stock is low. Consider restocking before composite kit allocations fail."}
                       </p>
-                      <button className="btn btn-primary btn-xs" onClick={() => handleQuickRestock(item.sku, 15)}>
+                      <button className="btn btn-primary btn-xs" aria-label={"Quick Restock 15 Units for " + item.sku} onClick={() => handleQuickRestock(item.sku, 15)}>
                         📥 Quick Restock 15 Units
                       </button>
                     </div>
@@ -847,7 +847,7 @@ function App() {
                           </span>
                         </td>
                         <td>
-                          <button className="btn btn-secondary btn-xs" style={{ padding: "6px 12px" }} onClick={() => handleQuickRestock(inv.sku, 10)}>
+                          <button className="btn btn-secondary btn-xs" aria-label={"Restock 10 units for " + inv.sku} style={{ padding: "6px 12px" }} onClick={() => handleQuickRestock(inv.sku, 10)}>
                             Restock +10
                           </button>
                         </td>
@@ -904,6 +904,7 @@ function App() {
                       <td>
                         <input
                           className="form-control"
+                          aria-label={"SKU for onboarding row " + (index + 1)}
                           type="text"
                           placeholder="e.g. SKU-NAME"
                           value={item.sku}
@@ -918,6 +919,7 @@ function App() {
                       <td>
                         <input
                           className="form-control"
+                          aria-label={"Quantity for onboarding row " + (index + 1)}
                           type="number"
                           placeholder="e.g. 50"
                           value={item.quantity || ""}
@@ -933,6 +935,7 @@ function App() {
                       <td>
                         <input
                           className="form-control"
+                          aria-label={"Unit Cost for onboarding row " + (index + 1)}
                           type="number"
                           placeholder="e.g. 25000 ($250.00)"
                           value={item.unitCostCents || ""}
@@ -1383,6 +1386,7 @@ function App() {
                 <div key={index} style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
                   <select
                     className="form-control"
+                    aria-label={"Component SKU for kit row " + (index + 1)}
                     style={{ flex: 2 }}
                     value={comp.variantId}
                     onChange={(e) => {
@@ -1399,6 +1403,7 @@ function App() {
                   </select>
                   <input
                     className="form-control"
+                    aria-label={"Quantity for kit row " + (index + 1)}
                     style={{ flex: 1 }}
                     type="number"
                     placeholder="Qty"

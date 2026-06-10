@@ -17,3 +17,6 @@
 ## 2026-06-09 - Keyboard Accessibility for Interactive Table Rows
 **Learning:** Interactive table rows (<tr onClick={...}>) require explicit keyboard support (tabIndex, role='button', and onKeyDown for Enter/Space) and focus indicators to be accessible to screen readers and keyboard users.
 **Action:** Always pair onClick handlers on non-interactive elements with corresponding keyboard event handlers and semantic ARIA roles.
+## 2026-06-10 - Dynamic Table Row Accessibility
+**Learning:** Inputs and action buttons in dynamically generated table rows must include dynamic `aria-label`s (e.g., combining context and index) to be intelligible to screen reader users when read in isolation.
+**Action:** Always add dynamic ARIA labels to repeating inputs and buttons within lists or tables.
