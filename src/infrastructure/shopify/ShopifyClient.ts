@@ -1,20 +1,3 @@
-export interface ShopifyInventoryItem {
-  id: string;
-  sku: string;
-}
-
-export interface ShopifyLocation {
-  id: string;
-  name: string;
-}
-
-export interface ShopifyInventoryLevel {
-  id: string;
-  available: number;
-  item: ShopifyInventoryItem;
-  location: ShopifyLocation;
-}
-
 export class ShopifyClient {
   private readonly shopUrl: string;
   private readonly accessToken: string;
