@@ -7,7 +7,7 @@ describe("SerializedItemStatus Utilities", () => {
     });
 
     it("should return false for all other statuses", () => {
-      const otherStatuses = Object.values(SerializedItemStatus).filter(
+      const otherStatuses = (Object.values(SerializedItemStatus) as SerializedItemStatus[]).filter(
         (status) => status !== SerializedItemStatus.InStock
       );
       otherStatuses.forEach((status) => {
