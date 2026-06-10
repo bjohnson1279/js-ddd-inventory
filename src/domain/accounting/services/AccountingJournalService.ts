@@ -6,7 +6,7 @@ import { AccountingMethod } from "../enums/AccountingMethod";
 import { CostingMethod } from "../enums/CostingMethod";
 import { AccountCode } from "../valueObjects/AccountCode";
 import { DebitCredit } from "../enums/DebitCredit";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 
 export class AccountingJournalService {
   constructor(
