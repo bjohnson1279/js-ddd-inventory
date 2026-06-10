@@ -354,7 +354,7 @@ function App() {
           body: JSON.stringify({
             variantId: sku,
             totalCostCents: qty * 10000, // assuming mock cost layers
-            purchaseOrderId: `RE-STOCK-${crypto.randomUUID()}`,
+            purchaseOrderId: `RE-STOCK-${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.floor(Math.random() * 1000000)}`,
             supplierName: "Emergency Wholesaler",
             tenantId: tenantId,
             accountingMethod: tenantAccountingMethod,
