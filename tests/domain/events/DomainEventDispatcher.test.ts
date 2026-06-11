@@ -42,7 +42,7 @@ describe("DomainEventDispatcher", () => {
 
     expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      `Error handling domain event DummyEvent:`,
+      `Error handling domain event DummyEvent in handler mockConstructor:`,
       expect.any(Error)
     );
   });
