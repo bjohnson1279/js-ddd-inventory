@@ -24,7 +24,7 @@ export class DomainEventDispatcher {
             try {
               await handler(event);
             } catch (error) {
-              console.error(`Error handling domain event ${event.eventName}:`, error);
+              console.error(`Error handling domain event ${event.eventName} in handler ${handler.name || 'anonymous'}:`, error);
               errors.push(error);
             }
           })
