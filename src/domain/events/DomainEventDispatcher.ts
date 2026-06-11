@@ -19,14 +19,16 @@ export class DomainEventDispatcher {
     for (const event of events) {
       const eventHandlers = this.handlers.get(event.eventName);
       if (eventHandlers) {
-        for (const handler of eventHandlers) {
-          try {
-            await handler(event);
-          } catch (error) {
-            console.error(`Error handling domain event ${event.eventName}:`, error);
-            errors.push(error);
-          }
-        }
+        await Promise.all(
+          eventHandlers.map(async (handler) => {
+            try {
+              await handler(event);
+            } catch (error) {
+              console.error(`Error handling domain event ${event.eventName}:`, error);
+              errors.push(error);
+            }
+          })
+        );
       }
     }
     if (errors.length > 0) {
