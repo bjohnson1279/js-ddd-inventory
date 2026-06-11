@@ -61,3 +61,6 @@
 ## 2026-06-08 - Optimized PrismaPurchaseOrderRepository items save
 **Learning:** Sequential awaited database calls (`await tx.purchaseOrderItemModel.upsert(...)`) inside a `for...of` loop within Prisma `$transaction` cause unnecessary N+1 round-trip wait time delays.
 **Action:** Replace `for...of` sequential waits with `Promise.all(items.map(...))` to execute the individual save statements concurrently within the transaction context, significantly reducing execution time.
+## 2026-06-11 - Optimize OutboxProcessor Database Updates
+**Learning:** When performing independent database updates inside a loop where prior results aren't needed, accumulating promises and running them concurrently with Promise.all reduces latency.
+**Action:** Use Promise.all to run non-dependent updates concurrently rather than sequentially awaiting each one.
