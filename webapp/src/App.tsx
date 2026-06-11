@@ -683,7 +683,7 @@ function App() {
               <span>Persistence Drivers: </span>
               <strong>Prisma 7</strong>
             </div>
-            <button className="btn-refresh" onClick={fetchAllData} title="Force Sync API Metrics">
+            <button className="btn-refresh" onClick={fetchAllData} title="Force Sync API Metrics" aria-label="Force Sync API Metrics">
               🔄 Sync
             </button>
           </>
@@ -772,7 +772,7 @@ function App() {
             <div className="workspace-panel bg-panel-alert">
               <h2 className="title-warning">Inventory Alerts</h2>
               {lowStockItems.length > 0 ? (
-                <div className="alert-list">
+                <div className="alert-list" role="status" aria-live="polite">
                   {lowStockItems.map((item, idx) => (
                     <div key={idx} className={`alert-card ${item.quantity === 0 ? "alert-depleted" : "alert-warning"}`}>
                       <div className="alert-header-info">
@@ -793,7 +793,7 @@ function App() {
                   ))}
                 </div>
               ) : (
-                <div className="alert-success-placeholder">
+                <div className="alert-success-placeholder" role="status" aria-live="polite">
                   <div className="checkmark-circle">✓</div>
                   <p>All catalog levels healthy. No low stock invariants breached.</p>
                 </div>
@@ -825,7 +825,7 @@ function App() {
                   <button
                     className="btn btn-danger"
                     disabled={!valSku || (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0}
-                    title={!valSku ? "Select a SKU first" : (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0 ? "Insufficient stock" : undefined}
+                    title={!valSku ? "Select a SKU first" : (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0 ? "Insufficient stock" : "Dispatch 1 unit"}
                     onClick={async () => {
                       const res = await fetch(`${API_BASE}/inventory/dispatch`, {
                         method: "POST",
@@ -2024,14 +2024,14 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
             <option value="warehouse-south">Warehouse South</option>
             <option value="store-east">Store East</option>
           </select>
-          <button className="btn btn-secondary" onClick={fetchReport} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }}>
+          <button className="btn btn-secondary" onClick={fetchReport} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing report..." : "Refresh the report data"}>
             Refresh Report
           </button>
         </div>
       </div>
 
       {error && (
-        <div style={{ padding: "12px", background: "rgba(220, 53, 69, 0.1)", border: "1px solid rgba(220, 53, 69, 0.2)", borderRadius: "6px", color: "#ea868f", marginBottom: "20px" }}>
+        <div role="status" aria-live="polite" style={{ padding: "12px", background: "rgba(220, 53, 69, 0.1)", border: "1px solid rgba(220, 53, 69, 0.2)", borderRadius: "6px", color: "#ea868f", marginBottom: "20px" }}>
           <strong>Error:</strong> {error}
         </div>
       )}
@@ -2237,6 +2237,7 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
                 className="btn btn-primary" 
                 disabled={forecastLoading || !selectedSku} 
                 style={{ marginTop: "10px", width: "100%" }}
+                title={!selectedSku ? "Select a SKU to generate forecast" : forecastLoading ? "Calculating..." : "Generate and save forecast"}
               >
                 {forecastLoading ? "Calculating Forecast..." : "Generate & Save Forecast"}
               </button>
@@ -2689,7 +2690,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
 
             {/* Screen Content: Results & Submits */}
             {actionMsg && (
-              <div style={{
+              <div role="status" aria-live="polite" style={{
                 padding: "8px 10px",
                 borderRadius: "6px",
                 fontSize: "0.75rem",
@@ -2898,6 +2899,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
               className="physical-trigger-btn"
               disabled={scanLoading || !scanValue}
               onClick={() => handleScan(scanValue)}
+              title={!scanValue ? "Enter a barcode to scan" : scanLoading ? "Scanning..." : "Trigger scan"}
             >
               ⚡ trigger Scan
             </button>
@@ -3007,13 +3009,13 @@ function OutboxTab() {
           <h2>Outbox Event Processing & Diagnostics</h2>
           <p>Monitor event reliability, analyze message failures, and manage the Dead Letter Queue (DLQ).</p>
         </div>
-        <button className="btn btn-secondary" onClick={fetchStatsAndDlq} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }}>
+        <button className="btn btn-secondary" onClick={fetchStatsAndDlq} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"}>
           Refresh Diagnostics
         </button>
       </div>
 
       {error && (
-        <div style={{ padding: "12px", background: "rgba(220, 53, 69, 0.1)", border: "1px solid rgba(220, 53, 69, 0.2)", borderRadius: "6px", color: "#ea868f", marginBottom: "20px" }}>
+        <div role="status" aria-live="polite" style={{ padding: "12px", background: "rgba(220, 53, 69, 0.1)", border: "1px solid rgba(220, 53, 69, 0.2)", borderRadius: "6px", color: "#ea868f", marginBottom: "20px" }}>
           <strong>Error:</strong> {error}
         </div>
       )}
@@ -3336,9 +3338,9 @@ function ShippingTab({
       </div>
 
       {notification && (
-        <div className={`alert alert-${notification.type === "success" ? "success" : "danger"}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <div className={`alert alert-${notification.type === "success" ? "success" : "danger"}`} role="status" aria-live="polite" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
           <span>{notification.text}</span>
-          <button className="btn-close" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", fontWeight: "bold" }} onClick={() => setNotification(null)}>×</button>
+          <button className="btn-close" aria-label="Close notification" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", fontWeight: "bold" }} onClick={() => setNotification(null)}>×</button>
         </div>
       )}
 
@@ -3383,7 +3385,7 @@ function ShippingTab({
                 />
               </div>
 
-              <button type="submit" className="btn btn-primary" disabled={loadingRates}>
+              <button type="submit" className="btn btn-primary" disabled={loadingRates} title={loadingRates ? "Estimating rates..." : "Estimate shipping rates"}>
                 {loadingRates ? "Estimating..." : "Estimate Shipping"}
               </button>
             </form>
@@ -3414,6 +3416,7 @@ function ShippingTab({
                   style={{ width: "100%", marginTop: "15px" }}
                   onClick={handlePurchaseLabel}
                   disabled={purchasingLabel || !selectedCarrier}
+                  title={!selectedCarrier ? "Select a carrier to buy a label" : purchasingLabel ? "Purchasing..." : "Buy selected shipping label"}
                 >
                   {purchasingLabel ? "Purchasing..." : `Buy ${selectedCarrier} Shipping Label`}
                 </button>
@@ -3477,7 +3480,7 @@ function ShippingTab({
                   </div>
                 </div>
                 <div style={{ textAlign: "center", marginTop: "15px" }}>
-                  <button className="btn btn-secondary btn-sm" onClick={() => window.print()}>
+                  <button className="btn btn-secondary btn-sm" aria-label="Print simulated shipping label" onClick={() => window.print()}>
                     🖨️ Print Label (Simulated)
                   </button>
                 </div>
@@ -3496,7 +3499,7 @@ function ShippingTab({
       <div className="card" style={{ marginTop: "20px" }}>
         <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3>Active Shipments & Carrier Milestones</h3>
-          <button className="btn btn-secondary btn-sm" onClick={fetchShipments}>
+          <button className="btn btn-secondary btn-sm" onClick={fetchShipments} title="Refresh the shipments list">
             🔄 Refresh List
           </button>
         </div>
@@ -3545,6 +3548,7 @@ function ShippingTab({
                               className="btn btn-warning btn-sm"
                               onClick={() => handleTrackShipment(s.id, "IN_TRANSIT")}
                               disabled={trackingLoading === s.id}
+                              title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as in transit"}
                             >
                               🚚 Scan (In Transit)
                             </button>
@@ -3555,6 +3559,7 @@ function ShippingTab({
                                 className="btn btn-success btn-sm"
                                 onClick={() => handleTrackShipment(s.id, "DELIVERED")}
                                 disabled={trackingLoading === s.id}
+                                title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as delivered"}
                               >
                                 ✅ Deliver
                               </button>
@@ -3562,6 +3567,7 @@ function ShippingTab({
                                 className="btn btn-danger btn-sm"
                                 onClick={() => handleTrackShipment(s.id, "FAILED")}
                                 disabled={trackingLoading === s.id}
+                                title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as failed"}
                               >
                                 ❌ Fail
                               </button>
