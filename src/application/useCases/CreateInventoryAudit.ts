@@ -3,6 +3,7 @@ import { IInventoryRepository } from "../../domain/repositories/IInventoryReposi
 import { InventoryAudit } from "../../domain/procurement/aggregates/InventoryAudit";
 import { InventoryAuditItem } from "../../domain/procurement/aggregates/InventoryAuditItem";
 import { SKU } from "../../domain/valueObjects/SKU";
+import { InventoryItem } from "../../domain/aggregates/InventoryItem";
 
 export interface CreateInventoryAuditDTO {
   auditNumber: string;
@@ -32,9 +33,24 @@ export class CreateInventoryAudit {
       variants = items.map((item) => item.sku.getValue());
     }
 
+    const skus = variants.map(v => SKU.create(v));
+    let inventoryItems: InventoryItem[] = [];
+
+    if (this.inventoryRepository.findBySkus) {
+      inventoryItems = await this.inventoryRepository.findBySkus(skus, dto.locationId);
+    } else {
+      const fetchPromises = skus.map(async (sku) => {
+        const item = await this.inventoryRepository.findBySku(sku, dto.locationId);
+        return item;
+      });
+      const results = await Promise.all(fetchPromises);
+      inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
+    }
+
+    const itemsBySku = new Map(inventoryItems.map(item => [item.sku.getValue(), item]));
+
     for (const variantId of variants) {
-      const sku = SKU.create(variantId);
-      const inventoryItem = await this.inventoryRepository.findBySku(sku, dto.locationId);
+      const inventoryItem = itemsBySku.get(variantId);
       const expectedQuantity = inventoryItem ? inventoryItem.quantity.getValue() : 0;
 
       const itemId = Math.random().toString(36).substring(2, 11);
