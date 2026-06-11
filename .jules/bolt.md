@@ -69,3 +69,7 @@
 ## 2026-06-11 - Optimize OutboxProcessor Database Updates
 **Learning:** When performing independent database updates inside a loop where prior results aren't needed, accumulating promises and running them concurrently with Promise.all reduces latency.
 **Action:** Use Promise.all to run non-dependent updates concurrently rather than sequentially awaiting each one.
+
+## 2024-06-11 - Optimize CreateInventoryAudit DB Reads
+**Learning:** Sequential awaits inside of loops caused an N+1 query problem, slowing down inventory audits. Replacing this with a batched query or `Promise.all` resolves the performance hit significantly.
+**Action:** Identify sequences of database operations in loops and defer promises into an array or utilize batch DB operations like `findBySkus?()` instead.
