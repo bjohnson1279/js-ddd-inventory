@@ -13,7 +13,8 @@ export class ShopifyWebhookController {
       "processedWebhookRepository",
     ) as IProcessedWebhookRepository;
     const reorderPolicyService = req.app.get("reorderPolicyService");
-    const dispatchStock = new DispatchStock(repository, undefined, reorderPolicyService);
+    const dispatchRecordRepository = req.app.get("dispatchRecordRepository");
+    const dispatchStock = new DispatchStock(repository, undefined, reorderPolicyService, dispatchRecordRepository);
 
     const hmac = req.get("X-Shopify-Hmac-Sha256");
     const topic = req.get("X-Shopify-Topic");

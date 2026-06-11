@@ -17,13 +17,15 @@ export class InMemoryOutboxRepository implements IOutboxRepository {
       occurredOn: event.occurredOn,
       processedAt: null,
       attempts: 0,
-      lastError: null
+      lastError: null,
+      nextAttemptAt: new Date()
     });
   }
 
-  async fetchPending(limit: number): Promise<any[]> {
+  async fetchPending(limit: number, maxAttempts: number = 5): Promise<any[]> {
+    const now = new Date();
     return this.entries
-      .filter((e) => e.processedAt === null)
+      .filter((e) => e.processedAt === null && e.attempts < maxAttempts && (!e.nextAttemptAt || e.nextAttemptAt <= now))
       .slice(0, limit);
   }
 
@@ -39,6 +41,41 @@ export class InMemoryOutboxRepository implements IOutboxRepository {
     if (entry) {
       entry.attempts += 1;
       entry.lastError = error;
+      const backoffMs = Math.min(Math.pow(2, entry.attempts) * 1000, 24 * 60 * 60 * 1000);
+      entry.nextAttemptAt = new Date(Date.now() + backoffMs);
     }
+  }
+
+  async fetchDeadLettered(limit: number, maxAttempts: number = 5): Promise<any[]> {
+    return this.entries
+      .filter((e) => e.processedAt === null && e.attempts >= maxAttempts)
+      .sort((a, b) => b.occurredOn.getTime() - a.occurredOn.getTime())
+      .slice(0, limit);
+  }
+
+  async retryEvent(id: string): Promise<void> {
+    const entry = this.entries.find((e) => e.id === id);
+    if (entry) {
+      entry.attempts = 0;
+      entry.lastError = null;
+      entry.nextAttemptAt = new Date();
+    }
+  }
+
+  async fetchStats(maxAttempts: number = 5): Promise<any> {
+    const pendingCount = this.entries.filter((e) => e.processedAt === null && e.attempts < maxAttempts).length;
+    const processedCount = this.entries.filter((e) => e.processedAt !== null).length;
+    const deadLetteredCount = this.entries.filter((e) => e.processedAt === null && e.attempts >= maxAttempts).length;
+    const recentFailures = this.entries
+      .filter((e) => e.processedAt === null && e.attempts > 0 && e.attempts < maxAttempts)
+      .sort((a, b) => b.occurredOn.getTime() - a.occurredOn.getTime())
+      .slice(0, 10);
+
+    return {
+      totalPending: pendingCount,
+      totalProcessed: processedCount,
+      totalDeadLettered: deadLetteredCount,
+      recentFailures
+    };
   }
 }

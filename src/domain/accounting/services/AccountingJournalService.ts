@@ -44,6 +44,30 @@ export class AccountingJournalService {
     return null;
   }
 
+  public async onStockReturned(
+    variantId: string,
+    totalCostCents: number,
+    referenceId: string,
+    date: Date,
+    config: TenantAccountingConfig,
+    tenantId: string
+  ): Promise<JournalEntry | null> {
+    if (config.accountingMethod === AccountingMethod.Accrual) {
+      return this.createEntry(
+        tenantId,
+        date,
+        `Inventory return receipt — variant ${variantId} — reference ${referenceId}`,
+        referenceId,
+        AccountingMethod.Accrual,
+        [
+          [AccountCode.inventory(), totalCostCents, DebitCredit.Debit, `Returned stock`],
+          [AccountCode.costOfGoodsSold(), totalCostCents, DebitCredit.Credit, `COGS reversal`],
+        ]
+      );
+    }
+    return null;
+  }
+
   public async onSupplierPaid(
     amountCents: number,
     purchaseOrderId: string,
@@ -179,6 +203,131 @@ export class AccountingJournalService {
         ]
       );
     }
+  }
+
+  public async onInventoryAuditReconciliation(
+    auditId: string,
+    variantId: string,
+    discrepancy: number,
+    totalCostCents: number,
+    date: Date,
+    config: TenantAccountingConfig,
+    tenantId: string
+  ): Promise<JournalEntry | null> {
+    if (config.accountingMethod === AccountingMethod.Accrual) {
+      if (discrepancy < 0) {
+        return this.createEntry(
+          tenantId,
+          date,
+          `Inventory Shrinkage — Audit ${auditId} — Item ${variantId}`,
+          auditId,
+          AccountingMethod.Accrual,
+          [
+            [
+              AccountCode.inventoryShrinkageExpense(),
+              totalCostCents,
+              DebitCredit.Debit,
+              `Shrinkage of ${Math.abs(discrepancy)} units`
+            ],
+            [
+              AccountCode.inventory(),
+              totalCostCents,
+              DebitCredit.Credit,
+              `Inventory reduction`
+            ]
+          ]
+        );
+      } else if (discrepancy > 0) {
+        return this.createEntry(
+          tenantId,
+          date,
+          `Inventory Gain — Audit ${auditId} — Item ${variantId}`,
+          auditId,
+          AccountingMethod.Accrual,
+          [
+            [
+              AccountCode.inventory(),
+              totalCostCents,
+              DebitCredit.Debit,
+              `Gain of ${discrepancy} units`
+            ],
+            [
+              AccountCode.inventoryAdjustmentGain(),
+              totalCostCents,
+              DebitCredit.Credit,
+              `Adjustment gain`
+            ]
+          ]
+        );
+      }
+    }
+    return null;
+  }
+
+  public async onInventoryWriteOff(
+    referenceId: string,
+    totalCostCents: number,
+    date: Date,
+    config: TenantAccountingConfig,
+    tenantId: string
+  ): Promise<JournalEntry | null> {
+    if (config.accountingMethod === AccountingMethod.Accrual) {
+      return this.createEntry(
+        tenantId,
+        date,
+        `Inventory Write-Off — Ref ${referenceId}`,
+        referenceId,
+        AccountingMethod.Accrual,
+        [
+          [
+            AccountCode.inventoryWriteOffExpense(),
+            totalCostCents,
+            DebitCredit.Debit,
+            `Inventory write-off`
+          ],
+          [
+            AccountCode.inventory(),
+            totalCostCents,
+            DebitCredit.Credit,
+            `Inventory reduction`
+          ]
+        ]
+      );
+    }
+    return null;
+  }
+
+  public async onReturnToVendor(
+    referenceId: string,
+    totalCostCents: number,
+    date: Date,
+    config: TenantAccountingConfig,
+    tenantId: string
+  ): Promise<JournalEntry | null> {
+    if (config.accountingMethod === AccountingMethod.Accrual) {
+      return this.createEntry(
+        tenantId,
+        date,
+        `Return to Vendor — Ref ${referenceId}`,
+        referenceId,
+        AccountingMethod.Accrual,
+        [
+          [
+            AccountCode.accountsPayable(),
+            totalCostCents,
+            DebitCredit.Debit,
+            `AP cleared — return to vendor`
+          ],
+          [
+            AccountCode.inventory(),
+            totalCostCents,
+            DebitCredit.Credit,
+            `Inventory reduction`
+          ]
+        ]
+      );
+    }
+    return null;
   }
 
   private async createEntry(

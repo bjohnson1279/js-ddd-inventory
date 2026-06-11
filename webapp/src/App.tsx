@@ -133,16 +133,40 @@ const Icons = {
       <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
     </svg>
   ),
+  Outbox: () => (
+    <svg className="tab-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M7 8h10M7 12h10M8 20h8" />
+    </svg>
+  ),
+  Forecasting: () => (
+    <svg className="tab-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 3v18h18M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" />
+    </svg>
+  ),
+  Scanner: () => (
+    <svg className="tab-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 4h4v4H4zm12 0h4v4h-4zM4 16h4v4H4zm12 0h4v4h-4zM9 9h6v6H9z" />
+    </svg>
+  ),
   Database: ({ active }: { active: boolean }) => (
     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke={active ? "#34d399" : "#f87171"} strokeWidth="2.5" className={active ? "pulse-icon" : ""}>
       <ellipse cx="12" cy="5" rx="9" ry="3" />
       <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
     </svg>
+  ),
+  Shipping: () => (
+    <svg className="tab-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="1" y="3" width="15" height="13" />
+      <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+      <circle cx="5.5" cy="18.5" r="2.5" />
+      <circle cx="18.5" cy="18.5" r="2.5" />
+    </svg>
   )
 };
 
 function App() {
-  const [activeTab, setActiveTab] = useState<"overview" | "onboarding" | "barcodes" | "serials" | "kits" | "bookkeeping">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "onboarding" | "barcodes" | "serials" | "kits" | "bookkeeping" | "outbox" | "forecasting" | "scanner" | "shipping">("overview");
 
   // Core metrics & state from DB
   const [inventoryList, setInventoryList] = useState<InventoryItem[]>([]);
@@ -696,6 +720,22 @@ function App() {
           <button role="tab" aria-selected={activeTab === "bookkeeping"} className={`tab-btn ${activeTab === "bookkeeping" ? "active" : ""}`} onClick={() => setActiveTab("bookkeeping")}>
             <Icons.Bookkeeping />
             <span>Ledger</span>
+          </button>
+          <button role="tab" aria-selected={activeTab === "outbox"} className={`tab-btn ${activeTab === "outbox" ? "active" : ""}`} onClick={() => setActiveTab("outbox")}>
+            <Icons.Outbox />
+            <span>Outbox</span>
+          </button>
+          <button role="tab" aria-selected={activeTab === "forecasting"} className={`tab-btn ${activeTab === "forecasting" ? "active" : ""}`} onClick={() => setActiveTab("forecasting")}>
+            <Icons.Forecasting />
+            <span>Forecasting</span>
+          </button>
+          <button role="tab" aria-selected={activeTab === "scanner"} className={`tab-btn ${activeTab === "scanner" ? "active" : ""}`} onClick={() => setActiveTab("scanner")}>
+            <Icons.Scanner />
+            <span>Mobile Scanner</span>
+          </button>
+          <button role="tab" aria-selected={activeTab === "shipping"} className={`tab-btn ${activeTab === "shipping" ? "active" : ""}`} onClick={() => setActiveTab("shipping")}>
+            <Icons.Shipping />
+            <span>Shipping & Logistics</span>
           </button>
         </nav>
       </header>
@@ -1826,6 +1866,1726 @@ function App() {
           </div>
         </div>
       )}
+
+      {activeTab === "outbox" && (
+        <OutboxTab />
+      )}
+
+      {activeTab === "forecasting" && (
+        <ForecastingTab inventoryList={inventoryList} />
+      )}
+
+      {activeTab === "scanner" && (
+        <MobileScannerTab 
+          inventoryList={inventoryList} 
+          barcodeList={barcodeList}
+          onRefreshData={fetchAllData}
+          tenantId={tenantId}
+        />
+      )}
+
+      {activeTab === "shipping" && (
+        <ShippingTab 
+          inventoryList={inventoryList} 
+          onRefreshData={fetchAllData}
+          tenantId={tenantId}
+          locationId={locationId}
+        />
+      )}
+    </div>
+  );
+}
+
+interface DemandPlanningReportItem {
+  sku: string;
+  locationId: string;
+  currentStock: number;
+  averageDailySales7d: number;
+  averageDailySales30d: number;
+  averageDailySales90d: number;
+  daysOfCover: number;
+  runOutDate: string | null;
+  reorderPoint: number;
+  reorderQuantity: number;
+  safetyStock: number;
+  forecastedDemand30d: number;
+  confidenceLevel: number;
+  actionRequired: boolean;
+  recommendedOrderQuantity: number;
+}
+
+function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
+  const [locationId, setLocationId] = useState("default");
+  const [report, setReport] = useState<DemandPlanningReportItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Manual forecast form state
+  const [selectedSku, setSelectedSku] = useState("");
+  const [forecastDays, setForecastDays] = useState(30);
+  const [trendMultiplier, setTrendMultiplier] = useState(1.0);
+  const [forecastResult, setForecastResult] = useState<any | null>(null);
+  const [forecastLoading, setForecastLoading] = useState(false);
+  const [forecastError, setForecastError] = useState<string | null>(null);
+
+  const fetchReport = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch(`/api/forecasting/report?locationId=${locationId}`);
+      if (!res.ok) throw new Error("Failed to fetch demand planning report");
+      const data = await res.json();
+      setReport(data);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to load report");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReport();
+  }, [locationId]);
+
+  // Set default SKU when inventory list loads
+  useEffect(() => {
+    if (inventoryList.length > 0 && !selectedSku) {
+      setSelectedSku(inventoryList[0].sku || "");
+    }
+  }, [inventoryList]);
+
+  const handleGenerateForecast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSku) {
+      setForecastError("Please select a SKU");
+      return;
+    }
+    try {
+      setForecastLoading(true);
+      setForecastError(null);
+      setForecastResult(null);
+
+      const res = await fetch("/api/forecasting/forecast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sku: selectedSku,
+          locationId,
+          forecastDays,
+          trendMultiplier
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to generate forecast");
+      }
+
+      const data = await res.json();
+      setForecastResult(data.forecast);
+      // Refresh the report to reflect the new forecast
+      fetchReport();
+    } catch (err: any) {
+      console.error(err);
+      setForecastError(err.message || "Failed to generate forecast");
+    } finally {
+      setForecastLoading(false);
+    }
+  };
+
+  const actionRequiredCount = report.filter(item => item.actionRequired).length;
+  const totalSkuCount = report.length;
+  const averageVelocity30d = report.reduce((acc, item) => acc + item.averageDailySales30d, 0);
+
+  return (
+    <div className="tab-content">
+      <div className="section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <div>
+          <h2>Inventory Forecasting & Demand Planning</h2>
+          <p>Analyze sales velocity, compute safety stock coverage, project run-out dates, and manage purchasing recommendations.</p>
+        </div>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <label style={{ fontSize: "0.9rem", fontWeight: 600 }}>Location:</label>
+          <select 
+            value={locationId} 
+            onChange={(e) => setLocationId(e.target.value)}
+            style={{
+              background: "rgba(22, 28, 45, 0.7)",
+              border: "1px solid var(--border-color)",
+              color: "var(--text-primary)",
+              padding: "6px 12px",
+              borderRadius: "6px",
+              cursor: "pointer"
+            }}
+          >
+            <option value="default">Default Location</option>
+            <option value="Main Store">Main Store</option>
+            <option value="warehouse-south">Warehouse South</option>
+            <option value="store-east">Store East</option>
+          </select>
+          <button className="btn btn-secondary" onClick={fetchReport} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }}>
+            Refresh Report
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div style={{ padding: "12px", background: "rgba(220, 53, 69, 0.1)", border: "1px solid rgba(220, 53, 69, 0.2)", borderRadius: "6px", color: "#ea868f", marginBottom: "20px" }}>
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+
+      {/* Stats Cards */}
+      <div className="stats-grid" style={{ marginBottom: "30px", marginTop: "10px" }}>
+        <div className="stat-card" style={{ borderLeft: "4px solid var(--accent-color)" }}>
+          <div className="stat-title">Tracked SKUs</div>
+          <div className="stat-value" style={{ color: "var(--accent-color-light)" }}>
+            {loading ? "..." : totalSkuCount}
+          </div>
+          <div className="stat-desc">Active items at this location</div>
+        </div>
+        <div className="stat-card" style={{ borderLeft: `4px solid ${actionRequiredCount > 0 ? "var(--error-color)" : "var(--success-color)"}` }}>
+          <div className="stat-title">Restock Recommendations</div>
+          <div className="stat-value" style={{ color: actionRequiredCount > 0 ? "#ea868f" : "var(--success-color)" }}>
+            {loading ? "..." : actionRequiredCount}
+          </div>
+          <div className="stat-desc">{actionRequiredCount > 0 ? "SKUs below reorder point" : "All items within safety levels"}</div>
+        </div>
+        <div className="stat-card" style={{ borderLeft: "4px solid var(--info-color)" }}>
+          <div className="stat-title">Combined 30d Velocity</div>
+          <div className="stat-value" style={{ color: "hsl(199, 89%, 60%)" }}>
+            {loading ? "..." : averageVelocity30d.toFixed(2)}
+          </div>
+          <div className="stat-desc">Average daily units dispatched</div>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "24px", alignItems: "start" }}>
+        {/* Main Planning Report Card */}
+        <div className="card" style={{ overflow: "hidden" }}>
+          <div className="card-header" style={{ padding: "16px 20px" }}>
+            <h3>Demand Planning Report</h3>
+          </div>
+          <div className="card-body" style={{ padding: "0" }}>
+            <div className="table-responsive" style={{ margin: 0, border: "none" }}>
+              <table className="data-table" style={{ width: "100%" }}>
+                <thead>
+                  <tr>
+                    <th>SKU</th>
+                    <th>Stock</th>
+                    <th>Vel. (7d/30d/90d)</th>
+                    <th>Days Cover</th>
+                    <th>Run-out Date</th>
+                    <th>Safety Stock</th>
+                    <th>Reorder Pt (Qty)</th>
+                    <th>30d Demand Est.</th>
+                    <th>Recommendation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={9} style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
+                        Loading demand planning data...
+                      </td>
+                    </tr>
+                  ) : report.length > 0 ? (
+                    report.map((item) => {
+                      const runOutClass = item.daysOfCover === Infinity ? "badge-healthy" : item.daysOfCover < 15 ? "badge-error" : item.daysOfCover < 30 ? "badge-warning" : "badge-healthy";
+                      const isLowStock = item.actionRequired;
+                      
+                      return (
+                        <tr key={item.sku}>
+                          <td style={{ fontWeight: 600 }}>
+                            <span 
+                              style={{ cursor: "pointer", color: "var(--accent-color-light)", textDecoration: "underline" }}
+                              onClick={() => setSelectedSku(item.sku)}
+                              title="Click to select for forecasting"
+                            >
+                              {item.sku}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: "center", fontWeight: "bold" }}>
+                            {item.currentStock}
+                          </td>
+                          <td style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                            {item.averageDailySales7d.toFixed(1)} / {item.averageDailySales30d.toFixed(1)} / {item.averageDailySales90d.toFixed(1)}
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            <span className={`badge ${runOutClass}`}>
+                              {item.daysOfCover === Infinity ? "∞ Days" : `${item.daysOfCover} d`}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                            {item.runOutDate ? new Date(item.runOutDate).toLocaleDateString() : "N/A"}
+                          </td>
+                          <td style={{ textAlign: "center" }}>{item.safetyStock}</td>
+                          <td style={{ textAlign: "center", fontSize: "0.9rem" }}>
+                            {item.reorderPoint} <span style={{ color: "var(--text-muted)" }}>({item.reorderQuantity})</span>
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            {item.forecastedDemand30d} 
+                            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                              Conf: {(item.confidenceLevel * 100).toFixed(0)}%
+                            </div>
+                          </td>
+                          <td>
+                            {isLowStock ? (
+                              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                                <span className="badge badge-error" style={{ fontSize: "0.75rem", padding: "2px 6px" }}>Reorder Req.</span>
+                                <span style={{ fontSize: "0.8rem", color: "#ea868f", fontWeight: 600 }}>Order: {item.recommendedOrderQuantity} units</span>
+                              </div>
+                            ) : (
+                              <span className="badge badge-healthy" style={{ fontSize: "0.75rem", padding: "2px 6px" }}>Healthy</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={9} style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
+                        No inventory items found. Add items or submit onboarding stock first.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Manual Forecasting Console Card */}
+        <div className="card">
+          <div className="card-header">
+            <h3>Manual Demand Forecast</h3>
+          </div>
+          <div className="card-body">
+            <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "15px" }}>
+              Project future demand for a specific SKU. Manual forecasts overwrite fallback calculations based on historical daily sales.
+            </p>
+            <form onSubmit={handleGenerateForecast} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>Select SKU</label>
+                <select
+                  value={selectedSku}
+                  onChange={(e) => setSelectedSku(e.target.value)}
+                  style={{
+                    background: "rgba(22, 28, 45, 0.7)",
+                    border: "1px solid var(--border-color)",
+                    color: "var(--text-primary)",
+                    padding: "8px 10px",
+                    borderRadius: "6px",
+                    width: "100%"
+                  }}
+                >
+                  <option value="">-- Choose a SKU --</option>
+                  {inventoryList.map((item: any) => {
+                    const skuVal = item.sku;
+                    return (
+                      <option key={skuVal} value={skuVal}>
+                        {skuVal}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>Forecast Horizon (Days)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={forecastDays}
+                  onChange={(e) => setForecastDays(parseInt(e.target.value) || 30)}
+                  style={{
+                    background: "rgba(22, 28, 45, 0.7)",
+                    border: "1px solid var(--border-color)",
+                    color: "var(--text-primary)",
+                    padding: "8px 10px",
+                    borderRadius: "6px"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>Trend / Seasonality Multiplier</label>
+                <input
+                  type="number"
+                  step="0.05"
+                  min="0.1"
+                  max="10.0"
+                  value={trendMultiplier}
+                  onChange={(e) => setTrendMultiplier(parseFloat(e.target.value) || 1.0)}
+                  style={{
+                    background: "rgba(22, 28, 45, 0.7)",
+                    border: "1px solid var(--border-color)",
+                    color: "var(--text-primary)",
+                    padding: "8px 10px",
+                    borderRadius: "6px"
+                  }}
+                />
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  e.g., 1.2 adds 20% bump for expected holiday peaks; 0.8 marks seasonal drop.
+                </span>
+              </div>
+
+              <button 
+                type="submit" 
+                className="btn btn-primary" 
+                disabled={forecastLoading || !selectedSku} 
+                style={{ marginTop: "10px", width: "100%" }}
+              >
+                {forecastLoading ? "Calculating Forecast..." : "Generate & Save Forecast"}
+              </button>
+            </form>
+
+            {forecastError && (
+              <div style={{ marginTop: "15px", padding: "8px 12px", background: "rgba(220, 53, 69, 0.1)", border: "1px solid rgba(220, 53, 69, 0.2)", borderRadius: "6px", color: "#ea868f", fontSize: "0.85rem" }}>
+                {forecastError}
+              </div>
+            )}
+
+            {forecastResult && (
+              <div style={{ 
+                marginTop: "20px", 
+                padding: "16px", 
+                background: "linear-gradient(135deg, rgba(170, 59, 255, 0.08) 0%, rgba(315, 85, 58, 0.08) 100%)", 
+                border: "1px solid rgba(170, 59, 255, 0.2)", 
+                borderRadius: "8px",
+                animation: "fadeIn 0.3s ease"
+              }}>
+                <h4 style={{ margin: "0 0 10px", color: "var(--accent-color-light)", fontSize: "0.95rem" }}>Forecast Created Successfully</h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "0.85rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "var(--text-muted)" }}>SKU:</span>
+                    <strong style={{ color: "var(--text-primary)" }}>{forecastResult.sku}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "var(--text-muted)" }}>Horizon:</span>
+                    <strong style={{ color: "var(--text-primary)" }}>{forecastDays} Days</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "var(--text-muted)" }}>Projected Demand:</span>
+                    <strong style={{ color: "var(--success-color)", fontSize: "1.1rem" }}>{forecastResult.forecastedQuantity} units</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "var(--text-muted)" }}>Confidence Rating:</span>
+                    <strong style={{ color: "var(--info-color)" }}>{(forecastResult.confidenceLevel * 100).toFixed(0)}%</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "var(--text-muted)" }}>Active Window:</span>
+                    <strong style={{ color: "var(--text-primary)", fontSize: "0.75rem" }}>
+                      {new Date(forecastResult.periodStart).toLocaleDateString()} - {new Date(forecastResult.periodEnd).toLocaleDateString()}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface MobileScannerTabProps {
+  inventoryList: any[];
+  barcodeList: any[];
+  onRefreshData: () => Promise<void>;
+  tenantId: string;
+}
+
+function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId }: MobileScannerTabProps) {
+  const [activeMode, setActiveMode] = useState<"pick" | "receive" | "count">("pick");
+  const [scanValue, setScanValue] = useState("");
+  const [scanLoading, setScanLoading] = useState(false);
+  const [resolvedItem, setResolvedItem] = useState<any | null>(null);
+  
+  // Transaction input states
+  const [qtyInput, setQtyInput] = useState(1);
+  const [selectedLocation, setSelectedLocation] = useState("default");
+  
+  // LED Status & messages
+  const [ledStatus, setLedStatus] = useState<"idle" | "success" | "error" | "scanning">("idle");
+  const [actionMsg, setActionMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  
+  // Cycle count session state
+  const [cycleCountSession, setCycleCountSession] = useState<Array<{ sku: string; count: number }>>([]);
+
+  const playBeep = (success: boolean) => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      if (success) {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(950, ctx.currentTime);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.1);
+      } else {
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(140, ctx.currentTime);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.28);
+      }
+    } catch (e) {
+      console.warn("Web Audio API not allowed or blocked by browser policy.", e);
+    }
+  };
+
+  const handleScan = async (value: string) => {
+    if (!value) return;
+    try {
+      setScanLoading(true);
+      setLedStatus("scanning");
+      setActionMsg(null);
+      
+      // Simulate laser scanner scan timing (600ms) for high-fidelity UX
+      await new Promise(resolve => setTimeout(resolve, 600));
+
+      const res = await fetch(`${API_BASE}/barcodes/scan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rawScan: value,
+          context: activeMode === "pick" ? "pos" : activeMode === "receive" ? "receiving" : "cycle_count"
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Barcode not registered");
+      }
+
+      const scanResult = await res.json();
+      const sku = scanResult.variantId;
+      
+      // Look up current stock details in the app inventory list
+      const invItem = inventoryList.find(item => item.sku === sku);
+      
+      playBeep(true);
+      setLedStatus("success");
+      
+      if (activeMode === "count") {
+        // Increment directly in session list
+        setCycleCountSession(prev => {
+          const exists = prev.find(item => item.sku === sku);
+          if (exists) {
+            return prev.map(item => item.sku === sku ? { ...item, count: item.count + 1 } : item);
+          } else {
+            return [...prev, { sku, count: 1 }];
+          }
+        });
+        setScanValue("");
+        setActionMsg({ type: "success", text: `Counted ${sku}` });
+      } else {
+        setResolvedItem({
+          sku,
+          barcodeValue: value,
+          currentStock: invItem ? invItem.quantity : 0
+        });
+        setQtyInput(1);
+      }
+    } catch (err: any) {
+      console.error(err);
+      playBeep(false);
+      setLedStatus("error");
+      setResolvedItem(null);
+      setActionMsg({ type: "error", text: err.message || "Failed to scan barcode" });
+    } finally {
+      setScanLoading(false);
+    }
+  };
+
+  const handleDispatch = async () => {
+    if (!resolvedItem) return;
+    try {
+      setActionMsg(null);
+      const res = await fetch(`${API_BASE}/inventory/dispatch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sku: resolvedItem.sku,
+          amount: qtyInput,
+          locationId: selectedLocation
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to dispatch stock");
+      }
+
+      try {
+        await fetch(`${API_BASE}/accounting/stock-sold`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            variantId: resolvedItem.sku,
+            quantity: qtyInput,
+            tenantId
+          })
+        });
+      } catch (accountingErr) {
+        console.warn("Accounting entry dispatch warning:", accountingErr);
+      }
+
+      playBeep(true);
+      setTimeout(() => playBeep(true), 120); // clean double chirp
+      setLedStatus("success");
+      setActionMsg({ type: "success", text: `Successfully dispatched ${qtyInput} units of ${resolvedItem.sku}!` });
+      setResolvedItem(null);
+      setScanValue("");
+      await onRefreshData();
+    } catch (err: any) {
+      console.error(err);
+      playBeep(false);
+      setLedStatus("error");
+      setActionMsg({ type: "error", text: err.message || "Dispatch failed" });
+    }
+  };
+
+  const handleReceive = async () => {
+    if (!resolvedItem) return;
+    try {
+      setActionMsg(null);
+      const res = await fetch(`${API_BASE}/inventory/receive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sku: resolvedItem.sku,
+          amount: qtyInput,
+          locationId: selectedLocation
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to receive stock");
+      }
+
+      try {
+        await fetch(`${API_BASE}/accounting/stock-received`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            variantId: resolvedItem.sku,
+            totalCostCents: qtyInput * 1500, // mock $15.00 cost per item received
+            supplierName: "Warehouse Inbound Scan",
+            tenantId
+          })
+        });
+      } catch (accountingErr) {
+        console.warn("Accounting entry receive warning:", accountingErr);
+      }
+
+      playBeep(true);
+      setTimeout(() => playBeep(true), 120);
+      setLedStatus("success");
+      setActionMsg({ type: "success", text: `Successfully received ${qtyInput} units of ${resolvedItem.sku}!` });
+      setResolvedItem(null);
+      setScanValue("");
+      await onRefreshData();
+    } catch (err: any) {
+      console.error(err);
+      playBeep(false);
+      setLedStatus("error");
+      setActionMsg({ type: "error", text: err.message || "Receive failed" });
+    }
+  };
+
+  const handleSubmitCycleCount = async () => {
+    if (cycleCountSession.length === 0) return;
+    try {
+      setActionMsg(null);
+      const res = await fetch(`${API_BASE}/inventory/count`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          counts: cycleCountSession.map(c => ({ sku: c.sku, count: c.count })),
+          locationId: selectedLocation
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to reconcile cycle count");
+      }
+
+      playBeep(true);
+      setTimeout(() => playBeep(true), 120);
+      setLedStatus("success");
+      setActionMsg({ type: "success", text: `Cycle count reconciled successfully for ${cycleCountSession.length} SKUs!` });
+      setCycleCountSession([]);
+      await onRefreshData();
+    } catch (err: any) {
+      console.error(err);
+      playBeep(false);
+      setLedStatus("error");
+      setActionMsg({ type: "error", text: err.message || "Reconciliation failed" });
+    }
+  };
+
+  const handlePillClick = (val: string) => {
+    setScanValue(val);
+    handleScan(val);
+  };
+
+  // Find demo barcodes for active items to render as simulator helper buttons
+  const activeBarcodes = barcodeList.slice(0, 8);
+
+  return (
+    <div className="tab-content" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <div style={{ textAlign: "center", marginBottom: "20px" }}>
+        <h2>Warehouse Mobile Terminal Simulator</h2>
+        <p>Perform live picking, receiving, and physical counts in real time using a simulated handheld computer.</p>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px 1fr", width: "100%", gap: "30px", alignItems: "start" }}>
+        {/* Left column: Simulator Instructions & Quick Barcode list */}
+        <div className="card">
+          <div className="card-header">
+            <h3>Terminal Instructions</h3>
+          </div>
+          <div className="card-body" style={{ fontSize: "0.85rem", lineHeight: "145%" }}>
+            <p><strong>1. Select Terminal Mode:</strong> Toggle the header buttons inside the Zebra terminal to select your current warehouse task.</p>
+            <p><strong>2. Trigger Scanner:</strong> Use the clickable barcode shortcut pills below to simulate laser gun triggers, or type manually and press Enter.</p>
+            <p><strong>3. Verify Audio & LED:</strong> Clean high-pitch beep represents a successful scan lookup; low buzz indicates unrecognized SKU.</p>
+            
+            <h4 style={{ marginTop: "20px", color: "var(--accent-color-light)", fontSize: "0.9rem" }}>Barcode Scanner Shortcut Pills</h4>
+            <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "8px" }}>Click to simulate a gun laser scan:</p>
+            <div className="scan-pills-container">
+              {activeBarcodes.length > 0 ? (
+                activeBarcodes.map(b => (
+                  <span 
+                    key={b.barcodeValue} 
+                    className="scan-pill"
+                    onClick={() => handlePillClick(b.barcodeValue)}
+                    title={`Click to scan barcode for ${b.variantId}`}
+                  >
+                    {b.barcodeValue} ({b.variantId})
+                  </span>
+                ))
+              ) : (
+                <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                  No barcodes registered yet. Create barcodes first!
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Middle column: Simulated ZebraTC21 Device */}
+        <div className="handheld-device">
+          {/* LED Status light */}
+          <div className={`scanner-led ${ledStatus}`} title={`Scanner LED: ${ledStatus}`}></div>
+
+          <div className="handheld-screen">
+            {/* Cell status bar */}
+            <div className="sim-status-bar">
+              <span className="sim-time">20:42 PM</span>
+              <span style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                <span>LTE 📶</span>
+                <span>🔋 98%</span>
+              </span>
+            </div>
+
+            {/* Terminal Header */}
+            <div className="sim-header">
+              <h3>WMS Terminus</h3>
+              <p>Device #8A-42 (Default)</p>
+            </div>
+
+            {/* Mode selection button grid */}
+            <div className="mode-selector">
+              <button 
+                type="button"
+                className={`mode-btn ${activeMode === "pick" ? "active" : ""}`}
+                onClick={() => {
+                  setActiveMode("pick");
+                  setResolvedItem(null);
+                  setActionMsg(null);
+                }}
+              >
+                📦 Pick
+              </button>
+              <button 
+                type="button"
+                className={`mode-btn ${activeMode === "receive" ? "active" : ""}`}
+                onClick={() => {
+                  setActiveMode("receive");
+                  setResolvedItem(null);
+                  setActionMsg(null);
+                }}
+              >
+                📥 Receive
+              </button>
+              <button 
+                type="button"
+                className={`mode-btn ${activeMode === "count" ? "active" : ""}`}
+                onClick={() => {
+                  setActiveMode("count");
+                  setResolvedItem(null);
+                  setActionMsg(null);
+                }}
+              >
+                📝 Count
+              </button>
+            </div>
+
+            {/* Laser viewport animation when scanning */}
+            <div className={`laser-viewport ${scanLoading ? "scanning" : ""}`}>
+              <div className="laser-beam"></div>
+              {scanLoading ? (
+                <span style={{ fontSize: "0.75rem", color: "red", zIndex: 4, fontWeight: 700 }}>EMITTING LASER...</span>
+              ) : resolvedItem ? (
+                <div style={{ textAlign: "center", zIndex: 4 }}>
+                  <div style={{ fontSize: "0.75rem", color: "var(--success-color)", fontWeight: "bold" }}>BARCODE RESOLVED</div>
+                  <div style={{ fontSize: "0.85rem", color: "var(--text-primary)" }}>{resolvedItem.barcodeValue}</div>
+                </div>
+              ) : (
+                <span className="virtual-scan-hint">Awaiting scan trigger...</span>
+              )}
+            </div>
+
+            {/* Barcode input buffer */}
+            <div style={{ marginBottom: "15px" }}>
+              <input
+                type="text"
+                placeholder="Scan barcode buffer..."
+                value={scanValue}
+                onChange={(e) => setScanValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleScan(scanValue);
+                  }
+                }}
+                disabled={scanLoading}
+                style={{
+                  background: "rgba(0, 0, 0, 0.4)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  color: "#fff",
+                  padding: "8px 10px",
+                  borderRadius: "6px",
+                  width: "100%",
+                  boxSizing: "border-box",
+                  textAlign: "center",
+                  fontSize: "0.9rem",
+                  fontFamily: "var(--mono-font)"
+                }}
+              />
+            </div>
+
+            {/* Screen Content: Results & Submits */}
+            {actionMsg && (
+              <div style={{
+                padding: "8px 10px",
+                borderRadius: "6px",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                marginBottom: "12px",
+                background: actionMsg.type === "success" ? "rgba(52, 211, 153, 0.15)" : "rgba(248, 113, 113, 0.15)",
+                border: actionMsg.type === "success" ? "1px solid rgba(52, 211, 153, 0.3)" : "1px solid rgba(248, 113, 113, 0.3)",
+                color: actionMsg.type === "success" ? "#34d399" : "#f87171",
+                textAlign: "center"
+              }}>
+                {actionMsg.text}
+              </div>
+            )}
+
+            {/* Picking & Receiving Resolved Form View */}
+            {resolvedItem && (activeMode === "pick" || activeMode === "receive") && (
+              <div style={{
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: "8px",
+                padding: "12px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                  <span style={{ color: "var(--text-muted)" }}>SKU:</span>
+                  <strong style={{ color: "#fff" }}>{resolvedItem.sku}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                  <span style={{ color: "var(--text-muted)" }}>Current On-Hand:</span>
+                  <strong>{resolvedItem.currentStock} units</strong>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Transaction Quantity</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={qtyInput}
+                    onChange={(e) => setQtyInput(parseInt(e.target.value) || 1)}
+                    style={{
+                      background: "rgba(0, 0, 0, 0.3)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      color: "#fff",
+                      padding: "6px",
+                      borderRadius: "4px",
+                      fontSize: "0.85rem"
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Warehouse Location</label>
+                  <select
+                    value={selectedLocation}
+                    onChange={(e) => setSelectedLocation(e.target.value)}
+                    style={{
+                      background: "rgba(0, 0, 0, 0.3)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      color: "#fff",
+                      padding: "6px",
+                      borderRadius: "4px",
+                      fontSize: "0.85rem"
+                    }}
+                  >
+                    <option value="default">Default Location</option>
+                    <option value="Main Store">Main Store</option>
+                    <option value="warehouse-south">Warehouse South</option>
+                    <option value="store-east">Store East</option>
+                  </select>
+                </div>
+
+                <div style={{ display: "flex", gap: "8px", marginTop: "5px" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResolvedItem(null);
+                      setScanValue("");
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: "8px",
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      color: "#fff",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontSize: "0.8rem"
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={activeMode === "pick" ? handleDispatch : handleReceive}
+                    style={{
+                      flex: 1,
+                      padding: "8px",
+                      background: activeMode === "pick" ? "var(--error-color)" : "var(--success-color)",
+                      border: "none",
+                      color: "#fff",
+                      borderRadius: "6px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontSize: "0.8rem"
+                    }}
+                  >
+                    {activeMode === "pick" ? "Pick Stock" : "Receive"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Cycle Count Session List Screen */}
+            {activeMode === "count" && (
+              <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Scanned Session Items:</span>
+                  {cycleCountSession.length > 0 && (
+                    <button 
+                      onClick={() => setCycleCountSession([])}
+                      style={{ background: "none", border: "none", color: "#f87171", fontSize: "0.7rem", cursor: "pointer", padding: 0 }}
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
+                
+                <div className="scanned-items-list">
+                  {cycleCountSession.length > 0 ? (
+                    cycleCountSession.map(c => (
+                      <div key={c.sku} className="scan-list-item">
+                        <span style={{ fontWeight: 600 }}>{c.sku}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span style={{ background: "rgba(255,255,255,0.08)", padding: "2px 8px", borderRadius: "4px", fontWeight: "bold" }}>
+                            {c.count} pcs
+                          </span>
+                          <button
+                            onClick={() => {
+                              setCycleCountSession(prev => prev.filter(item => item.sku !== c.sku));
+                            }}
+                            style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: "0.8rem" }}
+                            title="Delete item count"
+                          >
+                            ❌
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: "center", padding: "30px 10px", color: "var(--text-muted)", fontSize: "0.75rem" }}>
+                      No items scanned in session. Scan a barcode to begin counting!
+                    </div>
+                  )}
+                </div>
+
+                {cycleCountSession.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "auto" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <label style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Audit Location:</label>
+                      <select
+                        value={selectedLocation}
+                        onChange={(e) => setSelectedLocation(e.target.value)}
+                        style={{
+                          background: "rgba(0, 0, 0, 0.4)",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          color: "#fff",
+                          padding: "4px 8px",
+                          borderRadius: "4px",
+                          fontSize: "0.75rem",
+                          flex: 1
+                        }}
+                      >
+                        <option value="default">Default Location</option>
+                        <option value="Main Store">Main Store</option>
+                        <option value="warehouse-south">Warehouse South</option>
+                        <option value="store-east">Store East</option>
+                      </select>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSubmitCycleCount}
+                      style={{
+                        padding: "10px",
+                        background: "var(--accent-gradient)",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "6px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        fontSize: "0.8rem"
+                      }}
+                    >
+                      Reconcile Cycle Count
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Bottom handheld trigger button */}
+            <button
+              type="button"
+              className="physical-trigger-btn"
+              disabled={scanLoading || !scanValue}
+              onClick={() => handleScan(scanValue)}
+            >
+              ⚡ trigger Scan
+            </button>
+          </div>
+        </div>
+
+        {/* Right column: Active system stock stats lookup */}
+        <div className="card">
+          <div className="card-header">
+            <h3>Registered Barcodes Index</h3>
+          </div>
+          <div className="card-body" style={{ padding: "0" }}>
+            <div className="table-responsive" style={{ margin: 0, border: "none" }}>
+              <table className="data-table" style={{ width: "100%", fontSize: "0.8rem" }}>
+                <thead>
+                  <tr>
+                    <th>Barcode</th>
+                    <th>SKU (Variant)</th>
+                    <th>Format</th>
+                    <th>System Stock</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {barcodeList.length > 0 ? (
+                    barcodeList.map(b => {
+                      const itemStock = inventoryList.find(item => item.sku === b.variantId);
+                      return (
+                        <tr key={b.barcodeValue}>
+                          <td style={{ fontFamily: "var(--mono-font)" }}>{b.barcodeValue}</td>
+                          <td style={{ fontWeight: 600 }}>{b.variantId}</td>
+                          <td style={{ textTransform: "uppercase", fontSize: "0.7rem", color: "var(--text-muted)" }}>{b.symbology}</td>
+                          <td style={{ textAlign: "center", fontWeight: "bold" }}>
+                            {itemStock ? itemStock.quantity : 0}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)" }}>
+                        No barcodes found. Please assign barcodes first.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OutboxTab() {
+  const [stats, setStats] = useState<{
+    totalPending: number;
+    totalProcessed: number;
+    totalDeadLettered: number;
+    recentFailures: any[];
+  } | null>(null);
+  const [dlqEvents, setDlqEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchStatsAndDlq = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const statsRes = await fetch("/api/outbox/stats");
+      if (!statsRes.ok) throw new Error("Failed to fetch outbox statistics");
+      const statsData = await statsRes.json();
+      setStats(statsData);
+
+      const dlqRes = await fetch("/api/outbox/dead-letter");
+      if (!dlqRes.ok) throw new Error("Failed to fetch dead-lettered events");
+      const dlqData = await dlqRes.json();
+      setDlqEvents(dlqData);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to load outbox metrics");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStatsAndDlq();
+  }, []);
+
+  const handleRetry = async (id: string) => {
+    try {
+      const res = await fetch(`/api/outbox/${id}/retry`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to retry event");
+      alert("Event re-enqueued successfully!");
+      fetchStatsAndDlq();
+    } catch (err: any) {
+      alert(`Error retrying event: ${err.message}`);
+    }
+  };
+
+  return (
+    <div className="tab-content">
+      <div className="section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <h2>Outbox Event Processing & Diagnostics</h2>
+          <p>Monitor event reliability, analyze message failures, and manage the Dead Letter Queue (DLQ).</p>
+        </div>
+        <button className="btn btn-secondary" onClick={fetchStatsAndDlq} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }}>
+          Refresh Diagnostics
+        </button>
+      </div>
+
+      {error && (
+        <div style={{ padding: "12px", background: "rgba(220, 53, 69, 0.1)", border: "1px solid rgba(220, 53, 69, 0.2)", borderRadius: "6px", color: "#ea868f", marginBottom: "20px" }}>
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+
+      {/* Stats Cards */}
+      <div className="stats-grid" style={{ marginBottom: "30px", marginTop: "10px" }}>
+        <div className="stat-card" style={{ borderLeft: "4px solid var(--accent-color)" }}>
+          <div className="stat-title">Pending Events</div>
+          <div className="stat-value" style={{ color: "var(--accent-color-light)" }}>
+            {stats ? stats.totalPending : "..."}
+          </div>
+          <div className="stat-desc">Awaiting asynchronous publishing</div>
+        </div>
+        <div className="stat-card" style={{ borderLeft: "4px solid var(--success-color)" }}>
+          <div className="stat-title">Processed Events</div>
+          <div className="stat-value" style={{ color: "var(--success-color)" }}>
+            {stats ? stats.totalProcessed : "..."}
+          </div>
+          <div className="stat-desc">Successfully published to broker</div>
+        </div>
+        <div className="stat-card" style={{ borderLeft: "4px solid #dc3545" }}>
+          <div className="stat-title">Dead-Lettered (DLQ)</div>
+          <div className="stat-value" style={{ color: "#ea868f" }}>
+            {stats ? stats.totalDeadLettered : "..."}
+          </div>
+          <div className="stat-desc">Exceeded max attempts (5)</div>
+        </div>
+      </div>
+
+      {/* Main Grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "30px" }}>
+        {/* Dead Letter Queue Section */}
+        <div className="card">
+          <div className="card-header">
+            <h3>Dead Letter Queue (DLQ)</h3>
+          </div>
+          <div className="card-body">
+            <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "15px" }}>
+              Events in this table have failed to publish multiple times and are skipped by the processor. Review details and retry.
+            </p>
+            <div className="table-responsive">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Event ID</th>
+                    <th>Event Type</th>
+                    <th>Last Error</th>
+                    <th>Attempts</th>
+                    <th>Occurred On</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dlqEvents.length > 0 ? (
+                    dlqEvents.map((event) => (
+                      <tr key={event.id}>
+                        <td style={{ fontSize: "0.8rem", fontFamily: "monospace" }}>{event.id}</td>
+                        <td>
+                          <span style={{ padding: "4px 8px", background: "rgba(255,255,255,0.06)", borderRadius: "4px", fontWeight: 600 }}>
+                            {event.eventName}
+                          </span>
+                        </td>
+                        <td style={{ color: "#ea868f", fontSize: "0.85rem" }}>{event.lastError}</td>
+                        <td style={{ textAlign: "center", fontWeight: 600 }}>{event.attempts}</td>
+                        <td style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                          {new Date(event.occurredOn).toLocaleString()}
+                        </td>
+                        <td>
+                          <button className="btn btn-primary btn-sm" onClick={() => handleRetry(event.id)}>
+                            Retry Event
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: "center", color: "var(--text-muted)", padding: "20px" }}>
+                        No dead-lettered events detected. System publishing is healthy!
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Failures Section */}
+        <div className="card">
+          <div className="card-header">
+            <h3>Recent Failures & Backed-Off Retries</h3>
+          </div>
+          <div className="card-body">
+            <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "15px" }}>
+              These events are undergoing exponential backoff retries. The processor will retry them after their scheduled backoff time expires.
+            </p>
+            <div className="table-responsive">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Event ID</th>
+                    <th>Event Type</th>
+                    <th>Last Error</th>
+                    <th>Attempts</th>
+                    <th>Retry Scheduled At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats && stats.recentFailures.length > 0 ? (
+                    stats.recentFailures.map((event) => (
+                      <tr key={event.id}>
+                        <td style={{ fontSize: "0.8rem", fontFamily: "monospace" }}>{event.id}</td>
+                        <td>
+                          <span style={{ padding: "4px 8px", background: "rgba(255,255,255,0.06)", borderRadius: "4px", fontWeight: 600 }}>
+                            {event.eventName}
+                          </span>
+                        </td>
+                        <td style={{ color: "#f8c146", fontSize: "0.85rem" }}>{event.lastError}</td>
+                        <td style={{ textAlign: "center", fontWeight: 600 }}>{event.attempts}</td>
+                        <td style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                          {new Date(event.nextAttemptAt).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} style={{ textAlign: "center", color: "var(--text-muted)", padding: "20px" }}>
+                        No backed-off retries currently scheduled.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface Shipment {
+  id: string;
+  sku: string;
+  quantity: number;
+  destinationAddress: string;
+  carrier: string;
+  trackingNumber: string | null;
+  labelUrl: string | null;
+  shippingRateCents: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface CarrierRate {
+  carrier: string;
+  rateCents: number;
+  estimatedDays: number;
+}
+
+function ShippingTab({
+  inventoryList,
+  onRefreshData,
+  tenantId,
+  locationId
+}: {
+  inventoryList: any[];
+  onRefreshData: () => void;
+  tenantId: string;
+  locationId: string;
+}) {
+  const [shipments, setShipments] = useState<Shipment[]>([]);
+  const [sku, setSku] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [address, setAddress] = useState("123 Main St, Seattle, WA 98101");
+  const [rates, setRates] = useState<CarrierRate[]>([]);
+  const [selectedCarrier, setSelectedCarrier] = useState<string>("");
+  const [loadingRates, setLoadingRates] = useState(false);
+  const [purchasingLabel, setPurchasingLabel] = useState(false);
+  const [trackingLoading, setTrackingLoading] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [lastPurchasedLabel, setLastPurchasedLabel] = useState<{
+    trackingNumber: string;
+    labelUrl: string;
+    rateCents: number;
+    carrier: string;
+    sku: string;
+    quantity: number;
+    destinationAddress: string;
+  } | null>(null);
+
+  const fetchShipments = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/shipping/shipments`);
+      if (res.ok) {
+        const data = await res.json();
+        setShipments(data);
+      }
+    } catch (e) {
+      console.error("Failed to load shipments", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchShipments();
+    if (inventoryList.length > 0 && !sku) {
+      setSku(inventoryList[0].sku);
+    }
+  }, [inventoryList]);
+
+  const handleEstimateRates = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sku || !address) return;
+    setLoadingRates(true);
+    setNotification(null);
+    setRates([]);
+    setSelectedCarrier("");
+    try {
+      const res = await fetch(`${API_BASE}/shipping/rates?sku=${encodeURIComponent(sku)}&quantity=${quantity}&address=${encodeURIComponent(address)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setRates(data);
+        if (data.length > 0) {
+          setSelectedCarrier(data[0].carrier);
+        }
+      } else {
+        const err = await res.json();
+        setNotification({ type: "error", text: err.error || "Failed to fetch rates." });
+      }
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Failed to fetch rates." });
+    } finally {
+      setLoadingRates(false);
+    }
+  };
+
+  const handlePurchaseLabel = async () => {
+    if (!sku || !quantity || !address || !selectedCarrier) return;
+    setPurchasingLabel(true);
+    setNotification(null);
+    try {
+      const res = await fetch(`${API_BASE}/shipping/labels`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sku,
+          quantity,
+          destinationAddress: address,
+          carrier: selectedCarrier,
+          locationId,
+          tenantId
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setNotification({ type: "success", text: `Label purchased successfully for ${selectedCarrier}! Tracking: ${data.trackingNumber}` });
+        setLastPurchasedLabel({
+          trackingNumber: data.trackingNumber,
+          labelUrl: data.labelUrl,
+          rateCents: data.rateCents,
+          carrier: selectedCarrier,
+          sku,
+          quantity,
+          destinationAddress: address
+        });
+        fetchShipments();
+        onRefreshData();
+      } else {
+        const err = await res.json();
+        setNotification({ type: "error", text: err.error || "Failed to purchase label." });
+      }
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Failed to purchase label." });
+    } finally {
+      setPurchasingLabel(false);
+    }
+  };
+
+  const handleTrackShipment = async (id: string, nextStatus: string) => {
+    setTrackingLoading(id);
+    setNotification(null);
+    try {
+      const res = await fetch(`${API_BASE}/shipping/shipments/${id}/track`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus })
+      });
+
+      if (res.ok) {
+        setNotification({ type: "success", text: `Shipment status updated to ${nextStatus}` });
+        fetchShipments();
+      } else {
+        const err = await res.json();
+        setNotification({ type: "error", text: err.error || "Failed to update tracking status." });
+      }
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Failed to update tracking status." });
+    } finally {
+      setTrackingLoading(null);
+    }
+  };
+
+  const renderQrPixels = (text: string) => {
+    const pixels = [];
+    const hash = text.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    for (let i = 0; i < 64; i++) {
+      const isBlack = ((i + hash) * 17) % 3 === 0 || (i % 8 === 0) || (i < 8 && i % 2 === 0) || (i > 56 && i % 2 === 0);
+      pixels.push(<div key={i} className={`qr-pixel ${isBlack ? "" : "white"}`} />);
+    }
+    return pixels;
+  };
+
+  return (
+    <div className="tab-container animated fadeIn">
+      <div className="tab-header">
+        <h2>Shipping Carrier Integration & Logistics</h2>
+        <p>Estimate shipping options, buy labels (with automated ledger accruals), and track simulated carrier states.</p>
+      </div>
+
+      {notification && (
+        <div className={`alert alert-${notification.type === "success" ? "success" : "danger"}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+          <span>{notification.text}</span>
+          <button className="btn-close" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", fontWeight: "bold" }} onClick={() => setNotification(null)}>×</button>
+        </div>
+      )}
+
+      <div className="shipping-grid">
+        <div className="card">
+          <div className="card-header">
+            <h3>Estimate & Buy Label</h3>
+          </div>
+          <div className="card-body">
+            <form onSubmit={handleEstimateRates} className="custom-form">
+              <div className="form-group">
+                <label>Select SKU to Ship</label>
+                <select value={sku} onChange={(e) => setSku(e.target.value)} required>
+                  <option value="">-- Select SKU --</option>
+                  {inventoryList.map((item) => (
+                    <option key={item.sku} value={item.sku}>
+                      {item.sku} (Qty: {item.quantity} available)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Quantity</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Destination Address</label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Street, City, State, ZIP"
+                  required
+                />
+              </div>
+
+              <button type="submit" className="btn btn-primary" disabled={loadingRates}>
+                {loadingRates ? "Estimating..." : "Estimate Shipping"}
+              </button>
+            </form>
+
+            {rates.length > 0 && (
+              <div style={{ marginTop: "20px" }}>
+                <h4>Available Carrier Options</h4>
+                <div className="rate-cards">
+                  {rates.map((r) => (
+                    <div
+                      key={r.carrier}
+                      className={`rate-card ${selectedCarrier === r.carrier ? "selected" : ""}`}
+                      onClick={() => setSelectedCarrier(r.carrier)}
+                    >
+                      <div className="rate-info">
+                        <span className={`carrier-badge carrier-${r.carrier.toLowerCase()}`}>
+                          {r.carrier}
+                        </span>
+                        <span className="rate-days">Est. Delivery: {r.estimatedDays} days</span>
+                      </div>
+                      <span className="rate-price">${(r.rateCents / 100).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  className="btn btn-success"
+                  style={{ width: "100%", marginTop: "15px" }}
+                  onClick={handlePurchaseLabel}
+                  disabled={purchasingLabel || !selectedCarrier}
+                >
+                  {purchasingLabel ? "Purchasing..." : `Buy ${selectedCarrier} Shipping Label`}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <h3>Label Printer Preview</h3>
+          </div>
+          <div className="card-body" style={{ minHeight: "350px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            {lastPurchasedLabel ? (
+              <div>
+                <div className="shipping-label-container">
+                  <div className="shipping-label">
+                    <div className="label-header">
+                      <span className="label-title">{lastPurchasedLabel.carrier} SHIPPING</span>
+                      <span style={{ fontWeight: "bold" }}>PRIORITY</span>
+                    </div>
+                    <div className="label-addresses">
+                      <div className="label-address">
+                        <strong>SHIP FROM:</strong>
+                        Warehouse A (Location: {locationId})<br />
+                        Tenant ID: {tenantId}
+                      </div>
+                      <div className="label-address">
+                        <strong>SHIP TO:</strong>
+                        {lastPurchasedLabel.destinationAddress}
+                      </div>
+                    </div>
+                    <div className="label-details">
+                      <div>
+                        <strong>SKU:</strong> {lastPurchasedLabel.sku}
+                      </div>
+                      <div>
+                        <strong>QTY:</strong> {lastPurchasedLabel.quantity}
+                      </div>
+                      <div>
+                        <strong>COST:</strong> ${(lastPurchasedLabel.rateCents / 100).toFixed(2)}
+                      </div>
+                      <div>
+                        <strong>DATE:</strong> {new Date().toLocaleDateString()}
+                      </div>
+                    </div>
+                    <div className="label-barcode-section">
+                      <div className="label-barcode" />
+                      <div style={{ display: "flex", gap: "10px", alignItems: "center", width: "100%", justifyContent: "space-between" }}>
+                        <div>
+                          <div className="tracking-number-text">{lastPurchasedLabel.trackingNumber}</div>
+                          <div style={{ fontSize: "0.55rem", color: "#666", marginTop: "2px" }}>REF: {lastPurchasedLabel.labelUrl}</div>
+                        </div>
+                        <div className="label-qr-placeholder">
+                          <div className="label-qr-grid">
+                            {renderQrPixels(lastPurchasedLabel.trackingNumber)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ textAlign: "center", marginTop: "15px" }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => window.print()}>
+                    🖨️ Print Label (Simulated)
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "40px 0" }}>
+                <div style={{ fontSize: "2.5rem", marginBottom: "15px" }}>📦</div>
+                <p>No label printed yet.</p>
+                <p style={{ fontSize: "0.8rem" }}>Estimate and purchase a shipping label on the left to generate a simulated barcode label sheet.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: "20px" }}>
+        <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h3>Active Shipments & Carrier Milestones</h3>
+          <button className="btn btn-secondary btn-sm" onClick={fetchShipments}>
+            🔄 Refresh List
+          </button>
+        </div>
+        <div className="card-body">
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Shipment ID</th>
+                  <th>SKU / Qty</th>
+                  <th>Carrier & Tracking</th>
+                  <th>Destination</th>
+                  <th>Cost</th>
+                  <th>Current Status</th>
+                  <th>Actions / Milestone Sim</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shipments.length > 0 ? (
+                  shipments.map((s) => (
+                    <tr key={s.id}>
+                      <td style={{ fontSize: "0.8rem", fontFamily: "monospace" }}>{s.id.substring(0, 8)}...</td>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{s.sku}</div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{s.quantity} units</div>
+                      </td>
+                      <td>
+                        <span className={`carrier-badge carrier-${s.carrier.toLowerCase()}`} style={{ marginRight: "6px" }}>
+                          {s.carrier}
+                        </span>
+                        <div style={{ fontSize: "0.8rem", fontFamily: "monospace", display: "inline-block" }}>
+                          {s.trackingNumber || "N/A"}
+                        </div>
+                      </td>
+                      <td style={{ fontSize: "0.8rem" }}>{s.destinationAddress}</td>
+                      <td style={{ fontWeight: 600, fontFamily: "monospace" }}>${(s.shippingRateCents / 100).toFixed(2)}</td>
+                      <td>
+                        <span className={`badge badge-${s.status === "DELIVERED" ? "success" : s.status === "FAILED" ? "danger" : s.status === "IN_TRANSIT" ? "warning" : "info"}`}>
+                          {s.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                          {s.status === "LABEL_GENERATED" && (
+                            <button
+                              className="btn btn-warning btn-sm"
+                              onClick={() => handleTrackShipment(s.id, "IN_TRANSIT")}
+                              disabled={trackingLoading === s.id}
+                            >
+                              🚚 Scan (In Transit)
+                            </button>
+                          )}
+                          {s.status === "IN_TRANSIT" && (
+                            <>
+                              <button
+                                className="btn btn-success btn-sm"
+                                onClick={() => handleTrackShipment(s.id, "DELIVERED")}
+                                disabled={trackingLoading === s.id}
+                              >
+                                ✅ Deliver
+                              </button>
+                              <button
+                                className="btn btn-danger btn-sm"
+                                onClick={() => handleTrackShipment(s.id, "FAILED")}
+                                disabled={trackingLoading === s.id}
+                              >
+                                ❌ Fail
+                              </button>
+                            </>
+                          )}
+                          {(s.status === "DELIVERED" || s.status === "FAILED") && (
+                            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Transit Complete</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "30px" }}>
+                      No shipments created yet. Purchase a shipping label to dispatch inventory and register a shipment.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

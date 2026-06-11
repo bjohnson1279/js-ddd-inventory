@@ -1,13 +1,20 @@
 import { IOutboxRepository } from "../../domain/repositories/IOutboxRepository";
 import { DomainEventDispatcher } from "../../domain/events/DomainEventDispatcher";
+import { IMessageBroker } from "../../application/ports/IMessageBroker";
 
 export class OutboxProcessor {
   private isProcessing = false;
   private intervalId: NodeJS.Timeout | null = null;
 
+  private readonly maxAttempts: number;
+
   constructor(
-    private readonly outboxRepository: IOutboxRepository
-  ) {}
+    private readonly outboxRepository: IOutboxRepository,
+    private readonly messageBroker?: IMessageBroker,
+    maxAttempts: number = 5
+  ) {
+    this.maxAttempts = maxAttempts;
+  }
 
   public start(intervalMs: number = 5000): void {
     if (this.intervalId) return;
@@ -26,7 +33,7 @@ export class OutboxProcessor {
     this.isProcessing = true;
 
     try {
-      const pendingEvents = await this.outboxRepository.fetchPending(10); // Batch of 10
+      const pendingEvents = await this.outboxRepository.fetchPending(10, this.maxAttempts); // Batch of 10
 
       const processedIds: string[] = [];
       const failedUpdates: { id: string, error: string }[] = [];
@@ -41,6 +48,11 @@ export class OutboxProcessor {
 
           // Dispatch the single event to registered handlers
           await DomainEventDispatcher.dispatch([eventInstance]);
+
+          // Publish to external message broker if configured
+          if (this.messageBroker) {
+            await this.messageBroker.publish(record.eventName, eventInstance);
+          }
 
           // Collect successfully processed IDs
           processedIds.push(record.id);

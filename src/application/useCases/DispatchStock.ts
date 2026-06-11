@@ -3,12 +3,14 @@ import { SKU } from "../../domain/valueObjects/SKU";
 import { Quantity } from "../../domain/valueObjects/Quantity";
 import { IExternalInventoryPublisher } from "../ports/IExternalInventoryPublisher";
 import { ReorderPolicyService } from "../../domain/procurement/services/ReorderPolicyService";
+import { IDispatchRecordRepository, DispatchRecord } from "../../domain/repositories/IDispatchRecordRepository";
 
 export class DispatchStock {
   constructor(
     private readonly inventoryRepository: IInventoryRepository,
     private readonly externalPublisher?: IExternalInventoryPublisher,
-    private readonly reorderPolicyService?: ReorderPolicyService
+    private readonly reorderPolicyService?: ReorderPolicyService,
+    private readonly dispatchRecordRepository?: IDispatchRecordRepository
   ) {}
 
   async execute(skuStr: string, amount: number, locationId: string = "default", skipPublishing: boolean = false): Promise<void> {
@@ -24,6 +26,13 @@ export class DispatchStock {
     item.dispatchStock(quantityToSubtract);
 
     await this.inventoryRepository.save(item);
+
+    // Record historical dispatch for velocity tracking and demand forecasting
+    if (this.dispatchRecordRepository) {
+      await this.dispatchRecordRepository.save(
+        new DispatchRecord("", skuStr, locationId, amount, new Date())
+      );
+    }
 
     if (this.reorderPolicyService) {
       await this.reorderPolicyService.checkPolicy(skuStr, locationId, item.quantity.getValue());

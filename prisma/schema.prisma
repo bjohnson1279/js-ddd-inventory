@@ -128,13 +128,14 @@ model ProcessedWebhookModel {
 }
 
 model OutboxEventModel {
-  id          String    @id @default(uuid())
-  eventName   String
-  payload     String
-  occurredOn  DateTime
-  processedAt DateTime?
-  attempts    Int       @default(0)
-  lastError   String?
+  id            String    @id @default(uuid())
+  eventName     String
+  payload       String
+  occurredOn    DateTime
+  processedAt   DateTime?
+  attempts      Int       @default(0)
+  lastError     String?
+  nextAttemptAt DateTime  @default(now())
 }
 
 model PurchaseOrderModel {
@@ -171,3 +172,98 @@ model ReorderPolicyModel {
 
   @@unique([sku, locationId])
 }
+
+model InventoryAuditModel {
+  id          String                    @id
+  auditNumber String                    @unique
+  tenantId    String
+  locationId  String
+  status      String
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  items       InventoryAuditItemModel[]
+}
+
+model InventoryAuditItemModel {
+  id               String              @id
+  inventoryAuditId String
+  variantId        String
+  expectedQuantity Int
+  countedQuantity  Int?
+  isCounted        Boolean             @default(false)
+  inventoryAudit   InventoryAuditModel @relation(fields: [inventoryAuditId], references: [id], onDelete: Cascade)
+}
+
+model RMAModel {
+  id         String         @id
+  rmaNumber  String         @unique
+  tenantId   String
+  customerId String
+  locationId String
+  status     String
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  items      RMAItemModel[]
+}
+
+model RMAItemModel {
+  id               String   @id
+  rmaId            String
+  variantId        String
+  quantity         Int
+  receivedQuantity Int      @default(0)
+  unitCostCents    Int
+  status           String
+  disposition      String?
+  rma              RMAModel @relation(fields: [rmaId], references: [id], onDelete: Cascade)
+}
+
+model QuarantineItemModel {
+  id         String    @id
+  variantId  String
+  quantity   Int
+  reason     String
+  status     String
+  locationId String
+  tenantId   String
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+}
+
+model DispatchRecordModel {
+  id           String   @id @default(uuid())
+  sku          String
+  locationId   String
+  quantity     Int
+  dispatchedAt DateTime @default(now())
+}
+
+model DemandForecastModel {
+  id                 String   @id @default(uuid())
+  sku                String
+  locationId         String
+  forecastedQuantity Int
+  periodStart        DateTime
+  periodEnd          DateTime
+  confidenceLevel    Float
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([sku, locationId, periodStart, periodEnd])
+}
+
+model ShipmentModel {
+  id                 String   @id @default(uuid())
+  sku                String
+  quantity           Int
+  destinationAddress String
+  carrier            String
+  trackingNumber     String?
+  labelUrl           String?
+  shippingRateCents  Int
+  status             String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+

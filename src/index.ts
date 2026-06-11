@@ -35,6 +35,9 @@ import { PrismaProcessedWebhookRepository } from "./infrastructure/database/Pris
 import { InMemoryOutboxRepository } from "./infrastructure/database/InMemoryOutboxRepository";
 import { PrismaOutboxRepository } from "./infrastructure/database/PrismaOutboxRepository";
 import { OutboxProcessor } from "./infrastructure/outbox/OutboxProcessor";
+import { IMessageBroker } from "./application/ports/IMessageBroker";
+import { InMemoryMessageBroker } from "./infrastructure/messaging/InMemoryMessageBroker";
+import { RabbitMQMessageBroker } from "./infrastructure/messaging/RabbitMQMessageBroker";
 
 import barcodeRoutes from "./infrastructure/http/routes/barcode.routes";
 import serialRoutes from "./infrastructure/http/routes/serial.routes";
@@ -49,6 +52,32 @@ import { IReorderPolicyRepository } from "./domain/repositories/IReorderPolicyRe
 import { PrismaReorderPolicyRepository } from "./infrastructure/database/PrismaReorderPolicyRepository";
 import { InMemoryReorderPolicyRepository } from "./infrastructure/database/InMemoryReorderPolicyRepository";
 import { ReorderPolicyService } from "./domain/procurement/services/ReorderPolicyService";
+import inventoryAuditRoutes from "./infrastructure/http/routes/inventoryAudit.routes";
+import { IInventoryAuditRepository } from "./domain/repositories/IInventoryAuditRepository";
+import { PrismaInventoryAuditRepository } from "./infrastructure/database/PrismaInventoryAuditRepository";
+import { InMemoryInventoryAuditRepository } from "./infrastructure/database/InMemoryInventoryAuditRepository";
+import rmaRoutes from "./infrastructure/http/routes/rma.routes";
+import quarantineRoutes from "./infrastructure/http/routes/quarantine.routes";
+import outboxRoutes from "./infrastructure/http/routes/outbox.routes";
+import { IRMARepository } from "./domain/repositories/IRMARepository";
+import { IQuarantineRepository } from "./domain/repositories/IQuarantineRepository";
+import { PrismaRMARepository } from "./infrastructure/database/PrismaRMARepository";
+import { InMemoryRMARepository } from "./infrastructure/database/InMemoryRMARepository";
+import { PrismaQuarantineRepository } from "./infrastructure/database/PrismaQuarantineRepository";
+import { InMemoryQuarantineRepository } from "./infrastructure/database/InMemoryQuarantineRepository";
+import { IDispatchRecordRepository } from "./domain/repositories/IDispatchRecordRepository";
+import { IDemandForecastRepository } from "./domain/repositories/IDemandForecastRepository";
+import { PrismaDispatchRecordRepository } from "./infrastructure/database/PrismaDispatchRecordRepository";
+import { InMemoryDispatchRecordRepository } from "./infrastructure/database/InMemoryDispatchRecordRepository";
+import { PrismaDemandForecastRepository } from "./infrastructure/database/PrismaDemandForecastRepository";
+import { InMemoryDemandForecastRepository } from "./infrastructure/database/InMemoryDemandForecastRepository";
+import forecastingRoutes from "./infrastructure/http/routes/forecasting.routes";
+import { IShipmentRepository } from "./domain/repositories/IShipmentRepository";
+import { ICarrierService } from "./application/ports/ICarrierService";
+import { PrismaShipmentRepository } from "./infrastructure/database/PrismaShipmentRepository";
+import { InMemoryShipmentRepository } from "./infrastructure/database/InMemoryShipmentRepository";
+import { MockCarrierService } from "./infrastructure/shipping/MockCarrierService";
+import shippingRoutes from "./infrastructure/http/routes/shipping.routes";
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -91,7 +120,15 @@ export const setupApp = (
   outboxRepository?: IOutboxRepository,
   purchaseOrderRepository?: IPurchaseOrderRepository,
   reorderPolicyRepository?: IReorderPolicyRepository,
-  reorderPolicyService?: ReorderPolicyService
+  reorderPolicyService?: ReorderPolicyService,
+  inventoryAuditRepository?: IInventoryAuditRepository,
+  rmaRepository?: IRMARepository,
+  quarantineRepository?: IQuarantineRepository,
+  messageBroker?: IMessageBroker,
+  dispatchRecordRepository?: IDispatchRecordRepository,
+  demandForecastRepository?: IDemandForecastRepository,
+  shipmentRepository?: IShipmentRepository,
+  carrierService?: ICarrierService
 ) => {
   app.set("inventoryRepository", inventoryRepository);
   app.set("barcodeRepository", barcodeRepository || new InMemoryBarcodeRepository());
@@ -104,6 +141,14 @@ export const setupApp = (
   app.set("purchaseOrderRepository", purchaseOrderRepository || new InMemoryPurchaseOrderRepository());
   app.set("reorderPolicyRepository", reorderPolicyRepository || new InMemoryReorderPolicyRepository());
   app.set("reorderPolicyService", reorderPolicyService || new ReorderPolicyService(app.get("reorderPolicyRepository"), app.get("purchaseOrderRepository")));
+  app.set("inventoryAuditRepository", inventoryAuditRepository || new InMemoryInventoryAuditRepository());
+  app.set("rmaRepository", rmaRepository || new InMemoryRMARepository());
+  app.set("quarantineRepository", quarantineRepository || new InMemoryQuarantineRepository());
+  app.set("messageBroker", messageBroker || new InMemoryMessageBroker());
+  app.set("dispatchRecordRepository", dispatchRecordRepository || new InMemoryDispatchRecordRepository());
+  app.set("demandForecastRepository", demandForecastRepository || new InMemoryDemandForecastRepository());
+  app.set("shipmentRepository", shipmentRepository || new InMemoryShipmentRepository());
+  app.set("carrierService", carrierService || new MockCarrierService());
   
   // Legacy key for backwards compatibility
   app.set("repository", inventoryRepository);
@@ -117,6 +162,12 @@ export const setupApp = (
   app.use("/api/onboarding", onboardingRoutes);
   app.use("/api/purchase-orders", purchaseOrderRoutes);
   app.use("/api/reorder-policies", reorderPolicyRoutes);
+  app.use("/api/audits", inventoryAuditRoutes);
+  app.use("/api/returns/rma", rmaRoutes);
+  app.use("/api/returns/quarantine", quarantineRoutes);
+  app.use("/api/outbox", outboxRoutes);
+  app.use("/api/forecasting", forecastingRoutes);
+  app.use("/api/shipping", shippingRoutes);
 };
 
 const start = async () => {
@@ -148,10 +199,42 @@ const start = async () => {
   const purchaseOrderRepo = new PrismaPurchaseOrderRepository();
   const reorderPolicyRepo = new PrismaReorderPolicyRepository();
   const reorderPolicyService = new ReorderPolicyService(reorderPolicyRepo, purchaseOrderRepo);
+  const inventoryAuditRepo = new PrismaInventoryAuditRepository();
+  const rmaRepo = new PrismaRMARepository();
+  const quarantineRepo = new PrismaQuarantineRepository();
+  const dispatchRecordRepo = new PrismaDispatchRecordRepository();
+  const demandForecastRepo = new PrismaDemandForecastRepository();
+  const shipmentRepo = new PrismaShipmentRepository();
+  const carrierService = new MockCarrierService();
 
-  setupApp(repository, barcodeRepo, serialRepo, costLayerRepo, journalRepo, tenantConfigRepo, processedWebhookRepo, outboxRepo, purchaseOrderRepo, reorderPolicyRepo, reorderPolicyService);
+  const rabbitMqUrl = process.env.RABBITMQ_URL;
+  const messageBroker = rabbitMqUrl
+    ? new RabbitMQMessageBroker(rabbitMqUrl)
+    : new InMemoryMessageBroker();
 
-  const outboxProcessor = new OutboxProcessor(outboxRepo);
+  setupApp(
+    repository,
+    barcodeRepo,
+    serialRepo,
+    costLayerRepo,
+    journalRepo,
+    tenantConfigRepo,
+    processedWebhookRepo,
+    outboxRepo,
+    purchaseOrderRepo,
+    reorderPolicyRepo,
+    reorderPolicyService,
+    inventoryAuditRepo,
+    rmaRepo,
+    quarantineRepo,
+    messageBroker,
+    dispatchRecordRepo,
+    demandForecastRepo,
+    shipmentRepo,
+    carrierService
+  );
+
+  const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);
   outboxProcessor.start(3000);
 
   app.listen(port, () => {

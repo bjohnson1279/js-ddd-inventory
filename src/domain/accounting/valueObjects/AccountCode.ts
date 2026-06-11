@@ -34,4 +34,16 @@ export class AccountCode {
   public static inventoryExpense(): AccountCode {
     return new AccountCode("5100", "Inventory Purchases", AccountCategory.Expense);
   }
+
+  public static inventoryShrinkageExpense(): AccountCode {
+    return new AccountCode("5200", "Inventory Shrinkage Expense", AccountCategory.Expense);
+  }
+
+  public static inventoryAdjustmentGain(): AccountCode {
+    return new AccountCode("4100", "Inventory Adjustment Gain", AccountCategory.Revenue);
+  }
+
+  public static inventoryWriteOffExpense(): AccountCode {
+    return new AccountCode("5300", "Inventory Write-Off Expense", AccountCategory.Expense);
+  }
 }
