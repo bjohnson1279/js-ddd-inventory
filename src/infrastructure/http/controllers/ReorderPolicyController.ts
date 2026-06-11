@@ -10,7 +10,7 @@ export class ReorderPolicyController {
       const repo = req.app.get("reorderPolicyRepository") as IReorderPolicyRepository;
       const { sku, locationId, reorderPoint, reorderQuantity, safetyStock } = req.body;
 
-      const id = Math.random().toString(36).substring(2, 11);
+      const id = crypto.randomUUID();
       const policy = new ReorderPolicy(
         id,
         SKU.create(sku),

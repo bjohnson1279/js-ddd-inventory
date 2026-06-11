@@ -24,7 +24,7 @@ export class Product {
     }
 
     const variant = new ProductVariant(
-      Math.random().toString(36).substring(2, 11),
+      crypto.randomUUID(),
       this.id,
       sku,
       attributeSet

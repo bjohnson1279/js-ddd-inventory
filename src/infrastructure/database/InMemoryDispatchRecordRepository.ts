@@ -5,7 +5,7 @@ export class InMemoryDispatchRecordRepository implements IDispatchRecordReposito
 
   async save(record: DispatchRecord, tx?: any): Promise<void> {
     this.records.push(new DispatchRecord(
-      Math.random().toString(36).substring(2, 11),
+      crypto.randomUUID(),
       record.sku,
       record.locationId,
       record.quantity,

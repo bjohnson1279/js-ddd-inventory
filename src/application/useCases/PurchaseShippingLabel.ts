@@ -75,7 +75,7 @@ export class PurchaseShippingLabel {
     );
 
     // 5. Create Shipment record
-    const shipmentId = Math.random().toString(36).substring(2, 11);
+    const shipmentId = crypto.randomUUID();
     const shipment = new Shipment(
       shipmentId,
       sku,
@@ -97,7 +97,7 @@ export class PurchaseShippingLabel {
       const isAccrual = config.accountingMethod === AccountingMethod.Accrual || (config.accountingMethod as any) === "accrual";
       const method = isAccrual ? AccountingMethod.Accrual : AccountingMethod.Cash;
       
-      const entryId = Math.random().toString(36).substring(2, 11);
+      const entryId = crypto.randomUUID();
       const entry = new JournalEntry(
         entryId,
         tenantId,

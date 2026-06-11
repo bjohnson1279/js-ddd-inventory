@@ -90,7 +90,7 @@ export class ResolveQuarantineItem {
       let invItem = await this.inventoryRepository.findBySku(sku, qItem.locationId);
       if (!invItem) {
         invItem = InventoryItem.create(
-          Math.random().toString(36).substring(2, 11),
+          crypto.randomUUID(),
           sku,
           qItem.locationId,
           Quantity.create(0)

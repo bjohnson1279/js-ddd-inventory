@@ -11,7 +11,7 @@ export class InMemoryOutboxRepository implements IOutboxRepository {
     });
 
     this.entries.push({
-      id: Math.random().toString(36).substring(2, 11),
+      id: crypto.randomUUID(),
       eventName: event.eventName,
       payload,
       occurredOn: event.occurredOn,
