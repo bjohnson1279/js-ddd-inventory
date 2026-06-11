@@ -86,7 +86,7 @@ export class ReconcileInventoryAudit {
         // 1. Increment stock
         if (!inventoryItem) {
           inventoryItem = InventoryItem.create(
-            Math.random().toString(36).substring(2, 11),
+            crypto.randomUUID(),
             sku,
             audit.locationId,
             Quantity.create(0)
@@ -101,7 +101,7 @@ export class ReconcileInventoryAudit {
         const totalCostCents = unitCostCents * discrepancy;
 
         // 3. Create a new cost layer
-        const layerId = Math.random().toString(36).substring(2, 11);
+        const layerId = crypto.randomUUID();
         const newLayer = new InventoryCostLayer(
           layerId,
           item.variantId,

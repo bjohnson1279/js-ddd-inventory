@@ -75,7 +75,7 @@ export class ReceiveRMA {
       let invItem = await this.inventoryRepository.findBySku(sku, targetLocationId);
       if (!invItem) {
         invItem = InventoryItem.create(
-          Math.random().toString(36).substring(2, 11),
+          crypto.randomUUID(),
           sku,
           targetLocationId,
           Quantity.create(0)
@@ -85,7 +85,7 @@ export class ReceiveRMA {
       await this.inventoryRepository.save(invItem);
 
       // 3. Create Cost Layer
-      const layerId = Math.random().toString(36).substring(2, 11);
+      const layerId = crypto.randomUUID();
       const layer = new InventoryCostLayer(
         layerId,
         item.variantId,
@@ -100,7 +100,7 @@ export class ReceiveRMA {
 
       // 4. Create Quarantine record if quarantined
       if (item.disposition === RMADisposition.Quarantine) {
-        const qId = Math.random().toString(36).substring(2, 11);
+        const qId = crypto.randomUUID();
         const quarantineItem = new QuarantineItem(
           qId,
           item.variantId,

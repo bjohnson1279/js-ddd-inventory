@@ -43,7 +43,7 @@ export class PerformFullStoreCount {
     for (const [skuStr, count] of countMap.entries()) {
       const sku = SKU.create(skuStr);
       const quantity = Quantity.create(count);
-      const newItem = InventoryItem.create(Date.now().toString() + Math.random().toString(), sku, locationId, quantity);
+      const newItem = InventoryItem.create(crypto.randomUUID().toString(), sku, locationId, quantity);
       itemsToSave.push(newItem);
     }
 

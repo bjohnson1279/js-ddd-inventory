@@ -42,7 +42,7 @@ export class ReceivePurchaseOrder {
       await receiveStock.execute(item.variantId, item.quantityReceived, po.locationId);
 
       // 3. Create Cost Layer
-      const layerId = Math.random().toString(36).substring(2, 11);
+      const layerId = crypto.randomUUID();
       const costLayer = new InventoryCostLayer(
         layerId,
         item.variantId,

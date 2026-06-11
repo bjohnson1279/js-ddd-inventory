@@ -25,10 +25,10 @@ export class CreatePurchaseOrder {
       throw new Error(`Purchase order with number ${dto.purchaseOrderNumber} already exists.`);
     }
 
-    const id = Math.random().toString(36).substring(2, 11);
+    const id = crypto.randomUUID();
     const items = dto.items.map(item => 
       new PurchaseOrderItem(
-        Math.random().toString(36).substring(2, 11),
+        crypto.randomUUID(),
         item.variantId,
         item.quantity,
         item.unitCostCents

@@ -38,7 +38,7 @@ export class ProductUomConfiguration {
 
     this.conversionRules.push(
       new ConversionRule(
-        Date.now().toString() + Math.random(), // Simple ID for now
+        crypto.randomUUID(), // Simple ID for now
         unit,
         factorToBase,
         label

@@ -13,7 +13,7 @@ export class InMemoryDemandForecastRepository implements IDemandForecastReposito
     );
 
     const updated = new DemandForecast(
-      Math.random().toString(36).substring(2, 11),
+      crypto.randomUUID(),
       forecast.sku,
       forecast.locationId,
       forecast.forecastedQuantity,

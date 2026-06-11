@@ -29,7 +29,7 @@ export class CreateRMA {
     const items = dto.items.map(
       (item) =>
         new RMAItem(
-          Math.random().toString(36).substring(2, 11),
+          crypto.randomUUID(),
           item.variantId,
           item.quantity,
           item.unitCostCents
@@ -37,7 +37,7 @@ export class CreateRMA {
     );
 
     const rma = new RMA(
-      Math.random().toString(36).substring(2, 11),
+      crypto.randomUUID(),
       dto.rmaNumber,
       dto.tenantId,
       dto.customerId,

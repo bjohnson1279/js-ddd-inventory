@@ -36,7 +36,7 @@ export class VariantBarcodeSet {
     const shouldBePrimary = makePrimary || this.assignments.size === 0;
 
     const assignment = new BarcodeAssignment(
-      Math.random().toString(36).substring(2, 11), // Simple ID generator
+      crypto.randomUUID(), // Simple ID generator
       this.variantId,
       barcode,
       source,

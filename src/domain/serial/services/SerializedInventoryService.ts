@@ -27,7 +27,7 @@ export class SerializedInventoryService {
     }
 
     const item = new SerializedItem(
-      Math.random().toString(36).substring(2, 11),
+      crypto.randomUUID(),
       variantId,
       serialNumber,
       tenantId,
@@ -54,7 +54,7 @@ export class SerializedInventoryService {
     let invItem = await this.inventoryRepository.findBySku(sku, item.locationId);
     if (!invItem) {
       invItem = InventoryItem.create(
-        Math.random().toString(36).substring(2, 11),
+        crypto.randomUUID(),
         sku,
         item.locationId,
         Quantity.create(0)
@@ -81,7 +81,7 @@ export class SerializedInventoryService {
     let invItem = await this.inventoryRepository.findBySku(sku, item.locationId);
     if (!invItem) {
       invItem = InventoryItem.create(
-        Math.random().toString(36).substring(2, 11),
+        crypto.randomUUID(),
         sku,
         item.locationId,
         Quantity.create(0)
@@ -122,7 +122,7 @@ export class SerializedInventoryService {
     let invItem = await this.inventoryRepository.findBySku(sku, item.locationId);
     if (!invItem) {
       invItem = InventoryItem.create(
-        Math.random().toString(36).substring(2, 11),
+        crypto.randomUUID(),
         sku,
         item.locationId,
         Quantity.create(0)
@@ -153,7 +153,7 @@ export class SerializedInventoryService {
       let invItem = await this.inventoryRepository.findBySku(sku, item.locationId);
       if (!invItem) {
         invItem = InventoryItem.create(
-          Math.random().toString(36).substring(2, 11),
+          crypto.randomUUID(),
           sku,
           item.locationId,
           Quantity.create(0)

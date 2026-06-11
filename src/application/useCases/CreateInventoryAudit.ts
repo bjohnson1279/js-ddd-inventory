@@ -53,7 +53,7 @@ export class CreateInventoryAudit {
       const inventoryItem = itemsBySku.get(variantId);
       const expectedQuantity = inventoryItem ? inventoryItem.quantity.getValue() : 0;
 
-      const itemId = Math.random().toString(36).substring(2, 11);
+      const itemId = crypto.randomUUID();
       auditItems.push(
         new InventoryAuditItem(
           itemId,
@@ -65,7 +65,7 @@ export class CreateInventoryAudit {
       );
     }
 
-    const auditId = Math.random().toString(36).substring(2, 11);
+    const auditId = crypto.randomUUID();
     const audit = new InventoryAudit(
       auditId,
       dto.auditNumber,

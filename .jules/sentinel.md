@@ -99,3 +99,7 @@
 **Vulnerability:** Use of Math.random() to generate IDs (purchase orders, sales) in frontend.
 **Learning:** Math.random() is cryptographically weak and predictable, potentially leading to ID collisions or predictability attacks in business logic.
 **Prevention:** Always use a secure PRNG or a standard library like crypto.randomUUID() for generating unique identifiers.
+## 2026-06-11 - Replace Insecure Math.random with crypto.randomUUID
+**Vulnerability:** Several domain services, use cases, and repositories were using `Math.random().toString(36)` or `Date.now() + Math.random()` to generate unique identifiers for entities like SerializedItems, Audits, Purchase Orders, and RMAs.
+**Learning:** `Math.random()` is not a cryptographically secure pseudo-random number generator (CSPRNG). Identifiers generated this way are predictable and susceptible to collision, especially in high-throughput environments.
+**Prevention:** Always use Node's native `crypto.randomUUID()` (or a proven library like `uuid` v4) when generating unique, unpredictable identifiers to ensure system integrity and security.

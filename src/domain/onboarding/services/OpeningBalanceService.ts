@@ -75,7 +75,7 @@ export class OpeningBalanceService {
 
       if (!inventoryItem) {
         inventoryItem = InventoryItem.create(
-          Date.now().toString() + Math.random(),
+          crypto.randomUUID(),
           sku,
           onboarding.locationId,
           Quantity.create(0)
