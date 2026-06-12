@@ -2843,8 +2843,8 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                               setCycleCountSession(prev => prev.filter(item => item.sku !== c.sku));
                             }}
                             style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: "0.8rem" }}
-                            title="Delete item count"
-                            aria-label={`Delete item count for ${c.sku}`}
+                            title={"Delete item count for " + c.sku}
+                            aria-label={"Delete item count for " + c.sku}
                           >
                             ❌
                           </button>
