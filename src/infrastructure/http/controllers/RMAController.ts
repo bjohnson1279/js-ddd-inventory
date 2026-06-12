@@ -1,3 +1,5 @@
+import { DomainException } from "../../../domain/exceptions/DomainException";
+
 import { Request, Response } from "express";
 import { CreateRMA } from "../../../application/useCases/CreateRMA";
 import { AuthorizeRMA } from "../../../application/useCases/AuthorizeRMA";
@@ -36,7 +38,7 @@ export class RMAController {
       });
     } catch (error: any) {
       console.error(error);
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: error instanceof DomainException ? error.message : "Bad request" });
     }
   }
 
@@ -49,7 +51,7 @@ export class RMAController {
       res.status(200).json({ message: "RMA authorized successfully" });
     } catch (error: any) {
       console.error(error);
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: error instanceof DomainException ? error.message : "Bad request" });
     }
   }
 
@@ -81,7 +83,7 @@ export class RMAController {
       res.status(200).json({ message: "RMA items received and processed successfully" });
     } catch (error: any) {
       console.error(error);
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: error instanceof DomainException ? error.message : "Bad request" });
     }
   }
 

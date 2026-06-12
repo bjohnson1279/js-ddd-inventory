@@ -31,7 +31,7 @@ export class ShippingController {
       res.status(200).json(rates);
     } catch (error: any) {
       console.error("Failed to estimate shipping rates:", error);
-      res.status(500).json({ error: error.message || "Failed to fetch rates." });
+      res.status(500).json({ error: "Failed to fetch rates." });
     }
   }
 
@@ -72,7 +72,7 @@ export class ShippingController {
       });
     } catch (error: any) {
       console.error("Failed to purchase shipping label:", error);
-      res.status(400).json({ error: error.message || "Label purchase failed." });
+      res.status(400).json({ error: "Label purchase failed." });
     }
   }
 
@@ -98,7 +98,7 @@ export class ShippingController {
       );
     } catch (error: any) {
       console.error("Failed to list shipments:", error);
-      res.status(500).json({ error: error.message || "Failed to list shipments." });
+      res.status(500).json({ error: "Failed to list shipments." });
     }
   }
 
@@ -119,7 +119,7 @@ export class ShippingController {
       res.status(200).json({ message: "Shipment status updated successfully.", status });
     } catch (error: any) {
       console.error("Failed to update tracking status:", error);
-      res.status(400).json({ error: error.message || "Failed to update tracking." });
+      res.status(400).json({ error: "Failed to update tracking." });
     }
   }
 }

@@ -1,3 +1,5 @@
+import { DomainException } from "../../../domain/exceptions/DomainException";
+
 import { Request, Response } from "express";
 import { ResolveQuarantineItem } from "../../../application/useCases/ResolveQuarantineItem";
 import { IQuarantineRepository } from "../../../domain/repositories/IQuarantineRepository";
@@ -31,7 +33,7 @@ export class QuarantineController {
       res.status(200).json({ message: "Quarantine item resolved successfully" });
     } catch (error: any) {
       console.error(error);
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: error instanceof DomainException ? error.message : "Bad request" });
     }
   }
 
