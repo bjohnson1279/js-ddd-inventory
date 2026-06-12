@@ -3,7 +3,7 @@ import { SKU } from "../../domain/valueObjects/SKU";
 import { Quantity } from "../../domain/valueObjects/Quantity";
 import { InventoryItem } from "../../domain/aggregates/InventoryItem";
 
-interface CountItemDTO {
+export interface CountItemDTO {
   sku: string;
   count: number;
 }
