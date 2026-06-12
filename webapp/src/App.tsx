@@ -2822,6 +2822,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                     <button 
                       onClick={() => setCycleCountSession([])}
                       style={{ background: "none", border: "none", color: "#f87171", fontSize: "0.7rem", cursor: "pointer", padding: 0 }}
+                      aria-label="Clear All scanned items in session"
                     >
                       Clear All
                     </button>
@@ -2842,7 +2843,8 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                               setCycleCountSession(prev => prev.filter(item => item.sku !== c.sku));
                             }}
                             style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: "0.8rem" }}
-                            title="Delete item count"
+                            title={"Delete item count for " + c.sku}
+                            aria-label={"Delete item count for " + c.sku}
                           >
                             ❌
                           </button>
