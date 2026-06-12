@@ -24,7 +24,7 @@ export class OutboxController {
       );
     } catch (error: any) {
       console.error("Failed to list dead lettered outbox events:", error);
-      res.status(500).json({ error: error.message || "Internal server error" });
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 
@@ -38,7 +38,7 @@ export class OutboxController {
       res.status(200).json({ message: "Event successfully scheduled for retry" });
     } catch (error: any) {
       console.error(`Failed to retry outbox event ${req.params.id}:`, error);
-      res.status(400).json({ error: error.message || "Failed to retry event" });
+      res.status(400).json({ error: "Failed to retry event" });
     }
   }
 
@@ -66,7 +66,7 @@ export class OutboxController {
       });
     } catch (error: any) {
       console.error("Failed to get outbox metrics:", error);
-      res.status(500).json({ error: error.message || "Internal server error" });
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 }

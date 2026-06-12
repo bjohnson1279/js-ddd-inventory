@@ -29,7 +29,7 @@ export class ForecastingController {
       res.status(200).json(report);
     } catch (error: any) {
       console.error("Failed to fetch demand planning report:", error);
-      res.status(500).json({ error: error.message || "Internal server error" });
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 
@@ -69,7 +69,7 @@ export class ForecastingController {
       });
     } catch (error: any) {
       console.error("Failed to generate demand forecast:", error);
-      res.status(400).json({ error: error.message || "Failed to generate demand forecast" });
+      res.status(400).json({ error: "Failed to generate demand forecast" });
     }
   }
 }
