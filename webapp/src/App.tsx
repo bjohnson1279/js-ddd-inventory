@@ -2822,7 +2822,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                     <button 
                       onClick={() => setCycleCountSession([])}
                       style={{ background: "none", border: "none", color: "#f87171", fontSize: "0.7rem", cursor: "pointer", padding: 0 }}
-                      aria-label="Clear all scanned items in session"
+                      aria-label="Clear All scanned items in session"
                     >
                       Clear All
                     </button>
