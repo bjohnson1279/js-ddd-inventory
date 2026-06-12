@@ -73,3 +73,7 @@
 ## 2024-06-11 - Optimize CreateInventoryAudit DB Reads
 **Learning:** Sequential awaits inside of loops caused an N+1 query problem, slowing down inventory audits. Replacing this with a batched query or `Promise.all` resolves the performance hit significantly.
 **Action:** Identify sequences of database operations in loops and defer promises into an array or utilize batch DB operations like `findBySkus?()` instead.
+
+## 2026-06-12 - Resolve sequential DB query in GetDemandPlanningReport
+**Learning:** The `GetDemandPlanningReport` use case iterates through each inventory item and sequentially fetches sales velocity data and reorder policies. This causes an N+1 query issue since they can be executed independently.
+**Action:** When a loop iterates over items to fetch independent data from the repository layer, map the iterations to promises and await them concurrently using `Promise.all()` to dramatically reduce overall latency.

@@ -42,9 +42,7 @@ export class GetDemandPlanningReport {
     // 2. Fetch all forecasts for location
     const forecasts = await this.demandForecastRepository.findAllForLocation(locationId);
 
-    const reportItems: DemandPlanningReportItem[] = [];
-
-    for (const item of inventoryItems) {
+    const reportItemsPromises = inventoryItems.map(async (item) => {
       const skuStr = item.sku.getValue();
 
       // Calculate Sales Velocity
@@ -73,7 +71,7 @@ export class GetDemandPlanningReport {
       const actionRequired = item.quantity.getValue() <= reorderPoint;
       const recommendedOrderQuantity = actionRequired ? reorderQuantity : 0;
 
-      reportItems.push({
+      return {
         sku: skuStr,
         locationId,
         currentStock: item.quantity.getValue(),
@@ -92,9 +90,9 @@ export class GetDemandPlanningReport {
 
         actionRequired,
         recommendedOrderQuantity
-      });
-    }
+      };
+    });
 
-    return reportItems;
+    return Promise.all(reportItemsPromises);
   }
 }
