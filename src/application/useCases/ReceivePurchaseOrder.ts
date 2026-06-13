@@ -29,6 +29,8 @@ export class ReceivePurchaseOrder {
 
     const receiveStock = new ReceiveStock(this.inventoryRepository);
 
+    const costLayers: InventoryCostLayer[] = [];
+
     for (const item of dto.items) {
       const poItem = po.items.find((i) => i.variantId === item.variantId);
       if (!poItem) {
@@ -41,7 +43,7 @@ export class ReceivePurchaseOrder {
       // 2. Receive physical stock
       await receiveStock.execute(item.variantId, item.quantityReceived, po.locationId);
 
-      // 3. Create Cost Layer
+      // 3. Prepare Cost Layer
       const layerId = crypto.randomUUID();
       const costLayer = new InventoryCostLayer(
         layerId,
@@ -53,7 +55,13 @@ export class ReceivePurchaseOrder {
         po.id,
         po.locationId
       );
-      await this.costLayerRepository.save(costLayer);
+      costLayers.push(costLayer);
+    }
+
+    if (this.costLayerRepository.saveMany && costLayers.length > 0) {
+      await this.costLayerRepository.saveMany(costLayers);
+    } else {
+      await Promise.all(costLayers.map(layer => this.costLayerRepository.save(layer)));
     }
 
     // 4. Save updated PO
