@@ -149,9 +149,9 @@ export class ReceiveRMA {
 
       // 7. Handle Serialized items transitions
       if (item.serialNumbers && this.serializedItemRepository) {
-        for (const sn of item.serialNumbers) {
+        await Promise.all(item.serialNumbers.map(async (sn) => {
           const serialObj = new SerialNumber(sn);
-          const serialItem = await this.serializedItemRepository.findBySerialOrFail(serialObj, rma.tenantId);
+          const serialItem = await this.serializedItemRepository!.findBySerialOrFail(serialObj, rma.tenantId);
           serialItem.acceptReturn(`RMA-${rma.id}`, "system");
 
           if (item.disposition === RMADisposition.Restock) {
@@ -161,8 +161,8 @@ export class ReceiveRMA {
           } else if (item.disposition === RMADisposition.Scrap) {
             serialItem.writeOff(`RMA return: Scrapped`, "system", `RMA-${rma.id}`);
           }
-          await this.serializedItemRepository.save(serialItem);
-        }
+          await this.serializedItemRepository!.save(serialItem);
+        }));
       }
     }
 
