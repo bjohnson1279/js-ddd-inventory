@@ -2025,7 +2025,7 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
             <option value="store-east">Store East</option>
           </select>
 
-          <button className="btn btn-secondary" onClick={fetchReport} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing report..." : "Refresh the report data"}>
+          <button className="btn btn-secondary" onClick={fetchReport} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing report..." : "Refresh the report data"} aria-label={loading ? "Refreshing report..." : "Refresh the report data"}>
 
             Refresh Report
           </button>
@@ -2103,8 +2103,11 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
                         <tr key={item.sku}>
                           <td style={{ fontWeight: 600 }}>
                             <span 
+                              role="button"
+                              tabIndex={0}
                               style={{ cursor: "pointer", color: "var(--accent-color-light)", textDecoration: "underline" }}
                               onClick={() => setSelectedSku(item.sku)}
+                              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedSku(item.sku); } }}
                               title="Click to select for forecasting"
                             >
                               {item.sku}
@@ -2577,8 +2580,11 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                 activeBarcodes.map(b => (
                   <span 
                     key={b.barcodeValue} 
+                    role="button"
+                    tabIndex={0}
                     className="scan-pill"
                     onClick={() => handlePillClick(b.barcodeValue)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handlePillClick(b.barcodeValue); } }}
                     title={`Click to scan barcode for ${b.variantId}`}
                   >
                     {b.barcodeValue} ({b.variantId})
@@ -2775,6 +2781,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                 <div style={{ display: "flex", gap: "8px", marginTop: "5px" }}>
                   <button
                     type="button"
+                    aria-label="Cancel current scan operation"
                     onClick={() => {
                       setResolvedItem(null);
                       setScanValue("");
@@ -3022,7 +3029,7 @@ function OutboxTab() {
           <p>Monitor event reliability, analyze message failures, and manage the Dead Letter Queue (DLQ).</p>
         </div>
 
-        <button className="btn btn-secondary" onClick={fetchStatsAndDlq} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"}>
+        <button className="btn btn-secondary" onClick={fetchStatsAndDlq} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"} aria-label={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"}>
 
           Refresh Diagnostics
         </button>
@@ -3241,7 +3248,7 @@ function ShippingTab({
     if (inventoryList.length > 0 && !sku) {
       setSku(inventoryList[0].sku);
     }
-  }, [inventoryList]);
+  }, [inventoryList, sku]);
 
   const handleEstimateRates = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -3357,7 +3364,7 @@ function ShippingTab({
 
         <div className={`alert alert-${notification.type === "success" ? "success" : "danger"}`} role="status" aria-live="polite" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
           <span>{notification.text}</span>
-          <button className="btn-close" aria-label="Close notification" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", fontWeight: "bold" }} onClick={() => setNotification(null)}>×</button>
+          <button className="btn-close" aria-label="Close notification message" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", fontWeight: "bold" }} onClick={() => setNotification(null)}>×</button>
 
         </div>
       )}
@@ -3524,7 +3531,7 @@ function ShippingTab({
         <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3>Active Shipments & Carrier Milestones</h3>
 
-          <button className="btn btn-secondary btn-sm" onClick={fetchShipments} title="Refresh the shipments list">
+          <button className="btn btn-secondary btn-sm" onClick={fetchShipments} title="Refresh the shipments list" aria-label="Refresh the shipments list">
 
             🔄 Refresh List
           </button>

@@ -293,7 +293,9 @@ select.form-control option {
 
 .btn:focus-visible,
 .tab-btn:focus-visible,
-.btn-refresh:focus-visible {
+.btn-refresh:focus-visible,
+.scan-pill:focus-visible,
+span[role="button"]:focus-visible {
   outline: 2px solid var(--accent-color-light);
   outline-offset: 3px;
 }
@@ -424,7 +426,9 @@ button:focus:not(:focus-visible) {
   outline-offset: -2px;
 }
 
-.clickable-row:focus-visible td {
+.clickable-row:focus-visible td,
+.scan-pill:focus-visible,
+span[role="button"]:focus-visible {
   background: rgba(255, 255, 255, 0.04) !important;
 }
 

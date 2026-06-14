@@ -8,3 +8,6 @@
 ## 2024-06-12 - Added Aria-Label to Delete Scanned Item
 **Learning:** In dynamic item lists, recurring buttons (like a delete "❌" button on every row) lack context when announced by screen readers out of the surrounding visual flow, as they simply announce "Delete item count" or "❌".
 **Action:** Use a dynamic `aria-label` interpolating the item identifier (like SKU) for every recurring row action (e.g. `aria-label={\`Delete item count for \${c.sku}\`}`) to ensure screen reader users have exact context before committing destructive actions.
+## 2026-06-14 - Accessibility improvements to span elements simulating buttons
+**Learning:** Found several `span` elements acting as buttons (e.g., `onClick` handlers) missing keyboard support (like `tabIndex={0}` and `onKeyDown`) and focus visibility. Adding these ensures users navigating with a keyboard can access all interactive elements properly.
+**Action:** Always ensure that when `span` or `div` elements are given `onClick` handlers, they are also made keyboard accessible by adding `role="button"`, `tabIndex={0}`, an `onKeyDown` handler for 'Enter' and 'Space', and focus visible styles.
