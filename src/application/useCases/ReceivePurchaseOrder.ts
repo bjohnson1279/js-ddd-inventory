@@ -31,7 +31,7 @@ export class ReceivePurchaseOrder {
 
     const costLayers: InventoryCostLayer[] = [];
 
-    for (const item of dto.items) {
+    await Promise.all(dto.items.map(async (item) => {
       const poItem = po.items.find((i) => i.variantId === item.variantId);
       if (!poItem) {
         throw new Error(`Item ${item.variantId} not found in purchase order ${po.purchaseOrderNumber}.`);
@@ -56,7 +56,7 @@ export class ReceivePurchaseOrder {
         po.locationId
       );
       costLayers.push(costLayer);
-    }
+    }));
 
     if (this.costLayerRepository.saveMany && costLayers.length > 0) {
       await this.costLayerRepository.saveMany(costLayers);
