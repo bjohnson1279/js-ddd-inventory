@@ -1,3 +1,4 @@
+import * as crypto from "crypto";
 import { ICarrierService, CarrierRate, LabelResult } from "../../application/ports/ICarrierService";
 
 export class MockCarrierService implements ICarrierService {
@@ -34,7 +35,7 @@ export class MockCarrierService implements ICarrierService {
     const rates = await this.fetchRates(sku, quantity, destinationAddress);
     const selectedRate = rates.find(r => r.carrier.toLowerCase() === carrier.toLowerCase()) || rates[0];
     
-    const randomSuffix = Math.floor(100000 + Math.random() * 900000);
+    const randomSuffix = crypto.randomInt(100000, 1000000);
     let trackingNumber = `TRACK-${randomSuffix}`;
     if (carrier.toLowerCase().includes("ups")) {
       trackingNumber = `1Z999AA1012345${randomSuffix}`;
