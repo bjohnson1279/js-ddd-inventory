@@ -66,6 +66,9 @@ describe("E2E Integration Test Suite", () => {
       expect(response.body).toEqual({
         sku: "IPHONE-15-PRO-BLK",
         quantity: 45,
+        allocated: 0,
+        inTransit: 0,
+        available: 45,
       });
     });
 

@@ -1,6 +1,7 @@
 import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
 import { SKU } from "../../../src/domain/valueObjects/SKU";
 import { Quantity } from "../../../src/domain/valueObjects/Quantity";
+import { InsufficientAvailableStockException } from "../../../src/domain/exceptions/InsufficientAvailableStockException";
 
 describe("InventoryItem Aggregate", () => {
   let sku: SKU;
@@ -49,5 +50,57 @@ describe("InventoryItem Aggregate", () => {
     
     item.clearDomainEvents();
     expect(item.getDomainEvents()).toHaveLength(0);
+  });
+
+  it("should compute available stock (ATP) dynamically", () => {
+    const item = InventoryItem.create("123", sku, initialQuantity);
+    expect(item.available.getValue()).toBe(10);
+    
+    item.allocateStock(Quantity.create(4));
+    expect(item.available.getValue()).toBe(6);
+    
+    item.createInTransit(Quantity.create(5));
+    expect(item.available.getValue()).toBe(11);
+  });
+
+  it("should throw InsufficientAvailableStockException when allocating more than available", () => {
+    const item = InventoryItem.create("123", sku, initialQuantity);
+    expect(() => item.allocateStock(Quantity.create(11))).toThrow(
+      InsufficientAvailableStockException
+    );
+  });
+
+  it("should release allocated stock", () => {
+    const item = InventoryItem.create("123", sku, initialQuantity);
+    item.allocateStock(Quantity.create(4));
+    item.releaseAllocation(Quantity.create(2));
+    expect(item.allocated.getValue()).toBe(2);
+    expect(item.available.getValue()).toBe(8);
+  });
+
+  it("should fulfill allocated stock", () => {
+    const item = InventoryItem.create("123", sku, initialQuantity);
+    item.allocateStock(Quantity.create(4));
+    item.fulfillAllocation(Quantity.create(3));
+    expect(item.allocated.getValue()).toBe(1);
+    expect(item.quantity.getValue()).toBe(7);
+    expect(item.available.getValue()).toBe(6);
+  });
+
+  it("should create, receive and cancel in-transit stock", () => {
+    const item = InventoryItem.create("123", sku, initialQuantity);
+    item.createInTransit(Quantity.create(6));
+    expect(item.inTransit.getValue()).toBe(6);
+    expect(item.available.getValue()).toBe(16);
+
+    item.receiveInTransit(Quantity.create(4));
+    expect(item.inTransit.getValue()).toBe(2);
+    expect(item.quantity.getValue()).toBe(14);
+    expect(item.available.getValue()).toBe(16);
+
+    item.cancelInTransit(Quantity.create(2));
+    expect(item.inTransit.getValue()).toBe(0);
+    expect(item.quantity.getValue()).toBe(14);
+    expect(item.available.getValue()).toBe(14);
   });
 });

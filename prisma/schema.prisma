@@ -11,6 +11,9 @@ model InventoryModel {
   sku        String
   locationId String @default("default")
   quantity   Int
+  allocated  Int    @default(0)
+  inTransit  Int    @default(0)
+  version    Int    @default(1)
 
   @@unique([sku, locationId])
 }

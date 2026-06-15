@@ -3,8 +3,14 @@ import { ReceiveStock } from "../../../application/useCases/ReceiveStock";
 import { DispatchStock } from "../../../application/useCases/DispatchStock";
 import { GetStockLevel } from "../../../application/useCases/GetStockLevel";
 import { PerformFullStoreCount } from "../../../application/useCases/PerformFullStoreCount";
+import { AllocateStock } from "../../../application/useCases/AllocateStock";
+import { ReleaseAllocation } from "../../../application/useCases/ReleaseAllocation";
+import { FulfillAllocation } from "../../../application/useCases/FulfillAllocation";
+import { CreateInTransit } from "../../../application/useCases/CreateInTransit";
+import { ReceiveInTransit } from "../../../application/useCases/ReceiveInTransit";
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
 import { DomainException } from "../../../domain/exceptions/DomainException";
+import { SKU } from "../../../domain/valueObjects/SKU";
 
 export class InventoryController {
   static async receive(req: Request, res: Response) {
@@ -47,11 +53,19 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku } = req.params;
-      const locationId = req.query.locationId as string || "default";
-      const getStockLevel = new GetStockLevel(repository);
-      const quantity = await getStockLevel.execute(sku, locationId);
-      
-      const responseBody: any = { sku, quantity };
+      const locationId = (req.query.locationId as string) || "default";
+
+      const skuObj = SKU.create(sku);
+      const item = await repository.findBySku(skuObj, locationId);
+
+      const responseBody: any = {
+        sku,
+        quantity: item ? item.quantity.getValue() : 0,
+        allocated: item ? item.allocated.getValue() : 0,
+        inTransit: item ? item.inTransit.getValue() : 0,
+        available: item ? item.available.getValue() : 0,
+      };
+
       if (req.query.locationId) {
         responseBody.locationId = locationId;
       }
@@ -97,11 +111,99 @@ export class InventoryController {
           id: item.id,
           sku: item.sku.getValue(),
           quantity: item.quantity.getValue(),
+          allocated: item.allocated.getValue(),
+          inTransit: item.inTransit.getValue(),
+          available: item.available.getValue(),
         })),
       );
     } catch (error: any) {
       console.error(error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  static async allocate(req: Request, res: Response) {
+    try {
+      const repository = req.app.get("repository") as IInventoryRepository;
+      const { sku, amount, locationId } = req.body;
+      const useCase = new AllocateStock(repository);
+      await useCase.execute(sku, amount, locationId);
+      res.status(200).json({ message: "Stock allocated successfully" });
+    } catch (error: any) {
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    }
+  }
+
+  static async releaseAllocation(req: Request, res: Response) {
+    try {
+      const repository = req.app.get("repository") as IInventoryRepository;
+      const { sku, amount, locationId } = req.body;
+      const useCase = new ReleaseAllocation(repository);
+      await useCase.execute(sku, amount, locationId);
+      res.status(200).json({ message: "Allocation released successfully" });
+    } catch (error: any) {
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    }
+  }
+
+  static async fulfillAllocation(req: Request, res: Response) {
+    try {
+      const repository = req.app.get("repository") as IInventoryRepository;
+      const { sku, amount, locationId } = req.body;
+      const useCase = new FulfillAllocation(repository);
+      await useCase.execute(sku, amount, locationId);
+      res.status(200).json({ message: "Allocation fulfilled successfully" });
+    } catch (error: any) {
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    }
+  }
+
+  static async createInTransit(req: Request, res: Response) {
+    try {
+      const repository = req.app.get("repository") as IInventoryRepository;
+      const { sku, amount, locationId } = req.body;
+      const useCase = new CreateInTransit(repository);
+      await useCase.execute(sku, amount, locationId);
+      res.status(200).json({ message: "In-transit stock created successfully" });
+    } catch (error: any) {
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    }
+  }
+
+  static async receiveInTransit(req: Request, res: Response) {
+    try {
+      const repository = req.app.get("repository") as IInventoryRepository;
+      const { sku, amount, locationId } = req.body;
+      const useCase = new ReceiveInTransit(repository);
+      await useCase.execute(sku, amount, locationId);
+      res.status(200).json({ message: "In-transit stock received successfully" });
+    } catch (error: any) {
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+      }
     }
   }
 }
