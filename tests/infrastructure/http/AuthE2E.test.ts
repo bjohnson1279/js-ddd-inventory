@@ -108,4 +108,124 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
       process.env.NODE_ENV = originalEnv;
     }
   });
+
+  describe("User Management and RBAC", () => {
+    let adminToken: string;
+
+    beforeEach(async () => {
+      // 1. Setup org
+      await request(app)
+        .post("/api/auth/setup")
+        .send({
+          orgName: "Acme Retail",
+          tenantId: "tenant-acme",
+          adminName: "Alice Admin",
+          adminEmail: "alice@acme.com",
+          adminPassword: "Password123!"
+        });
+
+      // 2. Login as admin
+      const loginRes = await request(app)
+        .post("/api/auth/login")
+        .send({
+          tenantId: "tenant-acme",
+          email: "alice@acme.com",
+          password: "Password123!"
+        });
+      adminToken = loginRes.body.token;
+    });
+
+    it("should allow admin to invite user, list users, and update user role", async () => {
+      // Invite user
+      const inviteRes = await request(app)
+        .post("/api/users")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          email: "bob@acme.com",
+          role: "viewer"
+        });
+
+      expect(inviteRes.status).toBe(201);
+      expect(inviteRes.body.userId).toBeDefined();
+      expect(inviteRes.body.temporaryPassword).toBeDefined();
+      const newUserId = inviteRes.body.userId;
+
+      // List users
+      const listRes = await request(app)
+        .get("/api/users")
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(listRes.status).toBe(200);
+      expect(listRes.body.users).toHaveLength(2); // Admin + Bob
+      const bobRecord = listRes.body.users.find((u: any) => u.email === "bob@acme.com");
+      expect(bobRecord).toBeDefined();
+      expect(bobRecord.role).toBe("viewer");
+
+      // Update role
+      const updateRes = await request(app)
+        .patch(`/api/users/${newUserId}/role`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          role: "accountant"
+        });
+
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.success).toBe(true);
+
+      // Verify updated role
+      const listRes2 = await request(app)
+        .get("/api/users")
+        .set("Authorization", `Bearer ${adminToken}`);
+      const updatedBob = listRes2.body.users.find((u: any) => u.email === "bob@acme.com");
+      expect(updatedBob.role).toBe("accountant");
+    });
+
+    it("should deny non-admin users from accessing user management endpoints", async () => {
+      // 1. Invite a viewer
+      const inviteRes = await request(app)
+        .post("/api/users")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          email: "viewer@acme.com",
+          role: "viewer"
+        });
+      const viewerTempPass = inviteRes.body.temporaryPassword;
+
+      // 2. Log in as viewer
+      const viewerLoginRes = await request(app)
+        .post("/api/auth/login")
+        .send({
+          tenantId: "tenant-acme",
+          email: "viewer@acme.com",
+          password: viewerTempPass
+        });
+      const viewerToken = viewerLoginRes.body.token;
+
+      // 3. Try listing users as viewer -> should fail with 403
+      const listRes = await request(app)
+        .get("/api/users")
+        .set("Authorization", `Bearer ${viewerToken}`);
+      expect(listRes.status).toBe(403);
+      expect(listRes.body.error).toMatch(/Forbidden/i);
+
+      // 4. Try inviting a user as viewer -> should fail with 403
+      const inviteRes2 = await request(app)
+        .post("/api/users")
+        .set("Authorization", `Bearer ${viewerToken}`)
+        .send({
+          email: "another@acme.com",
+          role: "viewer"
+        });
+      expect(inviteRes2.status).toBe(403);
+
+      // 5. Try updating role as viewer -> should fail with 403
+      const updateRes = await request(app)
+        .patch(`/api/users/some-id/role`)
+        .set("Authorization", `Bearer ${viewerToken}`)
+        .send({
+          role: "admin"
+        });
+      expect(updateRes.status).toBe(403);
+    });
+  });
 });

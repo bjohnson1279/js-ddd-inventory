@@ -79,6 +79,7 @@ import { InMemoryShipmentRepository } from "./infrastructure/database/InMemorySh
 import { MockCarrierService } from "./infrastructure/shipping/MockCarrierService";
 import shippingRoutes from "./infrastructure/http/routes/shipping.routes";
 import authRoutes from "./infrastructure/http/routes/auth.routes";
+import userRoutes from "./infrastructure/http/routes/user.routes";
 import { authMiddleware } from "./infrastructure/http/middleware/auth";
 
 const app = express();
@@ -162,6 +163,7 @@ export const setupApp = (
   app.use(authMiddleware);
 
   app.use("/api/inventory", inventoryRoutes);
+  app.use("/api/users", userRoutes);
   app.use("/api/barcodes", barcodeRoutes);
   app.use("/api/serials", serialRoutes);
   app.use("/api/kits", kitRoutes);
