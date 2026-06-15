@@ -3428,7 +3428,6 @@ function ShippingTab({
                       onClick={() => setSelectedCarrier(r.carrier)}
                       role="button"
                       tabIndex={0}
-                      aria-label={`Select ${r.carrier} carrier`}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
