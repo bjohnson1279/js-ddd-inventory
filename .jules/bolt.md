@@ -80,3 +80,7 @@
 ## 2026-06-14 - Parallelize independent data processing loops
 **Learning:** Replaced bounded sequential awaits inside iterative loops (`for...of`) with `Promise.all` across arrays mapped to async operations when processing multiple independent items like RMA serials, PO items, or audit components. This reduces N+1 wait time bottlenecks significantly without architectural shifts.
 **Action:** When working on performance optimizations for independent records processing, identify `for...of` loops iterating and sequentially `await`ing independent logic, and replace them with `Promise.all` mapped over the array.
+
+## 2026-06-15 - Redundant Parallelize ReceiveRMA item processing
+**Learning:** Found sequential `for...of` in `ReceiveRMA.ts` and replaced it with `Promise.all` over items arrays. However, this is already a known pattern as seen in yesterday's entry (Parallelize independent data processing loops).
+**Action:** When working on performance optimizations for independent records processing, always check the journal first to avoid documenting identical optimizations.
