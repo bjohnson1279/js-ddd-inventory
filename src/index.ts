@@ -86,7 +86,7 @@ const port = process.env.PORT || 5000;
 
 const allowedOrigins = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(",").map(url => url.trim().replace(/\/$/, ""))
-  : ["http://localhost:3000"];
+  : ["http://localhost:3080"];
 
 const limiter = rateLimit({
   windowMs: process.env.RATE_LIMIT_WINDOW_MS ? parseInt(process.env.RATE_LIMIT_WINDOW_MS) : 15 * 60 * 1000, // 15 minutes default
