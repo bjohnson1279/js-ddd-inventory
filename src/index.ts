@@ -78,6 +78,8 @@ import { PrismaShipmentRepository } from "./infrastructure/database/PrismaShipme
 import { InMemoryShipmentRepository } from "./infrastructure/database/InMemoryShipmentRepository";
 import { MockCarrierService } from "./infrastructure/shipping/MockCarrierService";
 import shippingRoutes from "./infrastructure/http/routes/shipping.routes";
+import authRoutes from "./infrastructure/http/routes/auth.routes";
+import { authMiddleware } from "./infrastructure/http/middleware/auth";
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -153,12 +155,17 @@ export const setupApp = (
   // Legacy key for backwards compatibility
   app.set("repository", inventoryRepository);
 
+  app.use("/api/auth", authRoutes);
+  app.use("/api/shopify", shopifyRoutes);
+
+  // Secure all other endpoints under auth middleware
+  app.use(authMiddleware);
+
   app.use("/api/inventory", inventoryRoutes);
   app.use("/api/barcodes", barcodeRoutes);
   app.use("/api/serials", serialRoutes);
   app.use("/api/kits", kitRoutes);
   app.use("/api/accounting", accountingRoutes);
-  app.use("/api/shopify", shopifyRoutes);
   app.use("/api/onboarding", onboardingRoutes);
   app.use("/api/purchase-orders", purchaseOrderRoutes);
   app.use("/api/reorder-policies", reorderPolicyRoutes);
