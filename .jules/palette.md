@@ -8,3 +8,6 @@
 ## 2024-06-12 - Added Aria-Label to Delete Scanned Item
 **Learning:** In dynamic item lists, recurring buttons (like a delete "❌" button on every row) lack context when announced by screen readers out of the surrounding visual flow, as they simply announce "Delete item count" or "❌".
 **Action:** Use a dynamic `aria-label` interpolating the item identifier (like SKU) for every recurring row action (e.g. `aria-label={\`Delete item count for \${c.sku}\`}`) to ensure screen reader users have exact context before committing destructive actions.
+## 2024-06-13 - Enhance Visibility of Delete Action in Mobile Scanner Cycle Count
+**Learning:** Icon-only buttons representing destructive actions (like "❌") in lists can blend into the background or look disabled when they lack distinct styling and hover states, leading to poor usability for users expecting clear interactive cues.
+**Action:** Always provide adequate padding and clear hover transition states (e.g., background highlight and text color change) to icon-only buttons to reinforce their interactivity and ensure destructive actions are easily identifiable and visually responsive to pointer events.
