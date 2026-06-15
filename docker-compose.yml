@@ -52,7 +52,7 @@ services:
     container_name: inventory-webapp
     restart: always
     ports:
-      - "3000:80"
+      - "3080:80"
     depends_on:
       - app
 

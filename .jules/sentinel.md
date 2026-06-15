@@ -107,3 +107,7 @@
 **Vulnerability:** API controllers returned raw error messages (`error.message`) in HTTP 500 and 400 responses unconditionally, leaking internal stack details or database states to end-users.
 **Learning:** Exposing dynamic backend error messages directly in unhandled exception blocks is a medium/high severity risk. Only explicit domain exceptions (`DomainException`) are safe to expose to users, as their payloads are controlled.
 **Prevention:** Standardize a pattern across API handlers. Never use `res.status(500).json({ error: error.message });`. Always fallback to generic descriptions (e.g. "Internal server error") or wrap the validation with a domain-specific error class.
+## 2024-06-13 - Replace insecure Math.random() with crypto.randomInt() in MockCarrierService
+**Vulnerability:** Used Math.random() to generate tracking number suffixes in MockCarrierService.
+**Learning:** Math.random() is not a cryptographically secure pseudo-random number generator (CSPRNG), making identifiers generated this way predictable.
+**Prevention:** Always use Node's native crypto utilities (like crypto.randomInt() or crypto.randomUUID()) when generating random identifiers to ensure unpredictability and security.

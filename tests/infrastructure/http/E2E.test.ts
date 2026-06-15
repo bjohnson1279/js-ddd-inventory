@@ -8,7 +8,7 @@ import { SKU } from "../../../src/domain/valueObjects/SKU";
 import { Quantity } from "../../../src/domain/valueObjects/Quantity";
 import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
 import { prisma } from "../../../src/infrastructure/database/prisma";
-import * as crypto from "crypto";
+import * as crypto from "node:crypto";
 
 describe("E2E Integration Test Suite", () => {
   let repository: InMemoryInventoryRepository;

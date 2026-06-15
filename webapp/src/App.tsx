@@ -697,43 +697,43 @@ function App() {
           <p>Event-Driven Inventory Engine & Double-Entry Accounting Hub</p>
         </div>
         <nav className="nav-tabs" role="tablist" aria-label="Main Navigation">
-          <button role="tab" aria-selected={activeTab === "overview"} className={`tab-btn ${activeTab === "overview" ? "active" : ""}`} onClick={() => setActiveTab("overview")}>
+          <button role="tab" aria-selected={activeTab === "overview"} aria-label="Switch to Overview tab" className={`tab-btn ${activeTab === "overview" ? "active" : ""}`} onClick={() => setActiveTab("overview")}>
             <Icons.Dashboard />
             <span>Overview</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "onboarding"} className={`tab-btn ${activeTab === "onboarding" ? "active" : ""}`} onClick={() => setActiveTab("onboarding")}>
+          <button role="tab" aria-selected={activeTab === "onboarding"} aria-label="Switch to Onboarding tab" className={`tab-btn ${activeTab === "onboarding" ? "active" : ""}`} onClick={() => setActiveTab("onboarding")}>
             <Icons.Onboarding />
             <span>Onboarding</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "barcodes"} className={`tab-btn ${activeTab === "barcodes" ? "active" : ""}`} onClick={() => setActiveTab("barcodes")}>
+          <button role="tab" aria-selected={activeTab === "barcodes"} aria-label="Switch to Barcodes tab" className={`tab-btn ${activeTab === "barcodes" ? "active" : ""}`} onClick={() => setActiveTab("barcodes")}>
             <Icons.Barcode />
             <span>Barcodes</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "serials"} className={`tab-btn ${activeTab === "serials" ? "active" : ""}`} onClick={() => setActiveTab("serials")}>
+          <button role="tab" aria-selected={activeTab === "serials"} aria-label="Switch to Serials tab" className={`tab-btn ${activeTab === "serials" ? "active" : ""}`} onClick={() => setActiveTab("serials")}>
             <Icons.Serial />
             <span>Serials</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "kits"} className={`tab-btn ${activeTab === "kits" ? "active" : ""}`} onClick={() => setActiveTab("kits")}>
+          <button role="tab" aria-selected={activeTab === "kits"} aria-label="Switch to Kitting tab" className={`tab-btn ${activeTab === "kits" ? "active" : ""}`} onClick={() => setActiveTab("kits")}>
             <Icons.Kit />
             <span>Kitting</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "bookkeeping"} className={`tab-btn ${activeTab === "bookkeeping" ? "active" : ""}`} onClick={() => setActiveTab("bookkeeping")}>
+          <button role="tab" aria-selected={activeTab === "bookkeeping"} aria-label="Switch to Ledger tab" className={`tab-btn ${activeTab === "bookkeeping" ? "active" : ""}`} onClick={() => setActiveTab("bookkeeping")}>
             <Icons.Bookkeeping />
             <span>Ledger</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "outbox"} className={`tab-btn ${activeTab === "outbox" ? "active" : ""}`} onClick={() => setActiveTab("outbox")}>
+          <button role="tab" aria-selected={activeTab === "outbox"} aria-label="Switch to Outbox tab" className={`tab-btn ${activeTab === "outbox" ? "active" : ""}`} onClick={() => setActiveTab("outbox")}>
             <Icons.Outbox />
             <span>Outbox</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "forecasting"} className={`tab-btn ${activeTab === "forecasting" ? "active" : ""}`} onClick={() => setActiveTab("forecasting")}>
+          <button role="tab" aria-selected={activeTab === "forecasting"} aria-label="Switch to Forecasting tab" className={`tab-btn ${activeTab === "forecasting" ? "active" : ""}`} onClick={() => setActiveTab("forecasting")}>
             <Icons.Forecasting />
             <span>Forecasting</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "scanner"} className={`tab-btn ${activeTab === "scanner" ? "active" : ""}`} onClick={() => setActiveTab("scanner")}>
+          <button role="tab" aria-selected={activeTab === "scanner"} aria-label="Switch to Mobile Scanner tab" className={`tab-btn ${activeTab === "scanner" ? "active" : ""}`} onClick={() => setActiveTab("scanner")}>
             <Icons.Scanner />
             <span>Mobile Scanner</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "shipping"} className={`tab-btn ${activeTab === "shipping" ? "active" : ""}`} onClick={() => setActiveTab("shipping")}>
+          <button role="tab" aria-selected={activeTab === "shipping"} aria-label="Switch to Shipping & Logistics tab" className={`tab-btn ${activeTab === "shipping" ? "active" : ""}`} onClick={() => setActiveTab("shipping")}>
             <Icons.Shipping />
             <span>Shipping & Logistics</span>
           </button>
@@ -2025,7 +2025,7 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
             <option value="store-east">Store East</option>
           </select>
 
-          <button className="btn btn-secondary" onClick={fetchReport} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing report..." : "Refresh the report data"}>
+          <button className="btn btn-secondary" onClick={fetchReport} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing report..." : "Refresh the report data"} aria-label={loading ? "Refreshing report..." : "Refresh the report data"}>
 
             Refresh Report
           </button>
@@ -2103,8 +2103,11 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
                         <tr key={item.sku}>
                           <td style={{ fontWeight: 600 }}>
                             <span 
+                              role="button"
+                              tabIndex={0}
                               style={{ cursor: "pointer", color: "var(--accent-color-light)", textDecoration: "underline" }}
                               onClick={() => setSelectedSku(item.sku)}
+                              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedSku(item.sku); } }}
                               title="Click to select for forecasting"
                             >
                               {item.sku}
@@ -2577,8 +2580,11 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                 activeBarcodes.map(b => (
                   <span 
                     key={b.barcodeValue} 
+                    role="button"
+                    tabIndex={0}
                     className="scan-pill"
                     onClick={() => handlePillClick(b.barcodeValue)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handlePillClick(b.barcodeValue); } }}
                     title={`Click to scan barcode for ${b.variantId}`}
                   >
                     {b.barcodeValue} ({b.variantId})
@@ -2775,6 +2781,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                 <div style={{ display: "flex", gap: "8px", marginTop: "5px" }}>
                   <button
                     type="button"
+                    aria-label="Cancel current scan operation"
                     onClick={() => {
                       setResolvedItem(null);
                       setScanValue("");
@@ -3023,7 +3030,7 @@ function OutboxTab() {
           <p>Monitor event reliability, analyze message failures, and manage the Dead Letter Queue (DLQ).</p>
         </div>
 
-        <button className="btn btn-secondary" onClick={fetchStatsAndDlq} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"}>
+        <button className="btn btn-secondary" onClick={fetchStatsAndDlq} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"} aria-label={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"}>
 
           Refresh Diagnostics
         </button>
@@ -3242,7 +3249,7 @@ function ShippingTab({
     if (inventoryList.length > 0 && !sku) {
       setSku(inventoryList[0].sku);
     }
-  }, [inventoryList]);
+  }, [inventoryList, sku]);
 
   const handleEstimateRates = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -3358,7 +3365,7 @@ function ShippingTab({
 
         <div className={`alert alert-${notification.type === "success" ? "success" : "danger"}`} role="status" aria-live="polite" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
           <span>{notification.text}</span>
-          <button className="btn-close" aria-label="Close notification" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", fontWeight: "bold" }} onClick={() => setNotification(null)}>×</button>
+          <button className="btn-close" aria-label="Close notification message" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", fontWeight: "bold" }} onClick={() => setNotification(null)}>×</button>
 
         </div>
       )}
@@ -3420,6 +3427,14 @@ function ShippingTab({
                       key={r.carrier}
                       className={`rate-card ${selectedCarrier === r.carrier ? "selected" : ""}`}
                       onClick={() => setSelectedCarrier(r.carrier)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedCarrier(r.carrier);
+                        }
+                      }}
                     >
                       <div className="rate-info">
                         <span className={`carrier-badge carrier-${r.carrier.toLowerCase()}`}>
@@ -3525,7 +3540,7 @@ function ShippingTab({
         <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3>Active Shipments & Carrier Milestones</h3>
 
-          <button className="btn btn-secondary btn-sm" onClick={fetchShipments} title="Refresh the shipments list">
+          <button className="btn btn-secondary btn-sm" onClick={fetchShipments} title="Refresh the shipments list" aria-label="Refresh the shipments list">
 
             🔄 Refresh List
           </button>

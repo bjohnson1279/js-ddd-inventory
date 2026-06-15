@@ -78,13 +78,16 @@ import { PrismaShipmentRepository } from "./infrastructure/database/PrismaShipme
 import { InMemoryShipmentRepository } from "./infrastructure/database/InMemoryShipmentRepository";
 import { MockCarrierService } from "./infrastructure/shipping/MockCarrierService";
 import shippingRoutes from "./infrastructure/http/routes/shipping.routes";
+import authRoutes from "./infrastructure/http/routes/auth.routes";
+import userRoutes from "./infrastructure/http/routes/user.routes";
+import { authMiddleware } from "./infrastructure/http/middleware/auth";
 
 const app = express();
 const port = process.env.PORT || 5000;
 
 const allowedOrigins = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(",").map(url => url.trim().replace(/\/$/, ""))
-  : ["http://localhost:3000"];
+  : ["http://localhost:3080"];
 
 const limiter = rateLimit({
   windowMs: process.env.RATE_LIMIT_WINDOW_MS ? parseInt(process.env.RATE_LIMIT_WINDOW_MS) : 15 * 60 * 1000, // 15 minutes default
@@ -153,12 +156,18 @@ export const setupApp = (
   // Legacy key for backwards compatibility
   app.set("repository", inventoryRepository);
 
+  app.use("/api/auth", authRoutes);
+  app.use("/api/shopify", shopifyRoutes);
+
+  // Secure all other endpoints under auth middleware
+  app.use(authMiddleware);
+
   app.use("/api/inventory", inventoryRoutes);
+  app.use("/api/users", userRoutes);
   app.use("/api/barcodes", barcodeRoutes);
   app.use("/api/serials", serialRoutes);
   app.use("/api/kits", kitRoutes);
   app.use("/api/accounting", accountingRoutes);
-  app.use("/api/shopify", shopifyRoutes);
   app.use("/api/onboarding", onboardingRoutes);
   app.use("/api/purchase-orders", purchaseOrderRoutes);
   app.use("/api/reorder-policies", reorderPolicyRoutes);
