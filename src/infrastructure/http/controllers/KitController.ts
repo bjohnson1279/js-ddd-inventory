@@ -163,7 +163,7 @@ export class KitController {
       res.status(200).json({ message: `Successfully assembled ${quantity} units of Kit ${kitSku}.` });
     } catch (error: any) {
       console.error(error);
-      res.status(400).json({ error: error.message || "Failed to assemble kit" });
+      res.status(400).json({ error: error instanceof DomainException ? error.message : "Failed to assemble kit" });
     }
   }
 
@@ -201,7 +201,7 @@ export class KitController {
       res.status(200).json({ message: `Successfully disassembled ${quantity} units of Kit ${kitSku}.` });
     } catch (error: any) {
       console.error(error);
-      res.status(400).json({ error: error.message || "Failed to disassemble kit" });
+      res.status(400).json({ error: error instanceof DomainException ? error.message : "Failed to disassemble kit" });
     }
   }
 }
