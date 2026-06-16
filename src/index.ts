@@ -80,7 +80,15 @@ import { MockCarrierService } from "./infrastructure/shipping/MockCarrierService
 import shippingRoutes from "./infrastructure/http/routes/shipping.routes";
 import authRoutes from "./infrastructure/http/routes/auth.routes";
 import userRoutes from "./infrastructure/http/routes/user.routes";
+import warehouseLocationRoutes from "./infrastructure/http/routes/warehouseLocation.routes";
 import { authMiddleware } from "./infrastructure/http/middleware/auth";
+import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
+import { IProductRepository } from "./domain/repositories/IProductRepository";
+import { InMemoryWarehouseLocationRepository } from "./infrastructure/database/InMemoryWarehouseLocationRepository";
+import { InMemoryProductRepository } from "./infrastructure/database/InMemoryProductRepository";
+import { PrismaWarehouseLocationRepository } from "./infrastructure/database/PrismaWarehouseLocationRepository";
+import { PrismaProductRepository } from "./infrastructure/database/PrismaProductRepository";
+import { WMSCapacityService } from "./domain/services/WMSCapacityService";
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -131,7 +139,9 @@ export const setupApp = (
   dispatchRecordRepository?: IDispatchRecordRepository,
   demandForecastRepository?: IDemandForecastRepository,
   shipmentRepository?: IShipmentRepository,
-  carrierService?: ICarrierService
+  carrierService?: ICarrierService,
+  warehouseLocationRepository?: IWarehouseLocationRepository,
+  productRepository?: IProductRepository
 ) => {
   app.set("inventoryRepository", inventoryRepository);
   app.set("barcodeRepository", barcodeRepository || new InMemoryBarcodeRepository());
@@ -152,6 +162,13 @@ export const setupApp = (
   app.set("demandForecastRepository", demandForecastRepository || new InMemoryDemandForecastRepository());
   app.set("shipmentRepository", shipmentRepository || new InMemoryShipmentRepository());
   app.set("carrierService", carrierService || new MockCarrierService());
+  app.set("warehouseLocationRepository", warehouseLocationRepository || new InMemoryWarehouseLocationRepository());
+  app.set("productRepository", productRepository || new InMemoryProductRepository());
+  app.set("wmsCapacityService", new WMSCapacityService(
+    app.get("inventoryRepository"),
+    app.get("productRepository"),
+    app.get("warehouseLocationRepository")
+  ));
   
   // Legacy key for backwards compatibility
   app.set("repository", inventoryRepository);
@@ -177,6 +194,7 @@ export const setupApp = (
   app.use("/api/outbox", outboxRoutes);
   app.use("/api/forecasting", forecastingRoutes);
   app.use("/api/shipping", shippingRoutes);
+  app.use("/api/warehouse-locations", warehouseLocationRoutes);
 };
 
 const start = async () => {
@@ -215,6 +233,8 @@ const start = async () => {
   const demandForecastRepo = new PrismaDemandForecastRepository();
   const shipmentRepo = new PrismaShipmentRepository();
   const carrierService = new MockCarrierService();
+  const warehouseLocationRepo = new PrismaWarehouseLocationRepository();
+  const productRepo = new PrismaProductRepository();
 
   const rabbitMqUrl = process.env.RABBITMQ_URL;
   const messageBroker = rabbitMqUrl
@@ -240,7 +260,9 @@ const start = async () => {
     dispatchRecordRepo,
     demandForecastRepo,
     shipmentRepo,
-    carrierService
+    carrierService,
+    warehouseLocationRepo,
+    productRepo
   );
 
   const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);

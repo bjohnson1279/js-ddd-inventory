@@ -35,11 +35,13 @@ model ProductModel {
 }
 
 model ProductVariantModel {
-  id         String       @id
-  productId  String
-  sku        String       @unique
-  attributes String       // Serialized variant attributes JSON string (e.g. [{"name":"size","value":"M"}])
-  product    ProductModel @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id                String       @id
+  productId         String
+  sku               String       @unique
+  attributes        String       // Serialized variant attributes JSON string (e.g. [{"name":"size","value":"M"}])
+  weightGrams       Int?
+  volumeCubicMeters Float?
+  product           ProductModel @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model SerializedItemModel {
@@ -325,5 +327,17 @@ model ApiTokenModel {
   user      UserModel @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model WarehouseLocationModel {
+  id                   String   @id // e.g. "WH1-ZONEA-A03-R02-S01-B10"
+  warehouseId          String
+  zone                 String
+  aisle                String
+  rack                 String
+  shelf                String
+  bin                  String
+  maxWeightGrams       Int
+  maxVolumeCubicMeters Float
+  createdAt            DateTime @default(now())
 
-
+  @@unique([warehouseId, zone, aisle, rack, shelf, bin])
+}

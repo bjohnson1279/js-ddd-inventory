@@ -3,16 +3,24 @@ import { SKU } from "../../domain/valueObjects/SKU";
 import { Quantity } from "../../domain/valueObjects/Quantity";
 import { InventoryItem } from "../../domain/aggregates/InventoryItem";
 import { IExternalInventoryPublisher } from "../ports/IExternalInventoryPublisher";
+import { WMSCapacityService } from "../../domain/services/WMSCapacityService";
 
 export class ReceiveStock {
   constructor(
     private readonly inventoryRepository: IInventoryRepository,
-    private readonly externalPublisher?: IExternalInventoryPublisher
+    private readonly externalPublisher?: IExternalInventoryPublisher,
+    private readonly capacityService?: WMSCapacityService
   ) {}
 
   async execute(skuStr: string, amount: number, locationId: string = "default"): Promise<void> {
     const sku = SKU.create(skuStr);
     const quantityToAdd = Quantity.create(amount);
+
+    if (this.capacityService) {
+      await this.capacityService.validateCapacity(locationId, [
+        { sku: skuStr, mode: "relative", quantity: amount }
+      ]);
+    }
 
     let item = await this.inventoryRepository.findBySku(sku, locationId);
 

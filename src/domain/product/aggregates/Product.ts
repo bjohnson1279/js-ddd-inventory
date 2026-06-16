@@ -12,7 +12,12 @@ export class Product {
     public readonly name: string
   ) {}
 
-  public addVariant(sku: SKU, attributes: VariantAttribute[]): ProductVariant {
+  public addVariant(
+    sku: SKU,
+    attributes: VariantAttribute[],
+    weightGrams: number | null = null,
+    volumeCubicMeters: number | null = null
+  ): ProductVariant {
     const attributeSet = new VariantAttributeSet(attributes);
 
     for (const existing of this._variants.values()) {
@@ -27,7 +32,9 @@ export class Product {
       crypto.randomUUID(),
       this.id,
       sku,
-      attributeSet
+      attributeSet,
+      weightGrams,
+      volumeCubicMeters
     );
 
     this._variants.set(variant.id, variant);
