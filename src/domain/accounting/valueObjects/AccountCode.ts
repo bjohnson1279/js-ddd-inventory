@@ -46,4 +46,27 @@ export class AccountCode {
   public static inventoryWriteOffExpense(): AccountCode {
     return new AccountCode("5300", "Inventory Write-Off Expense", AccountCategory.Expense);
   }
+
+  public static fromCode(code: string): AccountCode {
+    switch (code) {
+      case "1000": return AccountCode.cash();
+      case "1100": return AccountCode.accountsReceivable();
+      case "1200": return AccountCode.inventory();
+      case "2000": return AccountCode.accountsPayable();
+      case "4000": return AccountCode.salesRevenue();
+      case "5000": return AccountCode.costOfGoodsSold();
+      case "5100": return AccountCode.inventoryExpense();
+      case "5200": return AccountCode.inventoryShrinkageExpense();
+      case "4100": return AccountCode.inventoryAdjustmentGain();
+      case "5300": return AccountCode.inventoryWriteOffExpense();
+      default: {
+        const category = code.startsWith("2") ? AccountCategory.Liability 
+                       : code.startsWith("3") ? AccountCategory.Equity 
+                       : code.startsWith("4") ? AccountCategory.Revenue 
+                       : code.startsWith("5") ? AccountCategory.Expense 
+                       : AccountCategory.Asset;
+        return new AccountCode(code, `Account ${code}`, category);
+      }
+    }
+  }
 }

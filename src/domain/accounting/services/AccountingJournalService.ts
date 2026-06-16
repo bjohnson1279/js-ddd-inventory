@@ -330,6 +330,48 @@ export class AccountingJournalService {
     return null;
   }
 
+  public async onKitAssembly(
+    tenantId: string,
+    date: Date,
+    description: string,
+    referenceId: string,
+    kitSku: string,
+    totalCostCents: number
+  ): Promise<JournalEntry> {
+    return this.createEntry(
+      tenantId,
+      date,
+      description,
+      referenceId,
+      AccountingMethod.Accrual,
+      [
+        [AccountCode.inventory(), totalCostCents, DebitCredit.Debit, `Debit Kit Inventory for ${kitSku} assembly`],
+        [AccountCode.fromCode("1210"), totalCostCents, DebitCredit.Credit, `Credit Component Inventory for ${kitSku} assembly`],
+      ]
+    );
+  }
+
+  public async onKitDisassembly(
+    tenantId: string,
+    date: Date,
+    description: string,
+    referenceId: string,
+    kitSku: string,
+    totalCostCents: number
+  ): Promise<JournalEntry> {
+    return this.createEntry(
+      tenantId,
+      date,
+      description,
+      referenceId,
+      AccountingMethod.Accrual,
+      [
+        [AccountCode.fromCode("1210"), totalCostCents, DebitCredit.Debit, `Debit Component Inventory for ${kitSku} disassembly`],
+        [AccountCode.inventory(), totalCostCents, DebitCredit.Credit, `Credit Kit Inventory for ${kitSku} disassembly`],
+      ]
+    );
+  }
+
   private async createEntry(
     tenantId: string,
     date: Date,

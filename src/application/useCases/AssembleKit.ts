@@ -1,0 +1,124 @@
+import { prisma } from "../../infrastructure/database/prisma";
+import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
+import { ICostLayerRepository } from "../../domain/repositories/ICostLayerRepository";
+import { ITenantConfigRepository } from "../../domain/repositories/ITenantConfigRepository";
+import { IJournalRepository } from "../../domain/repositories/IJournalRepository";
+import { CostLayerService } from "../../domain/accounting/services/CostLayerService";
+import { AccountingJournalService } from "../../domain/accounting/services/AccountingJournalService";
+import { SKU } from "../../domain/valueObjects/SKU";
+import { Quantity } from "../../domain/valueObjects/Quantity";
+import { InventoryItem } from "../../domain/aggregates/InventoryItem";
+import { InventoryCostLayer } from "../../domain/accounting/entities/InventoryCostLayer";
+import { AccountingMethod } from "../../domain/accounting/enums/AccountingMethod";
+import crypto from "crypto";
+
+export interface AssembleKitDTO {
+  tenantId: string;
+  locationId: string;
+  kitSku: string;
+  quantity: number;
+  actorId: string;
+  referenceId: string;
+}
+
+export class AssembleKit {
+  private readonly costLayerService: CostLayerService;
+  private readonly journalService: AccountingJournalService;
+
+  constructor(
+    private readonly inventoryRepository: IInventoryRepository,
+    private readonly costLayerRepository: ICostLayerRepository,
+    private readonly tenantConfigRepository: ITenantConfigRepository,
+    private readonly journalRepository: IJournalRepository
+  ) {
+    this.costLayerService = new CostLayerService(costLayerRepository);
+    this.journalService = new AccountingJournalService(journalRepository, this.costLayerService);
+  }
+
+  async execute(dto: AssembleKitDTO): Promise<void> {
+    const { tenantId, locationId, kitSku, quantity, actorId, referenceId } = dto;
+
+    if (quantity <= 0) {
+      throw new Error("Quantity to assemble must be greater than zero.");
+    }
+
+    // 1. Resolve kit details from prisma
+    const kitRecord = await prisma.kitModel.findUnique({
+      where: { sku: kitSku },
+      include: { components: true }
+    });
+    if (!kitRecord) {
+      throw new Error(`Kit with SKU ${kitSku} not found.`);
+    }
+
+    // 2. First pass: Validate component stock level
+    const componentItems = await Promise.all(
+      kitRecord.components.map(async (comp) => {
+        const sku = SKU.create(comp.variantId);
+        const invItem = await this.inventoryRepository.findBySku(sku, locationId);
+        const needed = comp.quantity * quantity;
+        const available = invItem ? invItem.quantity.getValue() : 0;
+        if (available < needed) {
+          throw new Error(`Insufficient stock for component variant ID ${comp.variantId}. Needed: ${needed}, Available: ${available}`);
+        }
+        return { invItem: invItem!, needed };
+      })
+    );
+
+    // 3. Second pass: Consume FIFO costing layers for components and calculate total components cost
+    let totalCostCents = 0;
+    for (const comp of kitRecord.components) {
+      const needed = comp.quantity * quantity;
+      const breakdown = await this.costLayerService.consumeFifoLayers(comp.variantId, needed);
+      totalCostCents += breakdown.totalCostCents;
+    }
+
+    // 4. Deduct stock for component variants
+    for (const { invItem, needed } of componentItems) {
+      invItem.dispatchStock(Quantity.create(needed));
+      await this.inventoryRepository.save(invItem);
+    }
+
+    // 5. Calculate assembled unit cost
+    const unitCostCents = Math.round(totalCostCents / quantity);
+
+    // 6. Create new costing layer for the assembled Kit variant
+    const kitLayer = new InventoryCostLayer(
+      crypto.randomUUID(),
+      kitSku,
+      tenantId,
+      quantity,
+      unitCostCents,
+      new Date(),
+      referenceId,
+      locationId
+    );
+    await this.costLayerRepository.save(kitLayer);
+
+    // 7. Add stock for the Kit variant
+    let kitInvItem = await this.inventoryRepository.findBySku(SKU.create(kitSku), locationId);
+    if (!kitInvItem) {
+      kitInvItem = InventoryItem.create(
+        crypto.randomUUID(),
+        SKU.create(kitSku),
+        locationId,
+        Quantity.create(0)
+      );
+    }
+    kitInvItem.receiveStock(Quantity.create(quantity));
+    await this.inventoryRepository.save(kitInvItem);
+
+    // 8. Write balanced journal entry if Accrual
+    const config = await this.tenantConfigRepository.findByTenantId(tenantId);
+    if (config && config.accountingMethod === AccountingMethod.Accrual) {
+      await this.journalService.onKitAssembly(
+        tenantId,
+        new Date(),
+        `Assemble ${quantity} units of Kit ${kitSku}`,
+        referenceId,
+        kitSku,
+        totalCostCents
+      );
+    }
+  }
+}
