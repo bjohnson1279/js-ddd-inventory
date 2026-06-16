@@ -1,4 +1,5 @@
 process.env.NODE_ENV = "test";
+process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 
 import request from "supertest";
 import jwt from "jsonwebtoken";
