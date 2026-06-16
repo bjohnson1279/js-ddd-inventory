@@ -1,3 +1,4 @@
+import { DomainException } from "../../../domain/exceptions/DomainException";
 import { Request, Response } from "express";
 import { WarehouseLocation } from "../../../domain/product/entities/WarehouseLocation";
 import { LocationId } from "../../../domain/valueObjects/LocationId";
@@ -47,7 +48,7 @@ export class WarehouseLocationController {
       });
     } catch (error: any) {
       console.error(error);
-      res.status(400).json({ error: error.message || "Failed to save location." });
+      res.status(400).json({ error: error instanceof DomainException ? error.message : "Failed to save location." });
     }
   }
 
@@ -85,7 +86,7 @@ export class WarehouseLocationController {
       res.status(200).json({ message: "Warehouse location deleted successfully." });
     } catch (error: any) {
       console.error(error);
-      res.status(400).json({ error: error.message || "Failed to delete location." });
+      res.status(400).json({ error: error instanceof DomainException ? error.message : "Failed to delete location." });
     }
   }
 
@@ -106,7 +107,7 @@ export class WarehouseLocationController {
       res.status(200).json(suggestions);
     } catch (error: any) {
       console.error(error);
-      res.status(400).json({ error: error.message || "Failed to generate putaway suggestions." });
+      res.status(400).json({ error: error instanceof DomainException ? error.message : "Failed to generate putaway suggestions." });
     }
   }
 
@@ -125,7 +126,7 @@ export class WarehouseLocationController {
       res.status(200).json(optimized);
     } catch (error: any) {
       console.error(error);
-      res.status(400).json({ error: error.message || "Failed to optimize picking route." });
+      res.status(400).json({ error: error instanceof DomainException ? error.message : "Failed to optimize picking route." });
     }
   }
 }
