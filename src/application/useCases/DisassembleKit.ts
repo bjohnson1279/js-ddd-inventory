@@ -71,7 +71,7 @@ export class DisassembleKit {
     let totalEstimatedComponentsCost = 0;
     const componentAvgCosts: { variantId: string; quantity: number; avgUnitCost: number }[] = [];
 
-    for (const component of kitRecord.components) {
+    const componentEstimates = await Promise.all(kitRecord.components.map(async (component) => {
       const needed = component.quantity * quantity;
       let avgUnitCost = 0;
 
@@ -92,17 +92,25 @@ export class DisassembleKit {
         avgUnitCost = 1000; // default 10.00
       }
 
-      componentAvgCosts.push({
+      return {
         variantId: component.variantId,
         quantity: needed,
         avgUnitCost
-      });
-      totalEstimatedComponentsCost += needed * avgUnitCost;
+      };
+    }));
+
+    for (const item of componentEstimates) {
+      componentAvgCosts.push(item);
+      totalEstimatedComponentsCost += item.quantity * item.avgUnitCost;
     }
 
     const scaleFactor = totalEstimatedComponentsCost > 0 ? totalDisassembledCost / totalEstimatedComponentsCost : 0;
 
     // 6. Restore component variants stock and costing layers
+    const restoreLayers: InventoryCostLayer[] = [];
+
+    // We cannot parallelize stock increments safely due to possible race conditions
+    // on identical component SKUs in the kit. However, we CAN batch save everything at the end.
     for (const item of componentAvgCosts) {
       const allocatedUnitCost = scaleFactor > 0 ? Math.round(item.avgUnitCost * scaleFactor) : 0;
 
@@ -117,7 +125,7 @@ export class DisassembleKit {
         referenceId,
         locationId
       );
-      await this.costLayerRepository.save(layer);
+      restoreLayers.push(layer);
 
       // Increment stock level for this component
       const compSku = SKU.create(item.variantId);
@@ -132,6 +140,13 @@ export class DisassembleKit {
       }
       compInv.receiveStock(Quantity.create(item.quantity));
       await this.inventoryRepository.save(compInv);
+    }
+
+    // Batch save cost layers if possible, otherwise Promise.all
+    if ('saveMany' in this.costLayerRepository && typeof (this.costLayerRepository as any).saveMany === 'function') {
+      await (this.costLayerRepository as any).saveMany(restoreLayers);
+    } else {
+      await Promise.all(restoreLayers.map(l => this.costLayerRepository.save(l)));
     }
 
     // 7. Write balanced journal entry if Accrual
