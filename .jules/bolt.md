@@ -84,3 +84,7 @@
 ## 2026-06-15 - Redundant Parallelize ReceiveRMA item processing
 **Learning:** Found sequential `for...of` in `ReceiveRMA.ts` and replaced it with `Promise.all` over items arrays. However, this is already a known pattern as seen in yesterday's entry (Parallelize independent data processing loops).
 **Action:** When working on performance optimizations for independent records processing, always check the journal first to avoid documenting identical optimizations.
+
+## 2026-06-17 - Optimize DisassembleKit N+1 Loop
+**Learning:** Found sequential fallback awaits (`await this.costLayerRepository.getActiveLayers` and `await this.inventoryRepository.save`) in `for...of` loops in `DisassembleKit.ts`.
+**Action:** Replaced bounded sequential writes over the fallback loop with `Promise.all` batch reads and writes to execute independent queries concurrently, significantly reducing wait time.

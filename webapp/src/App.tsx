@@ -3597,8 +3597,8 @@ function ShippingTab({
                               className="btn btn-warning btn-sm"
                               onClick={() => handleTrackShipment(s.id, "IN_TRANSIT")}
                               disabled={trackingLoading === s.id}
-
                               title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as in transit"}
+                              aria-label={trackingLoading === s.id ? "Updating status..." : `Mark shipment ${s.sku} as in transit`}
 
                             >
                               🚚 Scan (In Transit)
@@ -3610,8 +3610,8 @@ function ShippingTab({
                                 className="btn btn-success btn-sm"
                                 onClick={() => handleTrackShipment(s.id, "DELIVERED")}
                                 disabled={trackingLoading === s.id}
-
                                 title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as delivered"}
+                                aria-label={trackingLoading === s.id ? "Updating status..." : `Mark shipment ${s.sku} as delivered`}
 
                               >
                                 ✅ Deliver
@@ -3620,8 +3620,8 @@ function ShippingTab({
                                 className="btn btn-danger btn-sm"
                                 onClick={() => handleTrackShipment(s.id, "FAILED")}
                                 disabled={trackingLoading === s.id}
-
                                 title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as failed"}
+                                aria-label={trackingLoading === s.id ? "Updating status..." : `Mark shipment ${s.sku} as failed`}
 
                               >
                                 ❌ Fail

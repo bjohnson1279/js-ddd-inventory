@@ -9,7 +9,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 
 export class PrismaInventoryRepository implements IInventoryRepository {
-  private prisma = prisma;
+  private readonly prisma = prisma;
 
   constructor(
     private readonly outboxRepository?: IOutboxRepository

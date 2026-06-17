@@ -17,7 +17,8 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId } = req.body;
-      const receiveStock = new ReceiveStock(repository);
+      const capacityService = req.app.get("wmsCapacityService");
+      const receiveStock = new ReceiveStock(repository, undefined, capacityService);
       await receiveStock.execute(sku, amount, locationId);
       res.status(200).json({ message: "Stock received successfully" });
     } catch (error: any) {
