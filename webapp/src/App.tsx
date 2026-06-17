@@ -2928,7 +2928,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
               title={!scanValue ? "Enter a barcode to scan" : scanLoading ? "Scanning..." : "Trigger scan"}
 
             >
-              {scanLoading ? "⏳ Scanning..." : "⚡ Trigger Scan"}
+              {scanLoading ? <><span role="img" aria-hidden="true">⏳</span> Scanning...</> : <><span role="img" aria-hidden="true">⚡</span> Trigger Scan</>}
             </button>
           </div>
         </div>
