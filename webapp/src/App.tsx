@@ -3421,7 +3421,7 @@ function ShippingTab({
 
               <button type="submit" className="btn btn-primary" disabled={loadingRates} title={loadingRates ? "Estimating rates..." : "Estimate shipping rates"}>
 
-                {loadingRates ? "⏳ Estimating..." : "Estimate Shipping"}
+                {loadingRates ? <><span role="img" aria-hidden="true">⏳</span> Estimating...</> : "Estimate Shipping"}
               </button>
             </form>
 
