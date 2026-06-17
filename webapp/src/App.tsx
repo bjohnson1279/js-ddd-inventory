@@ -3463,7 +3463,7 @@ function ShippingTab({
                   title={!selectedCarrier ? "Select a carrier to buy a label" : purchasingLabel ? "Purchasing..." : "Buy selected shipping label"}
 
                 >
-                  {purchasingLabel ? "⏳ Purchasing..." : `Buy ${selectedCarrier} Shipping Label`}
+                  {purchasingLabel ? <><span role="img" aria-hidden="true">⏳</span> Purchasing...</> : "Buy " + selectedCarrier + " Shipping Label"}
                 </button>
               </div>
             )}
