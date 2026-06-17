@@ -81,6 +81,8 @@ import shippingRoutes from "./infrastructure/http/routes/shipping.routes";
 import authRoutes from "./infrastructure/http/routes/auth.routes";
 import userRoutes from "./infrastructure/http/routes/user.routes";
 import warehouseLocationRoutes from "./infrastructure/http/routes/warehouseLocation.routes";
+import notificationRoutes from "./infrastructure/http/routes/notification.routes";
+import { WebSocketManager } from "./infrastructure/websocket/WebSocketManager";
 import { authMiddleware } from "./infrastructure/http/middleware/auth";
 import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
 import { IProductRepository } from "./domain/repositories/IProductRepository";
@@ -195,6 +197,7 @@ export const setupApp = (
   app.use("/api/forecasting", forecastingRoutes);
   app.use("/api/shipping", shippingRoutes);
   app.use("/api/warehouse-locations", warehouseLocationRoutes);
+  app.use("/api/notifications", notificationRoutes);
 };
 
 const start = async () => {
@@ -268,9 +271,10 @@ const start = async () => {
   const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);
   outboxProcessor.start(3000);
 
-  app.listen(port, () => {
+  const server = app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
   });
+  WebSocketManager.init(server);
 };
 
 if (process.env.NODE_ENV !== "test") {

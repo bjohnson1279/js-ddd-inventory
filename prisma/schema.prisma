@@ -341,3 +341,14 @@ model WarehouseLocationModel {
 
   @@unique([warehouseId, zone, aisle, rack, shelf, bin])
 }
+
+model NotificationModel {
+  id        String   @id @default(uuid())
+  tenantId  String
+  title     String
+  message   String
+  type      String   @default("info")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
