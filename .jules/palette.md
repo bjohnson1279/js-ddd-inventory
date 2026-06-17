@@ -21,3 +21,7 @@
 ## 2024-06-15 - Interactive Div Accessibility
 **Learning:** Found \`div\` elements (like shipping rate cards) acting as buttons via \`onClick\` handlers, but completely lacking keyboard accessibility. This makes them unreachable for users relying on keyboard navigation or screen readers. Also found that navigation tab buttons containing icons and text may not be read by screen readers if not properly associated with an \`aria-label\`.
 **Action:** When a \`div\` or \`span\` is used as an interactive element, always add \`role="button"\`, \`tabIndex={0}\`, \`onKeyDown\` support (for Enter and Space keys), and a dynamic \`aria-label\`. Also ensure it has a \`:focus-visible\` style so keyboard users can see when it's focused. For navigation tab buttons, always add explicit \`aria-label\` attributes to give exact context for screen readers.
+
+## 2024-06-18 - Added Aria-Label to shipment action buttons
+**Learning:** State-change buttons that rely on emojis (like "🚚 Scan" or "❌ Fail") can be ambiguous and lack context when read by screen readers. While these buttons had `title` attributes, explicit `aria-label` attributes should be used for reliable accessibility.
+**Action:** Always provide explicit, dynamic `aria-label` attributes to state-change buttons alongside their `title` attributes to ensure robust accessibility for screen readers.
