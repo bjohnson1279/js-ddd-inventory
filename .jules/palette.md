@@ -21,3 +21,7 @@
 ## 2024-06-15 - Interactive Div Accessibility
 **Learning:** Found \`div\` elements (like shipping rate cards) acting as buttons via \`onClick\` handlers, but completely lacking keyboard accessibility. This makes them unreachable for users relying on keyboard navigation or screen readers. Also found that navigation tab buttons containing icons and text may not be read by screen readers if not properly associated with an \`aria-label\`.
 **Action:** When a \`div\` or \`span\` is used as an interactive element, always add \`role="button"\`, \`tabIndex={0}\`, \`onKeyDown\` support (for Enter and Space keys), and a dynamic \`aria-label\`. Also ensure it has a \`:focus-visible\` style so keyboard users can see when it's focused. For navigation tab buttons, always add explicit \`aria-label\` attributes to give exact context for screen readers.
+
+## 2024-06-16 - Dynamic Titles and Aria-Labels on Disabled Text Inputs
+**Learning:** Text inputs that enter disabled states (like barcode scan buffers during async loading) can leave screen reader and keyboard users confused if there's no dynamic label or title explaining the locked state.
+**Action:** When disabling interactive text inputs during loading or blocking operations, pair `disabled={state}` with a dynamic `title` attribute explaining the state (e.g. `title={loading ? "Processing..." : "Ready"}`), and set `aria-busy` to `true` to ensure the loading context is communicated properly to assistive tech.
