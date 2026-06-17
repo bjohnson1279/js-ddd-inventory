@@ -3591,7 +3591,7 @@ function ShippingTab({
                               onClick={() => handleTrackShipment(s.id, "IN_TRANSIT")}
                               disabled={trackingLoading === s.id}
                               title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as in transit"}
-                              aria-label={trackingLoading === s.id ? "Updating status..." : "Mark shipment as in transit"}
+                              aria-label={trackingLoading === s.id ? "Updating status..." : `Mark shipment ${s.sku} as in transit`}
 
                             >
                               🚚 Scan (In Transit)
