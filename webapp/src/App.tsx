@@ -808,11 +808,7 @@ function App() {
                 </p>
                 <div className="form-group" style={{ marginBottom: "15px" }}>
                   <label htmlFor="quick-restock-sku">SKU Variant</label>
-                  <select
-                    id="quick-restock-sku"
-                    className="form-control"
-                    value={valSku}
-                    onChange={(e) => setValSku(e.target.value)}
+                  <select\n                    id="quick-restock-sku"\n                    className="form-control"\n                    value={quickRestockSku}\n                    onChange={(e) => setQuickRestockSku(e.target.value)}
                   >
                     {inventoryList.map(item => (
                       <option key={item.id} value={item.sku}>{item.sku} ({item.quantity} available)</option>
