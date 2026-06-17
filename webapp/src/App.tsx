@@ -3604,7 +3604,7 @@ function ShippingTab({
                                 onClick={() => handleTrackShipment(s.id, "DELIVERED")}
                                 disabled={trackingLoading === s.id}
                                 title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as delivered"}
-                                aria-label={trackingLoading === s.id ? "Updating status..." : "Mark shipment as delivered"}
+                                aria-label={trackingLoading === s.id ? "Updating status..." : `Mark shipment ${s.sku} as delivered`}
 
                               >
                                 ✅ Deliver
