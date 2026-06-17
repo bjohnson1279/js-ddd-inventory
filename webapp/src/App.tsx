@@ -2253,7 +2253,7 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
                 title={!selectedSku ? "Select a SKU to generate forecast" : forecastLoading ? "Calculating..." : "Generate and save forecast"}
 
               >
-                {forecastLoading ? "⏳ Calculating Forecast..." : "Generate & Save Forecast"}
+                {forecastLoading ? <><span role="img" aria-hidden="true">⏳</span> Calculating Forecast...</> : "Generate & Save Forecast"}
               </button>
             </form>
 
