@@ -2689,10 +2689,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                     handleScan(scanValue);
                   }
                 }}
-                disabled={scanLoading}
-                title={scanLoading ? "Processing scan..." : "Scan barcode buffer"}
-                aria-label="Scan barcode buffer"
-                aria-busy={scanLoading}
+                disabled={scanLoading}\n                aria-label="Scan barcode buffer"\n                aria-busy={scanLoading}
                 style={{
                   background: "rgba(0, 0, 0, 0.4)",
                   border: "1px solid rgba(255, 255, 255, 0.1)",
