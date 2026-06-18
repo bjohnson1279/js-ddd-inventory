@@ -191,10 +191,15 @@ export class PrismaInventoryRepository implements IInventoryRepository {
 
     if (this.outboxRepository) {
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        // Upsert queries cannot be reliably parallelized inside interactive transactions if they lock identical indexes
         for (const item of items) {
-          // Fall back to upsert to ensure atomic saveMany operations without conflicts
           await tx.inventoryModel.upsert({
-            where: { id: item.id },
+            where: {
+              sku_locationId: {
+                sku: item.sku.getValue(),
+                locationId: item.locationId
+              }
+            },
             update: {
               quantity: item.quantity.getValue(),
               allocated: item.allocated.getValue(),
@@ -223,7 +228,12 @@ export class PrismaInventoryRepository implements IInventoryRepository {
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         const itemOperations = items.map(item =>
           tx.inventoryModel.upsert({
-            where: { id: item.id },
+            where: {
+              sku_locationId: {
+                sku: item.sku.getValue(),
+                locationId: item.locationId
+              }
+            },
             update: {
               quantity: item.quantity.getValue(),
               allocated: item.allocated.getValue(),
