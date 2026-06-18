@@ -8,6 +8,8 @@ import { ReleaseAllocation } from "../../../application/useCases/ReleaseAllocati
 import { FulfillAllocation } from "../../../application/useCases/FulfillAllocation";
 import { CreateInTransit } from "../../../application/useCases/CreateInTransit";
 import { ReceiveInTransit } from "../../../application/useCases/ReceiveInTransit";
+import { SuggestFefoPicking } from "../../../application/useCases/SuggestFefoPicking";
+import { TraceProductRecall } from "../../../application/useCases/TraceProductRecall";
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
 import { DomainException } from "../../../domain/exceptions/DomainException";
 import { SKU } from "../../../domain/valueObjects/SKU";
@@ -16,10 +18,21 @@ export class InventoryController {
   static async receive(req: Request, res: Response) {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
-      const { sku, amount, locationId } = req.body;
+      const { sku, amount, locationId, unitCostCents, lotNumber, expirationDate, tenantId, purchaseOrderId } = req.body;
       const capacityService = req.app.get("wmsCapacityService");
-      const receiveStock = new ReceiveStock(repository, undefined, capacityService);
-      await receiveStock.execute(sku, amount, locationId);
+      const productRepository = req.app.get("productRepository");
+      const costLayerRepository = req.app.get("costLayerRepository");
+      const receiveStock = new ReceiveStock(repository, undefined, capacityService, productRepository, costLayerRepository);
+      await receiveStock.execute(
+        sku,
+        amount,
+        locationId,
+        unitCostCents,
+        lotNumber,
+        expirationDate ? new Date(expirationDate) : undefined,
+        tenantId,
+        purchaseOrderId
+      );
       res.status(200).json({ message: "Stock received successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
@@ -34,11 +47,20 @@ export class InventoryController {
   static async dispatch(req: Request, res: Response) {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
-      const { sku, amount, locationId } = req.body;
+      const { sku, amount, locationId, lotNumber } = req.body;
       const reorderPolicyService = req.app.get("reorderPolicyService");
       const dispatchRecordRepository = req.app.get("dispatchRecordRepository");
-      const dispatchStock = new DispatchStock(repository, undefined, reorderPolicyService, dispatchRecordRepository);
-      await dispatchStock.execute(sku, amount, locationId);
+      const productRepository = req.app.get("productRepository");
+      const costLayerRepository = req.app.get("costLayerRepository");
+      const dispatchStock = new DispatchStock(
+        repository,
+        undefined,
+        reorderPolicyService,
+        dispatchRecordRepository,
+        productRepository,
+        costLayerRepository
+      );
+      await dispatchStock.execute(sku, amount, locationId, false, lotNumber);
       res.status(200).json({ message: "Stock dispatched successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
@@ -205,6 +227,45 @@ export class InventoryController {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
       }
+    }
+  }
+
+  static async suggestFefoPick(req: Request, res: Response) {
+    try {
+      const productRepository = req.app.get("productRepository");
+      const costLayerRepository = req.app.get("costLayerRepository");
+      const { sku, quantity } = req.query;
+
+      if (!sku || !quantity) {
+        return res.status(400).json({ error: "SKU and quantity are required query parameters" });
+      }
+
+      const useCase = new SuggestFefoPicking(productRepository, costLayerRepository);
+      const suggestions = await useCase.execute(sku as string, parseInt(quantity as string, 10));
+
+      res.status(200).json(suggestions);
+    } catch (error: any) {
+      console.error(error);
+      res.status(500).json({ error: error.message || "Internal server error" });
+    }
+  }
+
+  static async traceRecall(req: Request, res: Response) {
+    try {
+      const dispatchRecordRepository = req.app.get("dispatchRecordRepository");
+      const { lotNumber } = req.params;
+
+      if (!lotNumber) {
+        return res.status(400).json({ error: "Lot number is required" });
+      }
+
+      const useCase = new TraceProductRecall(dispatchRecordRepository);
+      const dispatches = await useCase.execute(lotNumber);
+
+      res.status(200).json(dispatches);
+    } catch (error: any) {
+      console.error(error);
+      res.status(500).json({ error: error.message || "Internal server error" });
     }
   }
 }

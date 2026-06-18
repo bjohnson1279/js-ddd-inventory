@@ -4,15 +4,29 @@ import { Quantity } from "../../domain/valueObjects/Quantity";
 import { InventoryItem } from "../../domain/aggregates/InventoryItem";
 import { IExternalInventoryPublisher } from "../ports/IExternalInventoryPublisher";
 import { WMSCapacityService } from "../../domain/services/WMSCapacityService";
+import { ICostLayerRepository } from "../../domain/repositories/ICostLayerRepository";
+import { IProductRepository } from "../../domain/repositories/IProductRepository";
+import { InventoryCostLayer } from "../../domain/accounting/entities/InventoryCostLayer";
 
 export class ReceiveStock {
   constructor(
     private readonly inventoryRepository: IInventoryRepository,
     private readonly externalPublisher?: IExternalInventoryPublisher,
-    private readonly capacityService?: WMSCapacityService
+    private readonly capacityService?: WMSCapacityService,
+    private readonly productRepository?: IProductRepository,
+    private readonly costLayerRepository?: ICostLayerRepository
   ) {}
 
-  async execute(skuStr: string, amount: number, locationId: string = "default"): Promise<void> {
+  async execute(
+    skuStr: string,
+    amount: number,
+    locationId: string = "default",
+    unitCostCents?: number,
+    lotNumber?: string,
+    expirationDate?: Date,
+    tenantId?: string,
+    purchaseOrderId?: string
+  ): Promise<void> {
     const sku = SKU.create(skuStr);
     const quantityToAdd = Quantity.create(amount);
 
@@ -32,6 +46,33 @@ export class ReceiveStock {
     item.receiveStock(quantityToAdd);
 
     await this.inventoryRepository.save(item);
+
+    // If cost layer repository and product repository are provided, create cost layer
+    if (this.costLayerRepository && this.productRepository && unitCostCents !== undefined) {
+      const product = await this.productRepository.findBySku(sku);
+      if (!product) {
+        throw new Error(`Product with SKU ${skuStr} not found.`);
+      }
+      const variant = product.variants.find((v) => v.sku.getValue() === skuStr);
+      if (!variant) {
+        throw new Error(`Variant with SKU ${skuStr} not found.`);
+      }
+
+      const layerId = crypto.randomUUID();
+      const layer = new InventoryCostLayer(
+        layerId,
+        variant.id,
+        tenantId || "default-tenant",
+        amount,
+        unitCostCents,
+        new Date(),
+        purchaseOrderId || "DIRECT-RECEIPT",
+        locationId,
+        lotNumber,
+        expirationDate
+      );
+      await this.costLayerRepository.save(layer);
+    }
 
     if (this.externalPublisher) {
       await this.externalPublisher.publishStockLevel(sku, item.quantity);

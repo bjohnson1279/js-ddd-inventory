@@ -4,11 +4,13 @@ export class DispatchRecord {
     public readonly sku: string,
     public readonly locationId: string,
     public readonly quantity: number,
-    public readonly dispatchedAt: Date
+    public readonly dispatchedAt: Date,
+    public readonly lotNumber?: string | null
   ) {}
 }
 
 export interface IDispatchRecordRepository {
   save(record: DispatchRecord, tx?: any): Promise<void>;
   fetchHistory(sku: string, locationId: string, since: Date): Promise<DispatchRecord[]>;
+  fetchByLotNumber(lotNumber: string): Promise<DispatchRecord[]>;
 }

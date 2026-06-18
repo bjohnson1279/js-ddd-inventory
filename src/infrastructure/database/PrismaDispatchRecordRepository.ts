@@ -11,7 +11,8 @@ export class PrismaDispatchRecordRepository implements IDispatchRecordRepository
         sku: record.sku,
         locationId: record.locationId,
         quantity: record.quantity,
-        dispatchedAt: record.dispatchedAt
+        dispatchedAt: record.dispatchedAt,
+        lotNumber: record.lotNumber || null
       }
     });
   }
@@ -29,7 +30,20 @@ export class PrismaDispatchRecordRepository implements IDispatchRecordRepository
     });
 
     return records.map(
-      (r) => new DispatchRecord(r.id, r.sku, r.locationId, r.quantity, r.dispatchedAt)
+      (r) => new DispatchRecord(r.id, r.sku, r.locationId, r.quantity, r.dispatchedAt, r.lotNumber)
+    );
+  }
+
+  async fetchByLotNumber(lotNumber: string): Promise<DispatchRecord[]> {
+    const records = await this.prisma.dispatchRecordModel.findMany({
+      where: {
+        lotNumber
+      },
+      orderBy: { dispatchedAt: "desc" }
+    });
+
+    return records.map(
+      (r) => new DispatchRecord(r.id, r.sku, r.locationId, r.quantity, r.dispatchedAt, r.lotNumber)
     );
   }
 }

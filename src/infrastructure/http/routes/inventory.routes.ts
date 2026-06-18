@@ -8,6 +8,8 @@ router.get("/", InventoryController.list);
 router.post("/receive", InventoryController.receive);
 router.post("/dispatch", InventoryController.dispatch);
 router.post("/count", InventoryController.performCount);
+router.get("/fefo-pick", InventoryController.suggestFefoPick);
+router.get("/reports/recall/:lotNumber", InventoryController.traceRecall);
 router.get("/:sku", InventoryController.getLevel);
 
 router.post("/allocate", requireRole(["admin", "warehouse_operator"]), InventoryController.allocate);
