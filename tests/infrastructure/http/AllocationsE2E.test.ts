@@ -1,4 +1,5 @@
 process.env.NODE_ENV = "test";
+process.env.JWT_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 
 import request from "supertest";
@@ -9,7 +10,7 @@ import { SKU } from "../../../src/domain/valueObjects/SKU";
 import { Quantity } from "../../../src/domain/valueObjects/Quantity";
 import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
 
-const JWT_SECRET = "super-secret-key";
+const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
 
 describe("Allocations & In-Transit Stock E2E Tests", () => {
   let repository: InMemoryInventoryRepository;

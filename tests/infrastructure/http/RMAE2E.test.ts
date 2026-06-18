@@ -1,4 +1,5 @@
 process.env.NODE_ENV = "test";
+process.env.JWT_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 
 import request from "supertest";
@@ -18,7 +19,7 @@ import { RMADisposition } from "../../../src/domain/returns/enums/RMADisposition
 import { QuarantineStatus } from "../../../src/domain/returns/enums/QuarantineStatus";
 import { SKU } from "../../../src/domain/valueObjects/SKU";
 
-const JWT_SECRET = "super-secret-key";
+const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
 
 describe("RMA and Quarantine HTTP API Endpoints", () => {
   let inventoryRepo: InMemoryInventoryRepository;

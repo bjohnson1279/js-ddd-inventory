@@ -4,7 +4,10 @@ import crypto from "crypto";
 import { prisma } from "../../database/prisma";
 import { hashPassword, verifyPassword } from "../../utils/security";
 
-const JWT_SECRET = process.env.JWT_SECRET || "super-secret-key";
+const JWT_SECRET = process.env.JWT_SECRET as string;
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET environment variable is required for security.");
+}
 
 export class AuthController {
   static async setup(req: Request, res: Response) {
