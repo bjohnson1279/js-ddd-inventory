@@ -1,4 +1,5 @@
 process.env.NODE_ENV = "test";
+process.env.JWT_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 
 import request from "supertest";
@@ -14,7 +15,7 @@ import { WarehouseLocation } from "../../../src/domain/product/entities/Warehous
 import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
 import { Quantity } from "../../../src/domain/valueObjects/Quantity";
 
-const JWT_SECRET = "super-secret-key";
+const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
 
 describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
   let inventoryRepo: InMemoryInventoryRepository;

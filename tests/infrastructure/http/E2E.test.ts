@@ -1,4 +1,5 @@
 process.env.NODE_ENV = "test";
+process.env.JWT_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 
 import request from "supertest";
@@ -378,7 +379,7 @@ describe("E2E Integration Test Suite", () => {
       expect(createRes.status).toBe(201);
 
       // Sign tokens for RBAC tests
-      const JWT_SECRET = "super-secret-key";
+      const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
       const adminToken = jwt.sign({ actorId: "admin-user", role: "admin", tenantId }, JWT_SECRET);
       const viewerToken = jwt.sign({ actorId: "viewer-user", role: "viewer", tenantId }, JWT_SECRET);
 
