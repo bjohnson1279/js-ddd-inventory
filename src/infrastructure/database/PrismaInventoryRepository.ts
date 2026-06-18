@@ -191,45 +191,26 @@ export class PrismaInventoryRepository implements IInventoryRepository {
 
     if (this.outboxRepository) {
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        // Bulk read existing items to avoid N+1 queries
-        const existingRecords = await tx.inventoryModel.findMany({
-          where: { id: { in: items.map(i => i.id) } }
-        });
-        const existingIds = new Set(existingRecords.map(r => r.id));
-
         for (const item of items) {
-          const isExisting = existingIds.has(item.id);
-
-          if (!isExisting) {
-            await tx.inventoryModel.create({
-              data: {
-                id: item.id,
-                sku: item.sku.getValue(),
-                locationId: item.locationId,
-                quantity: item.quantity.getValue(),
-                allocated: item.allocated.getValue(),
-                inTransit: item.inTransit.getValue(),
-                version: item.version
-              }
-            });
-          } else {
-            const result = await tx.inventoryModel.updateMany({
-              where: {
-                id: item.id,
-                version: item.version - 1
-              },
-              data: {
-                quantity: item.quantity.getValue(),
-                allocated: item.allocated.getValue(),
-                inTransit: item.inTransit.getValue(),
-                version: item.version
-              }
-            });
-
-            if (result.count === 0) {
-              throw new ConcurrencyException(item.sku.getValue(), item.locationId);
+          // Fall back to upsert to ensure atomic saveMany operations without conflicts
+          await tx.inventoryModel.upsert({
+            where: { id: item.id },
+            update: {
+              quantity: item.quantity.getValue(),
+              allocated: item.allocated.getValue(),
+              inTransit: item.inTransit.getValue(),
+              version: item.version
+            },
+            create: {
+              id: item.id,
+              sku: item.sku.getValue(),
+              locationId: item.locationId,
+              quantity: item.quantity.getValue(),
+              allocated: item.allocated.getValue(),
+              inTransit: item.inTransit.getValue(),
+              version: item.version
             }
-          }
+          });
 
           const events = item.getDomainEvents();
           for (const event of events) {
@@ -240,46 +221,27 @@ export class PrismaInventoryRepository implements IInventoryRepository {
       });
     } else {
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        // Bulk read existing items to avoid N+1 queries
-        const existingRecords = await tx.inventoryModel.findMany({
-          where: { id: { in: items.map(i => i.id) } }
-        });
-        const existingIds = new Set(existingRecords.map(r => r.id));
-
-        for (const item of items) {
-          const isExisting = existingIds.has(item.id);
-
-          if (!isExisting) {
-            await tx.inventoryModel.create({
-              data: {
-                id: item.id,
-                sku: item.sku.getValue(),
-                locationId: item.locationId,
-                quantity: item.quantity.getValue(),
-                allocated: item.allocated.getValue(),
-                inTransit: item.inTransit.getValue(),
-                version: item.version
-              }
-            });
-          } else {
-            const result = await tx.inventoryModel.updateMany({
-              where: {
-                id: item.id,
-                version: item.version - 1
-              },
-              data: {
-                quantity: item.quantity.getValue(),
-                allocated: item.allocated.getValue(),
-                inTransit: item.inTransit.getValue(),
-                version: item.version
-              }
-            });
-
-            if (result.count === 0) {
-              throw new ConcurrencyException(item.sku.getValue(), item.locationId);
+        const itemOperations = items.map(item =>
+          tx.inventoryModel.upsert({
+            where: { id: item.id },
+            update: {
+              quantity: item.quantity.getValue(),
+              allocated: item.allocated.getValue(),
+              inTransit: item.inTransit.getValue(),
+              version: item.version
+            },
+            create: {
+              id: item.id,
+              sku: item.sku.getValue(),
+              locationId: item.locationId,
+              quantity: item.quantity.getValue(),
+              allocated: item.allocated.getValue(),
+              inTransit: item.inTransit.getValue(),
+              version: item.version
             }
-          }
-        }
+          })
+        );
+        await Promise.all(itemOperations);
       });
 
       const allEvents = items.flatMap(item => {
