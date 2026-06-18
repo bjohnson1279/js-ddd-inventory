@@ -111,3 +111,7 @@
 **Vulnerability:** Used Math.random() to generate tracking number suffixes in MockCarrierService.
 **Learning:** Math.random() is not a cryptographically secure pseudo-random number generator (CSPRNG), making identifiers generated this way predictable.
 **Prevention:** Always use Node's native crypto utilities (like crypto.randomInt() or crypto.randomUUID()) when generating random identifiers to ensure unpredictability and security.
+## 2026-06-12 - Prevent Injection and Malformed Input in InventoryController
+**Vulnerability:** The `InventoryController` (for endpoints like receive, dispatch, performCount) lacked explicit input validation. This could allow malformed payloads (e.g., negative amounts, non-string SKUs) to trigger unhandled domain exceptions or database errors, which is a potential vector for DoS or unexpected internal states.
+**Learning:** Trusting input directly from `req.body` without verification violates the principle of "Trust nothing, verify everything." Missing boundary checks on numbers can bypass domain logic if type coercion behaves unexpectedly.
+**Prevention:** Always implement explicit input validation, type checking, and boundary assertions (like `amount <= 0` or `!Number.isInteger`) before invoking domain use cases.

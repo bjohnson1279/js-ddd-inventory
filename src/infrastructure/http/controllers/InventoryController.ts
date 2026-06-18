@@ -11,6 +11,17 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId } = req.body;
+
+      if (!sku || typeof sku !== 'string' || sku.trim() === '') {
+        return res.status(400).json({ error: "Invalid or missing sku" });
+      }
+      if (amount == null || typeof amount !== 'number' || amount <= 0 || !Number.isInteger(amount)) {
+        return res.status(400).json({ error: "Invalid or missing amount" });
+      }
+      if (locationId && typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Invalid locationId" });
+      }
+
       const receiveStock = new ReceiveStock(repository);
       await receiveStock.execute(sku, amount, locationId);
       res.status(200).json({ message: "Stock received successfully" });
@@ -28,6 +39,17 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId } = req.body;
+
+      if (!sku || typeof sku !== 'string' || sku.trim() === '') {
+        return res.status(400).json({ error: "Invalid or missing sku" });
+      }
+      if (amount == null || typeof amount !== 'number' || amount <= 0 || !Number.isInteger(amount)) {
+        return res.status(400).json({ error: "Invalid or missing amount" });
+      }
+      if (locationId && typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Invalid locationId" });
+      }
+
       const reorderPolicyService = req.app.get("reorderPolicyService");
       const dispatchRecordRepository = req.app.get("dispatchRecordRepository");
       const dispatchStock = new DispatchStock(repository, undefined, reorderPolicyService, dispatchRecordRepository);
@@ -71,10 +93,22 @@ export class InventoryController {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { counts, locationId } = req.body;
       if (!Array.isArray(counts)) {
-        return res
-          .status(400)
-          .json({ error: "Expected 'counts' to be an array" });
+        return res.status(400).json({ error: "Expected 'counts' to be an array" });
       }
+
+      // Validate counts array items
+      for (const count of counts) {
+        if (!count.sku || typeof count.sku !== 'string' || count.sku.trim() === '') {
+          return res.status(400).json({ error: "Invalid sku in counts array" });
+        }
+        if (count.count == null || typeof count.count !== 'number' || count.count < 0 || !Number.isInteger(count.count)) {
+          return res.status(400).json({ error: "Invalid quantity in counts array" });
+        }
+      }
+      if (locationId && typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Invalid locationId" });
+      }
+
       const performFullStoreCount = new PerformFullStoreCount(repository);
       await performFullStoreCount.execute(counts, locationId);
       res.status(200).json({ message: "Store count performed successfully" });
