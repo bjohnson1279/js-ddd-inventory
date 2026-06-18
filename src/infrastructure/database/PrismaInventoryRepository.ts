@@ -191,41 +191,31 @@ export class PrismaInventoryRepository implements IInventoryRepository {
 
     if (this.outboxRepository) {
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        // Upsert queries cannot be reliably parallelized inside interactive transactions if they lock identical indexes
         for (const item of items) {
-          const existing = await tx.inventoryModel.findUnique({
-            where: { id: item.id }
-          });
-
-          if (!existing) {
-            await tx.inventoryModel.create({
-              data: {
-                id: item.id,
+          await tx.inventoryModel.upsert({
+            where: {
+              sku_locationId: {
                 sku: item.sku.getValue(),
-                locationId: item.locationId,
-                quantity: item.quantity.getValue(),
-                allocated: item.allocated.getValue(),
-                inTransit: item.inTransit.getValue(),
-                version: item.version
+                locationId: item.locationId
               }
-            });
-          } else {
-            const result = await tx.inventoryModel.updateMany({
-              where: {
-                id: item.id,
-                version: item.version - 1
-              },
-              data: {
-                quantity: item.quantity.getValue(),
-                allocated: item.allocated.getValue(),
-                inTransit: item.inTransit.getValue(),
-                version: item.version
-              }
-            });
-
-            if (result.count === 0) {
-              throw new ConcurrencyException(item.sku.getValue(), item.locationId);
+            },
+            update: {
+              quantity: item.quantity.getValue(),
+              allocated: item.allocated.getValue(),
+              inTransit: item.inTransit.getValue(),
+              version: item.version
+            },
+            create: {
+              id: item.id,
+              sku: item.sku.getValue(),
+              locationId: item.locationId,
+              quantity: item.quantity.getValue(),
+              allocated: item.allocated.getValue(),
+              inTransit: item.inTransit.getValue(),
+              version: item.version
             }
-          }
+          });
 
           const events = item.getDomainEvents();
           for (const event of events) {
@@ -236,42 +226,32 @@ export class PrismaInventoryRepository implements IInventoryRepository {
       });
     } else {
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        for (const item of items) {
-          const existing = await tx.inventoryModel.findUnique({
-            where: { id: item.id }
-          });
-
-          if (!existing) {
-            await tx.inventoryModel.create({
-              data: {
-                id: item.id,
+        const itemOperations = items.map(item =>
+          tx.inventoryModel.upsert({
+            where: {
+              sku_locationId: {
                 sku: item.sku.getValue(),
-                locationId: item.locationId,
-                quantity: item.quantity.getValue(),
-                allocated: item.allocated.getValue(),
-                inTransit: item.inTransit.getValue(),
-                version: item.version
+                locationId: item.locationId
               }
-            });
-          } else {
-            const result = await tx.inventoryModel.updateMany({
-              where: {
-                id: item.id,
-                version: item.version - 1
-              },
-              data: {
-                quantity: item.quantity.getValue(),
-                allocated: item.allocated.getValue(),
-                inTransit: item.inTransit.getValue(),
-                version: item.version
-              }
-            });
-
-            if (result.count === 0) {
-              throw new ConcurrencyException(item.sku.getValue(), item.locationId);
+            },
+            update: {
+              quantity: item.quantity.getValue(),
+              allocated: item.allocated.getValue(),
+              inTransit: item.inTransit.getValue(),
+              version: item.version
+            },
+            create: {
+              id: item.id,
+              sku: item.sku.getValue(),
+              locationId: item.locationId,
+              quantity: item.quantity.getValue(),
+              allocated: item.allocated.getValue(),
+              inTransit: item.inTransit.getValue(),
+              version: item.version
             }
-          }
-        }
+          })
+        );
+        await Promise.all(itemOperations);
       });
 
       const allEvents = items.flatMap(item => {
