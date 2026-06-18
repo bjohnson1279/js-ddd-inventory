@@ -191,12 +191,16 @@ export class PrismaInventoryRepository implements IInventoryRepository {
 
     if (this.outboxRepository) {
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        for (const item of items) {
-          const existing = await tx.inventoryModel.findUnique({
-            where: { id: item.id }
-          });
+        // Bulk read existing items to avoid N+1 queries
+        const existingRecords = await tx.inventoryModel.findMany({
+          where: { id: { in: items.map(i => i.id) } }
+        });
+        const existingIds = new Set(existingRecords.map(r => r.id));
 
-          if (!existing) {
+        for (const item of items) {
+          const isExisting = existingIds.has(item.id);
+
+          if (!isExisting) {
             await tx.inventoryModel.create({
               data: {
                 id: item.id,
@@ -236,12 +240,16 @@ export class PrismaInventoryRepository implements IInventoryRepository {
       });
     } else {
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        for (const item of items) {
-          const existing = await tx.inventoryModel.findUnique({
-            where: { id: item.id }
-          });
+        // Bulk read existing items to avoid N+1 queries
+        const existingRecords = await tx.inventoryModel.findMany({
+          where: { id: { in: items.map(i => i.id) } }
+        });
+        const existingIds = new Set(existingRecords.map(r => r.id));
 
-          if (!existing) {
+        for (const item of items) {
+          const isExisting = existingIds.has(item.id);
+
+          if (!isExisting) {
             await tx.inventoryModel.create({
               data: {
                 id: item.id,

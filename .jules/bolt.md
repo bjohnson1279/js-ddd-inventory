@@ -88,3 +88,7 @@
 ## 2026-06-17 - Optimize DisassembleKit N+1 Loop
 **Learning:** Found sequential fallback awaits (`await this.costLayerRepository.getActiveLayers` and `await this.inventoryRepository.save`) in `for...of` loops in `DisassembleKit.ts`.
 **Action:** Replaced bounded sequential writes over the fallback loop with `Promise.all` batch reads and writes to execute independent queries concurrently, significantly reducing wait time.
+
+## 2026-06-18 - Avoid interleaved query operations within Prisma transactions
+**Learning:** Sequential interleaved read/write operations (`findUnique` conditionally followed by `create` or `update`) or executing them completely parallel inside a single `Prisma.$transaction` is an anti-pattern. While Prisma attempts to queue concurrent query arrays inside an interactive transaction, executing read/writes conditionally inside the array structure increases the risk of unpredictable lock acquisition and deadlocks.
+**Action:** The safest and most performant batch update pattern inside a Prisma `$transaction` is to first perform a bulk read query (`findMany({ where: { id: { in: ids } } })`) outside the loop, cache the lookup set, and then execute the sequential loop of writes/upserts utilizing the localized cache without triggering interleaved wait states.
