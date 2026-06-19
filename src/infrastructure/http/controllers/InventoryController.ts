@@ -98,6 +98,9 @@ export class InventoryController {
 
       // Validate counts array items
       for (const count of counts) {
+        if (!count || typeof count !== 'object') {
+          return res.status(400).json({ error: "Invalid item in counts array" });
+        }
         if (!count.sku || typeof count.sku !== 'string' || count.sku.trim() === '') {
           return res.status(400).json({ error: "Invalid sku in counts array" });
         }
