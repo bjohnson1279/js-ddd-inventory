@@ -95,6 +95,8 @@ model InventoryCostLayerModel {
   receivedAt        DateTime
   purchaseOrderId   String
   isConsumed        Boolean  @default(false)
+  lotNumber         String?
+  expirationDate    DateTime?
 }
 
 model JournalEntryModel {
@@ -241,6 +243,7 @@ model DispatchRecordModel {
   locationId   String
   quantity     Int
   dispatchedAt DateTime @default(now())
+  lotNumber    String?
 }
 
 model DemandForecastModel {

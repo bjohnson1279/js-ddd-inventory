@@ -111,3 +111,7 @@
 **Vulnerability:** Used Math.random() to generate tracking number suffixes in MockCarrierService.
 **Learning:** Math.random() is not a cryptographically secure pseudo-random number generator (CSPRNG), making identifiers generated this way predictable.
 **Prevention:** Always use Node's native crypto utilities (like crypto.randomInt() or crypto.randomUUID()) when generating random identifiers to ensure unpredictability and security.
+## 2026-06-18 - Fix hardcoded JWT secret
+**Vulnerability:** Hardcoded JWT secret fallback (`"super-secret-key"`) existed in `AuthController.ts` and `auth.ts` middleware.
+**Learning:** Developers sometimes use a hardcoded fallback secret to prevent the application from crashing locally, but this risks unauthorized token signing if not explicitly set in production environments.
+**Prevention:** Always enforce the presence of critical security environment variables on startup (e.g., throwing an error if missing) and provide dummy values explicitly for testing environments instead of relying on unsafe fallbacks.

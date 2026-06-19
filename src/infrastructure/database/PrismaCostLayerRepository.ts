@@ -14,7 +14,9 @@ export class PrismaCostLayerRepository implements ICostLayerRepository {
       record.unitCostCents,
       record.receivedAt,
       record.purchaseOrderId,
-      record.locationId
+      record.locationId,
+      record.lotNumber,
+      record.expirationDate
     );
 
     // Reconstitute the private remaining quantity field from the database
@@ -25,14 +27,26 @@ export class PrismaCostLayerRepository implements ICostLayerRepository {
 
   async getActiveLayers(
     variantId: string,
-    orderBy?: "asc" | "desc"
+    orderBy?: string
   ): Promise<InventoryCostLayer[]> {
+    const isExpiration = orderBy?.toLowerCase().includes("expiration");
+    const orderDirection = orderBy?.toLowerCase().includes("desc") ? "desc" : "asc";
+
     const records = await this.prisma.inventoryCostLayerModel.findMany({
       where: {
         variantId,
         remainingQuantity: { gt: 0 },
       },
-      orderBy: orderBy ? { receivedAt: orderBy } : undefined,
+      orderBy: isExpiration
+        ? [
+            { expirationDate: orderDirection },
+            { receivedAt: "asc" }
+          ]
+        : orderBy
+        ? {
+            receivedAt: orderDirection as any,
+          }
+        : undefined,
     });
 
     return records.map((r) => this.mapToDomain(r));
@@ -51,6 +65,8 @@ export class PrismaCostLayerRepository implements ICostLayerRepository {
         purchaseOrderId: layer.purchaseOrderId,
         locationId: layer.locationId || null,
         isConsumed: layer.isExhausted(),
+        lotNumber: layer.lotNumber || null,
+        expirationDate: layer.expirationDate || null,
       },
       create: {
         id: layer.id,
@@ -63,6 +79,8 @@ export class PrismaCostLayerRepository implements ICostLayerRepository {
         purchaseOrderId: layer.purchaseOrderId,
         locationId: layer.locationId || null,
         isConsumed: layer.isExhausted(),
+        lotNumber: layer.lotNumber || null,
+        expirationDate: layer.expirationDate || null,
       },
     });
   }
@@ -84,6 +102,8 @@ export class PrismaCostLayerRepository implements ICostLayerRepository {
             purchaseOrderId: layer.purchaseOrderId,
             locationId: layer.locationId || null,
             isConsumed: layer.isExhausted(),
+            lotNumber: layer.lotNumber || null,
+            expirationDate: layer.expirationDate || null,
           },
           create: {
             id: layer.id,
@@ -96,6 +116,8 @@ export class PrismaCostLayerRepository implements ICostLayerRepository {
             purchaseOrderId: layer.purchaseOrderId,
             locationId: layer.locationId || null,
             isConsumed: layer.isExhausted(),
+            lotNumber: layer.lotNumber || null,
+            expirationDate: layer.expirationDate || null,
           },
         })
       )

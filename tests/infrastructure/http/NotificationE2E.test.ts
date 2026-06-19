@@ -1,4 +1,5 @@
 process.env.NODE_ENV = "test";
+process.env.JWT_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 
 import request from "supertest";
@@ -10,7 +11,7 @@ import http from "http";
 import WebSocket from "ws";
 import { WebSocketManager } from "../../../src/infrastructure/websocket/WebSocketManager";
 
-const JWT_SECRET = "super-secret-key";
+const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
 
 describe("Notification & WebSocket E2E Suite", () => {
   beforeEach(async () => {
