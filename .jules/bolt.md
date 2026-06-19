@@ -88,3 +88,11 @@
 ## 2026-06-17 - Optimize DisassembleKit N+1 Loop
 **Learning:** Found sequential fallback awaits (`await this.costLayerRepository.getActiveLayers` and `await this.inventoryRepository.save`) in `for...of` loops in `DisassembleKit.ts`.
 **Action:** Replaced bounded sequential writes over the fallback loop with `Promise.all` batch reads and writes to execute independent queries concurrently, significantly reducing wait time.
+
+## 2026-06-19 - Resolve N+1 writes in AssembleKit
+**Learning:** A sequential `for...of` loop was being used in `AssembleKit.ts` to deduct and save stock for component variants. Because the components are processed individually, `this.inventoryRepository.save(invItem)` triggered multiple independent database writes, leading to N+1 query performance bottleneck.
+**Action:** When saving multiple updated component items inside an operation like Kit Assembly, push the modified components to an array first, then use `saveMany` to persist all changes in a single batch, falling back to `Promise.all` mapping if `saveMany` isn't supported.
+
+## 2026-06-19 - Fix N+1 saveMany in PrismaInventoryRepository
+**Learning:** The `saveMany` fallback method inside `PrismaInventoryRepository` iterated via `for...of` mapping items inside a Prisma `$transaction`, resulting in a sequential N+1 database operation queue. This eventually exhausts available transactions leading to driver socket timeouts when called inside operations mapping arrays of updates.
+**Action:** When performing batched reads/writes via a manual loop fallback inside a Prisma `$transaction` (e.g. `saveMany`), use `Promise.all` over the sequence array to execute independent database operations concurrently rather than sequentially waiting on each `await tx.model.upsert(...)`.
