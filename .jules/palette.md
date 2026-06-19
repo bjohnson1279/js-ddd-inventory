@@ -25,3 +25,7 @@
 ## 2024-06-16 - Dynamic Titles and Aria-Labels on Disabled Text Inputs
 **Learning:** Text inputs that enter disabled states (like barcode scan buffers during async loading) can leave screen reader and keyboard users confused if there's no dynamic label or title explaining the locked state.
 **Action:** When disabling interactive text inputs during loading or blocking operations, pair `disabled={state}` with a dynamic `title` attribute explaining the state (e.g. `title={loading ? "Processing..." : "Ready"}`), and set `aria-busy` to `true` to ensure the loading context is communicated properly to assistive tech.
+
+## 2024-06-17 - Add aria-labels to interactive span and div elements
+**Learning:** Interactive elements like `span` and `div` acting as buttons need explicit `aria-label` attributes to provide exact context for screen reader users, especially in lists and dynamic components where visual context isn't available.
+**Action:** Always add an `aria-label` when giving a `role="button"` to non-button semantic elements, ensuring screen reader users understand what action they are about to perform.
