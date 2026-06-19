@@ -190,11 +190,15 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     if (items.length === 0) return;
 
     if (this.outboxRepository) {
+      const existingItems = await this.prisma.inventoryModel.findMany({
+        where: { id: { in: items.map(i => i.id) } }
+      });
+      const existingIds = new Set(existingItems.map(e => e.id));
+
+      // Run bulk writes in parallel via Promise.all
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        for (const item of items) {
-          const existing = await tx.inventoryModel.findUnique({
-            where: { id: item.id }
-          });
+        await Promise.all(items.map(async (item) => {
+          const existing = existingIds.has(item.id);
 
           if (!existing) {
             await tx.inventoryModel.create({
@@ -232,14 +236,18 @@ export class PrismaInventoryRepository implements IInventoryRepository {
             await this.outboxRepository!.save(event, tx);
           }
           item.clearDomainEvents();
-        }
+        }));
       });
     } else {
+      const existingItems = await this.prisma.inventoryModel.findMany({
+        where: { id: { in: items.map(i => i.id) } }
+      });
+      const existingIds = new Set(existingItems.map(e => e.id));
+
+      // Run bulk writes in parallel via Promise.all
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        for (const item of items) {
-          const existing = await tx.inventoryModel.findUnique({
-            where: { id: item.id }
-          });
+        await Promise.all(items.map(async (item) => {
+          const existing = existingIds.has(item.id);
 
           if (!existing) {
             await tx.inventoryModel.create({
@@ -271,7 +279,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
               throw new ConcurrencyException(item.sku.getValue(), item.locationId);
             }
           }
-        }
+        }));
       });
 
       const allEvents = items.flatMap(item => {
