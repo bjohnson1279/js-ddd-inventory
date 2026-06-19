@@ -46,7 +46,7 @@ export class InventoryController {
       if (amount == null || typeof amount !== 'number' || amount <= 0 || !Number.isInteger(amount)) {
         return res.status(400).json({ error: "Invalid or missing amount" });
       }
-      if (locationId && typeof locationId !== 'string') {
+      if (locationId !== undefined && (typeof locationId !== 'string' || locationId.trim() === '')) {
         return res.status(400).json({ error: "Invalid locationId" });
       }
 
