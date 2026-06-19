@@ -105,7 +105,7 @@ export class InventoryController {
           return res.status(400).json({ error: "Invalid quantity in counts array" });
         }
       }
-      if (locationId && typeof locationId !== 'string') {
+      if (locationId !== undefined && (typeof locationId !== 'string' || locationId.trim() === '')) {
         return res.status(400).json({ error: "Invalid locationId" });
       }
 
