@@ -74,9 +74,16 @@ export class AssembleKit {
     }
 
     // 4. Deduct stock for component variants
+    const itemsToSave: InventoryItem[] = [];
     for (const { invItem, needed } of componentItems) {
       invItem.dispatchStock(Quantity.create(needed));
-      await this.inventoryRepository.save(invItem);
+      itemsToSave.push(invItem);
+    }
+
+    if ('saveMany' in this.inventoryRepository && typeof (this.inventoryRepository as any).saveMany === 'function') {
+      await (this.inventoryRepository as any).saveMany(itemsToSave);
+    } else {
+      await Promise.all(itemsToSave.map(item => this.inventoryRepository.save(item)));
     }
 
     // 5. Calculate assembled unit cost
