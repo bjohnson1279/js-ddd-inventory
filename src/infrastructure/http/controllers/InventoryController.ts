@@ -245,8 +245,12 @@ export class InventoryController {
 
       res.status(200).json(suggestions);
     } catch (error: any) {
-      console.error(error);
-      res.status(500).json({ error: error.message || "Internal server error" });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+      }
     }
   }
 
@@ -264,8 +268,12 @@ export class InventoryController {
 
       res.status(200).json(dispatches);
     } catch (error: any) {
-      console.error(error);
-      res.status(500).json({ error: error.message || "Internal server error" });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+      }
     }
   }
 }
