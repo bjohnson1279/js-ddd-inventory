@@ -18,7 +18,7 @@ export class InventoryController {
       if (amount == null || typeof amount !== 'number' || amount <= 0 || !Number.isInteger(amount)) {
         return res.status(400).json({ error: "Invalid or missing amount" });
       }
-      if (locationId !== undefined && (typeof locationId !== 'string' || locationId.trim() === '')) {
+      if (locationId && typeof locationId !== 'string') {
         return res.status(400).json({ error: "Invalid locationId" });
       }
 
@@ -46,7 +46,7 @@ export class InventoryController {
       if (amount == null || typeof amount !== 'number' || amount <= 0 || !Number.isInteger(amount)) {
         return res.status(400).json({ error: "Invalid or missing amount" });
       }
-      if (locationId !== undefined && (typeof locationId !== 'string' || locationId.trim() === '')) {
+      if (locationId && typeof locationId !== 'string') {
         return res.status(400).json({ error: "Invalid locationId" });
       }
 
@@ -98,9 +98,6 @@ export class InventoryController {
 
       // Validate counts array items
       for (const count of counts) {
-        if (!count || typeof count !== 'object') {
-          return res.status(400).json({ error: "Invalid item in counts array" });
-        }
         if (!count.sku || typeof count.sku !== 'string' || count.sku.trim() === '') {
           return res.status(400).json({ error: "Invalid sku in counts array" });
         }
@@ -108,7 +105,7 @@ export class InventoryController {
           return res.status(400).json({ error: "Invalid quantity in counts array" });
         }
       }
-      if (locationId !== undefined && (typeof locationId !== 'string' || locationId.trim() === '')) {
+      if (locationId && typeof locationId !== 'string') {
         return res.status(400).json({ error: "Invalid locationId" });
       }
 
