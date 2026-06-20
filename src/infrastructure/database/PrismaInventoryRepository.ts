@@ -186,7 +186,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     item.clearDomainEvents();
   }
 
-    async saveMany(items: InventoryItem[]): Promise<void> {
+      async saveMany(items: InventoryItem[]): Promise<void> {
     if (items.length === 0) return;
 
     if (this.outboxRepository) {

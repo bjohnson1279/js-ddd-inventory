@@ -39,7 +39,7 @@ export class PrismaCostLayerRepository implements ICostLayerRepository {
       },
       orderBy: isExpiration
         ? [
-            { expirationDate: orderDirection },
+            { expirationDate: "asc" },
             { receivedAt: "asc" }
           ]
         : orderBy

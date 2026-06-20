@@ -32,7 +32,7 @@ export class SuggestFefoPicking {
     }
 
     // Get active layers sorted by expiration date (FEFO)
-    const activeLayers = await this.costLayerRepository.getActiveLayers(variant.id, "expiration_date ASC");
+    const activeLayers = await this.costLayerRepository.getActiveLayers(variant.id, "expiration");
     const lotLayers = activeLayers.filter((l) => l.lotNumber !== null && l.lotNumber !== undefined);
 
     if (lotLayers.length === 0) {

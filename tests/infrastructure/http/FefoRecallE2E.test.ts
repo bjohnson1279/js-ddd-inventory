@@ -121,6 +121,7 @@ describe("FEFO and Recall E2E Integration Tests", () => {
         expirationDate: expiryC.toISOString()
       });
 
+    await new Promise(r => setTimeout(r, 100));
     // 3. Request FEFO picking suggestions for 20 units
     // Expected pick:
     // First 15 units from Lot B (expires first)
