@@ -111,6 +111,14 @@
 **Vulnerability:** Used Math.random() to generate tracking number suffixes in MockCarrierService.
 **Learning:** Math.random() is not a cryptographically secure pseudo-random number generator (CSPRNG), making identifiers generated this way predictable.
 **Prevention:** Always use Node's native crypto utilities (like crypto.randomInt() or crypto.randomUUID()) when generating random identifiers to ensure unpredictability and security.
+## 2026-06-18 - Fix hardcoded JWT secret
+**Vulnerability:** Hardcoded JWT secret fallback (`"super-secret-key"`) existed in `AuthController.ts` and `auth.ts` middleware.
+**Learning:** Developers sometimes use a hardcoded fallback secret to prevent the application from crashing locally, but this risks unauthorized token signing if not explicitly set in production environments.
+**Prevention:** Always enforce the presence of critical security environment variables on startup (e.g., throwing an error if missing) and provide dummy values explicitly for testing environments instead of relying on unsafe fallbacks.
+## 2024-06-20 - Prevent Information Leakage in API Controllers
+**Vulnerability:** API controllers returned raw error messages (`error.message`) in HTTP 500 responses unconditionally, leaking internal stack details or database states to end-users.
+**Learning:** Exposing dynamic backend error messages directly in unhandled exception blocks is a medium/high severity risk. Only explicit domain exceptions (`DomainException`) are safe to expose to users, as their payloads are controlled.
+**Prevention:** Standardize a pattern across API handlers. Never use `res.status(500).json({ error: error.message });`. Always fallback to generic descriptions (e.g. "Internal server error") or wrap the validation with a domain-specific error class.
 ## 2026-06-12 - Prevent Injection and Malformed Input in InventoryController
 **Vulnerability:** The `InventoryController` (for endpoints like receive, dispatch, performCount) lacked explicit input validation. This could allow malformed payloads (e.g., negative amounts, non-string SKUs) to trigger unhandled domain exceptions or database errors, which is a potential vector for DoS or unexpected internal states.
 **Learning:** Trusting input directly from `req.body` without verification violates the principle of "Trust nothing, verify everything." Missing boundary checks on numbers can bypass domain logic if type coercion behaves unexpectedly.

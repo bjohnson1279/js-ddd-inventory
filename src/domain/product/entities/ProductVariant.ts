@@ -6,6 +6,8 @@ export class ProductVariant {
     public readonly id: string,
     public readonly productId: string,
     public readonly sku: SKU,
-    public readonly attributes: VariantAttributeSet
+    public readonly attributes: VariantAttributeSet,
+    public readonly weightGrams: number | null = null,
+    public readonly volumeCubicMeters: number | null = null
   ) {}
 }

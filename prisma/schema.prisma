@@ -11,6 +11,9 @@ model InventoryModel {
   sku        String
   locationId String @default("default")
   quantity   Int
+  allocated  Int    @default(0)
+  inTransit  Int    @default(0)
+  version    Int    @default(1)
 
   @@unique([sku, locationId])
 }
@@ -32,11 +35,13 @@ model ProductModel {
 }
 
 model ProductVariantModel {
-  id         String       @id
-  productId  String
-  sku        String       @unique
-  attributes String       // Serialized variant attributes JSON string (e.g. [{"name":"size","value":"M"}])
-  product    ProductModel @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id                String       @id
+  productId         String
+  sku               String       @unique
+  attributes        String       // Serialized variant attributes JSON string (e.g. [{"name":"size","value":"M"}])
+  weightGrams       Int?
+  volumeCubicMeters Float?
+  product           ProductModel @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model SerializedItemModel {
@@ -90,6 +95,8 @@ model InventoryCostLayerModel {
   receivedAt        DateTime
   purchaseOrderId   String
   isConsumed        Boolean  @default(false)
+  lotNumber         String?
+  expirationDate    DateTime?
 }
 
 model JournalEntryModel {
@@ -236,6 +243,7 @@ model DispatchRecordModel {
   locationId   String
   quantity     Int
   dispatchedAt DateTime @default(now())
+  lotNumber    String?
 }
 
 model DemandForecastModel {
@@ -266,4 +274,84 @@ model ShipmentModel {
   updatedAt          DateTime @updatedAt
 }
 
+model TenantModel {
+  id        String      @id
+  name      String
+  createdAt DateTime    @default(now())
+  users     UserModel[]
+}
+
+model UserModel {
+  id           String          @id
+  tenantId     String
+  email        String
+  passwordHash String
+  name         String
+  active       Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  tenant       TenantModel     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userRoles    UserRoleModel[]
+  apiTokens    ApiTokenModel[]
+
+  @@unique([tenantId, email])
+}
+
+model RoleModel {
+  id              String                @id
+  name            String
+  userRoles       UserRoleModel[]
+  rolePermissions RolePermissionModel[]
+}
+
+model UserRoleModel {
+  userId String
+  roleId String
+  user   UserModel @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   RoleModel @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RolePermissionModel {
+  roleId     String
+  permission String
+  role       RoleModel @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permission])
+}
+
+model ApiTokenModel {
+  id        String    @id
+  userId    String
+  tenantId  String
+  tokenHash String    @unique
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  user      UserModel @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WarehouseLocationModel {
+  id                   String   @id // e.g. "WH1-ZONEA-A03-R02-S01-B10"
+  warehouseId          String
+  zone                 String
+  aisle                String
+  rack                 String
+  shelf                String
+  bin                  String
+  maxWeightGrams       Int
+  maxVolumeCubicMeters Float
+  createdAt            DateTime @default(now())
+
+  @@unique([warehouseId, zone, aisle, rack, shelf, bin])
+}
+
+model NotificationModel {
+  id        String   @id @default(uuid())
+  tenantId  String
+  title     String
+  message   String
+  type      String   @default("info")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
 

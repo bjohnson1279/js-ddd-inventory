@@ -9,7 +9,8 @@ export class InMemoryDispatchRecordRepository implements IDispatchRecordReposito
       record.sku,
       record.locationId,
       record.quantity,
-      record.dispatchedAt
+      record.dispatchedAt,
+      record.lotNumber
     ));
   }
 
@@ -17,5 +18,9 @@ export class InMemoryDispatchRecordRepository implements IDispatchRecordReposito
     return this.records.filter(
       (r) => r.sku === sku && r.locationId === locationId && r.dispatchedAt >= since
     );
+  }
+
+  async fetchByLotNumber(lotNumber: string): Promise<DispatchRecord[]> {
+    return this.records.filter((r) => r.lotNumber === lotNumber);
   }
 }

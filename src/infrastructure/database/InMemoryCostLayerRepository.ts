@@ -6,7 +6,7 @@ export class InMemoryCostLayerRepository implements ICostLayerRepository {
 
   public async getActiveLayers(
     variantId: string,
-    orderBy?: "asc" | "desc"
+    orderBy?: string
   ): Promise<InventoryCostLayer[]> {
     const list: InventoryCostLayer[] = [];
 
@@ -16,10 +16,24 @@ export class InMemoryCostLayerRepository implements ICostLayerRepository {
       }
     }
 
-    if (orderBy === "asc") {
-      list.sort((a, b) => a.receivedAt.getTime() - b.receivedAt.getTime());
-    } else if (orderBy === "desc") {
-      list.sort((a, b) => b.receivedAt.getTime() - a.receivedAt.getTime());
+    const isExpiration = orderBy?.toLowerCase().includes("expiration");
+    const orderDirection = orderBy?.toLowerCase().includes("desc") ? "desc" : "asc";
+
+    if (isExpiration) {
+      list.sort((a, b) => {
+        const aExp = a.expirationDate ? a.expirationDate.getTime() : Infinity;
+        const bExp = b.expirationDate ? b.expirationDate.getTime() : Infinity;
+        if (aExp !== bExp) {
+          return orderDirection === "desc" ? bExp - aExp : aExp - bExp;
+        }
+        return a.receivedAt.getTime() - b.receivedAt.getTime();
+      });
+    } else if (orderBy) {
+      if (orderDirection === "asc") {
+        list.sort((a, b) => a.receivedAt.getTime() - b.receivedAt.getTime());
+      } else {
+        list.sort((a, b) => b.receivedAt.getTime() - a.receivedAt.getTime());
+      }
     }
 
     return list;

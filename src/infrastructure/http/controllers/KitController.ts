@@ -6,6 +6,8 @@ import { SKU } from "../../../domain/valueObjects/SKU";
 import { InventoryService } from "../../../domain/services/InventoryService";
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
 import { DomainException } from "../../../domain/exceptions/DomainException";
+import { AssembleKit } from "../../../application/useCases/AssembleKit";
+import { DisassembleKit } from "../../../application/useCases/DisassembleKit";
 
 export class KitController {
   static async create(req: Request, res: Response) {
@@ -124,6 +126,82 @@ export class KitController {
     } catch (error: any) {
       console.error(error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  static async assemble(req: Request, res: Response) {
+    try {
+      const { kitSku, quantity, locationId, referenceId } = req.body;
+      const tenantId = (req as any).tenantId || "tenant-1";
+      const actorId = (req as any).user?.id || "system";
+
+      if (!kitSku || !quantity || !locationId || !referenceId) {
+        return res.status(400).json({ error: "Missing required fields (kitSku, quantity, locationId, referenceId)." });
+      }
+
+      const inventoryRepository = req.app.get("inventoryRepository");
+      const costLayerRepository = req.app.get("costLayerRepository");
+      const tenantConfigRepository = req.app.get("tenantConfigRepository");
+      const journalRepository = req.app.get("journalRepository");
+
+      const useCase = new AssembleKit(
+        inventoryRepository,
+        costLayerRepository,
+        tenantConfigRepository,
+        journalRepository
+      );
+
+      await useCase.execute({
+        tenantId,
+        locationId,
+        kitSku,
+        quantity: parseInt(quantity, 10),
+        actorId,
+        referenceId
+      });
+
+      res.status(200).json({ message: `Successfully assembled ${quantity} units of Kit ${kitSku}.` });
+    } catch (error: any) {
+      console.error(error);
+      res.status(400).json({ error: error instanceof DomainException ? error.message : "Failed to assemble kit" });
+    }
+  }
+
+  static async disassemble(req: Request, res: Response) {
+    try {
+      const { kitSku, quantity, locationId, referenceId } = req.body;
+      const tenantId = (req as any).tenantId || "tenant-1";
+      const actorId = (req as any).user?.id || "system";
+
+      if (!kitSku || !quantity || !locationId || !referenceId) {
+        return res.status(400).json({ error: "Missing required fields (kitSku, quantity, locationId, referenceId)." });
+      }
+
+      const inventoryRepository = req.app.get("inventoryRepository");
+      const costLayerRepository = req.app.get("costLayerRepository");
+      const tenantConfigRepository = req.app.get("tenantConfigRepository");
+      const journalRepository = req.app.get("journalRepository");
+
+      const useCase = new DisassembleKit(
+        inventoryRepository,
+        costLayerRepository,
+        tenantConfigRepository,
+        journalRepository
+      );
+
+      await useCase.execute({
+        tenantId,
+        locationId,
+        kitSku,
+        quantity: parseInt(quantity, 10),
+        actorId,
+        referenceId
+      });
+
+      res.status(200).json({ message: `Successfully disassembled ${quantity} units of Kit ${kitSku}.` });
+    } catch (error: any) {
+      console.error(error);
+      res.status(400).json({ error: error instanceof DomainException ? error.message : "Failed to disassemble kit" });
     }
   }
 }

@@ -80,3 +80,23 @@
 ## 2026-06-14 - Parallelize independent data processing loops
 **Learning:** Replaced bounded sequential awaits inside iterative loops (`for...of`) with `Promise.all` across arrays mapped to async operations when processing multiple independent items like RMA serials, PO items, or audit components. This reduces N+1 wait time bottlenecks significantly without architectural shifts.
 **Action:** When working on performance optimizations for independent records processing, identify `for...of` loops iterating and sequentially `await`ing independent logic, and replace them with `Promise.all` mapped over the array.
+
+## 2026-06-15 - Redundant Parallelize ReceiveRMA item processing
+**Learning:** Found sequential `for...of` in `ReceiveRMA.ts` and replaced it with `Promise.all` over items arrays. However, this is already a known pattern as seen in yesterday's entry (Parallelize independent data processing loops).
+**Action:** When working on performance optimizations for independent records processing, always check the journal first to avoid documenting identical optimizations.
+
+## 2026-06-17 - Optimize DisassembleKit N+1 Loop
+**Learning:** Found sequential fallback awaits (`await this.costLayerRepository.getActiveLayers` and `await this.inventoryRepository.save`) in `for...of` loops in `DisassembleKit.ts`.
+**Action:** Replaced bounded sequential writes over the fallback loop with `Promise.all` batch reads and writes to execute independent queries concurrently, significantly reducing wait time.
+
+## 2026-06-19 - Resolve N+1 writes in AssembleKit
+**Learning:** A sequential `for...of` loop was being used in `AssembleKit.ts` to deduct and save stock for component variants. Because the components are processed individually, `this.inventoryRepository.save(invItem)` triggered multiple independent database writes, leading to N+1 query performance bottleneck.
+**Action:** When saving multiple updated component items inside an operation like Kit Assembly, push the modified components to an array first, then use `saveMany` to persist all changes in a single batch, falling back to `Promise.all` mapping if `saveMany` isn't supported.
+
+## 2026-06-19 - Fix N+1 saveMany in PrismaInventoryRepository
+**Learning:** The `saveMany` fallback method inside `PrismaInventoryRepository` iterated via `for...of` mapping items inside a Prisma `$transaction`, resulting in a sequential N+1 database operation queue. This eventually exhausts available transactions leading to driver socket timeouts when called inside operations mapping arrays of updates.
+**Action:** When performing batched reads/writes via a manual loop fallback inside a Prisma `$transaction` (e.g. `saveMany`), use `Promise.all` over the sequence array to execute independent database operations concurrently rather than sequentially waiting on each `await tx.model.upsert(...)`.
+
+## 2026-06-20 - Resolve N+1 writes in DisassembleKit
+**Learning:** Found sequential fallback awaits (`await this.inventoryRepository.save(compInv)`) in `for...of` loops in `DisassembleKit.ts`. It also queries the `inventoryRepository` sequentially via `findBySku`. This creates a lot of unnecessary N+1 overhead during Kit Disassembly.
+**Action:** Replaced bounded sequential reads and writes inside the `for...of` loops with a batched/Promise.all pattern before the loop for reads, and accumulated the items to an array to be saved after the loop via `saveMany` or `Promise.all` fallback.

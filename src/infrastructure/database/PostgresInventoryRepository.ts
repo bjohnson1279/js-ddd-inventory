@@ -3,6 +3,7 @@ import { IInventoryRepository } from "../../domain/repositories/IInventoryReposi
 import { InventoryItem } from "../../domain/aggregates/InventoryItem";
 import { SKU } from "../../domain/valueObjects/SKU";
 import { Quantity } from "../../domain/valueObjects/Quantity";
+import { ConcurrencyException } from "../../domain/exceptions/ConcurrencyException";
 
 export class PostgresInventoryRepository implements IInventoryRepository {
   private pool: Pool;
@@ -18,6 +19,9 @@ export class PostgresInventoryRepository implements IInventoryRepository {
         sku VARCHAR(255) NOT NULL,
         location_id VARCHAR(255) DEFAULT 'default' NOT NULL,
         quantity INTEGER NOT NULL,
+        allocated INTEGER DEFAULT 0 NOT NULL,
+        in_transit INTEGER DEFAULT 0 NOT NULL,
+        version INTEGER DEFAULT 1 NOT NULL,
         shopify_inventory_item_id VARCHAR(255),
         UNIQUE(sku, location_id)
       );
@@ -40,6 +44,9 @@ export class PostgresInventoryRepository implements IInventoryRepository {
       sku,
       row.location_id,
       Quantity.create(row.quantity),
+      Quantity.create(row.allocated),
+      Quantity.create(row.in_transit),
+      row.version,
       row.shopify_inventory_item_id
     );
   }
@@ -55,6 +62,9 @@ export class PostgresInventoryRepository implements IInventoryRepository {
       SKU.create(row.sku),
       row.location_id,
       Quantity.create(row.quantity),
+      Quantity.create(row.allocated),
+      Quantity.create(row.in_transit),
+      row.version,
       row.shopify_inventory_item_id
     ));
   }
@@ -66,6 +76,9 @@ export class PostgresInventoryRepository implements IInventoryRepository {
       SKU.create(row.sku),
       row.location_id,
       Quantity.create(row.quantity),
+      Quantity.create(row.allocated),
+      Quantity.create(row.in_transit),
+      row.version,
       row.shopify_inventory_item_id
     ));
   }
@@ -77,46 +90,91 @@ export class PostgresInventoryRepository implements IInventoryRepository {
       SKU.create(row.sku),
       row.location_id,
       Quantity.create(row.quantity),
+      Quantity.create(row.allocated),
+      Quantity.create(row.in_transit),
+      row.version,
       row.shopify_inventory_item_id
     ));
   }
 
   async save(item: InventoryItem): Promise<void> {
-    const query = `
-      INSERT INTO inventory_items (id, sku, location_id, quantity, shopify_inventory_item_id)
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (sku, location_id) DO UPDATE SET
-        quantity = EXCLUDED.quantity,
-        shopify_inventory_item_id = EXCLUDED.shopify_inventory_item_id;
-    `;
-    await this.pool.query(query, [
-      item.id,
-      item.sku.getValue(),
-      item.locationId,
-      item.quantity.getValue(),
-      item.shopifyInventoryItemId
-    ]);
+    const existingRes = await this.pool.query('SELECT version FROM inventory_items WHERE id = $1', [item.id]);
+    if (existingRes.rows.length === 0) {
+      const query = `
+        INSERT INTO inventory_items (id, sku, location_id, quantity, allocated, in_transit, version, shopify_inventory_item_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `;
+      await this.pool.query(query, [
+        item.id,
+        item.sku.getValue(),
+        item.locationId,
+        item.quantity.getValue(),
+        item.allocated.getValue(),
+        item.inTransit.getValue(),
+        item.version,
+        item.shopifyInventoryItemId
+      ]);
+    } else {
+      const query = `
+        UPDATE inventory_items
+        SET quantity = $1, allocated = $2, in_transit = $3, version = $4, shopify_inventory_item_id = $5
+        WHERE id = $6 AND version = $7
+      `;
+      const res = await this.pool.query(query, [
+        item.quantity.getValue(),
+        item.allocated.getValue(),
+        item.inTransit.getValue(),
+        item.version,
+        item.shopifyInventoryItemId,
+        item.id,
+        item.version - 1
+      ]);
+      if (res.rowCount === 0) {
+        throw new ConcurrencyException(item.sku.getValue(), item.locationId);
+      }
+    }
   }
 
   async saveMany(items: InventoryItem[]): Promise<void> {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
-      const query = `
-        INSERT INTO inventory_items (id, sku, location_id, quantity, shopify_inventory_item_id)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (sku, location_id) DO UPDATE SET
-          quantity = EXCLUDED.quantity,
-          shopify_inventory_item_id = EXCLUDED.shopify_inventory_item_id;
-      `;
       for (const item of items) {
-        await client.query(query, [
-          item.id,
-          item.sku.getValue(),
-          item.locationId,
-          item.quantity.getValue(),
-          item.shopifyInventoryItemId
-        ]);
+        const existingRes = await client.query('SELECT version FROM inventory_items WHERE id = $1', [item.id]);
+        if (existingRes.rows.length === 0) {
+          const query = `
+            INSERT INTO inventory_items (id, sku, location_id, quantity, allocated, in_transit, version, shopify_inventory_item_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          `;
+          await client.query(query, [
+            item.id,
+            item.sku.getValue(),
+            item.locationId,
+            item.quantity.getValue(),
+            item.allocated.getValue(),
+            item.inTransit.getValue(),
+            item.version,
+            item.shopifyInventoryItemId
+          ]);
+        } else {
+          const query = `
+            UPDATE inventory_items
+            SET quantity = $1, allocated = $2, in_transit = $3, version = $4, shopify_inventory_item_id = $5
+            WHERE id = $6 AND version = $7
+          `;
+          const res = await client.query(query, [
+            item.quantity.getValue(),
+            item.allocated.getValue(),
+            item.inTransit.getValue(),
+            item.version,
+            item.shopifyInventoryItemId,
+            item.id,
+            item.version - 1
+          ]);
+          if (res.rowCount === 0) {
+            throw new ConcurrencyException(item.sku.getValue(), item.locationId);
+          }
+        }
       }
       await client.query('COMMIT');
     } catch (e) {

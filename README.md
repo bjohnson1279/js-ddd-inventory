@@ -52,11 +52,11 @@ The easiest way to run the application with a persistent database and the setup 
 This will start:
 - A PostgreSQL 16 database container.
 - The inventory application container (API) on port `5000`.
-- The **Inventory Setup Web App** on port `3000`.
+- The **Inventory Setup Web App** on port `3080`.
 
 ### Initial Inventory Setup
 
-Once the containers are running, navigate to `http://localhost:3000` to access the setup web app. This tool allows you to initialize your inventory with your first stock counts across any SKU and location.
+Once the containers are running, navigate to `http://localhost:3080` to access the setup web app. This tool allows you to initialize your inventory with your first stock counts across any SKU and location.
 
 ## Environment Variables
 

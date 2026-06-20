@@ -1,4 +1,5 @@
 process.env.NODE_ENV = "test";
+process.env.JWT_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 
 import request from "supertest";
@@ -8,7 +9,9 @@ import { SKU } from "../../../src/domain/valueObjects/SKU";
 import { Quantity } from "../../../src/domain/valueObjects/Quantity";
 import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
 import { prisma } from "../../../src/infrastructure/database/prisma";
-import * as crypto from "crypto";
+import * as crypto from "node:crypto";
+import jwt from "jsonwebtoken";
+import { InventoryCostLayer } from "../../../src/domain/accounting/entities/InventoryCostLayer";
 
 describe("E2E Integration Test Suite", () => {
   let repository: InMemoryInventoryRepository;
@@ -66,6 +69,9 @@ describe("E2E Integration Test Suite", () => {
       expect(response.body).toEqual({
         sku: "IPHONE-15-PRO-BLK",
         quantity: 45,
+        allocated: 0,
+        inTransit: 0,
+        available: 45,
       });
     });
 
@@ -333,6 +339,129 @@ describe("E2E Integration Test Suite", () => {
 
       expect(c1?.quantity.getValue()).toBe(6);
       expect(c2?.quantity.getValue()).toBe(10);
+    });
+
+    it("should assemble and disassemble kits, recording costing layers and journal entries, and enforce RBAC", async () => {
+      // 1. Save components inventory and costing layers
+      const comp1Sku = "COMP-A";
+      const comp2Sku = "COMP-B";
+      const kitSku = "KIT-BUNDLE";
+      const tenantId = "tenant-1";
+      const locationId = "default";
+
+      // Seed component stocks
+      await repository.save(InventoryItem.create("c1", SKU.create(comp1Sku), Quantity.create(10)));
+      await repository.save(InventoryItem.create("c2", SKU.create(comp2Sku), Quantity.create(20)));
+
+      // Seed costing layers for COMP-A (unit cost 100) and COMP-B (unit cost 200)
+      const costLayerRepo = app.get("costLayerRepository");
+      await costLayerRepo.save(new InventoryCostLayer("l1", comp1Sku, tenantId, 10, 100, new Date(), "PO-1", locationId));
+      await costLayerRepo.save(new InventoryCostLayer("l2", comp2Sku, tenantId, 20, 200, new Date(), "PO-2", locationId));
+
+      // Configure tenant to Accrual and FIFO
+      const tenantConfigRepo = app.get("tenantConfigRepository");
+      const { TenantAccountingConfig } = require("../../../src/domain/accounting/valueObjects/TenantAccountingConfig");
+      const { AccountingMethod } = require("../../../src/domain/accounting/enums/AccountingMethod");
+      const { CostingMethod } = require("../../../src/domain/accounting/enums/CostingMethod");
+      await tenantConfigRepo.save(tenantId, new TenantAccountingConfig(AccountingMethod.Accrual, CostingMethod.FIFO, "USD", "01-01"));
+
+      // 2. Create Kit formula
+      const createRes = await request(app)
+        .post("/api/kits/create")
+        .send({
+          sku: kitSku,
+          name: "Test Kit Bundle",
+          components: [
+            { variantId: comp1Sku, quantity: 2 },
+            { variantId: comp2Sku, quantity: 1 }
+          ]
+        });
+      expect(createRes.status).toBe(201);
+
+      // Sign tokens for RBAC tests
+      const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
+      const adminToken = jwt.sign({ actorId: "admin-user", role: "admin", tenantId }, JWT_SECRET);
+      const viewerToken = jwt.sign({ actorId: "viewer-user", role: "viewer", tenantId }, JWT_SECRET);
+
+      // Test RBAC rejection on assemble
+      const unauthorizedAssembleRes = await request(app)
+        .post("/api/kits/assemble")
+        .set("Authorization", `Bearer ${viewerToken}`)
+        .send({ kitSku, quantity: 2, locationId, referenceId: "REF-ASM-1" });
+      expect(unauthorizedAssembleRes.status).toBe(403);
+
+      // Test RBAC rejection on disassemble
+      const unauthorizedDisassembleRes = await request(app)
+        .post("/api/kits/disassemble")
+        .set("Authorization", `Bearer ${viewerToken}`)
+        .send({ kitSku, quantity: 2, locationId, referenceId: "REF-DIS-1" });
+      expect(unauthorizedDisassembleRes.status).toBe(403);
+
+      // 3. Assemble Kit (2 units)
+      // Needs 2 * 2 = 4 units of COMP-A (cost 4 * 100 = 400) and 2 * 1 = 2 units of COMP-B (cost 2 * 200 = 400). Total cost = 800.
+      const assembleRes = await request(app)
+        .post("/api/kits/assemble")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ kitSku, quantity: 2, locationId, referenceId: "REF-ASM-1" });
+      expect(assembleRes.status).toBe(200);
+
+      // Verify stock levels: COMP-A should be 6, COMP-B should be 18, KIT should be 2.
+      const comp1Inv = await repository.findBySku(SKU.create(comp1Sku));
+      const comp2Inv = await repository.findBySku(SKU.create(comp2Sku));
+      const kitInv = await repository.findBySku(SKU.create(kitSku));
+      expect(comp1Inv?.quantity.getValue()).toBe(6);
+      expect(comp2Inv?.quantity.getValue()).toBe(18);
+      expect(kitInv?.quantity.getValue()).toBe(2);
+
+      // Verify Kit costing layer: unit cost should be 400 (800 / 2)
+      const activeKitLayers = await costLayerRepo.getActiveLayers(kitSku);
+      expect(activeKitLayers).toHaveLength(1);
+      expect(activeKitLayers[0].remainingQuantity).toBe(2);
+      expect(activeKitLayers[0].unitCostCents).toBe(400);
+
+      // Verify Journal Entries: Debit Kit (1200) for 800, Credit Component (1210) for 800.
+      const journalRepo = app.get("journalRepository");
+      const journalEntries = await journalRepo.findAll(tenantId);
+      expect(journalEntries.length).toBeGreaterThan(0);
+      const asmEntry = journalEntries.find((e: any) => e.referenceId === "REF-ASM-1");
+      expect(asmEntry).toBeDefined();
+      expect(asmEntry.lines).toHaveLength(2);
+      const debitLine = asmEntry.lines.find((l: any) => l.account.code === "1200");
+      const creditLine = asmEntry.lines.find((l: any) => l.account.code === "1210");
+      expect(debitLine.amountCents).toBe(800);
+      expect(debitLine.type).toBe("debit");
+      expect(creditLine.amountCents).toBe(800);
+      expect(creditLine.type).toBe("credit");
+
+      // 4. Disassemble Kit (2 units)
+      // Restores components: 4 units of COMP-A, 2 units of COMP-B.
+      // Scaled cost: since no estimated component cost changes, scale factor is 1.0.
+      // COMP-A is restored at 100 unit cost, COMP-B at 200 unit cost.
+      const disassembleRes = await request(app)
+        .post("/api/kits/disassemble")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ kitSku, quantity: 2, locationId, referenceId: "REF-DIS-1" });
+      expect(disassembleRes.status).toBe(200);
+
+      // Verify stock levels: COMP-A should be 10, COMP-B should be 20, KIT should be 0.
+      const comp1InvPost = await repository.findBySku(SKU.create(comp1Sku));
+      const comp2InvPost = await repository.findBySku(SKU.create(comp2Sku));
+      const kitInvPost = await repository.findBySku(SKU.create(kitSku));
+      expect(comp1InvPost?.quantity.getValue()).toBe(10);
+      expect(comp2InvPost?.quantity.getValue()).toBe(20);
+      expect(kitInvPost?.quantity.getValue()).toBe(0);
+
+      // Verify Journal Entries for Disassembly: Debit Component (1210) for 800, Credit Kit (1200) for 800.
+      const journalEntriesPost = await journalRepo.findAll(tenantId);
+      const disEntry = journalEntriesPost.find((e: any) => e.referenceId === "REF-DIS-1");
+      expect(disEntry).toBeDefined();
+      expect(disEntry.lines).toHaveLength(2);
+      const debitLinePost = disEntry.lines.find((l: any) => l.account.code === "1210");
+      const creditLinePost = disEntry.lines.find((l: any) => l.account.code === "1200");
+      expect(debitLinePost.amountCents).toBe(800);
+      expect(debitLinePost.type).toBe("debit");
+      expect(creditLinePost.amountCents).toBe(800);
+      expect(creditLinePost.type).toBe("credit");
     });
   });
 

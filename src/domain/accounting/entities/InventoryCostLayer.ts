@@ -9,7 +9,9 @@ export class InventoryCostLayer {
     public readonly unitCostCents: number,
     public readonly receivedAt: Date,
     public readonly purchaseOrderId: string,
-    public readonly locationId?: string | null
+    public readonly locationId?: string | null,
+    public readonly lotNumber?: string | null,
+    public readonly expirationDate?: Date | null
   ) {
     this._remainingQuantity = originalQuantity;
   }

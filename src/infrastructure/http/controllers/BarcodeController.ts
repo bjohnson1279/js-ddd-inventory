@@ -11,6 +11,8 @@ import { Barcode } from "../../../domain/barcode/valueObjects/Barcode";
 import { BarcodeSymbology } from "../../../domain/barcode/enums/BarcodeSymbology";
 import { BarcodeSource } from "../../../domain/barcode/enums/BarcodeSource";
 import { DomainException } from "../../../domain/exceptions/DomainException";
+import { WebSocketManager } from "../../websocket/WebSocketManager";
+
 
 export class BarcodeController {
   static async assign(req: Request, res: Response) {
@@ -109,6 +111,15 @@ export class BarcodeController {
           throw err;
         }
       }
+
+      // Broadcast via WebSocket to the tenant
+      const tenantId = (req as any).tenantId || "tenant-1";
+      WebSocketManager.broadcastToTenant(tenantId, {
+        rawScan,
+        context,
+        payload: payload || {},
+        variantId
+      });
 
       res.status(200).json({
         message: "Scan processed.",

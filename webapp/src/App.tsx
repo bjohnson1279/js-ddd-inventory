@@ -697,43 +697,43 @@ function App() {
           <p>Event-Driven Inventory Engine & Double-Entry Accounting Hub</p>
         </div>
         <nav className="nav-tabs" role="tablist" aria-label="Main Navigation">
-          <button role="tab" aria-selected={activeTab === "overview"} className={`tab-btn ${activeTab === "overview" ? "active" : ""}`} onClick={() => setActiveTab("overview")}>
+          <button role="tab" aria-selected={activeTab === "overview"} aria-label="Switch to Overview tab" className={`tab-btn ${activeTab === "overview" ? "active" : ""}`} onClick={() => setActiveTab("overview")}>
             <Icons.Dashboard />
             <span>Overview</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "onboarding"} className={`tab-btn ${activeTab === "onboarding" ? "active" : ""}`} onClick={() => setActiveTab("onboarding")}>
+          <button role="tab" aria-selected={activeTab === "onboarding"} aria-label="Switch to Onboarding tab" className={`tab-btn ${activeTab === "onboarding" ? "active" : ""}`} onClick={() => setActiveTab("onboarding")}>
             <Icons.Onboarding />
             <span>Onboarding</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "barcodes"} className={`tab-btn ${activeTab === "barcodes" ? "active" : ""}`} onClick={() => setActiveTab("barcodes")}>
+          <button role="tab" aria-selected={activeTab === "barcodes"} aria-label="Switch to Barcodes tab" className={`tab-btn ${activeTab === "barcodes" ? "active" : ""}`} onClick={() => setActiveTab("barcodes")}>
             <Icons.Barcode />
             <span>Barcodes</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "serials"} className={`tab-btn ${activeTab === "serials" ? "active" : ""}`} onClick={() => setActiveTab("serials")}>
+          <button role="tab" aria-selected={activeTab === "serials"} aria-label="Switch to Serials tab" className={`tab-btn ${activeTab === "serials" ? "active" : ""}`} onClick={() => setActiveTab("serials")}>
             <Icons.Serial />
             <span>Serials</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "kits"} className={`tab-btn ${activeTab === "kits" ? "active" : ""}`} onClick={() => setActiveTab("kits")}>
+          <button role="tab" aria-selected={activeTab === "kits"} aria-label="Switch to Kitting tab" className={`tab-btn ${activeTab === "kits" ? "active" : ""}`} onClick={() => setActiveTab("kits")}>
             <Icons.Kit />
             <span>Kitting</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "bookkeeping"} className={`tab-btn ${activeTab === "bookkeeping" ? "active" : ""}`} onClick={() => setActiveTab("bookkeeping")}>
+          <button role="tab" aria-selected={activeTab === "bookkeeping"} aria-label="Switch to Ledger tab" className={`tab-btn ${activeTab === "bookkeeping" ? "active" : ""}`} onClick={() => setActiveTab("bookkeeping")}>
             <Icons.Bookkeeping />
             <span>Ledger</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "outbox"} className={`tab-btn ${activeTab === "outbox" ? "active" : ""}`} onClick={() => setActiveTab("outbox")}>
+          <button role="tab" aria-selected={activeTab === "outbox"} aria-label="Switch to Outbox tab" className={`tab-btn ${activeTab === "outbox" ? "active" : ""}`} onClick={() => setActiveTab("outbox")}>
             <Icons.Outbox />
             <span>Outbox</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "forecasting"} className={`tab-btn ${activeTab === "forecasting" ? "active" : ""}`} onClick={() => setActiveTab("forecasting")}>
+          <button role="tab" aria-selected={activeTab === "forecasting"} aria-label="Switch to Forecasting tab" className={`tab-btn ${activeTab === "forecasting" ? "active" : ""}`} onClick={() => setActiveTab("forecasting")}>
             <Icons.Forecasting />
             <span>Forecasting</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "scanner"} className={`tab-btn ${activeTab === "scanner" ? "active" : ""}`} onClick={() => setActiveTab("scanner")}>
+          <button role="tab" aria-selected={activeTab === "scanner"} aria-label="Switch to Mobile Scanner tab" className={`tab-btn ${activeTab === "scanner" ? "active" : ""}`} onClick={() => setActiveTab("scanner")}>
             <Icons.Scanner />
             <span>Mobile Scanner</span>
           </button>
-          <button role="tab" aria-selected={activeTab === "shipping"} className={`tab-btn ${activeTab === "shipping" ? "active" : ""}`} onClick={() => setActiveTab("shipping")}>
+          <button role="tab" aria-selected={activeTab === "shipping"} aria-label="Switch to Shipping & Logistics tab" className={`tab-btn ${activeTab === "shipping" ? "active" : ""}`} onClick={() => setActiveTab("shipping")}>
             <Icons.Shipping />
             <span>Shipping & Logistics</span>
           </button>
@@ -807,8 +807,9 @@ function App() {
                   Adjust shelf quantities directly on the database repository (equivalent to a warehouse receiving count).
                 </p>
                 <div className="form-group" style={{ marginBottom: "15px" }}>
-                  <label>SKU Variant</label>
+                  <label htmlFor="quick-restock-sku">SKU Variant</label>
                   <select
+                    id="quick-restock-sku"
                     className="form-control"
                     value={valSku}
                     onChange={(e) => setValSku(e.target.value)}
@@ -1032,8 +1033,9 @@ function App() {
             <h2>Assign Symbology Mapping</h2>
             <form onSubmit={handleAssignBarcode}>
               <div className="form-group" style={{ marginBottom: "15px" }}>
-                <label>Variant SKU</label>
+                <label htmlFor="barcode-variant-sku">Variant SKU</label>
                 <select
+                  id="barcode-variant-sku"
                   className="form-control"
                   value={barcodeInput.variantId}
                   onChange={(e) => setBarcodeInput({ ...barcodeInput, variantId: e.target.value })}
@@ -1046,8 +1048,9 @@ function App() {
               </div>
 
               <div className="form-group" style={{ marginBottom: "15px" }}>
-                <label>Symbology Standard</label>
+                <label htmlFor="barcode-symbology">Symbology Standard</label>
                 <select
+                  id="barcode-symbology"
                   className="form-control"
                   value={barcodeInput.symbology}
                   onChange={(e) => setBarcodeInput({ ...barcodeInput, symbology: e.target.value })}
@@ -1077,8 +1080,9 @@ function App() {
               </div>
 
               <div className="form-group" style={{ marginBottom: "20px" }}>
-                <label>GS1 Registration Origin</label>
+                <label htmlFor="barcode-source">GS1 Registration Origin</label>
                 <select
+                  id="barcode-source"
                   className="form-control"
                   value={barcodeInput.source}
                   onChange={(e) => setBarcodeInput({ ...barcodeInput, source: e.target.value })}
@@ -1194,8 +1198,8 @@ function App() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Scan Dispatch Target</label>
-                  <select className="form-control" value={scanContext} onChange={(e) => setScanContext(e.target.value)}>
+                  <label htmlFor="scan-dispatch-target">Scan Dispatch Target</label>
+                  <select id="scan-dispatch-target" className="form-control" value={scanContext} onChange={(e) => setScanContext(e.target.value)}>
                     <option value="pos">Point of Sale (POS Sales)</option>
                     <option value="receiving">Goods Inflow Receiving</option>
                     <option value="cycle_count">Inventory Reconciliation</option>
@@ -1240,8 +1244,8 @@ function App() {
                 <input className="form-control" type="text" value={newSerialNum} onChange={(e) => setNewSerialNum(e.target.value)} required />
               </div>
               <div className="form-group" style={{ marginBottom: "12px" }}>
-                <label>SKU Variant Mapping</label>
-                <select className="form-control" value={serialVariant} onChange={(e) => setSerialVariant(e.target.value)} required>
+                <label htmlFor="serial-variant-mapping">SKU Variant Mapping</label>
+                <select id="serial-variant-mapping" className="form-control" value={serialVariant} onChange={(e) => setSerialVariant(e.target.value)} required>
                   {inventoryList.map(item => (
                     <option key={item.id} value={item.sku}>{item.sku}</option>
                   ))}
@@ -1549,8 +1553,9 @@ function App() {
               <form onSubmit={handleDispatchKitSale}>
                 <div className="form-grid-2" style={{ marginBottom: "15px" }}>
                   <div className="form-group">
-                    <label>Kit SKU Code</label>
+                    <label htmlFor="kit-sku-code">Kit SKU Code</label>
                     <select
+                      id="kit-sku-code"
                       className="form-control"
                       value={sellKitSku}
                       onChange={(e) => setSellKitSku(e.target.value)}
@@ -1602,8 +1607,9 @@ function App() {
                 />
               </div>
               <div className="form-group" style={{ marginBottom: "12px" }}>
-                <label>Accounting Standard</label>
+                <label htmlFor="tenant-accounting-method">Accounting Standard</label>
                 <select
+                  id="tenant-accounting-method"
                   className="form-control"
                   value={tenantAccountingMethod}
                   onChange={(e) => {
@@ -1619,8 +1625,9 @@ function App() {
               </div>
 
               <div className="form-group" style={{ marginBottom: "12px" }}>
-                <label>Costing Layer Method</label>
+                <label htmlFor="tenant-costing-method">Costing Layer Method</label>
                 <select
+                  id="tenant-costing-method"
                   className="form-control"
                   value={tenantCostingMethod}
                   onChange={(e) => setTenantCostingMethod(e.target.value)}
@@ -1702,8 +1709,8 @@ function App() {
               <h2>FIFO vs. WAC Cost Layers</h2>
             <form onSubmit={handleCalculateValuation} style={{ marginBottom: "25px" }}>
               <div className="form-group" style={{ marginBottom: "12px" }}>
-                <label>Variant SKU</label>
-                <select className="form-control" value={valSku} onChange={(e) => setValSku(e.target.value)} required>
+                <label htmlFor="bookkeeping-variant-sku">Variant SKU</label>
+                <select id="bookkeeping-variant-sku" className="form-control" value={valSku} onChange={(e) => setValSku(e.target.value)} required>
                   {inventoryList.map(item => (
                     <option key={item.id} value={item.sku}>{item.sku}</option>
                   ))}
@@ -1714,8 +1721,8 @@ function App() {
                 <input className="form-control" type="number" value={valQty} onChange={(e) => setValQty(parseInt(e.target.value) || 0)} required min="1" />
               </div>
               <div className="form-group" style={{ marginBottom: "15px" }}>
-                <label>Valuation Method</label>
-                <select className="form-control" value={valMethod} onChange={(e) => setValMethod(e.target.value)}>
+                <label htmlFor="bookkeeping-valuation-method">Valuation Method</label>
+                <select id="bookkeeping-valuation-method" className="form-control" value={valMethod} onChange={(e) => setValMethod(e.target.value)}>
                   <option value="fifo">FIFO (Consume Oldest Batches)</option>
                   <option value="wac">WAC (Weighted Average Pool Cost)</option>
                 </select>
@@ -2006,8 +2013,9 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
           <p>Analyze sales velocity, compute safety stock coverage, project run-out dates, and manage purchasing recommendations.</p>
         </div>
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <label style={{ fontSize: "0.9rem", fontWeight: 600 }}>Location:</label>
+          <label htmlFor="forecast-location" style={{ fontSize: "0.9rem", fontWeight: 600 }}>Location:</label>
           <select 
+            id="forecast-location"
             value={locationId} 
             onChange={(e) => setLocationId(e.target.value)}
             style={{
@@ -2027,7 +2035,7 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
 
           <button className="btn btn-secondary" onClick={fetchReport} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing report..." : "Refresh the report data"} aria-label={loading ? "Refreshing report..." : "Refresh the report data"}>
 
-            Refresh Report
+            {loading ? "⏳ Refreshing..." : "Refresh Report"}
           </button>
         </div>
       </div>
@@ -2107,6 +2115,7 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
                               tabIndex={0}
                               style={{ cursor: "pointer", color: "var(--accent-color-light)", textDecoration: "underline" }}
                               onClick={() => setSelectedSku(item.sku)}
+                              aria-label={`Select ${item.sku} for forecasting`}
                               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedSku(item.sku); } }}
                               title="Click to select for forecasting"
                             >
@@ -2174,8 +2183,9 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
             </p>
             <form onSubmit={handleGenerateForecast} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>Select SKU</label>
+                <label htmlFor="forecast-select-sku" style={{ fontSize: "0.85rem", fontWeight: 600 }}>Select SKU</label>
                 <select
+                  id="forecast-select-sku"
                   value={selectedSku}
                   onChange={(e) => setSelectedSku(e.target.value)}
                   style={{
@@ -2248,7 +2258,7 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
                 title={!selectedSku ? "Select a SKU to generate forecast" : forecastLoading ? "Calculating..." : "Generate and save forecast"}
 
               >
-                {forecastLoading ? "Calculating Forecast..." : "Generate & Save Forecast"}
+                {forecastLoading ? <><span role="img" aria-hidden="true">⏳</span> Calculating Forecast...</> : "Generate & Save Forecast"}
               </button>
             </form>
 
@@ -2584,6 +2594,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                     tabIndex={0}
                     className="scan-pill"
                     onClick={() => handlePillClick(b.barcodeValue)}
+                    aria-label={`Scan barcode ${b.barcodeValue} for ${b.variantId}`}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handlePillClick(b.barcodeValue); } }}
                     title={`Click to scan barcode for ${b.variantId}`}
                   >
@@ -2685,6 +2696,8 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                   }
                 }}
                 disabled={scanLoading}
+                aria-label="Scan barcode buffer"
+                aria-busy={scanLoading}
                 style={{
                   background: "rgba(0, 0, 0, 0.4)",
                   border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -2758,8 +2771,9 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <label style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Warehouse Location</label>
+                  <label htmlFor="scanner-warehouse-location" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Warehouse Location</label>
                   <select
+                    id="scanner-warehouse-location"
                     value={selectedLocation}
                     onChange={(e) => setSelectedLocation(e.target.value)}
                     style={{
@@ -2846,12 +2860,13 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                             {c.count} pcs
                           </span>
                           <button
+                            className="btn btn-danger btn-xs"
                             onClick={() => {
                               setCycleCountSession(prev => prev.filter(item => item.sku !== c.sku));
                             }}
-                            style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: "0.8rem" }}
                             title={"Delete item count for " + c.sku}
                             aria-label={"Delete item count for " + c.sku}
+                            style={{ padding: "4px 6px" }}
                           >
                             ❌
                           </button>
@@ -2868,8 +2883,9 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                 {cycleCountSession.length > 0 && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "auto" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <label style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Audit Location:</label>
+                      <label htmlFor="scanner-audit-location" style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Audit Location:</label>
                       <select
+                        id="scanner-audit-location"
                         value={selectedLocation}
                         onChange={(e) => setSelectedLocation(e.target.value)}
                         style={{
@@ -2920,7 +2936,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
               title={!scanValue ? "Enter a barcode to scan" : scanLoading ? "Scanning..." : "Trigger scan"}
 
             >
-              ⚡ trigger Scan
+              {scanLoading ? <><span role="img" aria-hidden="true">⏳</span> Scanning...</> : <><span role="img" aria-hidden="true">⚡</span> Trigger Scan</>}
             </button>
           </div>
         </div>
@@ -3031,7 +3047,7 @@ function OutboxTab() {
 
         <button className="btn btn-secondary" onClick={fetchStatsAndDlq} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"} aria-label={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"}>
 
-          Refresh Diagnostics
+          {loading ? "⏳ Refreshing..." : "Refresh Diagnostics"}
         </button>
       </div>
 
@@ -3377,8 +3393,8 @@ function ShippingTab({
           <div className="card-body">
             <form onSubmit={handleEstimateRates} className="custom-form">
               <div className="form-group">
-                <label>Select SKU to Ship</label>
-                <select value={sku} onChange={(e) => setSku(e.target.value)} required>
+                <label htmlFor="shipping-select-sku">Select SKU to Ship</label>
+                <select id="shipping-select-sku" value={sku} onChange={(e) => setSku(e.target.value)} required>
                   <option value="">-- Select SKU --</option>
                   {inventoryList.map((item) => (
                     <option key={item.sku} value={item.sku}>
@@ -3413,7 +3429,7 @@ function ShippingTab({
 
               <button type="submit" className="btn btn-primary" disabled={loadingRates} title={loadingRates ? "Estimating rates..." : "Estimate shipping rates"}>
 
-                {loadingRates ? "Estimating..." : "Estimate Shipping"}
+                {loadingRates ? <><span role="img" aria-hidden="true">⏳</span> Estimating...</> : "Estimate Shipping"}
               </button>
             </form>
 
@@ -3426,6 +3442,15 @@ function ShippingTab({
                       key={r.carrier}
                       className={`rate-card ${selectedCarrier === r.carrier ? "selected" : ""}`}
                       onClick={() => setSelectedCarrier(r.carrier)}
+                      aria-label={`Select ${r.carrier} carrier option`}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedCarrier(r.carrier);
+                        }
+                      }}
                     >
                       <div className="rate-info">
                         <span className={`carrier-badge carrier-${r.carrier.toLowerCase()}`}>
@@ -3447,7 +3472,7 @@ function ShippingTab({
                   title={!selectedCarrier ? "Select a carrier to buy a label" : purchasingLabel ? "Purchasing..." : "Buy selected shipping label"}
 
                 >
-                  {purchasingLabel ? "Purchasing..." : `Buy ${selectedCarrier} Shipping Label`}
+                  {purchasingLabel ? <><span role="img" aria-hidden="true">⏳</span> Purchasing...</> : "Buy " + selectedCarrier + " Shipping Label"}
                 </button>
               </div>
             )}
@@ -3581,8 +3606,8 @@ function ShippingTab({
                               className="btn btn-warning btn-sm"
                               onClick={() => handleTrackShipment(s.id, "IN_TRANSIT")}
                               disabled={trackingLoading === s.id}
-
                               title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as in transit"}
+                              aria-label={trackingLoading === s.id ? "Updating status..." : `Mark shipment ${s.sku} as in transit`}
 
                             >
                               🚚 Scan (In Transit)
@@ -3594,8 +3619,8 @@ function ShippingTab({
                                 className="btn btn-success btn-sm"
                                 onClick={() => handleTrackShipment(s.id, "DELIVERED")}
                                 disabled={trackingLoading === s.id}
-
                                 title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as delivered"}
+                                aria-label={trackingLoading === s.id ? "Updating status..." : `Mark shipment ${s.sku} as delivered`}
 
                               >
                                 ✅ Deliver
@@ -3604,8 +3629,8 @@ function ShippingTab({
                                 className="btn btn-danger btn-sm"
                                 onClick={() => handleTrackShipment(s.id, "FAILED")}
                                 disabled={trackingLoading === s.id}
-
                                 title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as failed"}
+                                aria-label={trackingLoading === s.id ? "Updating status..." : `Mark shipment ${s.sku} as failed`}
 
                               >
                                 ❌ Fail

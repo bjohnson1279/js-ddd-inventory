@@ -962,6 +962,11 @@ span[role="button"]:focus-visible {
   transform: translateY(-1px);
 }
 
+.rate-card:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
 .rate-card.selected {
   border-color: var(--accent-color);
   background: rgba(139, 92, 246, 0.08);
