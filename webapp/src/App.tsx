@@ -808,7 +808,11 @@ function App() {
                 </p>
                 <div className="form-group" style={{ marginBottom: "15px" }}>
                   <label htmlFor="quick-restock-sku">SKU Variant</label>
-                  <select\n                    id="quick-restock-sku"\n                    className="form-control"\n                    value={quickRestockSku}\n                    onChange={(e) => setQuickRestockSku(e.target.value)}
+                  <select
+                    id="quick-restock-sku"
+                    className="form-control"
+                    value={valSku}
+                    onChange={(e) => setValSku(e.target.value)}
                   >
                     {inventoryList.map(item => (
                       <option key={item.id} value={item.sku}>{item.sku} ({item.quantity} available)</option>
@@ -2111,6 +2115,7 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
                               tabIndex={0}
                               style={{ cursor: "pointer", color: "var(--accent-color-light)", textDecoration: "underline" }}
                               onClick={() => setSelectedSku(item.sku)}
+                              aria-label={`Select ${item.sku} for forecasting`}
                               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedSku(item.sku); } }}
                               title="Click to select for forecasting"
                             >
@@ -2589,6 +2594,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                     tabIndex={0}
                     className="scan-pill"
                     onClick={() => handlePillClick(b.barcodeValue)}
+                    aria-label={`Scan barcode ${b.barcodeValue} for ${b.variantId}`}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handlePillClick(b.barcodeValue); } }}
                     title={`Click to scan barcode for ${b.variantId}`}
                   >
@@ -2689,7 +2695,9 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                     handleScan(scanValue);
                   }
                 }}
-                disabled={scanLoading}\n                aria-label="Scan barcode buffer"\n                aria-busy={scanLoading}
+                disabled={scanLoading}
+                aria-label="Scan barcode buffer"
+                aria-busy={scanLoading}
                 style={{
                   background: "rgba(0, 0, 0, 0.4)",
                   border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -3434,6 +3442,7 @@ function ShippingTab({
                       key={r.carrier}
                       className={`rate-card ${selectedCarrier === r.carrier ? "selected" : ""}`}
                       onClick={() => setSelectedCarrier(r.carrier)}
+                      aria-label={`Select ${r.carrier} carrier option`}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
