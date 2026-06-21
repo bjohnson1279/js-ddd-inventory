@@ -100,3 +100,7 @@
 ## 2026-06-20 - Resolve N+1 writes in DisassembleKit
 **Learning:** Found sequential fallback awaits (`await this.inventoryRepository.save(compInv)`) in `for...of` loops in `DisassembleKit.ts`. It also queries the `inventoryRepository` sequentially via `findBySku`. This creates a lot of unnecessary N+1 overhead during Kit Disassembly.
 **Action:** Replaced bounded sequential reads and writes inside the `for...of` loops with a batched/Promise.all pattern before the loop for reads, and accumulated the items to an array to be saved after the loop via `saveMany` or `Promise.all` fallback.
+
+## 2024-06-21 - Rejected concurrent execution of state-mutating service method
+**Learning:** Blindly replacing a sequential `for...of` loop with `Promise.all` to concurrently execute a state-mutating service method (`consumeFifoLayers`) is an unsafe anti-pattern that introduces critical risks of data corruption (race conditions) and transaction failures.
+**Action:** Never introduce concurrency to financial or inventory mutation loops without dedicated bulk-operation logic. The correct optimization is to implement a batch method inside the service that handles database locks and batch updates safely.
