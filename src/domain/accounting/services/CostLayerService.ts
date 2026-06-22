@@ -32,7 +32,50 @@ export class CostLayerService {
     return breakdown;
   }
 
-  public async calculateWeightedAverageCost(
+    public async consumeFifoLayersBatch(
+    components: { variantId: string; quantity: number }[]
+  ): Promise<CostBreakdown[]> {
+    // 1. Accumulate all variant IDs to prefetch their active layers
+    const variantIds = Array.from(new Set(components.map((c) => c.variantId)));
+
+    // 2. Prefetch all active layers in batch to reduce queries
+    const activeLayersByVariant = new Map<string, InventoryCostLayer[]>();
+    await Promise.all(
+      variantIds.map(async (vId) => {
+        const layers = await this.layers.getActiveLayers(vId, "asc");
+        activeLayersByVariant.set(vId, layers);
+      })
+    );
+
+    // 3. Sequentially consume layers in-memory to prevent race conditions
+    const breakdowns: CostBreakdown[] = [];
+    const modifiedLayers = new Set<InventoryCostLayer>();
+
+    for (const comp of components) {
+      const activeLayers = activeLayersByVariant.get(comp.variantId) || [];
+      const breakdown = this.consumeLayers(activeLayers, comp.quantity, true);
+      breakdowns.push(breakdown);
+      for (const layer of activeLayers) {
+        if (layer.remainingQuantity < layer.originalQuantity) {
+            modifiedLayers.add(layer);
+        }
+      }
+    }
+
+    // 4. Batch save all modified layers at once
+    const layersToSave = Array.from(modifiedLayers);
+    if (layersToSave.length > 0) {
+      if (this.layers.saveMany) {
+        await this.layers.saveMany(layersToSave);
+      } else {
+        await Promise.all(layersToSave.map((layer) => this.layers.save(layer)));
+      }
+    }
+
+    return breakdowns;
+  }
+
+public async calculateWeightedAverageCost(
     variantId: string,
     quantity: number
   ): Promise<CostBreakdown> {

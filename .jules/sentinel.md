@@ -119,3 +119,11 @@
 **Vulnerability:** API controllers returned raw error messages (`error.message`) in HTTP 500 responses unconditionally, leaking internal stack details or database states to end-users.
 **Learning:** Exposing dynamic backend error messages directly in unhandled exception blocks is a medium/high severity risk. Only explicit domain exceptions (`DomainException`) are safe to expose to users, as their payloads are controlled.
 **Prevention:** Standardize a pattern across API handlers. Never use `res.status(500).json({ error: error.message });`. Always fallback to generic descriptions (e.g. "Internal server error") or wrap the validation with a domain-specific error class.
+## 2026-06-25 - Missing Strict Rate Limiting on Authentication Endpoint
+**Vulnerability:** The application had a global rate limiter, but the login endpoint (`/api/auth/login`) lacked a strict, endpoint-specific rate limiter, making it susceptible to brute-force password guessing attacks.
+**Learning:** Global rate limiters (e.g., 100 requests per 15 minutes) are often too permissive for sensitive endpoints like login, allowing attackers sufficient attempts to guess passwords or enumerate users.
+**Prevention:** Always implement strict, configurable rate limiting (e.g., 5 attempts per 15 minutes) specifically on authentication and password reset endpoints to effectively mitigate brute-force and credential stuffing attacks.
+## 2026-06-25 - Prevent Information Leakage in Remaining API Controllers
+**Vulnerability:** Several API controllers (Forecasting, Notification, Outbox, Shipping, ShopifyWebhook) returned generic 500 error messages instead of validating and returning safe `DomainException` payloads (with status 400), potentially obscuring valid domain rules and inconsistently handling internal exceptions vs domain errors.
+**Learning:** Exposing dynamic backend error messages directly or failing to properly isolate `DomainException` across all API handlers leads to inconsistent error handling, where safe domain logic errors are either swallowed as 500s or risk leaking stack details if generic catch blocks are modified later.
+**Prevention:** Standardize the `if (error instanceof DomainException)` pattern across ALL API handlers to guarantee domain errors are safely returned to clients (400) and unhandled internal errors remain sanitized 500 responses.
