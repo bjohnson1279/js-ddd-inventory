@@ -62,7 +62,7 @@ export class ReconcileInventoryAudit {
       }
 
       const sku = SKU.create(item.variantId);
-      let inventoryItem = inventoryItemsMap.get(item.variantId) || null;
+      let inventoryItem = inventoryItemsMap.get(sku.getValue()) || null;
 
       if (discrepancy < 0) {
         // Shrinkage (Negative discrepancy)
