@@ -278,8 +278,8 @@ export class InventoryController {
 
       res.status(200).json(suggestions);
     } catch (error: any) {
-      if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+      if (error instanceof DomainException || (error.message && error.message.includes("No lot-controlled inventory layers")) || (error.message && error.message.includes("Product variant with SKU")) || (error.message && error.message.includes("Insufficient lot-controlled inventory"))) {
+        res.status(400).json({ error: error.message, type: "Error" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
