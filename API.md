@@ -234,3 +234,4 @@ Modify user permissions/role (Admin role required).
 *   **Shopify Order Webhook**: `POST /api/shopify/webhooks/orders/create`
 *   **Outbox Event Log Status**: `GET /api/outbox/stats`
 *   **Retry Dead-Lettered Messages**: `POST /api/outbox/:id/retry`
+

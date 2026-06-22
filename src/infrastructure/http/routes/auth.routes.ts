@@ -17,7 +17,6 @@ const authLimiter = rateLimit({
 });
 
 
-
 const router = Router();
 
 router.post("/setup", AuthController.setup);
