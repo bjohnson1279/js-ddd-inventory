@@ -29,3 +29,6 @@
 ## 2024-06-17 - Add aria-labels to interactive span and div elements
 **Learning:** Interactive elements like `span` and `div` acting as buttons need explicit `aria-label` attributes to provide exact context for screen reader users, especially in lists and dynamic components where visual context isn't available.
 **Action:** Always add an `aria-label` when giving a `role="button"` to non-button semantic elements, ensuring screen reader users understand what action they are about to perform.
+## 2024-06-22 - Add aria-busy to Disabled States
+**Learning:** Using `disabled` alone is insufficient to convey *why* an element is inactive to assistive technologies. `aria-busy` adds crucial context that the element is temporarily unavailable because an asynchronous operation is in progress, preventing confusion.
+**Action:** Pair `aria-busy={loadingState}` alongside `disabled={loadingState}` on interactive elements like buttons and inputs to clearly communicate async transitions to screen readers.

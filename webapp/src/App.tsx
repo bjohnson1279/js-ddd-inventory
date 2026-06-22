@@ -826,6 +826,7 @@ function App() {
                   <button
                     className="btn btn-danger"
                     disabled={!valSku || (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0}
+                    aria-busy={!valSku || (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0}
                     title={!valSku ? "Select a SKU first" : (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0 ? "Insufficient stock" : "Dispatch 1 unit"}
                     onClick={async () => {
                       const res = await fetch(`${API_BASE}/inventory/dispatch`, {
@@ -2033,7 +2034,7 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
             <option value="store-east">Store East</option>
           </select>
 
-          <button className="btn btn-secondary" onClick={fetchReport} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing report..." : "Refresh the report data"} aria-label={loading ? "Refreshing report..." : "Refresh the report data"}>
+          <button className="btn btn-secondary" onClick={fetchReport} disabled={loading} aria-busy={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing report..." : "Refresh the report data"} aria-label={loading ? "Refreshing report..." : "Refresh the report data"}>
 
             {loading ? "⏳ Refreshing..." : "Refresh Report"}
           </button>
@@ -2253,8 +2254,8 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
                 type="submit" 
                 className="btn btn-primary" 
                 disabled={forecastLoading || !selectedSku} 
+                aria-busy={forecastLoading || !selectedSku}
                 style={{ marginTop: "10px", width: "100%" }}
-
                 title={!selectedSku ? "Select a SKU to generate forecast" : forecastLoading ? "Calculating..." : "Generate and save forecast"}
 
               >
@@ -2843,7 +2844,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                     <button 
                       onClick={() => setCycleCountSession([])}
                       style={{ background: "none", border: "none", color: "#f87171", fontSize: "0.7rem", cursor: "pointer", padding: 0 }}
-                      aria-label="Clear All scanned items in session"
+                      aria-label="Clear all scanned items in session"
                     >
                       Clear All
                     </button>
@@ -2931,8 +2932,8 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
               type="button"
               className="physical-trigger-btn"
               disabled={scanLoading || !scanValue}
+              aria-busy={scanLoading || !scanValue}
               onClick={() => handleScan(scanValue)}
-
               title={!scanValue ? "Enter a barcode to scan" : scanLoading ? "Scanning..." : "Trigger scan"}
 
             >
@@ -3045,7 +3046,7 @@ function OutboxTab() {
           <p>Monitor event reliability, analyze message failures, and manage the Dead Letter Queue (DLQ).</p>
         </div>
 
-        <button className="btn btn-secondary" onClick={fetchStatsAndDlq} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"} aria-label={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"}>
+        <button className="btn btn-secondary" onClick={fetchStatsAndDlq} disabled={loading} aria-busy={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"} aria-label={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"}>
 
           {loading ? "⏳ Refreshing..." : "Refresh Diagnostics"}
         </button>
@@ -3427,7 +3428,7 @@ function ShippingTab({
               </div>
 
 
-              <button type="submit" className="btn btn-primary" disabled={loadingRates} title={loadingRates ? "Estimating rates..." : "Estimate shipping rates"}>
+              <button type="submit" className="btn btn-primary" disabled={loadingRates} aria-busy={loadingRates} title={loadingRates ? "Estimating rates..." : "Estimate shipping rates"}>
 
                 {loadingRates ? <><span role="img" aria-hidden="true">⏳</span> Estimating...</> : "Estimate Shipping"}
               </button>
@@ -3468,7 +3469,7 @@ function ShippingTab({
                   style={{ width: "100%", marginTop: "15px" }}
                   onClick={handlePurchaseLabel}
                   disabled={purchasingLabel || !selectedCarrier}
-
+                  aria-busy={purchasingLabel || !selectedCarrier}
                   title={!selectedCarrier ? "Select a carrier to buy a label" : purchasingLabel ? "Purchasing..." : "Buy selected shipping label"}
 
                 >
@@ -3606,6 +3607,7 @@ function ShippingTab({
                               className="btn btn-warning btn-sm"
                               onClick={() => handleTrackShipment(s.id, "IN_TRANSIT")}
                               disabled={trackingLoading === s.id}
+                              aria-busy={trackingLoading === s.id}
                               title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as in transit"}
                               aria-label={trackingLoading === s.id ? "Updating status..." : `Mark shipment ${s.sku} as in transit`}
 
@@ -3619,6 +3621,7 @@ function ShippingTab({
                                 className="btn btn-success btn-sm"
                                 onClick={() => handleTrackShipment(s.id, "DELIVERED")}
                                 disabled={trackingLoading === s.id}
+                                aria-busy={trackingLoading === s.id}
                                 title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as delivered"}
                                 aria-label={trackingLoading === s.id ? "Updating status..." : `Mark shipment ${s.sku} as delivered`}
 
@@ -3629,6 +3632,7 @@ function ShippingTab({
                                 className="btn btn-danger btn-sm"
                                 onClick={() => handleTrackShipment(s.id, "FAILED")}
                                 disabled={trackingLoading === s.id}
+                                aria-busy={trackingLoading === s.id}
                                 title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as failed"}
                                 aria-label={trackingLoading === s.id ? "Updating status..." : `Mark shipment ${s.sku} as failed`}
 
