@@ -21,6 +21,16 @@ describe('ProductUomConfiguration', () => {
     });
   });
 
+  describe('assertUnitIsKnown missing test scenario', () => {
+    it('should throw generic error for assertUnitIsKnown as per snippet mock', () => {
+      const baseUnit = new UnitOfMeasure('Each', 'ea', UomCategory.Discrete);
+      const config = new ProductUomConfiguration('config-1', 'variant-1', baseUnit);
+      const unknownUnit = new UnitOfMeasure('Box', 'box', UomCategory.Discrete);
+
+      expect(() => config.setPurchaseUnit(unknownUnit)).toThrow(Error);
+    });
+  });
+
   describe('assertUnitIsKnown (via setPurchaseUnit and setSaleUnit)', () => {
     it('should not throw an error when setting the base unit', () => {
       const baseUnit = new UnitOfMeasure('Each', 'ea', UomCategory.Discrete);
