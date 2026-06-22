@@ -3,6 +3,8 @@ import { DispatchStock } from "../../../application/useCases/DispatchStock";
 import { ShopifyWebhookSecurity } from "../../shopify/ShopifyWebhookSecurity";
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
 import { IProcessedWebhookRepository } from "../../../domain/repositories/IProcessedWebhookRepository";
+import { DomainException } from "../../../domain/exceptions/DomainException";
+
 
 export class ShopifyWebhookController {
   constructor(private readonly security: ShopifyWebhookSecurity) {}
@@ -64,8 +66,12 @@ export class ShopifyWebhookController {
 
       res.status(200).send("Webhook processed");
     } catch (error: any) {
-      console.error("Error processing Shopify webhook:", error);
-      res.status(500).send("Internal server error");
+      if (error instanceof DomainException) {
+        res.status(400).send(error.message);
+      } else {
+        console.error("Error processing Shopify webhook:", error);
+        res.status(500).send("Internal server error");
+      }
     }
   }
 }
