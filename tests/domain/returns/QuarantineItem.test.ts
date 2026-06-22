@@ -33,10 +33,29 @@ describe("QuarantineItem Aggregate", () => {
     expect(item.resolvedAt).not.toBeNull();
   });
 
-  it("should throw if trying to resolve an already resolved item", () => {
+  it("should throw if initialized with a quantity less than or equal to zero", () => {
+    expect(() => new QuarantineItem("q-1", "VAR-1", 0, "Damaged packaging", "loc-1", "TEN-1")).toThrow(/Quantity must be greater than zero./i);
+    expect(() => new QuarantineItem("q-1", "VAR-1", -5, "Damaged packaging", "loc-1", "TEN-1")).toThrow(/Quantity must be greater than zero./i);
+  });
+
+  it("should throw if trying to resolve an already resolved item via resolveScrap", () => {
     const item = new QuarantineItem("q-1", "VAR-1", 5, "Damaged packaging", "loc-1", "TEN-1");
     item.resolveRestock();
 
     expect(() => item.resolveScrap()).toThrow(/already resolved/i);
+  });
+
+  it("should throw if trying to resolve an already resolved item via resolveRestock", () => {
+    const item = new QuarantineItem("q-1", "VAR-1", 5, "Damaged packaging", "loc-1", "TEN-1");
+    item.resolveScrap();
+
+    expect(() => item.resolveRestock()).toThrow(/already resolved/i);
+  });
+
+  it("should throw if trying to resolve an already resolved item via resolveRtv", () => {
+    const item = new QuarantineItem("q-1", "VAR-1", 5, "Damaged packaging", "loc-1", "TEN-1");
+    item.resolveScrap();
+
+    expect(() => item.resolveRtv()).toThrow(/already resolved/i);
   });
 });
