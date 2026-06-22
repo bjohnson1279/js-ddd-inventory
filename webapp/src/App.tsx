@@ -413,8 +413,6 @@ function App() {
       }
     } catch (err) {
       setBarcodeMsg({ type: "error", text: "API Connection issue." });
-    } finally {
-      setGenLoading(false);
     }
   };
 
@@ -436,6 +434,8 @@ function App() {
       }
     } catch (err) {
       setBarcodeMsg({ type: "error", text: "API Connection issue." });
+    } finally {
+      setGenLoading(false);
     }
   };
 
