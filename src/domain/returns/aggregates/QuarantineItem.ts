@@ -17,7 +17,7 @@ export class QuarantineItem extends AggregateRoot {
     resolvedAt: Date | null = null
   ) {
     super();
-    if (quantity <= 0) {
+    if (quantity <= 0 || isNaN(quantity)) {
       throw new Error("Quantity must be greater than zero.");
     }
     this._status = status;
