@@ -45,6 +45,19 @@ describe("AllocateStock Use Case", () => {
     mockRepo.findBySku.mockResolvedValue(null);
 
     await expect(useCase.execute("NON-EXISTENT-SKU", 5)).rejects.toThrow(InsufficientAvailableStockException);
+    expect(mockRepo.findBySku).toHaveBeenCalledWith(SKU.create("NON-EXISTENT-SKU"), "default");
     expect(mockRepo.save).not.toHaveBeenCalled();
+  });
+
+  it("should allocate stock successfully using a custom locationId", async () => {
+    const sku = SKU.create("SKU-123");
+    const item = InventoryItem.create("item-1", sku, "custom-location", Quantity.create(10));
+    mockRepo.findBySku.mockResolvedValue(item);
+
+    await useCase.execute("SKU-123", 5, "custom-location");
+
+    expect(mockRepo.findBySku).toHaveBeenCalledWith(sku, "custom-location");
+    expect(item.allocated.getValue()).toBe(5);
+    expect(mockRepo.save).toHaveBeenCalledWith(item);
   });
 });
