@@ -3642,7 +3642,7 @@ function ShippingTab({
                               <button
                                 className="btn btn-danger btn-sm"
                                 onClick={() => handleTrackShipment(s.id, "FAILED")}
-                                disabled={trackingLoading === s.id}
+                                disabled={trackingLoading !== null}
                                 aria-busy={trackingLoading === s.id}
                                 title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as failed"}
                                 aria-label={trackingLoading === s.id ? "Updating status..." : `Mark shipment ${s.sku} as failed`}
