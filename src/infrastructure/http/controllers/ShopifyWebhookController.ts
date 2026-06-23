@@ -54,12 +54,14 @@ export class ShopifyWebhookController {
       const order = req.body;
       const lineItems = order.line_items || [];
 
+      const dispatchPromises = [];
       for (const item of lineItems) {
         if (item.sku) {
           // We skip publishing back to Shopify because this change originated from Shopify
-          await dispatchStock.execute(item.sku, item.quantity, "default", true);
+          dispatchPromises.push(dispatchStock.execute(item.sku, item.quantity, "default", true));
         }
       }
+      await Promise.all(dispatchPromises);
 
       // Mark as processed
       await processedWebhookRepo.save(webhookId);
