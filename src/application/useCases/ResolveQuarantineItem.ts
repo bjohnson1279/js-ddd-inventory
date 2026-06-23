@@ -3,7 +3,6 @@ import { IInventoryRepository } from "../../domain/repositories/IInventoryReposi
 import { ICostLayerRepository } from "../../domain/repositories/ICostLayerRepository";
 import { ITenantConfigRepository } from "../../domain/repositories/ITenantConfigRepository";
 import { IJournalRepository } from "../../domain/repositories/IJournalRepository";
-import { QuarantineStatus } from "../../domain/returns/enums/QuarantineStatus";
 import { SKU } from "../../domain/valueObjects/SKU";
 import { Quantity } from "../../domain/valueObjects/Quantity";
 import { InventoryItem } from "../../domain/aggregates/InventoryItem";
