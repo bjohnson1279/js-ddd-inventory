@@ -43,7 +43,14 @@ export class QuickBooksClient {
 
     const url = `${this.baseUrl}/${this.realmId}/journalentry`;
 
-    // TODO: Implement structured logging for API requests and payloads
+    console.info(JSON.stringify({
+      context: "QuickBooksClient",
+      action: "publishJournalEntry",
+      method: "POST",
+      url,
+      payload: qboPayload
+    }));
+
     const response = await fetch(url, {
       method: "POST",
       headers: {
