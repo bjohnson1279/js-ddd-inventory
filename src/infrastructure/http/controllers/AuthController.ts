@@ -26,13 +26,19 @@ export class AuthController {
       }
 
       const roles = ["admin", "warehouse_operator", "accountant", "viewer"];
-      for (const r of roles) {
-        const roleExists = await prisma.roleModel.findUnique({ where: { id: r } });
-        if (!roleExists) {
-          await prisma.roleModel.create({
-            data: { id: r, name: r.replace("_", " ") }
-          });
-        }
+      const existingRoles = await prisma.roleModel.findMany({
+        where: { id: { in: roles } }
+      });
+      const existingRoleIds = new Set(existingRoles.map(r => r.id));
+      const rolesToCreate = roles.filter(r => !existingRoleIds.has(r)).map(r => ({
+        id: r,
+        name: r.replace("_", " ")
+      }));
+
+      if (rolesToCreate.length > 0) {
+        await prisma.roleModel.createMany({
+          data: rolesToCreate
+        });
       }
 
       const email = adminEmail.toLowerCase().trim();
