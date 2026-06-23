@@ -6,8 +6,6 @@ import { IInventoryRepository } from "../../../domain/repositories/IInventoryRep
 import { IReorderPolicyRepository } from "../../../domain/repositories/IReorderPolicyRepository";
 import { IDemandForecastRepository } from "../../../domain/repositories/IDemandForecastRepository";
 import { IDispatchRecordRepository } from "../../../domain/repositories/IDispatchRecordRepository";
-import { DomainException } from "../../../domain/exceptions/DomainException";
-
 
 export class ForecastingController {
   static async getReport(req: Request, res: Response) {
@@ -30,12 +28,8 @@ export class ForecastingController {
 
       res.status(200).json(report);
     } catch (error: any) {
-      if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
-      } else {
-        console.error("Failed to fetch demand planning report:", error);
-        res.status(500).json({ error: "Internal server error" });
-      }
+      console.error("Failed to fetch demand planning report:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 
@@ -74,12 +68,8 @@ export class ForecastingController {
         }
       });
     } catch (error: any) {
-      if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
-      } else {
-        console.error("Failed to generate demand forecast:", error);
-        res.status(500).json({ error: "Failed to generate demand forecast" });
-      }
+      console.error("Failed to generate demand forecast:", error);
+      res.status(400).json({ error: "Failed to generate demand forecast" });
     }
   }
 }

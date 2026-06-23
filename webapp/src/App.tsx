@@ -197,10 +197,8 @@ function App() {
   const [scanValue, setScanValue] = useState("");
   const [scanContext, setScanContext] = useState("pos");
   const [scanOutput, setScanOutput] = useState<string | null>(null);
-  const [ingestionLoading, setIngestionLoading] = useState(false);
   const [barcodeMsg, setBarcodeMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [barcodeSearch, setBarcodeSearch] = useState("");
-  const [genLoading, setGenLoading] = useState(false);
 
   // Serial State
   const [serialQuery, setSerialQuery] = useState("");
@@ -223,7 +221,6 @@ function App() {
   const [sellKitSku, setSellKitSku] = useState("");
   const [sellKitQty, setSellKitQty] = useState(1);
   const [kitMsg, setKitMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [compilingKit, setCompilingKit] = useState(false);
 
   // Bookkeeping & Valuation State
   const [valSku, setValSku] = useState("IPHONE-15");
@@ -417,7 +414,6 @@ function App() {
   };
 
   const handleGenerateBarcode = async () => {
-    setGenLoading(true);
     setBarcodeMsg(null);
     try {
       const res = await fetch(`${API_BASE}/barcodes/generate`, {
@@ -434,15 +430,12 @@ function App() {
       }
     } catch (err) {
       setBarcodeMsg({ type: "error", text: "API Connection issue." });
-    } finally {
-      setGenLoading(false);
     }
   };
 
   const handleBarcodeScan = async () => {
     setScanOutput(null);
     if (!scanValue) return;
-    setIngestionLoading(true);
     try {
       const res = await fetch(`${API_BASE}/barcodes/scan`, {
         method: "POST",
@@ -474,8 +467,6 @@ function App() {
       }
     } catch (err) {
       setScanOutput(JSON.stringify({ error: "Express backend API connection failed." }, null, 2));
-    } finally {
-      setIngestionLoading(false);
     }
   };
 
@@ -566,7 +557,6 @@ function App() {
 
   const handleCreateKit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCompilingKit(true);
     setKitMsg(null);
     try {
       const res = await fetch(`${API_BASE}/kits/create`, {
@@ -588,8 +578,6 @@ function App() {
       }
     } catch (err) {
       setKitMsg({ type: "error", text: "Connection issues." });
-    } finally {
-      setCompilingKit(false);
     }
   };
 
@@ -838,6 +826,7 @@ function App() {
                   <button
                     className="btn btn-danger"
                     disabled={!valSku || (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0}
+                    aria-busy={!valSku || (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0}
                     title={!valSku ? "Select a SKU first" : (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0 ? "Insufficient stock" : "Dispatch 1 unit"}
                     onClick={async () => {
                       const res = await fetch(`${API_BASE}/inventory/dispatch`, {
@@ -1085,8 +1074,8 @@ function App() {
                     onChange={(e) => setBarcodeInput({ ...barcodeInput, barcodeValue: e.target.value })}
                     required
                   />
-                  <button type="button" className="btn btn-secondary" style={{ padding: "0 15px" }} onClick={handleGenerateBarcode} disabled={genLoading} aria-busy={genLoading} title={genLoading ? "Generating barcode..." : "Generate a new Code-128 barcode"}>
-                    {genLoading ? "⏳ Gen" : "Gen Code-128"}
+                  <button type="button" className="btn btn-secondary" style={{ padding: "0 15px" }} onClick={handleGenerateBarcode}>
+                    Gen Code-128
                   </button>
                 </div>
               </div>
@@ -1219,8 +1208,8 @@ function App() {
                 </div>
               </div>
 
-              <button className="btn btn-primary" style={{ width: "100%", marginBottom: "15px" }} onClick={handleBarcodeScan} disabled={ingestionLoading} aria-busy={ingestionLoading} title={ingestionLoading ? "Processing ingestion..." : "Trigger scanner ingestion"}>
-                {ingestionLoading ? "⏳ Processing..." : "Trigger Scanner Ingestion Event"}
+              <button className="btn btn-primary" style={{ width: "100%", marginBottom: "15px" }} onClick={handleBarcodeScan}>
+                Trigger Scanner Ingestion Event
               </button>
 
               {scanOutput && (
@@ -1489,8 +1478,8 @@ function App() {
                 <button type="button" className="btn btn-secondary" onClick={() => setKitComponents([...kitComponents, { variantId: "", quantity: 1 }])}>
                   + Add Component
                 </button>
-                <button type="submit" className="btn btn-primary" disabled={compilingKit} aria-busy={compilingKit} title={compilingKit ? "Compiling kit formula..." : "Compile the kit formula"}>
-                  {compilingKit ? "⏳ Compiling..." : "Compile Formula"}
+                <button type="submit" className="btn btn-primary">
+                  Compile Formula
                 </button>
               </div>
             </form>
@@ -2855,7 +2844,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                     <button 
                       onClick={() => setCycleCountSession([])}
                       style={{ background: "none", border: "none", color: "#f87171", fontSize: "0.7rem", cursor: "pointer", padding: 0 }}
-                      aria-label="Clear all scanned items in session"
+                      aria-label="Clear All scanned items in session"
                     >
                       Clear All
                     </button>

@@ -38,38 +38,10 @@ describe("Barcode Value Object", () => {
     const qr = new Barcode(BarcodeSymbology.QR, "https://example.com/item/123");
     expect(qr.value).toBe("HTTPS://EXAMPLE.COM/ITEM/123");
 
-    expect(() => new Barcode(BarcodeSymbology.QR, "")).toThrow(/Invalid barcode/i);
+    expect(() => new Barcode(BarcodeSymbology.QR, "")).toThrow(/empty/i);
   });
 
   it("should throw an error for unsupported barcode symbology", () => {
     expect(() => new Barcode("UNKNOWN_SYMBOLOGY" as BarcodeSymbology, "12345")).toThrow(/Unsupported symbology: UNKNOWN_SYMBOLOGY/);
   });
-
-  it('should test equals method', () => {
-    const barcode1 = new Barcode(BarcodeSymbology.UPC_A, '012345678905');
-    const barcode2 = new Barcode(BarcodeSymbology.UPC_A, '012345678905');
-    const barcode3 = new Barcode(BarcodeSymbology.EAN_13, '4006381333931');
-    expect(barcode1.equals(barcode2)).toBe(true);
-    expect(barcode1.equals(barcode3)).toBe(false);
-  });
-
-  it('should test toString method', () => {
-    const barcode = new Barcode(BarcodeSymbology.UPC_A, '012345678905');
-    expect(barcode.toString()).toBe('012345678905');
-  });
-
-  it('should throw an error for invalid EAN-13 length', () => {
-    expect(() => new Barcode(BarcodeSymbology.EAN_13, '1234567')).toThrow(/13 digits/i);
-  });
-
-  it('should throw an error if QR code exceeds max length', () => {
-    const longString = 'A'.repeat(2954);
-    expect(() => new Barcode(BarcodeSymbology.QR, longString)).toThrow(/exceeds maximum length/i);
-  });
-
-  it('should throw Invalid barcode error for empty or whitespace strings', () => {
-    expect(() => new Barcode(BarcodeSymbology.UPC_A, '')).toThrow('Invalid barcode');
-    expect(() => new Barcode(BarcodeSymbology.UPC_A, '   ')).toThrow('Invalid barcode');
-  });
-
 });

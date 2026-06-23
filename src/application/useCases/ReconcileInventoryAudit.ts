@@ -41,20 +41,6 @@ export class ReconcileInventoryAudit {
       throw new Error(`Tenant config not found for tenant ${audit.tenantId}.`);
     }
 
-    const skusToFetch = audit.items
-      .filter(i => i.discrepancy !== null && i.discrepancy !== 0)
-      .map(i => SKU.create(i.variantId));
-
-    let inventoryItems: InventoryItem[] = [];
-    if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {
-      inventoryItems = await this.inventoryRepository.findBySkus(skusToFetch, audit.locationId);
-    } else if (skusToFetch.length > 0) {
-      const fetchPromises = skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, audit.locationId));
-      const results = await Promise.all(fetchPromises);
-      inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
-    }
-    const inventoryItemsMap = new Map(inventoryItems.map(i => [i.sku.getValue(), i]));
-
     await Promise.all(audit.items.map(async (item) => {
       const discrepancy = item.discrepancy;
       if (discrepancy === null || discrepancy === 0) {
@@ -62,7 +48,7 @@ export class ReconcileInventoryAudit {
       }
 
       const sku = SKU.create(item.variantId);
-      let inventoryItem = inventoryItemsMap.get(sku.getValue()) || null;
+      let inventoryItem = await this.inventoryRepository.findBySku(sku, audit.locationId);
 
       if (discrepancy < 0) {
         // Shrinkage (Negative discrepancy)

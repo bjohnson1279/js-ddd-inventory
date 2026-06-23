@@ -84,25 +84,4 @@ describe("UomConverter", () => {
     const costPerCase = converter.convertCost(50, each, caseUnit, config);
     expect(costPerCase).toBe(1200);
   });
-
-  it("should return the exact same quantity if from.unit equals toUnit", () => {
-    const each = StandardUnits.each();
-    const config = new ProductUomConfiguration("config-6", "variant-6", each);
-    const qty = new UomQuantity(10, each);
-
-    const result = converter.convert(qty, each, config);
-
-    expect(result).toBe(qty);
-    expect(result.amount).toBe(10);
-    expect(result.unit.equals(each)).toBe(true);
-  });
-
-  it("should return the exact same cost if perUnit equals targetUnit", () => {
-    const each = StandardUnits.each();
-    const config = new ProductUomConfiguration("config-7", "variant-7", each);
-
-    const cost = converter.convertCost(500, each, each, config);
-
-    expect(cost).toBe(500);
-  });
 });

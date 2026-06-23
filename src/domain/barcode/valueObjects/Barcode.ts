@@ -20,7 +20,6 @@ export class Barcode {
   }
 
   private validate(): void {
-    if (!this.value) throw new Error('Invalid barcode');
     switch (this.symbology) {
       case BarcodeSymbology.UPC_A:
         this.validateUpcA();

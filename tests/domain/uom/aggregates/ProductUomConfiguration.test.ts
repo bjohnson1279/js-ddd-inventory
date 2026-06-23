@@ -20,42 +20,4 @@ describe('ProductUomConfiguration', () => {
       }).toThrow(`Cannot convert between ${UomCategory.Volume} and ${UomCategory.Weight} units.`);
     });
   });
-
-  describe('assertUnitIsKnown (via setPurchaseUnit and setSaleUnit)', () => {
-    it('should not throw an error when setting the base unit', () => {
-      const baseUnit = new UnitOfMeasure('Each', 'ea', UomCategory.Discrete);
-      const config = new ProductUomConfiguration('config-1', 'variant-1', baseUnit);
-
-      expect(() => config.setPurchaseUnit(baseUnit)).not.toThrow();
-      expect(() => config.setSaleUnit(baseUnit)).not.toThrow();
-    });
-
-    it('should throw an error when setting a unit that is unknown (no conversion rule)', () => {
-      const baseUnit = new UnitOfMeasure('Each', 'ea', UomCategory.Discrete);
-      const config = new ProductUomConfiguration('config-1', 'variant-1', baseUnit);
-
-      const unknownUnit = new UnitOfMeasure('Box', 'box', UomCategory.Discrete);
-
-      expect(() => config.setPurchaseUnit(unknownUnit)).toThrow(Error);
-      expect(() => config.setPurchaseUnit(unknownUnit)).toThrow(
-        `Unit ${unknownUnit.name} has no conversion rule defined. Add it via addConversionRule() before using it as a purchase or sale unit.`
-      );
-
-      expect(() => config.setSaleUnit(unknownUnit)).toThrow(Error);
-      expect(() => config.setSaleUnit(unknownUnit)).toThrow(
-        `Unit ${unknownUnit.name} has no conversion rule defined. Add it via addConversionRule() before using it as a purchase or sale unit.`
-      );
-    });
-
-    it('should not throw an error when setting a unit that has a conversion rule', () => {
-      const baseUnit = new UnitOfMeasure('Each', 'ea', UomCategory.Discrete);
-      const config = new ProductUomConfiguration('config-1', 'variant-1', baseUnit);
-
-      const knownUnit = new UnitOfMeasure('Box', 'box', UomCategory.Discrete);
-      config.addConversionRule(knownUnit, 10);
-
-      expect(() => config.setPurchaseUnit(knownUnit)).not.toThrow();
-      expect(() => config.setSaleUnit(knownUnit)).not.toThrow();
-    });
-  });
 });

@@ -66,15 +66,11 @@ export class AssembleKit {
     );
 
     // 3. Second pass: Consume FIFO costing layers for components and calculate total components cost
-    const componentsBatch = kitRecord.components.map(comp => ({
-      variantId: comp.variantId,
-      quantity: comp.quantity * quantity
-    }));
-
     let totalCostCents = 0;
-    if (componentsBatch.length > 0) {
-      const breakdowns = await this.costLayerService.consumeFifoLayersBatch(componentsBatch);
-      totalCostCents = breakdowns.reduce((sum, b) => sum + b.totalCostCents, 0);
+    for (const comp of kitRecord.components) {
+      const needed = comp.quantity * quantity;
+      const breakdown = await this.costLayerService.consumeFifoLayers(comp.variantId, needed);
+      totalCostCents += breakdown.totalCostCents;
     }
 
     // 4. Deduct stock for component variants

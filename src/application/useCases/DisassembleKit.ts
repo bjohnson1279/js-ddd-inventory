@@ -108,24 +108,9 @@ export class DisassembleKit {
 
     // 6. Restore component variants stock and costing layers
     const restoreLayers: InventoryCostLayer[] = [];
-    const itemsToSave: InventoryItem[] = [];
 
-    // First fetch all required component inventory items to avoid N+1 queries during update
-    // We handle possible race conditions on identical component SKUs by accumulating updates
-    // on a single retrieved instance.
-    const skusToFetch = componentAvgCosts.map(item => SKU.create(item.variantId));
-    let inventoryItems: InventoryItem[] = [];
-    if ('findBySkus' in this.inventoryRepository && typeof (this.inventoryRepository as any).findBySkus === 'function') {
-      inventoryItems = await (this.inventoryRepository as any).findBySkus(skusToFetch, locationId);
-    } else {
-      const results = await Promise.all(skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, locationId)));
-      inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
-    }
-    const inventoryItemsMap = new Map(
-      inventoryItems.filter((i): i is InventoryItem => i !== null).map(i => [i.sku.getValue(), i])
-    );
-
-    // Prepare components updates
+    // We cannot parallelize stock increments safely due to possible race conditions
+    // on identical component SKUs in the kit. However, we CAN batch save everything at the end.
     for (const item of componentAvgCosts) {
       const allocatedUnitCost = scaleFactor > 0 ? Math.round(item.avgUnitCost * scaleFactor) : 0;
 
@@ -143,29 +128,18 @@ export class DisassembleKit {
       restoreLayers.push(layer);
 
       // Increment stock level for this component
-      const skuStr = item.variantId;
-      let compInv = inventoryItemsMap.get(skuStr);
+      const compSku = SKU.create(item.variantId);
+      let compInv = await this.inventoryRepository.findBySku(compSku, locationId);
       if (!compInv) {
         compInv = InventoryItem.create(
           crypto.randomUUID(),
-          SKU.create(skuStr),
+          compSku,
           locationId,
           Quantity.create(0)
         );
-        inventoryItemsMap.set(skuStr, compInv);
-        itemsToSave.push(compInv);
-      } else if (!itemsToSave.includes(compInv)) {
-        itemsToSave.push(compInv);
       }
-
       compInv.receiveStock(Quantity.create(item.quantity));
-    }
-
-    // Batch save inventory items if possible, otherwise Promise.all
-    if ('saveMany' in this.inventoryRepository && typeof (this.inventoryRepository as any).saveMany === 'function') {
-      await (this.inventoryRepository as any).saveMany(itemsToSave);
-    } else {
-      await Promise.all(itemsToSave.map(item => this.inventoryRepository.save(item)));
+      await this.inventoryRepository.save(compInv);
     }
 
     // Batch save cost layers if possible, otherwise Promise.all
