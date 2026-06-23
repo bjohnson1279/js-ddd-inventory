@@ -45,11 +45,11 @@ export class GetDemandPlanningReport {
     const reportItemsPromises = inventoryItems.map(async (item) => {
       const skuStr = item.sku.getValue();
 
-      // Calculate Sales Velocity
-      const velocity = await this.calculateSalesVelocity.execute(skuStr, locationId);
-
-      // Fetch Reorder Policy
-      const policy = await this.reorderPolicyRepository.findBySkuAndLocation(item.sku, locationId);
+      // Calculate Sales Velocity and Fetch Reorder Policy concurrently
+      const [velocity, policy] = await Promise.all([
+        this.calculateSalesVelocity.execute(skuStr, locationId),
+        this.reorderPolicyRepository.findBySkuAndLocation(item.sku, locationId)
+      ]);
       const reorderPoint = policy ? policy.reorderPoint : 10;
       const reorderQuantity = policy ? policy.reorderQuantity : 20;
       const safetyStock = policy ? policy.safetyStock : 5;
