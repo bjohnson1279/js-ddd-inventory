@@ -2045,7 +2045,7 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
             <option value="store-east">Store East</option>
           </select>
 
-          <button className="btn btn-secondary" onClick={fetchReport} disabled={loading} aria-busy={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing report..." : "Refresh the report data"} aria-label={loading ? "Refreshing report..." : "Refresh the report data"}>
+          <button className="btn btn-secondary" onClick={loading ? undefined : fetchReport} aria-disabled={loading} aria-busy={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", opacity: loading ? 0.6 : 1, cursor: loading ? "not-allowed" : "pointer" }} title={loading ? "Refreshing report..." : "Refresh the report data"} aria-label={loading ? "Refreshing report..." : "Refresh the report data"}>
 
             {loading ? "⏳ Refreshing..." : "Refresh Report"}
           </button>
