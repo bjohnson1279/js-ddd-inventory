@@ -32,6 +32,14 @@ export class QuarantineItem extends AggregateRoot {
     return this._resolvedAt;
   }
 
+  public release(): void {
+    this.resolveRestock();
+  }
+
+  public scrap(): void {
+    this.resolveScrap();
+  }
+
   public resolveRestock(): void {
     if (this._status !== QuarantineStatus.Quarantined) {
       throw new Error("Quarantine item is already resolved.");
