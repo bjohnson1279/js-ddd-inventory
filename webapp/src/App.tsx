@@ -3057,7 +3057,7 @@ function OutboxTab() {
           <p>Monitor event reliability, analyze message failures, and manage the Dead Letter Queue (DLQ).</p>
         </div>
 
-        <button className="btn btn-secondary" onClick={fetchStatsAndDlq} disabled={loading} aria-busy={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"} aria-label={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"}>
+        <button className="btn btn-secondary" onClick={loading ? undefined : fetchStatsAndDlq} aria-disabled={loading} aria-busy={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", opacity: loading ? 0.6 : 1, cursor: loading ? "not-allowed" : "pointer" }} title={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"} aria-label={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"}>
 
           {loading ? "⏳ Refreshing..." : "Refresh Diagnostics"}
         </button>
