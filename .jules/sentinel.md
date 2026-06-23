@@ -123,7 +123,6 @@
 **Vulnerability:** The application had a global rate limiter, but the login endpoint (`/api/auth/login`) lacked a strict, endpoint-specific rate limiter, making it susceptible to brute-force password guessing attacks.
 **Learning:** Global rate limiters (e.g., 100 requests per 15 minutes) are often too permissive for sensitive endpoints like login, allowing attackers sufficient attempts to guess passwords or enumerate users.
 **Prevention:** Always implement strict, configurable rate limiting (e.g., 5 attempts per 15 minutes) specifically on authentication and password reset endpoints to effectively mitigate brute-force and credential stuffing attacks.
-
 ## 2026-06-12 - Prevent Injection and Malformed Input in InventoryController
 **Vulnerability:** The `InventoryController` (for endpoints like receive, dispatch, performCount) lacked explicit input validation. This could allow malformed payloads (e.g., negative amounts, non-string SKUs) to trigger unhandled domain exceptions or database errors, which is a potential vector for DoS or unexpected internal states.
 **Learning:** Trusting input directly from `req.body` without verification violates the principle of "Trust nothing, verify everything." Missing boundary checks on numbers can bypass domain logic if type coercion behaves unexpectedly.
