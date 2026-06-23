@@ -10,6 +10,8 @@ import { ITenantConfigRepository } from "../../../domain/repositories/ITenantCon
 import { IJournalRepository } from "../../../domain/repositories/IJournalRepository";
 import { IOutboxRepository } from "../../../domain/repositories/IOutboxRepository";
 import { ShipmentStatus } from "../../../domain/shipping/enums/ShipmentStatus";
+import { DomainException } from "../../../domain/exceptions/DomainException";
+
 
 export class ShippingController {
   static async getRates(req: Request, res: Response) {
@@ -30,8 +32,12 @@ export class ShippingController {
 
       res.status(200).json(rates);
     } catch (error: any) {
-      console.error("Failed to estimate shipping rates:", error);
-      res.status(500).json({ error: "Failed to fetch rates." });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error("Failed to estimate shipping rates:", error);
+        res.status(500).json({ error: "Failed to fetch rates." });
+      }
     }
   }
 
@@ -71,8 +77,12 @@ export class ShippingController {
         ...result
       });
     } catch (error: any) {
-      console.error("Failed to purchase shipping label:", error);
-      res.status(400).json({ error: "Label purchase failed." });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error("Failed to purchase shipping label:", error);
+        res.status(500).json({ error: "Label purchase failed." });
+      }
     }
   }
 
@@ -97,8 +107,12 @@ export class ShippingController {
         }))
       );
     } catch (error: any) {
-      console.error("Failed to list shipments:", error);
-      res.status(500).json({ error: "Failed to list shipments." });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error("Failed to list shipments:", error);
+        res.status(500).json({ error: "Failed to list shipments." });
+      }
     }
   }
 
@@ -118,8 +132,12 @@ export class ShippingController {
 
       res.status(200).json({ message: "Shipment status updated successfully.", status });
     } catch (error: any) {
-      console.error("Failed to update tracking status:", error);
-      res.status(400).json({ error: "Failed to update tracking." });
+      if (error instanceof DomainException) {
+        res.status(400).json({ error: error.message, type: error.name });
+      } else {
+        console.error("Failed to update tracking status:", error);
+        res.status(500).json({ error: "Failed to update tracking." });
+      }
     }
   }
 }

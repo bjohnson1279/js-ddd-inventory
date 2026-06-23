@@ -7,6 +7,7 @@ describe("UomQuantity Value Object", () => {
   const discreteUnit = new UnitOfMeasure("Each", "ea", UomCategory.Discrete);
   const continuousUnit = new UnitOfMeasure("Gram", "g", UomCategory.Weight);
   const volumeUnit = new UnitOfMeasure("Milliliter", "ml", UomCategory.Volume);
+  const otherDiscreteUnit = new UnitOfMeasure("Box", "bx", UomCategory.Discrete);
 
   it("should create a valid UomQuantity", () => {
     const qty = new UomQuantity(10, discreteUnit);
@@ -35,6 +36,14 @@ describe("UomQuantity Value Object", () => {
     const qty2 = new UomQuantity(5, continuousUnit);
     expect(() => qty1.add(qty2)).toThrow(IncompatibleUnitsException);
   });
+
+  it("should throw IncompatibleUnitsException when operating on different units of the same category", () => {
+    const qty1 = new UomQuantity(10, discreteUnit);
+    const qty2 = new UomQuantity(5, otherDiscreteUnit);
+    expect(() => qty1.add(qty2)).toThrow(IncompatibleUnitsException);
+    expect(() => qty1.subtract(qty2)).toThrow(IncompatibleUnitsException);
+  });
+
 
   it("should subtract quantities of the same unit", () => {
     const qty1 = new UomQuantity(10, discreteUnit);
