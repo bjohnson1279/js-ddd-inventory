@@ -109,13 +109,15 @@ export class InventoryService {
     }
 
     if (this.reorderPolicyService) {
-      for (const item of itemsToSave) {
-        await this.reorderPolicyService.checkPolicy(
-          item.sku.getValue(),
-          locationId,
-          item.quantity.getValue()
-        );
-      }
+      await Promise.all(
+        itemsToSave.map((item) =>
+          this.reorderPolicyService!.checkPolicy(
+            item.sku.getValue(),
+            locationId,
+            item.quantity.getValue()
+          )
+        )
+      );
     }
   }
 }
