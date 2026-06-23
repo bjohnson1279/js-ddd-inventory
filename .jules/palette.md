@@ -32,3 +32,7 @@
 ## 2024-06-22 - Add loading states to scan triggers
 **Learning:** In React applications interacting with async services, buttons that trigger long-running actions (like ingestion scanning) need immediate visual feedback and disabled states to prevent double submissions and assure the user that the action is processing. Combining `disabled`, `aria-busy`, and `title` updates ensures robust accessibility for assistive tech.
 **Action:** Always add local boolean loading state to async button actions, applying `disabled={loading}` and `aria-busy={loading}` for UX and accessibility.
+
+## 2024-06-23 - Add aria-busy to disabled action buttons
+**Learning:** Adding `aria-busy` along with `disabled` state on buttons during asynchronous actions greatly improves the screen reader experience, giving context that something is processing.
+**Action:** Make sure to consistently pair `disabled` with `aria-busy` for buttons executing network requests.
