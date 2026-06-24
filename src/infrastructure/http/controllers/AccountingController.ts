@@ -18,7 +18,7 @@ export class AccountingController {
       if (req.query.tenantId !== undefined && typeof req.query.tenantId !== "string") {
         return res.status(400).json({ error: "Invalid tenantId parameter." });
       }
-      const tenantId = req.query.tenantId ? (req.query.tenantId as string).trim() : undefined;
+      const tenantId = req.query.tenantId ? (req.query.tenantId as string).trim() || undefined : undefined;
       const entries = await journalRepo.findAll(tenantId);
 
       res.status(200).json(
