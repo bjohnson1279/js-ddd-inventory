@@ -46,8 +46,15 @@ export class QuickBooksClient {
     console.info(JSON.stringify({
       context: "QuickBooksClient",
       action: "publishJournalEntry",
-      method: "POST",
-      url,
+      request: {
+        method: "POST",
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer [REDACTED]",
+          "Accept": "application/json"
+        }
+      },
       payload: qboPayload
     }));
 
