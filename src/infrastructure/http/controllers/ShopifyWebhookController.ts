@@ -65,8 +65,10 @@ export class ShopifyWebhookController {
 
       const dispatchPromises = [];
       for (const [sku, quantity] of skuQuantities.entries()) {
-        // We skip publishing back to Shopify because this change originated from Shopify
-        dispatchPromises.push(dispatchStock.execute(sku, quantity, "default", true));
+        if (quantity > 0) {
+          // We skip publishing back to Shopify because this change originated from Shopify
+          dispatchPromises.push(dispatchStock.execute(sku, quantity, "default", true));
+        }
       }
       await Promise.all(dispatchPromises);
 
