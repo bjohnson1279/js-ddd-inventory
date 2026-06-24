@@ -58,8 +58,8 @@ export class ShopifyWebhookController {
       const skuQuantities = new Map<string, number>();
       for (const item of lineItems) {
         if (item.sku) {
-          const currentQty = skuQuantities.get(item.sku) || 0;
-          skuQuantities.set(item.sku, currentQty + (item.quantity || 1));
+          const currentQty = skuQuantities.get(item.sku) ?? 0;
+          skuQuantities.set(item.sku, currentQty + (item.quantity ?? 1));
         }
       }
 
