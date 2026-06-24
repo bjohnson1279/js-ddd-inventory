@@ -18,9 +18,18 @@ const authLimiter = rateLimit({
 
 
 
+
+const setupLimiter = rateLimit({
+  windowMs: parseEnvInt(process.env.SETUP_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
+  limit: parseEnvInt(process.env.SETUP_RATE_LIMIT_MAX, 10),
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: "Too many setup attempts, please try again later." }
+});
+
 const router = Router();
 
-router.post("/setup", AuthController.setup);
+router.post("/setup", setupLimiter, AuthController.setup);
 router.post("/login", authLimiter, AuthController.login);
 
 export default router;
