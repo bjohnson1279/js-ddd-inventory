@@ -54,21 +54,19 @@ export class ShopifyWebhookController {
       const order = req.body;
       const lineItems = order.line_items || [];
 
-      // Group identical SKUs to prevent race conditions
+      // Group by SKU to avoid race conditions when multiple line items have the same SKU
       const skuQuantities = new Map<string, number>();
       for (const item of lineItems) {
         if (item.sku) {
-          const currentQty = skuQuantities.get(item.sku) || 0;
-          skuQuantities.set(item.sku, currentQty + (Number(item.quantity) || 0));
+          const currentQty = skuQuantities.get(item.sku) ?? 0;
+          skuQuantities.set(item.sku, currentQty + (item.quantity ?? 1));
         }
       }
 
       const dispatchPromises = [];
       for (const [sku, quantity] of skuQuantities.entries()) {
-        if (quantity > 0) {
-          // We skip publishing back to Shopify because this change originated from Shopify
-          dispatchPromises.push(dispatchStock.execute(sku, quantity, "default", true));
-        }
+        // We skip publishing back to Shopify because this change originated from Shopify
+        dispatchPromises.push(dispatchStock.execute(sku, quantity, "default", true));
       }
       await Promise.all(dispatchPromises);
 
