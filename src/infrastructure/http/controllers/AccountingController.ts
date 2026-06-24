@@ -209,8 +209,8 @@ export class AccountingController {
       if (req.query.quantity !== undefined && typeof req.query.quantity !== "string") {
         return res.status(400).json({ error: "Invalid quantity parameter." });
       }
-      const parsedQuantity = parseInt(req.query.quantity as string);
-      const quantity = isNaN(parsedQuantity) ? 1 : parsedQuantity;
+      const parsedQuantity = req.query.quantity !== undefined ? parseInt(req.query.quantity as string, 10) : NaN;
+      const quantity = isNaN(parsedQuantity) || parsedQuantity <= 0 ? 1 : parsedQuantity;
 
       if (req.query.tenantId !== undefined && typeof req.query.tenantId !== "string") {
         return res.status(400).json({ error: "Invalid tenantId parameter." });
