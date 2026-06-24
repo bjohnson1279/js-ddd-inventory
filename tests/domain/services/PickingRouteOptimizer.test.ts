@@ -149,4 +149,65 @@ describe("PickingRouteOptimizer", () => {
     expect(result[0].items[2].sku).toBe("B2");
     expect(result[0].items[3].sku).toBe("B1");
   });
+
+  it("should sort correctly when rack and shelf are the same but bin differs", async () => {
+    const locEvenBin1 = WarehouseLocation.parsePath("WH1-Z1-2-R1-S1-B1");
+    const locEvenBin2 = WarehouseLocation.parsePath("WH1-Z1-2-R1-S1-B2");
+
+    mockLocationRepo.findById.mockImplementation(async (id: LocationId) => {
+      if (id.value === locEvenBin1.id.value) return locEvenBin1;
+      if (id.value === locEvenBin2.id.value) return locEvenBin2;
+      return null;
+    });
+
+    const input: PickItemInput[] = [
+      { sku: "SKU_BIN_2", quantity: 1, locationId: locEvenBin2.id.value },
+      { sku: "SKU_BIN_1", quantity: 1, locationId: locEvenBin1.id.value },
+    ];
+
+    const result = await optimizer.optimizeRoute(input);
+    expect(result[0].items[0].sku).toBe("SKU_BIN_2"); // Descending, so B2 comes before B1
+    expect(result[0].items[1].sku).toBe("SKU_BIN_1");
+  });
+
+  it("should sort correctly when rack and shelf are the same but bin differs (odd aisle)", async () => {
+    const locOddBin1 = WarehouseLocation.parsePath("WH1-Z1-1-R1-S1-B1");
+    const locOddBin2 = WarehouseLocation.parsePath("WH1-Z1-1-R1-S1-B2");
+
+    mockLocationRepo.findById.mockImplementation(async (id: LocationId) => {
+      if (id.value === locOddBin1.id.value) return locOddBin1;
+      if (id.value === locOddBin2.id.value) return locOddBin2;
+      return null;
+    });
+
+    const input: PickItemInput[] = [
+      { sku: "SKU_BIN_2", quantity: 1, locationId: locOddBin2.id.value },
+      { sku: "SKU_BIN_1", quantity: 1, locationId: locOddBin1.id.value },
+    ];
+
+    const result = await optimizer.optimizeRoute(input);
+    expect(result[0].items[0].sku).toBe("SKU_BIN_1"); // Ascending, so B1 comes before B2
+    expect(result[0].items[1].sku).toBe("SKU_BIN_2");
+  });
+
+  it("should extract aisle index correctly using fallback 1 if aisle has no letters and no numbers", async () => {
+    const loc1 = WarehouseLocation.parsePath("WH1-Z1-@-R1-S1-B1");
+    const loc2 = WarehouseLocation.parsePath("WH1-Z1-@-R1-S1-B2");
+
+    mockLocationRepo.findById.mockImplementation(async (id: LocationId) => {
+      if (id.value === loc1.id.value) return loc1;
+      if (id.value === loc2.id.value) return loc2;
+      return null;
+    });
+
+    const input: PickItemInput[] = [
+      { sku: "SKU_BIN_2", quantity: 1, locationId: loc2.id.value },
+      { sku: "SKU_BIN_1", quantity: 1, locationId: loc1.id.value },
+    ];
+
+    const result = await optimizer.optimizeRoute(input);
+    // Aisle defaults to 1 (odd), meaning ascending. So B1 comes before B2.
+    expect(result[0].items[0].sku).toBe("SKU_BIN_1");
+    expect(result[0].items[1].sku).toBe("SKU_BIN_2");
+  });
 });
