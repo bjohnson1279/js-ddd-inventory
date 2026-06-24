@@ -919,12 +919,12 @@ function App() {
           <form onSubmit={handleOnboardingSubmit}>
             <div className="form-grid-2">
               <div className="form-group">
-                <label>Location ID</label>
-                <input className="form-control" type="text" value={locationId} onChange={(e) => setLocationId(e.target.value)} required />
+                <label htmlFor="location-id">Location ID</label>
+                <input id="location-id" className="form-control" type="text" value={locationId} onChange={(e) => setLocationId(e.target.value)} required />
               </div>
               <div className="form-group">
-                <label>Opening Costing Date</label>
-                <input className="form-control" type="date" value={asOfDate} onChange={(e) => setAsOfDate(e.target.value)} required />
+                <label htmlFor="as-of-date">Opening Costing Date</label>
+                <input id="as-of-date" className="form-control" type="date" value={asOfDate} onChange={(e) => setAsOfDate(e.target.value)} required />
               </div>
             </div>
 
@@ -1063,9 +1063,10 @@ function App() {
               </div>
 
               <div className="form-group" style={{ marginBottom: "15px" }}>
-                <label>Barcode ID Value</label>
+                <label htmlFor="barcode-id-value">Barcode ID Value</label>
                 <div style={{ display: "flex", gap: "10px" }}>
                   <input
+                    id="barcode-id-value"
                     className="form-control"
                     style={{ flex: 1 }}
                     type="text"
@@ -1187,8 +1188,9 @@ function App() {
 
               <div className="form-grid-2" style={{ marginBottom: "15px" }}>
                 <div className="form-group">
-                  <label>Barcode String</label>
+                  <label htmlFor="barcode-string">Barcode String</label>
                   <input
+                    id="barcode-string"
                     className="form-control"
                     type="text"
                     placeholder="Enter or select barcode from table"
@@ -1240,8 +1242,8 @@ function App() {
             <h2>Pre-Register Serial Units</h2>
             <form onSubmit={handleRegisterSerial} style={{ marginBottom: "25px" }}>
               <div className="form-group" style={{ marginBottom: "12px" }}>
-                <label>Unique Serial Code</label>
-                <input className="form-control" type="text" value={newSerialNum} onChange={(e) => setNewSerialNum(e.target.value)} required />
+                <label htmlFor="new-serial-num">Unique Serial Code</label>
+                <input id="new-serial-num" className="form-control" type="text" value={newSerialNum} onChange={(e) => setNewSerialNum(e.target.value)} required />
               </div>
               <div className="form-group" style={{ marginBottom: "12px" }}>
                 <label htmlFor="serial-variant-mapping">SKU Variant Mapping</label>
@@ -1252,8 +1254,8 @@ function App() {
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: "15px" }}>
-                <label>Opening Location</label>
-                <input className="form-control" type="text" value={serialLocation} onChange={(e) => setSerialLocation(e.target.value)} required />
+                <label htmlFor="serial-location">Opening Location</label>
+                <input id="serial-location" className="form-control" type="text" value={serialLocation} onChange={(e) => setSerialLocation(e.target.value)} required />
               </div>
               <button type="submit" className="btn btn-primary" style={{ width: "100%" }}>
                 Pre-Register Serial Item
@@ -1266,12 +1268,12 @@ function App() {
             </p>
             <div className="form-grid-2" style={{ marginBottom: "15px" }}>
               <div className="form-group">
-                <label>Authorized Actor</label>
-                <input className="form-control" type="text" value={serialActor} onChange={(e) => setSerialActor(e.target.value)} />
+                <label htmlFor="serial-actor">Authorized Actor</label>
+                <input id="serial-actor" className="form-control" type="text" value={serialActor} onChange={(e) => setSerialActor(e.target.value)} />
               </div>
               <div className="form-group">
-                <label>Ref Invoice / PO ID</label>
-                <input className="form-control" type="text" value={serialRefId} onChange={(e) => setSerialRefId(e.target.value)} />
+                <label htmlFor="serial-ref-id">Ref Invoice / PO ID</label>
+                <input id="serial-ref-id" className="form-control" type="text" value={serialRefId} onChange={(e) => setSerialRefId(e.target.value)} />
               </div>
             </div>
 
@@ -1417,12 +1419,12 @@ function App() {
             <h2>Compile Bundle Recipe</h2>
             <form onSubmit={handleCreateKit}>
               <div className="form-group" style={{ marginBottom: "15px" }}>
-                <label>Composite Kit SKU Code</label>
-                <input className="form-control" type="text" placeholder="e.g. BUNDLE-IPHONE-PRO" value={kitSku} onChange={(e) => setKitSku(e.target.value)} required />
+                <label htmlFor="kit-sku">Composite Kit SKU Code</label>
+                <input id="kit-sku" className="form-control" type="text" placeholder="e.g. BUNDLE-IPHONE-PRO" value={kitSku} onChange={(e) => setKitSku(e.target.value)} required />
               </div>
               <div className="form-group" style={{ marginBottom: "15px" }}>
-                <label>Bundle Marketing Name</label>
-                <input className="form-control" type="text" placeholder="iPhone Tech Pack" value={kitName} onChange={(e) => setKitName(e.target.value)} required />
+                <label htmlFor="kit-name">Bundle Marketing Name</label>
+                <input id="kit-name" className="form-control" type="text" placeholder="iPhone Tech Pack" value={kitName} onChange={(e) => setKitName(e.target.value)} required />
               </div>
 
               <h3 style={{ color: "var(--text-primary)", fontSize: "1rem", margin: "20px 0 10px" }}>Formula Components</h3>
@@ -1568,8 +1570,9 @@ function App() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>Quantity to Sell</label>
+                    <label htmlFor="sell-kit-qty">Quantity to Sell</label>
                     <input
+                      id="sell-kit-qty"
                       className="form-control"
                       type="number"
                       value={sellKitQty}
@@ -1597,8 +1600,9 @@ function App() {
             <div className="workspace-panel">
               <h2>Tenant Config Scoping</h2>
               <div className="form-group" style={{ marginBottom: "15px" }}>
-                <label>Active Tenant Context ID</label>
+                <label htmlFor="tenant-id">Active Tenant Context ID</label>
                 <input
+                  id="tenant-id"
                   className="form-control"
                   type="text"
                   placeholder="e.g. DEFAULT, TENANT_A"
@@ -1643,8 +1647,9 @@ function App() {
 
               <div className="form-grid-2" style={{ marginBottom: "15px" }}>
                 <div className="form-group">
-                  <label>Currency ISO</label>
+                  <label htmlFor="tenant-currency-code">Currency ISO</label>
                   <input
+                    id="tenant-currency-code"
                     className="form-control"
                     type="text"
                     value={tenantCurrencyCode}
@@ -1653,8 +1658,9 @@ function App() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Fiscal Year Start</label>
+                  <label htmlFor="tenant-fiscal-year">Fiscal Year Start</label>
                   <input
+                    id="tenant-fiscal-year"
                     className="form-control"
                     type="text"
                     placeholder="MM-DD"
@@ -1717,8 +1723,8 @@ function App() {
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: "12px" }}>
-                <label>Quantity to Consume</label>
-                <input className="form-control" type="number" value={valQty} onChange={(e) => setValQty(parseInt(e.target.value) || 0)} required min="1" />
+                <label htmlFor="val-qty">Quantity to Consume</label>
+                <input id="val-qty" className="form-control" type="number" value={valQty} onChange={(e) => setValQty(parseInt(e.target.value) || 0)} required min="1" />
               </div>
               <div className="form-group" style={{ marginBottom: "15px" }}>
                 <label htmlFor="bookkeeping-valuation-method">Valuation Method</label>
@@ -2210,8 +2216,9 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>Forecast Horizon (Days)</label>
+                <label htmlFor="forecast-days" style={{ fontSize: "0.85rem", fontWeight: 600 }}>Forecast Horizon (Days)</label>
                 <input
+                  id="forecast-days"
                   type="number"
                   min="1"
                   max="365"
@@ -2228,8 +2235,9 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>Trend / Seasonality Multiplier</label>
+                <label htmlFor="trend-multiplier" style={{ fontSize: "0.85rem", fontWeight: 600 }}>Trend / Seasonality Multiplier</label>
                 <input
+                  id="trend-multiplier"
                   type="number"
                   step="0.05"
                   min="0.1"
@@ -2752,8 +2760,9 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <label style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Transaction Quantity</label>
+                  <label htmlFor="qty-input" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Transaction Quantity</label>
                   <input
+                    id="qty-input"
                     type="number"
                     min="1"
                     value={qtyInput}
@@ -3403,8 +3412,9 @@ function ShippingTab({
               </div>
 
               <div className="form-group">
-                <label>Quantity</label>
+                <label htmlFor="shipping-qty">Quantity</label>
                 <input
+                  id="shipping-qty"
                   type="number"
                   min="1"
                   value={quantity}
@@ -3414,8 +3424,9 @@ function ShippingTab({
               </div>
 
               <div className="form-group">
-                <label>Destination Address</label>
+                <label htmlFor="shipping-address">Destination Address</label>
                 <input
+                  id="shipping-address"
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}

@@ -36,3 +36,7 @@
 ## 2024-06-23 - Add aria-busy to disabled action buttons
 **Learning:** Adding `aria-busy` along with `disabled` state on buttons during asynchronous actions greatly improves the screen reader experience, giving context that something is processing.
 **Action:** Make sure to consistently pair `disabled` with `aria-busy` for buttons executing network requests.
+
+## 2024-06-24 - Forms without proper labels
+**Learning:** Found a recurring pattern in `webapp/src/App.tsx` where many forms used `<label>` directly wrapping the text but failed to associate with the corresponding `<input>` via the `htmlFor` attribute.
+**Action:** Always ensure that when implementing form components, `htmlFor` is provided on the label and matching `id` on the input to improve accessibility for screen readers and increase the clickable hit area.
