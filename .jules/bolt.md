@@ -104,3 +104,6 @@
 ## 2024-06-21 - Rejected concurrent execution of state-mutating service method
 **Learning:** Blindly replacing a sequential `for...of` loop with `Promise.all` to concurrently execute a state-mutating service method (`consumeFifoLayers`) is an unsafe anti-pattern that introduces critical risks of data corruption (race conditions) and transaction failures.
 **Action:** Never introduce concurrency to financial or inventory mutation loops without dedicated bulk-operation logic. The correct optimization is to implement a batch method inside the service that handles database locks and batch updates safely.
+## 2025-01-01 - Optimizing Overlapping Time-Series Queries
+**Learning:** Overlapping time-series queries (e.g., fetching 7-day, 30-day, and 90-day histories) often result in redundant database scans and increased latency.
+**Action:** Replace multiple overlapping queries with a single query covering the maximum time window, and filter the result set in memory for smaller intervals.
