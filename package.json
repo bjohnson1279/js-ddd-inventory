@@ -7,12 +7,13 @@
     "start": "ts-node src/index.ts",
     "dev": "nodemon src/index.ts",
     "build": "tsc",
-    "test": "jest",
+    "test": "jest --runInBand",
     "start:prod": "node dist/index.js",
-    "postinstall": "prisma generate && prisma db push"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.8.0",
+    "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "amqplib": "^2.0.1",
     "better-sqlite3": "^12.10.0",
