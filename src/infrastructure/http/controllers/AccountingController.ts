@@ -111,7 +111,7 @@ export class AccountingController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        res.status(400).json({ error: "Invalid accounting operation" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -340,7 +340,7 @@ export class AccountingController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        res.status(400).json({ error: "Invalid accounting operation" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
