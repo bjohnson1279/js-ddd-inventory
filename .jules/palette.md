@@ -44,3 +44,7 @@
 ## 2026-06-25 - Handling Time-Series Data in UI Components
 **Learning:** Displaying time-series historical data (like ledger entries or stock transactions) requires clean sorting and efficient pagination to prevent DOM bloat and layout shift when huge lists are loaded.
 **Action:** Always implement server-side pagination, sorting by timestamp, and clear date/time formatters in UI displays of ledger, transaction, or dispatch lists. Ensure that dynamic alert messages or state loading components (like fetching older history chunks) use appropriate ARIA live regions to notify the user of background updates.
+
+## 2024-05-24 - Dynamic ARIA Labels on Emoji-Based State Buttons
+**Learning:** State-change buttons that rely primarily on emojis or brief text (like terminal mode selectors) lack context when read by screen readers. Furthermore, standard `aria-label` or `title` attributes alone don't convey the current active/inactive state dynamically, making navigation confusing.
+**Action:** Always provide explicit, dynamic `aria-label` and `title` attributes (e.g., `aria-label={isActive ? "Mode active" : "Switch to Mode"}`) to state-change buttons to ensure robust accessibility and clear state indication for screen readers and tooltips.

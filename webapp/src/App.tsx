@@ -2643,6 +2643,8 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
               <button 
                 type="button"
                 className={`mode-btn ${activeMode === "pick" ? "active" : ""}`}
+                aria-label={activeMode === "pick" ? "Pick mode active" : "Switch to Pick mode"}
+                title={activeMode === "pick" ? "Pick mode active" : "Switch to Pick mode"}
                 onClick={() => {
                   setActiveMode("pick");
                   setResolvedItem(null);
@@ -2654,6 +2656,8 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
               <button 
                 type="button"
                 className={`mode-btn ${activeMode === "receive" ? "active" : ""}`}
+                aria-label={activeMode === "receive" ? "Receive mode active" : "Switch to Receive mode"}
+                title={activeMode === "receive" ? "Receive mode active" : "Switch to Receive mode"}
                 onClick={() => {
                   setActiveMode("receive");
                   setResolvedItem(null);
@@ -2665,6 +2669,8 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
               <button 
                 type="button"
                 className={`mode-btn ${activeMode === "count" ? "active" : ""}`}
+                aria-label={activeMode === "count" ? "Count mode active" : "Switch to Count mode"}
+                title={activeMode === "count" ? "Count mode active" : "Switch to Count mode"}
                 onClick={() => {
                   setActiveMode("count");
                   setResolvedItem(null);
