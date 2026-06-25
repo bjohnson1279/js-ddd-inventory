@@ -107,3 +107,10 @@
 ## 2025-01-01 - Optimizing Overlapping Time-Series Queries
 **Learning:** Overlapping time-series queries (e.g., fetching 7-day, 30-day, and 90-day histories) often result in redundant database scans and increased latency.
 **Action:** Replace multiple overlapping queries with a single query covering the maximum time window, and filter the result set in memory for smaller intervals.
+
+## 2026-06-25 - TimescaleDB Hypertables and Composite Primary Keys
+**Learning:** Standard single-column primary keys (e.g. `id UUID PRIMARY KEY`) are incompatible with TimescaleDB hypertables, which require any primary key or unique constraint to include the time-partitioning column.
+**Action:** When working with append-only time-series tables (like `ledger_entries`, `inventory_transactions`, or `dispatch_records`):
+- Ensure that the primary key is defined as a composite key containing both the unique ID and the timestamp column (e.g. `PRIMARY KEY (id, occurred_at)` or `@@id([id, occurredAt])`).
+- Convert the table to a hypertable immediately upon creation/migration using `SELECT create_hypertable('table_name', 'time_column', if_not_exists => TRUE);`.
+- For Node.js/Prisma setups, ensure the datasource provider is set to PostgreSQL (not SQLite) to maintain database parity across all service variants.

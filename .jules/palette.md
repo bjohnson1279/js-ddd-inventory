@@ -40,3 +40,7 @@
 ## 2024-06-24 - Forms without proper labels
 **Learning:** Found a recurring pattern in `webapp/src/App.tsx` where many forms used `<label>` directly wrapping the text but failed to associate with the corresponding `<input>` via the `htmlFor` attribute.
 **Action:** Always ensure that when implementing form components, `htmlFor` is provided on the label and matching `id` on the input to improve accessibility for screen readers and increase the clickable hit area.
+
+## 2026-06-25 - Handling Time-Series Data in UI Components
+**Learning:** Displaying time-series historical data (like ledger entries or stock transactions) requires clean sorting and efficient pagination to prevent DOM bloat and layout shift when huge lists are loaded.
+**Action:** Always implement server-side pagination, sorting by timestamp, and clear date/time formatters in UI displays of ledger, transaction, or dispatch lists. Ensure that dynamic alert messages or state loading components (like fetching older history chunks) use appropriate ARIA live regions to notify the user of background updates.
