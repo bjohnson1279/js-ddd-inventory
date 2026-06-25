@@ -189,7 +189,7 @@ export class AccountingController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("Insufficient"))
       ) {
-        res.status(400).json({ error: "Insufficient stock" }); // Fixed information exposure // Ensure no internal messages are leaked
+        res.status(400).json({ error: "Insufficient stock" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
