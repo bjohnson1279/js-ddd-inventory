@@ -7,6 +7,7 @@ import { PrismaBarcodeRepository } from "./infrastructure/database/PrismaBarcode
 import { PrismaSerializedItemRepository } from "./infrastructure/database/PrismaSerializedItemRepository";
 import { PrismaCostLayerRepository } from "./infrastructure/database/PrismaCostLayerRepository";
 import { PrismaJournalRepository } from "./infrastructure/database/PrismaJournalRepository";
+import { prisma } from "./infrastructure/database/prisma";
 import { PostgresInventoryRepository } from "./infrastructure/database/PostgresInventoryRepository";
 import { IInventoryRepository } from "./domain/repositories/IInventoryRepository";
 import inventoryRoutes from "./infrastructure/http/routes/inventory.routes";
@@ -203,6 +204,23 @@ export const setupApp = (
 const start = async () => {
   let repository: IInventoryRepository;
 
+  // Run TimescaleDB migration query when connecting to Postgres
+  try {
+    await prisma.$executeRawUnsafe(`CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;`);
+    console.log("TimescaleDB extension enabled.");
+    
+    const isHypertable = await prisma.$queryRawUnsafe(`
+      SELECT 1 FROM timescaledb_information.hypertables 
+      WHERE hypertable_name = 'dispatch_records'
+    `);
+    if ((isHypertable as any[]).length === 0) {
+      await prisma.$executeRawUnsafe(`SELECT create_hypertable('dispatch_records', 'dispatched_at', if_not_exists => TRUE);`);
+      console.log("dispatch_records table converted to TimescaleDB hypertable.");
+    }
+  } catch (e) {
+    console.log("TimescaleDB setup skipped/warning:", (e as Error).message);
+  }
+
   if (process.env.DB_HOST) {
     console.log("Initializing PostgreSQL Repository...");
     const pgRepo = new PostgresInventoryRepository({
@@ -215,7 +233,7 @@ const start = async () => {
     await pgRepo.initialize();
     repository = pgRepo;
   } else {
-    console.log("Initializing Prisma Repository (SQLite)...");
+    console.log("Initializing Prisma Repository...");
     repository = new PrismaInventoryRepository(new PrismaOutboxRepository());
   }
 
