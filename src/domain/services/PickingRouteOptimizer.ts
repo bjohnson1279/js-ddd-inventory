@@ -40,10 +40,7 @@ export class PickingRouteOptimizer {
       })
     );
 
-    const locationMap = new Map();
-    for (const { id, loc } of locationsResult) {
-      locationMap.set(id, loc);
-    }
+    const locationMap = new Map(locationsResult.map(({ id, loc }) => [id, loc]));
 
     const routeItems: PickRouteItem[] = [];
     for (const item of items) {
