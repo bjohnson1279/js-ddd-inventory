@@ -3,7 +3,7 @@ import { StockDepletedEvent } from "../../../src/domain/events/StockDepletedEven
 
 describe("AlertPurchasingOnStockDepleted", () => {
   it("should log the event in a structured format", async () => {
-    const consoleSpy = jest.spyOn(console, "info").mockImplementation(() => {});
+    const consoleSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
 
     const event = new StockDepletedEvent("aggregate1", "SKU-123");
 
