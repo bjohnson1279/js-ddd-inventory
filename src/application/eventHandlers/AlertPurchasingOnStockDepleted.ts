@@ -1,7 +1,7 @@
 import { StockDepletedEvent } from "../../domain/events/StockDepletedEvent";
 
 export const alertPurchasingOnStockDepleted = async (event: StockDepletedEvent): Promise<void> => {
-  console.warn(JSON.stringify({
+  console.info(JSON.stringify({
     message: "[ALERT] Stock depleted. Purchasing department notified.",
     event: event.eventName,
     sku: event.sku,
