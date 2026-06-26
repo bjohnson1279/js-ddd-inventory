@@ -48,7 +48,6 @@ export class WarehouseLocationController {
       });
     } catch (error: any) {
       console.error(error);
-      console.error(error instanceof DomainException ? error.message : error);
       res.status(400).json({ error: "Failed to save location." });
     }
   }
