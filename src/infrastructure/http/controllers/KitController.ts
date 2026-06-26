@@ -109,7 +109,8 @@ export class KitController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("Insufficient"))
       ) {
-        res.status(400).json({ error: error instanceof DomainException ? error.message : "Insufficient stock" });
+        console.error(error instanceof DomainException ? error.message : error);
+      res.status(400).json({ error: "Insufficient stock" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -163,7 +164,8 @@ export class KitController {
       res.status(200).json({ message: `Successfully assembled ${quantity} units of Kit ${kitSku}.` });
     } catch (error: any) {
       console.error(error);
-      res.status(400).json({ error: error instanceof DomainException ? error.message : "Failed to assemble kit" });
+      console.error(error instanceof DomainException ? error.message : error);
+      res.status(400).json({ error: "Failed to assemble kit" });
     }
   }
 
@@ -201,7 +203,8 @@ export class KitController {
       res.status(200).json({ message: `Successfully disassembled ${quantity} units of Kit ${kitSku}.` });
     } catch (error: any) {
       console.error(error);
-      res.status(400).json({ error: error instanceof DomainException ? error.message : "Failed to disassemble kit" });
+      console.error(error instanceof DomainException ? error.message : error);
+      res.status(400).json({ error: "Failed to disassemble kit" });
     }
   }
 }

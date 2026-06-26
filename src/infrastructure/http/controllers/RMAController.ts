@@ -38,7 +38,8 @@ export class RMAController {
       });
     } catch (error: any) {
       console.error(error);
-      res.status(400).json({ error: error instanceof DomainException ? error.message : "Bad request" });
+      console.error(error instanceof DomainException ? error.message : error);
+      res.status(400).json({ error: "Bad request" });
     }
   }
 
@@ -51,7 +52,8 @@ export class RMAController {
       res.status(200).json({ message: "RMA authorized successfully" });
     } catch (error: any) {
       console.error(error);
-      res.status(400).json({ error: error instanceof DomainException ? error.message : "Bad request" });
+      console.error(error instanceof DomainException ? error.message : error);
+      res.status(400).json({ error: "Bad request" });
     }
   }
 
@@ -83,7 +85,8 @@ export class RMAController {
       res.status(200).json({ message: "RMA items received and processed successfully" });
     } catch (error: any) {
       console.error(error);
-      res.status(400).json({ error: error instanceof DomainException ? error.message : "Bad request" });
+      console.error(error instanceof DomainException ? error.message : error);
+      res.status(400).json({ error: "Bad request" });
     }
   }
 

@@ -94,6 +94,7 @@ import { PrismaProductRepository } from "./infrastructure/database/PrismaProduct
 import { WMSCapacityService } from "./domain/services/WMSCapacityService";
 
 const app = express();
+app.disable("x-powered-by");
 const port = process.env.PORT || 5000;
 
 const allowedOrigins = process.env.FRONTEND_URL

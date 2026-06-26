@@ -33,7 +33,8 @@ export class QuarantineController {
       res.status(200).json({ message: "Quarantine item resolved successfully" });
     } catch (error: any) {
       console.error(error);
-      res.status(400).json({ error: error instanceof DomainException ? error.message : "Bad request" });
+      console.error(error instanceof DomainException ? error.message : error);
+      res.status(400).json({ error: "Bad request" });
     }
   }
 
