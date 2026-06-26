@@ -32,10 +32,22 @@ export class PickingRouteOptimizer {
       return [];
     }
 
+    const uniqueLocationIds = Array.from(new Set(items.map(i => i.locationId)));
+    const locationsResult = await Promise.all(
+      uniqueLocationIds.map(async id => {
+        const loc = await this.locationRepo.findById(new LocationId(id));
+        return { id, loc };
+      })
+    );
+
+    const locationMap = new Map();
+    for (const { id, loc } of locationsResult) {
+      locationMap.set(id, loc);
+    }
+
     const routeItems: PickRouteItem[] = [];
     for (const item of items) {
-      const locId = new LocationId(item.locationId);
-      const loc = await this.locationRepo.findById(locId);
+      const loc = locationMap.get(item.locationId);
       if (!loc) {
         throw new Error(`Warehouse location with ID ${item.locationId} not found.`);
       }

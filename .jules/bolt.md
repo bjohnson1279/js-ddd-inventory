@@ -114,3 +114,7 @@
 - Ensure that the primary key is defined as a composite key containing both the unique ID and the timestamp column (e.g. `PRIMARY KEY (id, occurred_at)` or `@@id([id, occurredAt])`).
 - Convert the table to a hypertable immediately upon creation/migration using `SELECT create_hypertable('table_name', 'time_column', if_not_exists => TRUE);`.
 - For Node.js/Prisma setups, ensure the datasource provider is set to PostgreSQL (not SQLite) to maintain database parity across all service variants.
+
+## 2026-06-25 - Optimized PickingRouteOptimizer N+1 location fetches
+**Learning:** Found sequential `await this.locationRepo.findById(locId)` inside a `for...of` loop in `PickingRouteOptimizer.ts`. This causes an N+1 query issue for picking routes with multiple items.
+**Action:** Batched the unique location IDs into a `Set` and fetched them concurrently using `Promise.all` before iterating the items.
