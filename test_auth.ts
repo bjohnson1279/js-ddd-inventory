@@ -22,4 +22,4 @@ async function main() {
   // Assuming Prisma is mocked or not connecting to DB, this will probably throw an error.
   await AuthController.login(req, res);
 }
-main();
+main().catch(console.error);
