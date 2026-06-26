@@ -114,3 +114,6 @@
 - Ensure that the primary key is defined as a composite key containing both the unique ID and the timestamp column (e.g. `PRIMARY KEY (id, occurred_at)` or `@@id([id, occurredAt])`).
 - Convert the table to a hypertable immediately upon creation/migration using `SELECT create_hypertable('table_name', 'time_column', if_not_exists => TRUE);`.
 - For Node.js/Prisma setups, ensure the datasource provider is set to PostgreSQL (not SQLite) to maintain database parity across all service variants.
+## 2026-06-26 - O(N*M) Lookup Optimization
+**Learning:** Found a critical performance bottleneck in `ReceivePurchaseOrder.ts` where an array `.find()` operation was nested inside an asynchronous `.map()` loop iterating over DTO items ($O(N \times M)$ complexity).
+**Action:** When mapping over items and searching another array, always pre-compute a `Map` of the target array keyed by its unique identifier (e.g., `variantId`) outside the loop to reduce the lookup to $O(1)$. Do not attempt to merge the input payload if uniqueness isn't strictly guaranteed by the business logic.

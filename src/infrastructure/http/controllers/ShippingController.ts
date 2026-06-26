@@ -33,7 +33,8 @@ export class ShippingController {
       res.status(200).json(rates);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error("Failed to estimate shipping rates:", error);
         res.status(500).json({ error: "Failed to fetch rates." });
@@ -78,7 +79,8 @@ export class ShippingController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error("Failed to purchase shipping label:", error);
         res.status(500).json({ error: "Label purchase failed." });
@@ -108,7 +110,8 @@ export class ShippingController {
       );
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error("Failed to list shipments:", error);
         res.status(500).json({ error: "Failed to list shipments." });
@@ -133,7 +136,8 @@ export class ShippingController {
       res.status(200).json({ message: "Shipment status updated successfully.", status });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error("Failed to update tracking status:", error);
         res.status(500).json({ error: "Failed to update tracking." });

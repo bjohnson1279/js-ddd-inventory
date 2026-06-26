@@ -31,8 +31,11 @@ export class ReceivePurchaseOrder {
 
     const costLayers: InventoryCostLayer[] = [];
 
+    // Optimization: Index purchase order items by variantId to prevent O(N*M) nested lookups
+    const poItemsMap = new Map(po.items.map((i) => [i.variantId, i]));
+
     await Promise.all(dto.items.map(async (item) => {
-      const poItem = po.items.find((i) => i.variantId === item.variantId);
+      const poItem = poItemsMap.get(item.variantId);
       if (!poItem) {
         throw new Error(`Item ${item.variantId} not found in purchase order ${po.purchaseOrderNumber}.`);
       }
