@@ -170,7 +170,10 @@ export class SerialController {
         "serializedItemRepository",
       ) as ISerializedItemRepository;
       const { serialNumber } = req.params;
-      const tenantId = (req.query.tenantId as string) || "DEFAULT";
+      if (req.query.tenantId !== undefined && typeof req.query.tenantId !== "string") {
+        return res.status(400).json({ error: "Invalid tenantId parameter" });
+      }
+      const tenantId = req.query.tenantId ? (req.query.tenantId as string).trim() : "DEFAULT";
 
       if (!serialNumber) {
         return res
