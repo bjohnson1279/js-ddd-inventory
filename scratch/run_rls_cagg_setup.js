@@ -15,10 +15,10 @@ async function runSql(clientConfig, queries) {
 
 async function main() {
   // 1. GraphQL DB (port 5433)
-  console.log("Applying RLS & Continuous Aggregate on GraphQL DB...");
+  console.log("Applying Continuous Aggregate on GraphQL DB...");
   const gqlConfig = { connectionString: "postgresql://inventory_user:inventory_password@127.0.0.1:5433/inventory_db?schema=public" };
   const gqlQueries = [
-    // Disable RLS on the raw hypertable to allow background materialization
+    // Disable RLS on raw hypertable to allow TimescaleDB background job access
     `ALTER TABLE ledger_entries DISABLE ROW LEVEL SECURITY;`,
 
     // Create the continuous aggregate
@@ -34,26 +34,27 @@ async function main() {
      FROM ledger_entries
      GROUP BY bucket, tenant_id, variant_id;`,
 
-    // Enable RLS on the materialized view itself to secure aggregated reads
-    `ALTER MATERIALIZED VIEW daily_stock_velocity ENABLE ROW LEVEL SECURITY;`,
-    `DROP POLICY IF EXISTS tenant_isolation ON daily_stock_velocity;`,
-    `CREATE POLICY tenant_isolation ON daily_stock_velocity USING (tenant_id = current_setting('app.current_tenant_id', true));`,
-
-    // Add continuous aggregate policy to update the view automatically in background
+    // Add continuous aggregate policy
     `SELECT add_continuous_aggregate_policy('daily_stock_velocity',
        start_offset => INTERVAL '1 month',
        end_offset => INTERVAL '1 hour',
        schedule_interval => INTERVAL '1 hour',
-       if_not_exists => TRUE);`
+       if_not_exists => TRUE);`,
+
+    // Create secure tenant-filtered view
+    `CREATE OR REPLACE VIEW stock_velocity_report AS
+     SELECT bucket, tenant_id, variant_id, units_dispatched, units_received, transaction_count
+     FROM daily_stock_velocity
+     WHERE tenant_id = current_setting('app.current_tenant_id', true);`
   ];
   await runSql(gqlConfig, gqlQueries);
-  console.log("GraphQL DB RLS & Continuous Aggregate applied successfully!");
+  console.log("GraphQL DB Continuous Aggregate applied successfully!");
 
   // 2. Laravel DB (port 5436)
-  console.log("\nApplying RLS & Continuous Aggregate on Laravel DB...");
+  console.log("\nApplying Continuous Aggregate on Laravel DB...");
   const laravelConfig = { connectionString: "postgresql://ddd_user:secret@127.0.0.1:5436/ddd_inventory?schema=public" };
   const laravelQueries = [
-    // Disable RLS on the raw hypertable to allow background materialization
+    // Disable RLS on raw hypertable to allow TimescaleDB background job access
     `ALTER TABLE ledger_entries DISABLE ROW LEVEL SECURITY;`,
 
     // Create the continuous aggregate
@@ -69,23 +70,24 @@ async function main() {
      FROM ledger_entries
      GROUP BY bucket, tenant_id, variant_id;`,
 
-    // Enable RLS on the materialized view itself to secure aggregated reads
-    `ALTER MATERIALIZED VIEW daily_stock_velocity ENABLE ROW LEVEL SECURITY;`,
-    `DROP POLICY IF EXISTS tenant_isolation ON daily_stock_velocity;`,
-    `CREATE POLICY tenant_isolation ON daily_stock_velocity USING (tenant_id = current_setting('app.current_tenant_id', true));`,
-
-    // Add continuous aggregate policy to update the view automatically in background
+    // Add continuous aggregate policy
     `SELECT add_continuous_aggregate_policy('daily_stock_velocity',
        start_offset => INTERVAL '1 month',
        end_offset => INTERVAL '1 hour',
        schedule_interval => INTERVAL '1 hour',
-       if_not_exists => TRUE);`
+       if_not_exists => TRUE);`,
+
+    // Create secure tenant-filtered view
+    `CREATE OR REPLACE VIEW stock_velocity_report AS
+     SELECT bucket, tenant_id, variant_id, units_dispatched, units_received, transaction_count
+     FROM daily_stock_velocity
+     WHERE tenant_id = current_setting('app.current_tenant_id', true);`
   ];
   await runSql(laravelConfig, laravelQueries);
-  console.log("Laravel DB RLS & Continuous Aggregate applied successfully!");
+  console.log("Laravel DB Continuous Aggregate applied successfully!");
 
   // 3. Express DB (port 5432)
-  console.log("\nApplying RLS & Continuous Aggregate on Express DB...");
+  console.log("\nApplying Continuous Aggregate on Express DB...");
   const expressConfig = { connectionString: "postgresql://postgres:password@127.0.0.1:5432/inventory?schema=public" };
   const expressQueries = [
     `CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;`,
@@ -108,7 +110,7 @@ async function main() {
        if_not_exists => TRUE);`
   ];
   await runSql(expressConfig, expressQueries);
-  console.log("Express DB RLS & Continuous Aggregate applied successfully!");
+  console.log("Express DB Continuous Aggregate applied successfully!");
 }
 
 main().catch(console.error);
