@@ -41,6 +41,7 @@ import { OutboxProcessor } from "./infrastructure/outbox/OutboxProcessor";
 import { IMessageBroker } from "./application/ports/IMessageBroker";
 import { InMemoryMessageBroker } from "./infrastructure/messaging/InMemoryMessageBroker";
 import { RabbitMQMessageBroker } from "./infrastructure/messaging/RabbitMQMessageBroker";
+import { KafkaMessageBroker } from "./infrastructure/messaging/KafkaMessageBroker";
 
 import barcodeRoutes from "./infrastructure/http/routes/barcode.routes";
 import serialRoutes from "./infrastructure/http/routes/serial.routes";
@@ -262,10 +263,13 @@ const start = async () => {
   const warehouseLocationRepo = new PrismaWarehouseLocationRepository();
   const productRepo = new PrismaProductRepository();
 
+  const kafkaUrl = process.env.KAFKA_URL;
   const rabbitMqUrl = process.env.RABBITMQ_URL;
-  const messageBroker = rabbitMqUrl
-    ? new RabbitMQMessageBroker(rabbitMqUrl)
-    : new InMemoryMessageBroker();
+  const messageBroker = kafkaUrl
+    ? new KafkaMessageBroker(kafkaUrl)
+    : rabbitMqUrl
+      ? new RabbitMQMessageBroker(rabbitMqUrl)
+      : new InMemoryMessageBroker();
 
   setupApp(
     repository,
