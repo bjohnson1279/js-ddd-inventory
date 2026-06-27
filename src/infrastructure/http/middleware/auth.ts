@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { tenantLocalStorage } from "../../database/tenantContext";
 
 const JWT_SECRET = process.env.JWT_SECRET || "";
 if (!JWT_SECRET) {
@@ -20,8 +21,9 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     if (process.env.NODE_ENV === "test") {
       req.user = { id: "admin-user", role: "admin", email: "admin@test.com" };
-      req.tenantId = "tenant-1";
-      return next();
+      const tenantId = "tenant-1";
+      req.tenantId = tenantId;
+      return tenantLocalStorage.run(tenantId, () => next());
     }
     return res.status(401).json({ error: "Unauthorized: Access token is missing or invalid." });
   }
@@ -34,8 +36,9 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
       role: decoded.role || "viewer",
       email: decoded.email
     };
-    req.tenantId = decoded.tenantId || "tenant-1";
-    next();
+    const tenantId = decoded.tenantId || "tenant-1";
+    req.tenantId = tenantId;
+    tenantLocalStorage.run(tenantId, () => next());
   } catch (err) {
     return res.status(401).json({ error: "Unauthorized: Access token is missing or invalid." });
   }
