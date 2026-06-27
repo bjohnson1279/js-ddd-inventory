@@ -2,9 +2,13 @@ import { JournalEntryCreatedEvent } from "../../../src/domain/events/JournalEntr
 import { syncJournalToQuickBooks } from "../../../src/application/eventHandlers/SyncJournalToQuickBooks";
 import { syncJournalToNetSuite } from "../../../src/application/eventHandlers/SyncJournalToNetSuite";
 import { syncJournalToXero } from "../../../src/application/eventHandlers/SyncJournalToXero";
-import { prisma } from "../../../src/infrastructure/database/prisma";
+import { prisma, pool } from "../../../src/infrastructure/database/prisma";
 
 describe("Accounting Sync Mapping Integration Tests", () => {
+  afterAll(async () => {
+    await prisma.$disconnect();
+    await pool.end();
+  });
   beforeEach(async () => {
     // Setup environment variables to bypass mock checks
     process.env.QUICKBOOKS_REALM_ID = "real-realm";
