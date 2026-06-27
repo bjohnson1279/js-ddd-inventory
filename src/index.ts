@@ -223,6 +223,37 @@ const start = async () => {
       await prisma.$executeRawUnsafe(`SELECT create_hypertable('dispatch_records', 'dispatched_at', if_not_exists => TRUE);`);
       console.log("dispatch_records table converted to TimescaleDB hypertable.");
     }
+
+    const isView = await prisma.$queryRawUnsafe(`
+      SELECT 1 FROM pg_matviews 
+      WHERE matviewname = 'daily_dispatch_summary'
+    `);
+    if ((isView as any[]).length === 0) {
+      await prisma.$executeRawUnsafe(`
+        CREATE MATERIALIZED VIEW daily_dispatch_summary
+        WITH (timescaledb.continuous) AS
+        SELECT 
+          time_bucket('1 day', dispatched_at) AS bucket,
+          sku,
+          "locationId",
+          sum(quantity) as total_dispatched,
+          count(*) as dispatch_count
+        FROM dispatch_records
+        GROUP BY bucket, sku, "locationId";
+      `);
+      try {
+        await prisma.$executeRawUnsafe(`
+          SELECT add_continuous_aggregate_policy('daily_dispatch_summary',
+            start_offset => INTERVAL '1 month',
+            end_offset => INTERVAL '1 hour',
+            schedule_interval => INTERVAL '1 hour',
+            if_not_exists => TRUE);
+        `);
+      } catch (policyErr: any) {
+        console.log("TimescaleDB aggregate policy setup warning:", policyErr.message);
+      }
+      console.log("daily_dispatch_summary continuous aggregate created.");
+    }
   } catch (e) {
     console.log("TimescaleDB setup skipped/warning:", (e as Error).message);
   }
