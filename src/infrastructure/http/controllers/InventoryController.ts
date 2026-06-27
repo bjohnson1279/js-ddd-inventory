@@ -77,7 +77,10 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku } = req.params;
-      const locationId = (req.query.locationId as string) || "default";
+      if (req.query.locationId !== undefined && typeof req.query.locationId !== "string") {
+        return res.status(400).json({ error: "Invalid locationId parameter" });
+      }
+      const locationId = req.query.locationId ? (req.query.locationId as string).trim() : "default";
 
       const skuObj = SKU.create(sku);
       const item = await repository.findBySku(skuObj, locationId);
@@ -248,8 +251,17 @@ export class InventoryController {
         return res.status(400).json({ error: "SKU and quantity are required query parameters" });
       }
 
+      if (typeof sku !== "string" || typeof quantity !== "string") {
+        return res.status(400).json({ error: "Invalid query parameters" });
+      }
+
+      const parsedQuantity = parseInt(quantity.trim(), 10);
+      if (isNaN(parsedQuantity) || parsedQuantity <= 0) {
+        return res.status(400).json({ error: "Invalid quantity parameter" });
+      }
+
       const useCase = new SuggestFefoPicking(productRepository, costLayerRepository);
-      const suggestions = await useCase.execute(sku as string, parseInt(quantity as string, 10));
+      const suggestions = await useCase.execute(sku.trim(), parsedQuantity);
 
       res.status(200).json(suggestions);
     } catch (error: any) {

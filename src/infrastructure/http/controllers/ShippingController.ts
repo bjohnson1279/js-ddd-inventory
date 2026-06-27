@@ -20,14 +20,24 @@ export class ShippingController {
       const useCase = new CalculateShippingRates(carrierService);
 
       const { sku, quantity, address } = req.query;
+
       if (!sku || !address) {
-        return res.status(400).json({ error: "Missing required query parameters: sku and address." });
+        return res.status(400).json({ error: "Missing required parameters: sku, address." });
+      }
+
+      if (typeof sku !== "string" || typeof address !== "string" || (quantity !== undefined && typeof quantity !== "string")) {
+        return res.status(400).json({ error: "Invalid query parameters" });
+      }
+
+      const parsedQuantity = quantity ? parseInt((quantity as string).trim(), 10) : 1;
+      if (isNaN(parsedQuantity) || parsedQuantity <= 0) {
+        return res.status(400).json({ error: "Invalid quantity parameter" });
       }
 
       const rates = await useCase.execute({
-        sku: sku as string,
-        quantity: quantity ? parseInt(quantity as string) : 1,
-        destinationAddress: address as string
+        sku: (sku as string).trim(),
+        quantity: parsedQuantity,
+        destinationAddress: (address as string).trim()
       });
 
       res.status(200).json(rates);

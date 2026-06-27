@@ -25,7 +25,10 @@ export class ForecastingController {
         salesVelocityService
       );
 
-      const locationId = (req.query.locationId as string) || "default";
+      if (req.query.locationId !== undefined && typeof req.query.locationId !== "string") {
+        return res.status(400).json({ error: "Invalid locationId parameter" });
+      }
+      const locationId = req.query.locationId ? (req.query.locationId as string).trim() : "default";
       const report = await useCase.execute(locationId);
 
       res.status(200).json(report);

@@ -18,6 +18,9 @@ export class AccountingController {
       if (req.query.tenantId !== undefined && typeof req.query.tenantId !== "string") {
         return res.status(400).json({ error: "Invalid tenantId parameter." });
       }
+      if (req.query.tenantId !== undefined && typeof req.query.tenantId !== "string") {
+        return res.status(400).json({ error: "Invalid tenantId parameter." });
+      }
       const tenantId = req.query.tenantId ? (req.query.tenantId as string).trim() || undefined : undefined;
       const entries = await journalRepo.findAll(tenantId);
 
@@ -211,9 +214,15 @@ export class AccountingController {
       if (req.query.quantity !== undefined && typeof req.query.quantity !== "string") {
         return res.status(400).json({ error: "Invalid quantity parameter." });
       }
+      if (req.query.quantity !== undefined && typeof req.query.quantity !== "string") {
+        return res.status(400).json({ error: "Invalid quantity parameter." });
+      }
       const parsedQuantity = req.query.quantity !== undefined ? parseInt(req.query.quantity as string, 10) : NaN;
       const quantity = isNaN(parsedQuantity) || parsedQuantity <= 0 ? 1 : parsedQuantity;
 
+      if (req.query.tenantId !== undefined && typeof req.query.tenantId !== "string") {
+        return res.status(400).json({ error: "Invalid tenantId parameter." });
+      }
       if (req.query.tenantId !== undefined && typeof req.query.tenantId !== "string") {
         return res.status(400).json({ error: "Invalid tenantId parameter." });
       }
@@ -222,6 +231,9 @@ export class AccountingController {
         tenantId = "DEFAULT";
       }
 
+      if (req.query.method !== undefined && typeof req.query.method !== "string") {
+        return res.status(400).json({ error: "Invalid method parameter." });
+      }
       if (req.query.method !== undefined && typeof req.query.method !== "string") {
         return res.status(400).json({ error: "Invalid method parameter." });
       }
