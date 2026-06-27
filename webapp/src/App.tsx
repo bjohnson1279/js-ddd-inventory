@@ -197,6 +197,7 @@ function App() {
   const [scanValue, setScanValue] = useState("");
   const [scanContext, setScanContext] = useState("pos");
   const [scanOutput, setScanOutput] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
   const [barcodeMsg, setBarcodeMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [barcodeSearch, setBarcodeSearch] = useState("");
 
@@ -209,6 +210,8 @@ function App() {
   const [serialActor, setSerialActor] = useState("admin-1");
   const [serialRefId, setSerialRefId] = useState("PO-202");
   const [serialMsg, setSerialMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [isRegisteringSerial, setIsRegisteringSerial] = useState(false);
+  const [isSerialLifecycleAction, setIsSerialLifecycleAction] = useState<"receive" | "sell" | "return" | "restock" | null>(null);
   const [serialSearch, setSerialSearch] = useState("");
 
   // Kit State
@@ -436,6 +439,7 @@ function App() {
   const handleBarcodeScan = async () => {
     setScanOutput(null);
     if (!scanValue) return;
+    setIsScanning(true);
     try {
       const res = await fetch(`${API_BASE}/barcodes/scan`, {
         method: "POST",
@@ -467,12 +471,15 @@ function App() {
       }
     } catch (err) {
       setScanOutput(JSON.stringify({ error: "Express backend API connection failed." }, null, 2));
+    } finally {
+      setIsScanning(false);
     }
   };
 
   const handleRegisterSerial = async (e: React.FormEvent) => {
     e.preventDefault();
     setSerialMsg(null);
+    setIsRegisteringSerial(true);
     try {
       const res = await fetch(`${API_BASE}/serials/register`, {
         method: "POST",
@@ -496,6 +503,8 @@ function App() {
       }
     } catch (err) {
       setSerialMsg({ type: "error", text: "API connection error." });
+    } finally {
+      setIsRegisteringSerial(false);
     }
   };
 
@@ -505,6 +514,7 @@ function App() {
       setSerialMsg({ type: "error", text: "Please query or enter a Serial Number first." });
       return;
     }
+    setIsSerialLifecycleAction(action);
     try {
       const payload: any = {
         serialNumber: serialQuery,
@@ -535,6 +545,8 @@ function App() {
       }
     } catch (err) {
       setSerialMsg({ type: "error", text: "API connection failure." });
+    } finally {
+      setIsSerialLifecycleAction(null);
     }
   };
 
@@ -1209,8 +1221,8 @@ function App() {
                 </div>
               </div>
 
-              <button className="btn btn-primary" style={{ width: "100%", marginBottom: "15px" }} onClick={handleBarcodeScan}>
-                Trigger Scanner Ingestion Event
+              <button className="btn btn-primary" style={{ width: "100%", marginBottom: "15px" }} onClick={handleBarcodeScan} disabled={isScanning} aria-busy={isScanning} title={isScanning ? "Processing scan..." : "Trigger Scanner Ingestion Event"}>
+                {isScanning ? <><span role="img" aria-hidden="true">⏳</span> Processing...</> : "Trigger Scanner Ingestion Event"}
               </button>
 
               {scanOutput && (
@@ -1257,8 +1269,8 @@ function App() {
                 <label htmlFor="serial-location">Opening Location</label>
                 <input id="serial-location" className="form-control" type="text" value={serialLocation} onChange={(e) => setSerialLocation(e.target.value)} required />
               </div>
-              <button type="submit" className="btn btn-primary" style={{ width: "100%" }}>
-                Pre-Register Serial Item
+              <button type="submit" className="btn btn-primary" style={{ width: "100%" }} disabled={isRegisteringSerial} aria-busy={isRegisteringSerial} title={isRegisteringSerial ? "Registering serial item..." : "Pre-Register Serial Item"}>
+                {isRegisteringSerial ? <><span role="img" aria-hidden="true">⏳</span> Registering...</> : "Pre-Register Serial Item"}
               </button>
             </form>
 
@@ -1278,17 +1290,17 @@ function App() {
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("receive")} title="Pending -> InStock">
-                Receive Stock
+              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("receive")} disabled={isSerialLifecycleAction !== null} aria-busy={isSerialLifecycleAction === "receive"} title="Pending -> InStock">
+                {isSerialLifecycleAction === "receive" ? "Processing..." : "Receive Stock"}
               </button>
-              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("sell")} title="InStock -> Sold">
-                POS Sell
+              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("sell")} disabled={isSerialLifecycleAction !== null} aria-busy={isSerialLifecycleAction === "sell"} title="InStock -> Sold">
+                {isSerialLifecycleAction === "sell" ? "Processing..." : "POS Sell"}
               </button>
-              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("return")} title="Sold -> Returned">
-                Customer Return
+              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("return")} disabled={isSerialLifecycleAction !== null} aria-busy={isSerialLifecycleAction === "return"} title="Sold -> Returned">
+                {isSerialLifecycleAction === "return" ? "Processing..." : "Customer Return"}
               </button>
-              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("restock")} title="Returned -> InStock">
-                Restock Shelf
+              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("restock")} disabled={isSerialLifecycleAction !== null} aria-busy={isSerialLifecycleAction === "restock"} title="Returned -> InStock">
+                {isSerialLifecycleAction === "restock" ? "Processing..." : "Restock Shelf"}
               </button>
             </div>
 
@@ -2643,6 +2655,8 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
               <button 
                 type="button"
                 className={`mode-btn ${activeMode === "pick" ? "active" : ""}`}
+                aria-label={activeMode === "pick" ? "Pick mode active" : "Switch to Pick mode"}
+                title={activeMode === "pick" ? "Pick mode active" : "Switch to Pick mode"}
                 onClick={() => {
                   setActiveMode("pick");
                   setResolvedItem(null);
@@ -2654,6 +2668,8 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
               <button 
                 type="button"
                 className={`mode-btn ${activeMode === "receive" ? "active" : ""}`}
+                aria-label={activeMode === "receive" ? "Receive mode active" : "Switch to Receive mode"}
+                title={activeMode === "receive" ? "Receive mode active" : "Switch to Receive mode"}
                 onClick={() => {
                   setActiveMode("receive");
                   setResolvedItem(null);
@@ -2665,6 +2681,8 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
               <button 
                 type="button"
                 className={`mode-btn ${activeMode === "count" ? "active" : ""}`}
+                aria-label={activeMode === "count" ? "Count mode active" : "Switch to Count mode"}
+                title={activeMode === "count" ? "Count mode active" : "Switch to Count mode"}
                 onClick={() => {
                   setActiveMode("count");
                   setResolvedItem(null);

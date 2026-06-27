@@ -44,7 +44,8 @@ export class BarcodeController {
         });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

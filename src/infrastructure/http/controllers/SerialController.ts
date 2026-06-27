@@ -45,7 +45,8 @@ export class SerialController {
         });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -80,7 +81,8 @@ export class SerialController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("not found"))
       ) {
-        res.status(400).json({ error: error instanceof DomainException ? error.message : "Not found" });
+        console.error(error instanceof DomainException ? error.message : error);
+      res.status(400).json({ error: "Not found" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -108,7 +110,8 @@ export class SerialController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("not found"))
       ) {
-        res.status(400).json({ error: error instanceof DomainException ? error.message : "Not found" });
+        console.error(error instanceof DomainException ? error.message : error);
+      res.status(400).json({ error: "Not found" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

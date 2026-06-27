@@ -111,6 +111,7 @@ export class AccountingController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
+        console.error(error.message);
         res.status(400).json({ error: "Invalid accounting operation" });
       } else {
         console.error(error);
@@ -189,6 +190,7 @@ export class AccountingController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("Insufficient"))
       ) {
+        console.error(error instanceof DomainException ? error.message : error);
         res.status(400).json({ error: "Insufficient stock" });
       } else {
         console.error(error);
@@ -269,6 +271,7 @@ export class AccountingController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("Insufficient"))
       ) {
+        console.error(error instanceof DomainException ? error.message : error);
         res.status(400).json({ error: "Insufficient stock" });
       } else {
         console.error(error);
@@ -340,6 +343,7 @@ export class AccountingController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
+        console.error(error.message);
         res.status(400).json({ error: "Invalid accounting operation" });
       } else {
         console.error(error);
