@@ -16,6 +16,8 @@ import onboardingRoutes from "./infrastructure/http/routes/onboarding.routes";
 import { DomainEventDispatcher } from "./domain/events/DomainEventDispatcher";
 import { alertPurchasingOnStockDepleted } from "./application/eventHandlers/AlertPurchasingOnStockDepleted";
 import { syncJournalToQuickBooks } from "./application/eventHandlers/SyncJournalToQuickBooks";
+import { syncJournalToNetSuite } from "./application/eventHandlers/SyncJournalToNetSuite";
+import { syncJournalToXero } from "./application/eventHandlers/SyncJournalToXero";
 
 import { IBarcodeRepository } from "./domain/repositories/IBarcodeRepository";
 import { ISerializedItemRepository } from "./domain/repositories/ISerializedItemRepository";
@@ -122,6 +124,8 @@ app.use(express.json());
 // Register Domain Event Handlers
 DomainEventDispatcher.register("StockDepletedEvent", alertPurchasingOnStockDepleted);
 DomainEventDispatcher.register("JournalEntryCreatedEvent", syncJournalToQuickBooks);
+DomainEventDispatcher.register("JournalEntryCreatedEvent", syncJournalToNetSuite);
+DomainEventDispatcher.register("JournalEntryCreatedEvent", syncJournalToXero);
 
 // Define setup function so E2E tests can configure app with custom repository
 export const setupApp = (

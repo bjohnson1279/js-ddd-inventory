@@ -359,3 +359,25 @@ model NotificationModel {
   createdAt DateTime @default(now())
 }
 
+model NetsuiteJournalMappingModel {
+  id                 String   @id @default(uuid())
+  journalEntryId     String   @unique
+  netsuiteJournalId  String   @unique
+  createdAt          DateTime @default(now())
+}
+
+model XeroJournalMappingModel {
+  id                 String   @id @default(uuid())
+  journalEntryId     String   @unique
+  xeroJournalId      String   @unique
+  createdAt          DateTime @default(now())
+}
+
+model QuickbooksJournalMappingModel {
+  id                 String   @id @default(uuid())
+  journalEntryId     String   @unique
+  quickbooksJournalId String  @unique
+  createdAt          DateTime @default(now())
+}
+
+
