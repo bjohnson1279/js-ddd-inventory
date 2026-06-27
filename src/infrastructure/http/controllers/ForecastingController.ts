@@ -87,4 +87,28 @@ export class ForecastingController {
       }
     }
   }
+
+  static async getDispatchSummary(req: Request, res: Response) {
+    try {
+      const { prisma } = require("../../database/prisma");
+      const sku = req.query.sku as string;
+      
+      const query = sku 
+        ? `SELECT bucket::text, sku, "locationId", total_dispatched as "totalDispatched", dispatch_count as "dispatchCount"
+           FROM daily_dispatch_summary
+           WHERE sku = $1
+           ORDER BY bucket DESC`
+        : `SELECT bucket::text, sku, "locationId", total_dispatched as "totalDispatched", dispatch_count as "dispatchCount"
+           FROM daily_dispatch_summary
+           ORDER BY bucket DESC`;
+      
+      const params = sku ? [sku] : [];
+      const results = await prisma.$queryRawUnsafe(query, ...params);
+      
+      res.status(200).json(results);
+    } catch (error: any) {
+      console.error("Failed to fetch dispatch summary from continuous aggregate:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
 }
