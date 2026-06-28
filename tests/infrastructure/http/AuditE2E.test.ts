@@ -1,5 +1,6 @@
 process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = "dummy_test_secret";
+process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_SHOP_URL = "mock-shop.myshopify.com";
 process.env.SHOPIFY_ACCESS_TOKEN = "mock-token";
 process.env.QUICKBOOKS_ACCESS_TOKEN = "mock-qbo-token";
@@ -16,7 +17,7 @@ jest.mock("../../../src/infrastructure/database/prisma", () => {
         findMany: jest.fn(),
         findUnique: jest.fn()
       },
-      ledgerEntryModel: {
+      inventoryModel: {
         aggregate: jest.fn()
       },
       journalEntryModel: {
@@ -84,7 +85,7 @@ describe("Audit REST API Endpoints", () => {
     ]);
 
     // 2. Mock ledger aggregate local quantities
-    (prisma.ledgerEntryModel.aggregate as jest.Mock).mockResolvedValueOnce({
+    (prisma.inventoryModel.aggregate as jest.Mock).mockResolvedValueOnce({
       _sum: { quantity: 10 }
     });
 

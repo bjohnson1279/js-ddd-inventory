@@ -17,8 +17,8 @@ export class AuditProcessorService {
 
       for (const variant of variants) {
         // Aggregate local quantity for this variant across all locations
-        const ledgerSum = await prisma.ledgerEntryModel.aggregate({
-          where: { tenantId, variantId: variant.id },
+        const ledgerSum = await prisma.inventoryModel.aggregate({
+          where: { sku: variant.sku },
           _sum: { quantity: true }
         });
         const localQty = ledgerSum._sum.quantity || 0;
@@ -197,8 +197,8 @@ export class AuditProcessorService {
 
       if (variant && storeDomain && accessToken && accessToken !== "mock-token" && !storeDomain.includes("mock")) {
         // Sum local stock levels
-        const ledgerSum = await prisma.ledgerEntryModel.aggregate({
-          where: { tenantId, variantId: variant.id },
+        const ledgerSum = await prisma.inventoryModel.aggregate({
+          where: { sku: variant.sku },
           _sum: { quantity: true }
         });
         const localQty = ledgerSum._sum.quantity || 0;
@@ -218,9 +218,9 @@ export class AuditProcessorService {
                   mutation setQty($input: InventorySetOnHandQuantitiesInput!) {
                     inventorySetOnHandQuantities(input: $input) {
                       userErrors { message }
-                    }
-                  }
-                `,
+                        }
+                      }
+                    `,
                 variables: {
                   input: {
                     setQuantities: [
