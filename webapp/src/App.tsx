@@ -832,13 +832,14 @@ function App() {
                   </select>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                  <button className="btn btn-secondary" onClick={() => handleQuickRestock(valSku, 10)}>
+                  <button className="btn btn-secondary" onClick={() => handleQuickRestock(valSku, 10)} aria-label={`Receive 10 units of ${valSku}`} title={`Receive 10 units of ${valSku}`}>
                     + Receive 10 Units
                   </button>
                   <button
                     className="btn btn-danger"
                     disabled={!valSku || (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0}
                     title={!valSku ? "Select a SKU first" : (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0 ? "Insufficient stock" : "Dispatch 1 unit"}
+                    aria-label={!valSku ? "Select a SKU first" : (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0 ? "Insufficient stock" : `Dispatch 1 unit of ${valSku}`}
                     onClick={async () => {
                       const res = await fetch(`${API_BASE}/inventory/dispatch`, {
                         method: "POST",
@@ -2821,7 +2822,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                 <div style={{ display: "flex", gap: "8px", marginTop: "5px" }}>
                   <button
                     type="button"
-                    aria-label="Cancel current scan operation"
+                    aria-label="Cancel current scan operation" title="Cancel current scan operation"
                     onClick={() => {
                       setResolvedItem(null);
                       setScanValue("");
@@ -2933,7 +2934,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
 
                     <button
                       type="button"
-                      onClick={handleSubmitCycleCount}
+                      onClick={handleSubmitCycleCount} aria-label="Reconcile Cycle Count" title="Reconcile Cycle Count"
                       style={{
                         padding: "10px",
                         background: "var(--accent-gradient)",
