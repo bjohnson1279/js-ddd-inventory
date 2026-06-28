@@ -6,8 +6,9 @@ process.env.SHOPIFY_ACCESS_TOKEN = "mock-token";
 process.env.QUICKBOOKS_ACCESS_TOKEN = "mock-qbo-token";
 
 import request from "supertest";
-import { app } from "../../../src/index";
+import { app, setupApp } from "../../../src/index";
 import { prisma } from "../../../src/infrastructure/database/prisma";
+import { InMemoryInventoryRepository } from "../../../src/infrastructure/database/InMemoryInventoryRepository";
 import jwt from "jsonwebtoken";
 
 jest.mock("../../../src/infrastructure/database/prisma", () => {
@@ -54,6 +55,8 @@ describe("Audit REST API Endpoints", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Initialize routes
+    setupApp(new InMemoryInventoryRepository());
   });
 
   it("should list discrepancies", async () => {
