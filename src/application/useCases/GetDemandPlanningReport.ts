@@ -42,6 +42,15 @@ export class GetDemandPlanningReport {
     // 2. Fetch all forecasts for location
     const forecasts = await this.demandForecastRepository.findAllForLocation(locationId);
 
+    const now = new Date();
+    const endWindow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const activeForecastsMap = new Map();
+    for (const f of forecasts) {
+      if (f.periodEnd >= now && f.periodStart <= endWindow && !activeForecastsMap.has(f.sku)) {
+        activeForecastsMap.set(f.sku, f);
+      }
+    }
+
     const reportItemsPromises = inventoryItems.map(async (item) => {
       const skuStr = item.sku.getValue();
 
@@ -55,14 +64,7 @@ export class GetDemandPlanningReport {
       const safetyStock = policy ? policy.safetyStock : 5;
 
       // Find active forecast within the next 30 days
-      const now = new Date();
-      const endWindow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-      const activeForecast = forecasts.find(
-        (f) =>
-          f.sku === skuStr &&
-          f.periodEnd >= now &&
-          f.periodStart <= endWindow
-      );
+      const activeForecast = activeForecastsMap.get(skuStr);
 
       const forecastedDemand30d = activeForecast ? activeForecast.forecastedQuantity : Math.ceil(velocity.averageDailySales30d * 30);
       const confidenceLevel = activeForecast ? activeForecast.confidenceLevel : (velocity.averageDailySales30d > 0 ? 0.70 : 0.50);
