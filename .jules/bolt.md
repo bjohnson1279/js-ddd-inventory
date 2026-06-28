@@ -122,3 +122,7 @@
 ## 2026-06-26 - O(N*M) Lookup Optimization
 **Learning:** Found a critical performance bottleneck in `ReceivePurchaseOrder.ts` where an array `.find()` operation was nested inside an asynchronous `.map()` loop iterating over DTO items ($O(N \times M)$ complexity).
 **Action:** When mapping over items and searching another array, always pre-compute a `Map` of the target array keyed by its unique identifier (e.g., `variantId`) outside the loop to reduce the lookup to $O(1)$. Do not attempt to merge the input payload if uniqueness isn't strictly guaranteed by the business logic.
+
+## 2026-06-28 - O(N*M) Lookup Optimization in GetDemandPlanningReport
+**Learning:** Found an O(N*M) lookup bottleneck in `GetDemandPlanningReport.ts` where an array `.find()` operation to search for forecasts was nested inside an asynchronous `.map()` loop iterating over inventory items.
+**Action:** When mapping over items and searching another array, always pre-compute a `Map` of the target array keyed by its unique identifier (e.g., `sku`) outside the loop to reduce the lookup to O(1).
