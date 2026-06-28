@@ -86,6 +86,7 @@ import authRoutes from "./infrastructure/http/routes/auth.routes";
 import userRoutes from "./infrastructure/http/routes/user.routes";
 import warehouseLocationRoutes from "./infrastructure/http/routes/warehouseLocation.routes";
 import notificationRoutes from "./infrastructure/http/routes/notification.routes";
+import auditRoutes from "./infrastructure/http/routes/audit.routes";
 import { WebSocketManager } from "./infrastructure/websocket/WebSocketManager";
 import { authMiddleware } from "./infrastructure/http/middleware/auth";
 import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
@@ -205,6 +206,7 @@ export const setupApp = (
   app.use("/api/shipping", shippingRoutes);
   app.use("/api/warehouse-locations", warehouseLocationRoutes);
   app.use("/api/notifications", notificationRoutes);
+  app.use("/api/audit", auditRoutes);
 };
 
 const start = async () => {
