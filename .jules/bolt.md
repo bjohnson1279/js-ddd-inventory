@@ -126,3 +126,7 @@
 ## 2026-06-28 - O(N*M) Lookup Optimization in GetDemandPlanningReport
 **Learning:** Found an O(N*M) lookup bottleneck in `GetDemandPlanningReport.ts` where an array `.find()` operation to search for forecasts was nested inside an asynchronous `.map()` loop iterating over inventory items.
 **Action:** When mapping over items and searching another array, always pre-compute a `Map` of the target array keyed by its unique identifier (e.g., `sku`) outside the loop to reduce the lookup to O(1).
+
+## 2026-06-29 - O(N) Array Allocation Optimization in Variant Lookups
+**Learning:** Found an $O(N)$ memory allocation bottleneck in multiple use cases where looking up a product variant by SKU required iterating through `Product` variants via a getter that executed `Array.from(this._variants.values())`. This creates a new array allocation on every lookup, adding unnecessary GC pressure in bulk operations.
+**Action:** When a domain aggregate exposes internal state (like a `Map`) via a getter that allocates a new array, do not use array methods (like `.find()`) on the getter if called repeatedly. Instead, implement a dedicated lookup method on the aggregate (e.g., `findVariantBySku`) that iterates the internal data structure directly to achieve $O(1)$ allocation overhead.
