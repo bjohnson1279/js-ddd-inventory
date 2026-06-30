@@ -832,13 +832,15 @@ function App() {
                   </select>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                  <button className="btn btn-secondary" onClick={() => handleQuickRestock(valSku, 10)}>
+                  <button className="btn btn-secondary" onClick={() => handleQuickRestock(valSku, 10)} disabled={!valSku} aria-disabled={!valSku} title={!valSku ? "Select a SKU first" : "Receive 10 units"} aria-label={!valSku ? "Select a SKU first" : "Receive 10 units"}>
                     + Receive 10 Units
                   </button>
                   <button
                     className="btn btn-danger"
                     disabled={!valSku || (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0}
+                    aria-disabled={!valSku || (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0}
                     title={!valSku ? "Select a SKU first" : (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0 ? "Insufficient stock" : "Dispatch 1 unit"}
+                    aria-label={!valSku ? "Select a SKU first" : (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0 ? "Insufficient stock" : "Dispatch 1 unit"}
                     onClick={async () => {
                       const res = await fetch(`${API_BASE}/inventory/dispatch`, {
                         method: "POST",
@@ -1221,7 +1223,7 @@ function App() {
                 </div>
               </div>
 
-              <button className="btn btn-primary" style={{ width: "100%", marginBottom: "15px" }} onClick={handleBarcodeScan} disabled={isScanning} aria-busy={isScanning} title={isScanning ? "Processing scan..." : "Trigger Scanner Ingestion Event"}>
+              <button className="btn btn-primary" style={{ width: "100%", marginBottom: "15px" }} onClick={handleBarcodeScan} disabled={isScanning} aria-busy={isScanning} title={isScanning ? "Processing scan..." : "Trigger Scanner Ingestion Event"} aria-label={isScanning ? "Processing scan..." : "Trigger Scanner Ingestion Event"}>
                 {isScanning ? <><span role="img" aria-hidden="true">⏳</span> Processing...</> : "Trigger Scanner Ingestion Event"}
               </button>
 
@@ -1269,7 +1271,7 @@ function App() {
                 <label htmlFor="serial-location">Opening Location</label>
                 <input id="serial-location" className="form-control" type="text" value={serialLocation} onChange={(e) => setSerialLocation(e.target.value)} required />
               </div>
-              <button type="submit" className="btn btn-primary" style={{ width: "100%" }} disabled={isRegisteringSerial} aria-busy={isRegisteringSerial} title={isRegisteringSerial ? "Registering serial item..." : "Pre-Register Serial Item"}>
+              <button type="submit" className="btn btn-primary" style={{ width: "100%" }} disabled={isRegisteringSerial} aria-busy={isRegisteringSerial} title={isRegisteringSerial ? "Registering serial item..." : "Pre-Register Serial Item"} aria-label={isRegisteringSerial ? "Registering serial item..." : "Pre-Register Serial Item"}>
                 {isRegisteringSerial ? <><span role="img" aria-hidden="true">⏳</span> Registering...</> : "Pre-Register Serial Item"}
               </button>
             </form>
@@ -1290,16 +1292,16 @@ function App() {
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("receive")} disabled={isSerialLifecycleAction !== null} aria-busy={isSerialLifecycleAction === "receive"} title="Pending -> InStock">
+              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("receive")} disabled={isSerialLifecycleAction !== null} aria-busy={isSerialLifecycleAction === "receive"} title="Pending -> InStock" aria-label="Receive pending serial stock">
                 {isSerialLifecycleAction === "receive" ? "Processing..." : "Receive Stock"}
               </button>
-              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("sell")} disabled={isSerialLifecycleAction !== null} aria-busy={isSerialLifecycleAction === "sell"} title="InStock -> Sold">
+              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("sell")} disabled={isSerialLifecycleAction !== null} aria-busy={isSerialLifecycleAction === "sell"} title="InStock -> Sold" aria-label="Sell instock serial">
                 {isSerialLifecycleAction === "sell" ? "Processing..." : "POS Sell"}
               </button>
-              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("return")} disabled={isSerialLifecycleAction !== null} aria-busy={isSerialLifecycleAction === "return"} title="Sold -> Returned">
+              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("return")} disabled={isSerialLifecycleAction !== null} aria-busy={isSerialLifecycleAction === "return"} title="Sold -> Returned" aria-label="Return sold serial">
                 {isSerialLifecycleAction === "return" ? "Processing..." : "Customer Return"}
               </button>
-              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("restock")} disabled={isSerialLifecycleAction !== null} aria-busy={isSerialLifecycleAction === "restock"} title="Returned -> InStock">
+              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("restock")} disabled={isSerialLifecycleAction !== null} aria-busy={isSerialLifecycleAction === "restock"} title="Returned -> InStock" aria-label="Restock returned serial">
                 {isSerialLifecycleAction === "restock" ? "Processing..." : "Restock Shelf"}
               </button>
             </div>
@@ -2275,7 +2277,7 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
                 disabled={forecastLoading || !selectedSku} 
                 style={{ marginTop: "10px", width: "100%" }}
                 title={!selectedSku ? "Select a SKU to generate forecast" : forecastLoading ? "Calculating..." : "Generate and save forecast"}
-
+                aria-label={!selectedSku ? "Select a SKU to generate forecast" : forecastLoading ? "Calculating..." : "Generate and save forecast"}
               >
                 {forecastLoading ? <><span role="img" aria-hidden="true">⏳</span> Calculating Forecast...</> : "Generate & Save Forecast"}
               </button>
@@ -2959,7 +2961,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
               disabled={scanLoading || !scanValue}
               onClick={() => handleScan(scanValue)}
               title={!scanValue ? "Enter a barcode to scan" : scanLoading ? "Scanning..." : "Trigger scan"}
-
+              aria-label={!scanValue ? "Enter a barcode to scan" : scanLoading ? "Scanning..." : "Trigger scan"}
             >
               {scanLoading ? <><span role="img" aria-hidden="true">⏳</span> Scanning...</> : <><span role="img" aria-hidden="true">⚡</span> Trigger Scan</>}
             </button>
@@ -3148,7 +3150,7 @@ function OutboxTab() {
                           {new Date(event.occurredOn).toLocaleString()}
                         </td>
                         <td>
-                          <button className="btn btn-primary btn-sm" onClick={() => handleRetry(event.id)}>
+                          <button className="btn btn-primary btn-sm" onClick={() => handleRetry(event.id)} aria-label={`Retry event ${event.id}`} title="Retry Event">
                             Retry Event
                           </button>
                         </td>
@@ -3454,8 +3456,7 @@ function ShippingTab({
               </div>
 
 
-              <button type="submit" className="btn btn-primary" disabled={loadingRates} aria-busy={loadingRates} title={loadingRates ? "Estimating rates..." : "Estimate shipping rates"}>
-
+              <button type="submit" className="btn btn-primary" disabled={loadingRates} aria-busy={loadingRates} title={loadingRates ? "Estimating rates..." : "Estimate shipping rates"} aria-label={loadingRates ? "Estimating rates..." : "Estimate shipping rates"}>
                 {loadingRates ? <><span role="img" aria-hidden="true">⏳</span> Estimating...</> : "Estimate Shipping"}
               </button>
             </form>
@@ -3497,7 +3498,7 @@ function ShippingTab({
                   disabled={purchasingLabel || !selectedCarrier}
                   aria-busy={purchasingLabel}
                   title={!selectedCarrier ? "Select a carrier to buy a label" : purchasingLabel ? "Purchasing..." : "Buy selected shipping label"}
-
+                  aria-label={!selectedCarrier ? "Select a carrier to buy a label" : purchasingLabel ? "Purchasing..." : "Buy selected shipping label"}
                 >
                   {purchasingLabel ? <><span role="img" aria-hidden="true">⏳</span> Purchasing...</> : "Buy " + selectedCarrier + " Shipping Label"}
                 </button>
