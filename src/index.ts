@@ -8,6 +8,7 @@ import { PrismaSerializedItemRepository } from "./infrastructure/database/Prisma
 import { PrismaCostLayerRepository } from "./infrastructure/database/PrismaCostLayerRepository";
 import { PrismaJournalRepository } from "./infrastructure/database/PrismaJournalRepository";
 import { prisma } from "./infrastructure/database/prisma";
+import { enableRowLevelSecurity } from "./infrastructure/database/rls";
 import { PostgresInventoryRepository } from "./infrastructure/database/PostgresInventoryRepository";
 import { IInventoryRepository } from "./domain/repositories/IInventoryRepository";
 import inventoryRoutes from "./infrastructure/http/routes/inventory.routes";
@@ -256,8 +257,11 @@ const start = async () => {
       }
       console.log("daily_dispatch_summary continuous aggregate created.");
     }
+    
+    // Set up PostgreSQL Row-Level Security (RLS) policies
+    await enableRowLevelSecurity(prisma);
   } catch (e) {
-    console.log("TimescaleDB setup skipped/warning:", (e as Error).message);
+    console.log("Database/TimescaleDB setup skipped/warning:", (e as Error).message);
   }
 
   if (process.env.DB_HOST) {
