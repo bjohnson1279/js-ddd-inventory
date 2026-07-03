@@ -1,17 +1,19 @@
 import { PrismaClient } from "@prisma/client";
 
 export const rlsTables = [
-  { table: "SerializedItemModel", column: "tenantId" },
-  { table: "InventoryCostLayerModel", column: "tenantId" },
-  { table: "JournalEntryModel", column: "tenantId" },
-  { table: "TenantConfigModel", column: "tenantId" },
-  { table: "PurchaseOrderModel", column: "tenantId" },
-  { table: "InventoryAuditModel", column: "tenantId" },
-  { table: "RMAModel", column: "tenantId" },
-  { table: "QuarantineItemModel", column: "tenantId" },
-  { table: "UserModel", column: "tenantId" },
-  { table: "ApiTokenModel", column: "tenantId" },
-  { table: "NotificationModel", column: "tenantId" },
+  { table: "inventory_items", column: "tenantId" },
+  { table: "barcodes", column: "tenantId" },
+  { table: "serialized_items", column: "tenantId" },
+  { table: "inventory_cost_layers", column: "tenantId" },
+  { table: "journal_entries", column: "tenantId" },
+  { table: "tenant_configs", column: "tenantId" },
+  { table: "purchase_orders", column: "tenantId" },
+  { table: "inventory_audits", column: "tenantId" },
+  { table: "rmas", column: "tenantId" },
+  { table: "quarantine_items", column: "tenantId" },
+  { table: "users", column: "tenantId" },
+  { table: "api_tokens", column: "tenantId" },
+  { table: "notifications", column: "tenantId" },
   { table: "audit_discrepancies", column: "tenant_id" },
 ];
 
