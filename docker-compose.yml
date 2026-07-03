@@ -14,6 +14,23 @@ services:
     volumes:
       - postgres_data_pg15:/var/lib/postgresql/data
 
+  db-backup:
+    image: prodrigestivill/postgres-backup-local:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${DB_NAME:-inventory}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-password}
+      - BACKUP_NUM_KEEP=7
+      - BACKUP_FREQUENCY=daily
+      - SCHEDULE=@daily
+    volumes:
+      - ./infra/db/backups:/backups
+    depends_on:
+      - db
+
   rabbitmq:
     image: rabbitmq:3-management
     container_name: inventory-rabbitmq
