@@ -76,6 +76,29 @@ services:
       - SHOPIFY_ACCESS_TOKEN=${SHOPIFY_ACCESS_TOKEN}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672
       - KAFKA_URL=kafka:9092
+      - DISABLE_WORKERS=true
+    depends_on:
+      - db
+      - rabbitmq
+      - kafka
+
+  worker:
+    build: .
+    container_name: inventory-worker
+    restart: always
+    command: ["node", "dist/worker.js"]
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_NAME=${DB_NAME:-inventory}
+      - SHOPIFY_API_SECRET=${SHOPIFY_API_SECRET}
+      - SHOPIFY_SHOP_URL=${SHOPIFY_SHOP_URL}
+      - SHOPIFY_ACCESS_TOKEN=${SHOPIFY_ACCESS_TOKEN}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672
+      - KAFKA_URL=kafka:9092
     depends_on:
       - db
       - rabbitmq
