@@ -51,3 +51,7 @@
 ## 2024-06-26 - Replacing alert() with Accessible Toast Notifications
 **Learning:** Native `alert()` calls disrupt the user flow and lack robust accessibility controls. Screen readers may handle them inconsistently, and they freeze the main thread.
 **Action:** Replace `alert()` calls with dynamic in-page toast or banner notifications. Ensure these notifications are wrapped in a container with `role="status"` and `aria-live="polite"` so screen readers announce them automatically without stealing focus.
+
+## 2025-02-14 - Loading State for Async Initializations
+**Learning:** Adding loading states to setup/initialization forms (like the onboarding flow) significantly reduces anxiety and prevents duplicate submissions for heavy operations.
+**Action:** Always provide explicit disabled states with visual and ARIA feedback (`aria-busy="true"`, "Loading..." text) on forms performing critical inventory initialization.

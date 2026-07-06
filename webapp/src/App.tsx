@@ -185,6 +185,7 @@ function App() {
     { sku: "MACBOOK-AIR", quantity: 5, unitCostCents: 120000 },
   ]);
   const [onboardingMsg, setOnboardingMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [isOnboardingSubmitting, setIsOnboardingSubmitting] = useState(false);
 
   // Barcode State
   const [barcodeInput, setBarcodeInput] = useState<BarcodeAssignment>({
@@ -342,6 +343,7 @@ function App() {
   const handleOnboardingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setOnboardingMsg(null);
+    setIsOnboardingSubmitting(true);
     try {
       const res = await fetch(`${API_BASE}/onboarding/submit`, {
         method: "POST",
@@ -363,6 +365,8 @@ function App() {
       }
     } catch (err) {
       setOnboardingMsg({ type: "error", text: "API Connection issue." });
+    } finally {
+      setIsOnboardingSubmitting(false);
     }
   };
 
@@ -1028,8 +1032,13 @@ function App() {
               >
                 + Add Row
               </button>
-              <button type="submit" className="btn btn-primary">
-                Initialize Opening Balances & Save layers
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={isOnboardingSubmitting}
+                aria-busy={isOnboardingSubmitting}
+              >
+                {isOnboardingSubmitting ? "Loading..." : "Initialize Opening Balances & Save layers"}
               </button>
             </div>
           </form>
