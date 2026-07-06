@@ -19,24 +19,29 @@ jest.mock("../../../src/infrastructure/database/prisma", () => {
         findUnique: jest.fn()
       },
       inventoryModel: {
-        aggregate: jest.fn()
+        aggregate: jest.fn(),
+        groupBy: jest.fn()
       },
       journalEntryModel: {
         findMany: jest.fn()
       },
       quickbooksJournalMappingModel: {
-        findUnique: jest.fn()
+        findUnique: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([])
       },
       xeroJournalMappingModel: {
-        findUnique: jest.fn()
+        findUnique: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([])
       },
       netsuiteJournalMappingModel: {
-        findUnique: jest.fn()
+        findUnique: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([])
       },
       auditDiscrepancyModel: {
-        findMany: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
         findFirst: jest.fn(),
         create: jest.fn(),
+        createMany: jest.fn(),
         update: jest.fn()
       }
     }
@@ -55,6 +60,7 @@ describe("Audit REST API Endpoints", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (prisma.inventoryModel.groupBy as jest.Mock).mockResolvedValue([]);
     // Initialize routes
     setupApp(new InMemoryInventoryRepository());
   });
@@ -113,11 +119,12 @@ describe("Audit REST API Endpoints", () => {
     expect(res.body.shopifyDiscrepancies).toBe(1);
     expect(res.body.accountingDiscrepancies).toBe(1);
 
-    expect(prisma.auditDiscrepancyModel.create).toHaveBeenCalledTimes(2);
+    expect(prisma.auditDiscrepancyModel.createMany).toHaveBeenCalledTimes(2);
   });
 
   it("should resolve discrepancy", async () => {
-    (prisma.auditDiscrepancyModel.findFirst as jest.Mock).mockResolvedValueOnce({
+    (prisma.auditDiscrepancyModel.findFirst as jest.Mock).mockReset();
+    (prisma.auditDiscrepancyModel.findFirst as jest.Mock).mockResolvedValue({
       id: "disc-1",
       tenantId: "tenant-1",
       type: "ACCOUNTING_JOURNAL_MISSING",
