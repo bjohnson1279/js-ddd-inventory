@@ -68,7 +68,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
 
   async findAll(): Promise<InventoryItem[]> {
     const records = await this.prisma.inventoryModel.findMany();
-    return records.map((record: { id: string; sku: string; locationId: string; quantity: number; allocated: number; inTransit: number; version: number }) => 
+    return records.map((record: { id: string; sku: string; locationId: string; quantity: number; allocated: number; inTransit: number; version: number }) =>
       InventoryItem.create(
         record.id,
         SKU.create(record.sku),
@@ -85,7 +85,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     const records = await this.prisma.inventoryModel.findMany({
       where: { locationId }
     });
-    return records.map((record: { id: string; sku: string; locationId: string; quantity: number; allocated: number; inTransit: number; version: number }) => 
+    return records.map((record: { id: string; sku: string; locationId: string; quantity: number; allocated: number; inTransit: number; version: number }) =>
       InventoryItem.create(
         record.id,
         SKU.create(record.sku),
@@ -186,72 +186,100 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     item.clearDomainEvents();
   }
 
-      async saveMany(items: InventoryItem[]): Promise<void> {
+  async saveMany(items: InventoryItem[]): Promise<void> {
     if (items.length === 0) return;
 
     if (this.outboxRepository) {
+      const existingItems = await this.prisma.inventoryModel.findMany({
+        where: { id: { in: items.map(i => i.id) } }
+      });
+      const existingIds = new Set(existingItems.map(e => e.id));
+
+      // Run bulk writes in parallel via Promise.all
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        // Upsert queries cannot be reliably parallelized inside interactive transactions if they lock identical indexes
-        for (const item of items) {
-          await tx.inventoryModel.upsert({
-            where: {
-              sku_locationId: {
+        await Promise.all(items.map(async (item) => {
+          const existing = existingIds.has(item.id);
+
+          if (!existing) {
+            await tx.inventoryModel.create({
+              data: {
+                id: item.id,
                 sku: item.sku.getValue(),
-                locationId: item.locationId
+                locationId: item.locationId,
+                quantity: item.quantity.getValue(),
+                allocated: item.allocated.getValue(),
+                inTransit: item.inTransit.getValue(),
+                version: item.version
               }
-            },
-            update: {
-              quantity: item.quantity.getValue(),
-              allocated: item.allocated.getValue(),
-              inTransit: item.inTransit.getValue(),
-              version: item.version
-            },
-            create: {
-              id: item.id,
-              sku: item.sku.getValue(),
-              locationId: item.locationId,
-              quantity: item.quantity.getValue(),
-              allocated: item.allocated.getValue(),
-              inTransit: item.inTransit.getValue(),
-              version: item.version
+            });
+          } else {
+            const result = await tx.inventoryModel.updateMany({
+              where: {
+                id: item.id,
+                version: item.version - 1
+              },
+              data: {
+                quantity: item.quantity.getValue(),
+                allocated: item.allocated.getValue(),
+                inTransit: item.inTransit.getValue(),
+                version: item.version
+              }
+            });
+
+            if (result.count === 0) {
+              throw new ConcurrencyException(item.sku.getValue(), item.locationId);
             }
-          });
+          }
 
           const events = item.getDomainEvents();
           for (const event of events) {
             await this.outboxRepository!.save(event, tx);
           }
           item.clearDomainEvents();
-        }
+        }));
       });
     } else {
+      const existingItems = await this.prisma.inventoryModel.findMany({
+        where: { id: { in: items.map(i => i.id) } }
+      });
+      const existingIds = new Set(existingItems.map(e => e.id));
+
+      // Run bulk writes in parallel via Promise.all
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        const itemOperations = items.map(item =>
-          tx.inventoryModel.upsert({
-            where: {
-              sku_locationId: {
+        await Promise.all(items.map(async (item) => {
+          const existing = existingIds.has(item.id);
+
+          if (!existing) {
+            await tx.inventoryModel.create({
+              data: {
+                id: item.id,
                 sku: item.sku.getValue(),
-                locationId: item.locationId
+                locationId: item.locationId,
+                quantity: item.quantity.getValue(),
+                allocated: item.allocated.getValue(),
+                inTransit: item.inTransit.getValue(),
+                version: item.version
               }
-            },
-            update: {
-              quantity: item.quantity.getValue(),
-              allocated: item.allocated.getValue(),
-              inTransit: item.inTransit.getValue(),
-              version: item.version
-            },
-            create: {
-              id: item.id,
-              sku: item.sku.getValue(),
-              locationId: item.locationId,
-              quantity: item.quantity.getValue(),
-              allocated: item.allocated.getValue(),
-              inTransit: item.inTransit.getValue(),
-              version: item.version
+            });
+          } else {
+            const result = await tx.inventoryModel.updateMany({
+              where: {
+                id: item.id,
+                version: item.version - 1
+              },
+              data: {
+                quantity: item.quantity.getValue(),
+                allocated: item.allocated.getValue(),
+                inTransit: item.inTransit.getValue(),
+                version: item.version
+              }
+            });
+
+            if (result.count === 0) {
+              throw new ConcurrencyException(item.sku.getValue(), item.locationId);
             }
-          })
-        );
-        await Promise.all(itemOperations);
+          }
+        }));
       });
 
       const allEvents = items.flatMap(item => {

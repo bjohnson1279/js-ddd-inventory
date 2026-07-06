@@ -2,19 +2,16 @@ import { PrismaBarcodeRepository } from "../../../src/infrastructure/database/Pr
 import { PrismaSerializedItemRepository } from "../../../src/infrastructure/database/PrismaSerializedItemRepository";
 import { PrismaCostLayerRepository } from "../../../src/infrastructure/database/PrismaCostLayerRepository";
 import { PrismaJournalRepository } from "../../../src/infrastructure/database/PrismaJournalRepository";
-import { prisma as sharedPrisma } from "../../../src/infrastructure/database/prisma";
+import { prisma as sharedPrisma, pool } from "../../../src/infrastructure/database/prisma";
 
 import { VariantBarcodeSet } from "../../../src/domain/barcode/aggregates/VariantBarcodeSet";
 import { Barcode } from "../../../src/domain/barcode/valueObjects/Barcode";
 import { BarcodeSymbology } from "../../../src/domain/barcode/enums/BarcodeSymbology";
 import { BarcodeSource } from "../../../src/domain/barcode/enums/BarcodeSource";
-
 import { SerializedItem } from "../../../src/domain/serial/aggregates/SerializedItem";
 import { SerialNumber } from "../../../src/domain/serial/valueObjects/SerialNumber";
 import { SerializedItemStatus } from "../../../src/domain/serial/enums/SerializedItemStatus";
-
 import { InventoryCostLayer } from "../../../src/domain/accounting/entities/InventoryCostLayer";
-
 import { JournalEntry } from "../../../src/domain/accounting/aggregates/JournalEntry";
 import { AccountCode } from "../../../src/domain/accounting/valueObjects/AccountCode";
 import { AccountingMethod } from "../../../src/domain/accounting/enums/AccountingMethod";
@@ -26,6 +23,11 @@ describe("Prisma Repositories Integration Tests", () => {
   let serialRepo: PrismaSerializedItemRepository;
   let costLayerRepo: PrismaCostLayerRepository;
   let journalRepo: PrismaJournalRepository;
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+    await pool.end();
+  });
 
   beforeAll(async () => {
     barcodeRepo = new PrismaBarcodeRepository();

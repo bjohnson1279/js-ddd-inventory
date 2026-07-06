@@ -30,7 +30,8 @@ export class PurchaseOrderController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -50,7 +51,8 @@ export class PurchaseOrderController {
       res.status(200).json({ message: "Purchase order approved successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -70,7 +72,8 @@ export class PurchaseOrderController {
       res.status(200).json({ message: "Purchase order sent to vendor successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -93,7 +96,8 @@ export class PurchaseOrderController {
       res.status(200).json({ message: "Items received successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

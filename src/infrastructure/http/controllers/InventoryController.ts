@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { ReceiveStock } from "../../../application/useCases/ReceiveStock";
 import { DispatchStock } from "../../../application/useCases/DispatchStock";
-import { GetStockLevel } from "../../../application/useCases/GetStockLevel";
 import { PerformFullStoreCount } from "../../../application/useCases/PerformFullStoreCount";
 import { AllocateStock } from "../../../application/useCases/AllocateStock";
 import { ReleaseAllocation } from "../../../application/useCases/ReleaseAllocation";
@@ -19,6 +18,15 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId, unitCostCents, lotNumber, expirationDate, tenantId, purchaseOrderId } = req.body;
+      if (!sku || typeof sku !== 'string' || sku.trim() === '') {
+        return res.status(400).json({ error: "Invalid or missing sku" });
+      }
+      if (amount == null || typeof amount !== 'number' || amount <= 0 || !Number.isInteger(amount)) {
+        return res.status(400).json({ error: "Invalid or missing amount" });
+      }
+      if (locationId && typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Invalid locationId" });
+      }
       const capacityService = req.app.get("wmsCapacityService");
       const productRepository = req.app.get("productRepository");
       const costLayerRepository = req.app.get("costLayerRepository");
@@ -36,7 +44,8 @@ export class InventoryController {
       res.status(200).json({ message: "Stock received successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -48,6 +57,15 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId, lotNumber } = req.body;
+      if (!sku || typeof sku !== 'string' || sku.trim() === '') {
+        return res.status(400).json({ error: "Invalid or missing sku" });
+      }
+      if (amount == null || typeof amount !== 'number' || amount <= 0 || !Number.isInteger(amount)) {
+        return res.status(400).json({ error: "Invalid or missing amount" });
+      }
+      if (locationId && typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Invalid locationId" });
+      }
       const reorderPolicyService = req.app.get("reorderPolicyService");
       const dispatchRecordRepository = req.app.get("dispatchRecordRepository");
       const productRepository = req.app.get("productRepository");
@@ -64,7 +82,8 @@ export class InventoryController {
       res.status(200).json({ message: "Stock dispatched successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -76,7 +95,10 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku } = req.params;
-      const locationId = (req.query.locationId as string) || "default";
+      if (req.query.locationId !== undefined && typeof req.query.locationId !== "string") {
+        return res.status(400).json({ error: "Invalid locationId parameter" });
+      }
+      const locationId = req.query.locationId ? (req.query.locationId as string).trim() : "default";
 
       const skuObj = SKU.create(sku);
       const item = await repository.findBySku(skuObj, locationId);
@@ -95,7 +117,8 @@ export class InventoryController {
       res.status(200).json(responseBody);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -108,16 +131,29 @@ export class InventoryController {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { counts, locationId } = req.body;
       if (!Array.isArray(counts)) {
-        return res
-          .status(400)
-          .json({ error: "Expected 'counts' to be an array" });
+        return res.status(400).json({ error: "Expected 'counts' to be an array" });
       }
+
+      // Validate counts array items
+      for (const count of counts) {
+        if (!count.sku || typeof count.sku !== 'string' || count.sku.trim() === '') {
+          return res.status(400).json({ error: "Invalid sku in counts array" });
+        }
+        if (count.count == null || typeof count.count !== 'number' || count.count < 0 || !Number.isInteger(count.count)) {
+          return res.status(400).json({ error: "Invalid quantity in counts array" });
+        }
+      }
+      if (locationId && typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Invalid locationId" });
+      }
+
       const performFullStoreCount = new PerformFullStoreCount(repository);
       await performFullStoreCount.execute(counts, locationId);
       res.status(200).json({ message: "Store count performed successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -154,7 +190,8 @@ export class InventoryController {
       res.status(200).json({ message: "Stock allocated successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -171,7 +208,8 @@ export class InventoryController {
       res.status(200).json({ message: "Allocation released successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -188,7 +226,8 @@ export class InventoryController {
       res.status(200).json({ message: "Allocation fulfilled successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -205,7 +244,8 @@ export class InventoryController {
       res.status(200).json({ message: "In-transit stock created successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -222,7 +262,8 @@ export class InventoryController {
       res.status(200).json({ message: "In-transit stock received successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -240,13 +281,30 @@ export class InventoryController {
         return res.status(400).json({ error: "SKU and quantity are required query parameters" });
       }
 
+      if (typeof sku !== "string" || typeof quantity !== "string") {
+        return res.status(400).json({ error: "Invalid query parameters" });
+      }
+
+      const parsedQuantity = parseInt(quantity.trim(), 10);
+      if (isNaN(parsedQuantity) || parsedQuantity <= 0) {
+        return res.status(400).json({ error: "Invalid quantity parameter" });
+      }
+
       const useCase = new SuggestFefoPicking(productRepository, costLayerRepository);
-      const suggestions = await useCase.execute(sku as string, parseInt(quantity as string, 10));
+      const suggestions = await useCase.execute(sku.trim(), parsedQuantity);
 
       res.status(200).json(suggestions);
     } catch (error: any) {
-      if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+      const isDomainOrExpectedError = error instanceof DomainException || 
+        (error.message && (
+          error.message.includes("No lot-controlled inventory layers") ||
+          error.message.includes("Product variant with SKU") ||
+          error.message.includes("Insufficient lot-controlled inventory")
+        ));
+
+      if (isDomainOrExpectedError) {
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name || "Error" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -269,7 +327,8 @@ export class InventoryController {
       res.status(200).json(dispatches);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

@@ -53,7 +53,7 @@ export class ReceiveStock {
       if (!product) {
         throw new Error(`Product with SKU ${skuStr} not found.`);
       }
-      const variant = product.variants.find((v) => v.sku.getValue() === skuStr);
+      const variant = product.findVariantBySku(skuStr);
       if (!variant) {
         throw new Error(`Variant with SKU ${skuStr} not found.`);
       }

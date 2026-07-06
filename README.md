@@ -12,8 +12,9 @@ An Express.js API for a retail inventory system built using Domain-Driven Design
 
 ## Prerequisites
 
-- Node.js (v18+)
+- Node.js (v20+)
 - npm
+- PostgreSQL 16 with TimescaleDB Extension (local instance or Docker container)
 
 ## Setup Instructions
 
@@ -35,12 +36,13 @@ An Express.js API for a retail inventory system built using Domain-Driven Design
    npm run build
    ```
 
-4. **Run the application (In-Memory)**:
+4. **Run the application**:
    ```bash
+   # Make sure to copy .env.example to .env and configure DATABASE_URL
    npm run dev
    ```
 
-### Docker Setup (with PostgreSQL)
+### Docker Setup (with TimescaleDB)
 
 The easiest way to run the application with a persistent database and the setup web app is using Docker Compose.
 
@@ -50,9 +52,11 @@ The easiest way to run the application with a persistent database and the setup 
    ```
 
 This will start:
-- A PostgreSQL 16 database container.
+- A TimescaleDB PostgreSQL 16 database container (`timescale/timescaledb:latest-pg16`).
 - The inventory application container (API) on port `5000`.
 - The **Inventory Setup Web App** on port `3080`.
+
+During server startup, the database wrapper automatically enables the `timescaledb` extension and converts the `dispatch_records` table to a hypertable partitioned by `dispatched_at`.
 
 ### Initial Inventory Setup
 

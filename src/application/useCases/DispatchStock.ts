@@ -41,7 +41,7 @@ export class DispatchStock {
     if (this.costLayerRepository && this.productRepository) {
       const product = await this.productRepository.findBySku(sku);
       if (product) {
-        const variant = product.variants.find((v) => v.sku.getValue() === skuStr);
+        const variant = product.findVariantBySku(skuStr);
         if (variant) {
           const activeLayers = await this.costLayerRepository.getActiveLayers(variant.id, "expiration_date ASC");
           const targetLayers = lotNumber

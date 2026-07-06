@@ -116,7 +116,7 @@ export class PostgresInventoryRepository implements IInventoryRepository {
       ]);
     } else {
       const query = `
-        UPDATE inventory_items 
+        UPDATE inventory_items
         SET quantity = $1, allocated = $2, in_transit = $3, version = $4, shopify_inventory_item_id = $5
         WHERE id = $6 AND version = $7
       `;
@@ -139,9 +139,23 @@ export class PostgresInventoryRepository implements IInventoryRepository {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
+
+      const itemIds = items.map(item => item.id);
+      let existingVersions = new Map<string, number>();
+
+      if (itemIds.length > 0) {
+        const existingRes = await client.query(
+          'SELECT id, version FROM inventory_items WHERE id = ANY($1)',
+          [itemIds]
+        );
+        for (const row of existingRes.rows) {
+          existingVersions.set(row.id, row.version);
+        }
+      }
+
       for (const item of items) {
-        const existingRes = await client.query('SELECT version FROM inventory_items WHERE id = $1', [item.id]);
-        if (existingRes.rows.length === 0) {
+        const existingVersion = existingVersions.get(item.id);
+        if (existingVersion === undefined) {
           const query = `
             INSERT INTO inventory_items (id, sku, location_id, quantity, allocated, in_transit, version, shopify_inventory_item_id)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -158,7 +172,7 @@ export class PostgresInventoryRepository implements IInventoryRepository {
           ]);
         } else {
           const query = `
-            UPDATE inventory_items 
+            UPDATE inventory_items
             SET quantity = $1, allocated = $2, in_transit = $3, version = $4, shopify_inventory_item_id = $5
             WHERE id = $6 AND version = $7
           `;

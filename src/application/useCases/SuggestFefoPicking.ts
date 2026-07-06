@@ -26,13 +26,13 @@ export class SuggestFefoPicking {
       throw new Error(`Product variant with SKU ${skuStr} not found.`);
     }
 
-    const variant = product.variants.find((v) => v.sku.getValue() === skuStr);
+    const variant = product.findVariantBySku(skuStr);
     if (!variant) {
       throw new Error(`Product variant with SKU ${skuStr} not found.`);
     }
 
     // Get active layers sorted by expiration date (FEFO)
-    const activeLayers = await this.costLayerRepository.getActiveLayers(variant.id, "expiration");
+    const activeLayers = await this.costLayerRepository.getActiveLayers(variant.id, "expiration_date ASC");
     const lotLayers = activeLayers.filter((l) => l.lotNumber !== null && l.lotNumber !== undefined);
 
     if (lotLayers.length === 0) {

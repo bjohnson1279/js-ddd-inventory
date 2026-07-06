@@ -55,10 +55,8 @@ describe("InventoryItem Aggregate", () => {
   it("should compute available stock (ATP) dynamically", () => {
     const item = InventoryItem.create("123", sku, initialQuantity);
     expect(item.available.getValue()).toBe(10);
-    
     item.allocateStock(Quantity.create(4));
     expect(item.available.getValue()).toBe(6);
-    
     item.createInTransit(Quantity.create(5));
     expect(item.available.getValue()).toBe(11);
   });

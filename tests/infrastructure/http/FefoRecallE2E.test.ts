@@ -1,4 +1,3 @@
-process.env.JWT_SECRET = "test-secret-key";
 process.env.NODE_ENV = "test";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 process.env.JWT_SECRET = "dummy_jwt_secret";
@@ -121,7 +120,6 @@ describe("FEFO and Recall E2E Integration Tests", () => {
         expirationDate: expiryC.toISOString()
       });
 
-    await new Promise(r => setTimeout(r, 100));
     // 3. Request FEFO picking suggestions for 20 units
     // Expected pick:
     // First 15 units from Lot B (expires first)

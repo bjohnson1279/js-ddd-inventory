@@ -56,10 +56,13 @@ export class ReceiveRMA {
       throw new Error(`Tenant config not found for tenant ${rma.tenantId}.`);
     }
 
+    // Optimization: Index RMA items by variantId to prevent O(N*M) nested lookups
+    const rmaItemsMap = new Map(rma.items.map((i) => [i.variantId, i]));
+
     // Optimization: Replaced sequential `for...of` loop with `Promise.all` mapping to process independent
     // RMA items concurrently. This dramatically reduces total processing time for multi-item returns, resolving N+1 wait times.
     await Promise.all(dto.items.map(async (item) => {
-      const rmaItem = rma.items.find((i) => i.variantId === item.variantId);
+      const rmaItem = rmaItemsMap.get(item.variantId);
       if (!rmaItem) {
         throw new Error(`Item with variant ID ${item.variantId} not found in RMA ${rma.rmaNumber}.`);
       }

@@ -55,6 +55,11 @@ export class PrismaReorderPolicyRepository implements IReorderPolicyRepository {
     });
   }
 
+  async findAllByLocation(locationId: string): Promise<ReorderPolicy[]> {
+    const records = await this.prisma.reorderPolicyModel.findMany({ where: { locationId } });
+    return records.map(record => this.mapToDomain(record));
+  }
+
   async findAll(): Promise<ReorderPolicy[]> {
     const records = await this.prisma.reorderPolicyModel.findMany();
     return records.map(record => this.mapToDomain(record));
