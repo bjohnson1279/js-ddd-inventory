@@ -137,3 +137,7 @@
 **Vulnerability:** The application was not explicitly validating that `req.query` parameters were strings, potentially allowing HTTP Parameter Pollution (HPP) by passing arrays or objects, which could cause application crashes or bypass certain logic.
 **Learning:** This is a medium priority vulnerability that could lead to unexpected behavior when `req.query` objects are passed directly to `prisma.$queryRaw` or similar methods.
 **Prevention:** Always validate that `req.query` values are of the expected primitive type (`typeof parameter === "string"`) before processing them in controllers.
+## 2026-07-06 - [Fix Information Disclosure in BarcodeController]
+**Vulnerability:** The application was exposing `error.message` for `DomainException` instances directly in `res.status(404)` responses in `BarcodeController.ts`.
+**Learning:** Even though `DomainException` signifies validated domain logic errors, exposing its dynamic message can leak internal state (like exact inventory numbers or specific failure reasons) to the client, constituting Information Disclosure.
+**Prevention:** Always map domain exception details to a generic, static safe string (e.g., 'Not registered') in the HTTP response, while ensuring the original error details are securely logged server-side (`console.error`) for troubleshooting.
