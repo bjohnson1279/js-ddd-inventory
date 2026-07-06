@@ -832,7 +832,7 @@ function App() {
                   </select>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                  <button className="btn btn-secondary" onClick={() => handleQuickRestock(valSku, 10)} disabled={!valSku} aria-disabled={!valSku} title={!valSku ? "Select a SKU first" : "Receive 10 units"} aria-label={!valSku ? "Select a SKU first" : "Receive 10 units"}>
+                  <button className="btn btn-secondary" onClick={() => handleQuickRestock(valSku, 10)} disabled={!valSku} aria-disabled={!valSku} aria-label={!valSku ? "Select a SKU first" : `Receive 10 units of ${valSku}`} title={!valSku ? "Select a SKU first" : `Receive 10 units of ${valSku}`}>
                     + Receive 10 Units
                   </button>
                   <button
@@ -840,7 +840,7 @@ function App() {
                     disabled={!valSku || (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0}
                     aria-disabled={!valSku || (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0}
                     title={!valSku ? "Select a SKU first" : (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0 ? "Insufficient stock" : "Dispatch 1 unit"}
-                    aria-label={!valSku ? "Select a SKU first" : (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0 ? "Insufficient stock" : "Dispatch 1 unit"}
+                    aria-label={!valSku ? "Select a SKU first" : (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0 ? "Insufficient stock" : `Dispatch 1 unit of ${valSku}`}
                     onClick={async () => {
                       const res = await fetch(`${API_BASE}/inventory/dispatch`, {
                         method: "POST",
@@ -2823,7 +2823,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                 <div style={{ display: "flex", gap: "8px", marginTop: "5px" }}>
                   <button
                     type="button"
-                    aria-label="Cancel current scan operation"
+                    aria-label="Cancel current scan operation" title="Cancel current scan operation"
                     onClick={() => {
                       setResolvedItem(null);
                       setScanValue("");
@@ -2935,7 +2935,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
 
                     <button
                       type="button"
-                      onClick={handleSubmitCycleCount}
+                      onClick={handleSubmitCycleCount} aria-label="Reconcile Cycle Count" title="Reconcile Cycle Count"
                       style={{
                         padding: "10px",
                         background: "var(--accent-gradient)",
@@ -3026,6 +3026,8 @@ function OutboxTab() {
   const [dlqEvents, setDlqEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [outboxActionMsg, setOutboxActionMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
 
   const fetchStatsAndDlq = async () => {
     try {
@@ -3054,13 +3056,17 @@ function OutboxTab() {
   }, []);
 
   const handleRetry = async (id: string) => {
+    setRetryingId(id);
+    setOutboxActionMsg(null);
     try {
       const res = await fetch(`/api/outbox/${id}/retry`, { method: "POST" });
       if (!res.ok) throw new Error("Failed to retry event");
-      alert("Event re-enqueued successfully!");
+      setOutboxActionMsg({ type: "success", text: `Event ${id.substring(0, 8)}... re-enqueued successfully!` });
       fetchStatsAndDlq();
     } catch (err: any) {
-      alert(`Error retrying event: ${err.message}`);
+      setOutboxActionMsg({ type: "error", text: `Error retrying event: ${err.message}` });
+    } finally {
+      setRetryingId(null);
     }
   };
 
@@ -3079,10 +3085,13 @@ function OutboxTab() {
       </div>
 
       {error && (
-
         <div role="status" aria-live="polite" style={{ padding: "12px", background: "rgba(220, 53, 69, 0.1)", border: "1px solid rgba(220, 53, 69, 0.2)", borderRadius: "6px", color: "#ea868f", marginBottom: "20px" }}>
-
           <strong>Error:</strong> {error}
+        </div>
+      )}
+      {outboxActionMsg && (
+        <div role="status" aria-live="polite" style={{ padding: "12px", background: outboxActionMsg.type === "success" ? "rgba(52, 211, 153, 0.15)" : "rgba(248, 113, 113, 0.15)", border: outboxActionMsg.type === "success" ? "1px solid rgba(52, 211, 153, 0.3)" : "1px solid rgba(248, 113, 113, 0.3)", borderRadius: "6px", color: outboxActionMsg.type === "success" ? "#34d399" : "#f87171", marginBottom: "20px" }}>
+          {outboxActionMsg.text}
         </div>
       )}
 
@@ -3150,8 +3159,15 @@ function OutboxTab() {
                           {new Date(event.occurredOn).toLocaleString()}
                         </td>
                         <td>
-                          <button className="btn btn-primary btn-sm" onClick={() => handleRetry(event.id)} aria-label={`Retry event ${event.id}`} title="Retry Event">
-                            Retry Event
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handleRetry(event.id)}
+                            disabled={retryingId === event.id}
+                            aria-busy={retryingId === event.id}
+                            title={retryingId === event.id ? "Retrying event..." : "Retry Event"}
+                            aria-label={retryingId === event.id ? "Retrying event..." : `Retry event ${event.id.substring(0, 8)}`}
+                          >
+                            {retryingId === event.id ? "⏳ Retrying..." : "Retry Event"}
                           </button>
                         </td>
                       </tr>

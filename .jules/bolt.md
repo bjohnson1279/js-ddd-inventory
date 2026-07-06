@@ -122,3 +122,18 @@
 ## 2026-06-26 - O(N*M) Lookup Optimization
 **Learning:** Found a critical performance bottleneck in `ReceivePurchaseOrder.ts` where an array `.find()` operation was nested inside an asynchronous `.map()` loop iterating over DTO items ($O(N \times M)$ complexity).
 **Action:** When mapping over items and searching another array, always pre-compute a `Map` of the target array keyed by its unique identifier (e.g., `variantId`) outside the loop to reduce the lookup to $O(1)$. Do not attempt to merge the input payload if uniqueness isn't strictly guaranteed by the business logic.
+
+## 2026-06-28 - O(N*M) Lookup Optimization in GetDemandPlanningReport
+**Learning:** Found an O(N*M) lookup bottleneck in `GetDemandPlanningReport.ts` where an array `.find()` operation to search for forecasts was nested inside an asynchronous `.map()` loop iterating over inventory items.
+**Action:** When mapping over items and searching another array, always pre-compute a `Map` of the target array keyed by its unique identifier (e.g., `sku`) outside the loop to reduce the lookup to O(1).
+
+## 2026-06-29 - O(N) Array Allocation Optimization in Variant Lookups
+**Learning:** Found an $O(N)$ memory allocation bottleneck in multiple use cases where looking up a product variant by SKU required iterating through `Product` variants via a getter that executed `Array.from(this._variants.values())`. This creates a new array allocation on every lookup, adding unnecessary GC pressure in bulk operations.
+**Action:** When a domain aggregate exposes internal state (like a `Map`) via a getter that allocates a new array, do not use array methods (like `.find()`) on the getter if called repeatedly. Instead, implement a dedicated lookup method on the aggregate (e.g., `findVariantBySku`) that iterates the internal data structure directly to achieve $O(1)$ allocation overhead.
+## 2026-06-30 - Optimize Find Operation Array Mapping
+**Learning:** In `ReceiveRMA.ts`, the `dto.items.map` loop performed a linear search (`.find()`) on `rma.items` for every item, leading to a nested loop $O(N \times M)$ performance bottleneck. Additionally, `PutawaySuggester.ts` needlessly mapped an array of locations sequentially in memory instead of tracking an index, resulting in poor spatial allocation.
+**Action:** When mapping over items and searching another array, pre-compute a `Map` of the target array keyed by its unique identifier (e.g., `variantId`) outside the loop to reduce the lookup to $O(1)$, minimizing complexity to $O(N + M)$. Furthermore, replace grouped item lookup maps with index-based reverse-mapping when summing properties to avoid unnecessary object allocation and traversal.
+
+## 2026-07-03 - O(N) Array Allocation Optimization in ReorderPolicy Lookups
+**Learning:** Found a performance bottleneck in `GetDemandPlanningReport.ts` where fetching the reorder policy inside an asynchronous `.map()` loop iterated over inventory items and called `this.reorderPolicyRepository.findBySkuAndLocation`, causing an N+1 query issue for database-backed repositories and an $O(N)$ lookup in memory-backed repositories.
+**Action:** When mapping over items and repeatedly fetching the same type of configuration per item (like reorder policies), fetch all relevant configurations (e.g. by location) upfront and pre-compute a `Map` keyed by their unique identifier (e.g., `sku`) outside the loop to reduce the internal lookup to $O(1)$. Also, avoid $O(N)$ mapping overhead by replacing array mappings like `const poItemsMap = new Map(po.items.map((i) => [i.variantId, i]));` and subsequent `.get()` lookups with dedicated aggregate lookup methods (e.g., `po.findItemByVariantId(item.variantId)`) that return directly from the aggregate.

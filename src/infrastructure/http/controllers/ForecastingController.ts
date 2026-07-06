@@ -93,17 +93,21 @@ export class ForecastingController {
       const { prisma } = require("../../database/prisma");
       const sku = req.query.sku as string;
       
-      const query = sku 
-        ? `SELECT bucket::text, sku, "locationId", total_dispatched as "totalDispatched", dispatch_count as "dispatchCount"
+      if (sku !== undefined && typeof sku !== "string") {
+        return res.status(400).json({ error: "Invalid sku parameter" });
+      }
+
+      let results;
+      if (sku) {
+        results = await prisma.$queryRaw`SELECT bucket::text, sku, "locationId", total_dispatched as "totalDispatched", dispatch_count as "dispatchCount"
            FROM daily_dispatch_summary
-           WHERE sku = $1
-           ORDER BY bucket DESC`
-        : `SELECT bucket::text, sku, "locationId", total_dispatched as "totalDispatched", dispatch_count as "dispatchCount"
+           WHERE sku = ${sku}
+           ORDER BY bucket DESC`;
+      } else {
+        results = await prisma.$queryRaw`SELECT bucket::text, sku, "locationId", total_dispatched as "totalDispatched", dispatch_count as "dispatchCount"
            FROM daily_dispatch_summary
            ORDER BY bucket DESC`;
-      
-      const params = sku ? [sku] : [];
-      const results = await prisma.$queryRawUnsafe(query, ...params);
+      }
       
       res.status(200).json(results);
     } catch (error: any) {

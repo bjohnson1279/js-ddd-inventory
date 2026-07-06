@@ -8,6 +8,7 @@ import { PrismaSerializedItemRepository } from "./infrastructure/database/Prisma
 import { PrismaCostLayerRepository } from "./infrastructure/database/PrismaCostLayerRepository";
 import { PrismaJournalRepository } from "./infrastructure/database/PrismaJournalRepository";
 import { prisma } from "./infrastructure/database/prisma";
+import { enableRowLevelSecurity } from "./infrastructure/database/rls";
 import { PostgresInventoryRepository } from "./infrastructure/database/PostgresInventoryRepository";
 import { IInventoryRepository } from "./domain/repositories/IInventoryRepository";
 import inventoryRoutes from "./infrastructure/http/routes/inventory.routes";
@@ -214,24 +215,24 @@ const start = async () => {
 
   // Run TimescaleDB migration query when connecting to Postgres
   try {
-    await prisma.$executeRawUnsafe(`CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;`);
+    await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;`;
     console.log("TimescaleDB extension enabled.");
     
-    const isHypertable = await prisma.$queryRawUnsafe(`
+    const isHypertable = await prisma.$queryRaw`
       SELECT 1 FROM timescaledb_information.hypertables 
       WHERE hypertable_name = 'dispatch_records'
-    `);
+    `;
     if ((isHypertable as any[]).length === 0) {
-      await prisma.$executeRawUnsafe(`SELECT create_hypertable('dispatch_records', 'dispatched_at', if_not_exists => TRUE);`);
+      await prisma.$executeRaw`SELECT create_hypertable('dispatch_records', 'dispatched_at', if_not_exists => TRUE);`;
       console.log("dispatch_records table converted to TimescaleDB hypertable.");
     }
 
-    const isView = await prisma.$queryRawUnsafe(`
+    const isView = await prisma.$queryRaw`
       SELECT 1 FROM pg_matviews 
       WHERE matviewname = 'daily_dispatch_summary'
-    `);
+    `;
     if ((isView as any[]).length === 0) {
-      await prisma.$executeRawUnsafe(`
+      await prisma.$executeRaw`
         CREATE MATERIALIZED VIEW daily_dispatch_summary
         WITH (timescaledb.continuous) AS
         SELECT 
@@ -242,22 +243,25 @@ const start = async () => {
           count(*) as dispatch_count
         FROM dispatch_records
         GROUP BY bucket, sku, "locationId";
-      `);
+      `;
       try {
-        await prisma.$executeRawUnsafe(`
+        await prisma.$executeRaw`
           SELECT add_continuous_aggregate_policy('daily_dispatch_summary',
             start_offset => INTERVAL '1 month',
             end_offset => INTERVAL '1 hour',
             schedule_interval => INTERVAL '1 hour',
             if_not_exists => TRUE);
-        `);
+        `;
       } catch (policyErr: any) {
         console.log("TimescaleDB aggregate policy setup warning:", policyErr.message);
       }
       console.log("daily_dispatch_summary continuous aggregate created.");
     }
+    
+    // Set up PostgreSQL Row-Level Security (RLS) policies
+    await enableRowLevelSecurity(prisma);
   } catch (e) {
-    console.log("TimescaleDB setup skipped/warning:", (e as Error).message);
+    console.log("Database/TimescaleDB setup skipped/warning:", (e as Error).message);
   }
 
   if (process.env.DB_HOST) {
@@ -328,8 +332,10 @@ const start = async () => {
     productRepo
   );
 
-  const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);
-  outboxProcessor.start(3000);
+  if (process.env.DISABLE_WORKERS !== "true") {
+    const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);
+    outboxProcessor.start(3000);
+  }
 
   const server = app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
