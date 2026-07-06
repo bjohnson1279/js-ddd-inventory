@@ -25,4 +25,17 @@ describe("StockOnboarding", () => {
       onboarding.submit();
     }).toThrow();
   });
+
+  it("should enforce draft state validation", () => {
+    const onboarding = new StockOnboarding("ob-state-test", "loc-1", new Date());
+
+    // Change the aggregate status from Draft to something else
+    onboarding.setItem("item-1", 10, 100);
+    onboarding.submit();
+
+    // Call a method that asserts draft state and verify it throws
+    expect(() => {
+      onboarding.setItem("item-2", 5, 50);
+    }).toThrow(Error);
+  });
 });

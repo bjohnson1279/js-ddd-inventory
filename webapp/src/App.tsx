@@ -197,6 +197,7 @@ function App() {
   const [scanValue, setScanValue] = useState("");
   const [scanContext, setScanContext] = useState("pos");
   const [scanOutput, setScanOutput] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
   const [barcodeMsg, setBarcodeMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [barcodeSearch, setBarcodeSearch] = useState("");
 
@@ -209,6 +210,8 @@ function App() {
   const [serialActor, setSerialActor] = useState("admin-1");
   const [serialRefId, setSerialRefId] = useState("PO-202");
   const [serialMsg, setSerialMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [isRegisteringSerial, setIsRegisteringSerial] = useState(false);
+  const [isSerialLifecycleAction, setIsSerialLifecycleAction] = useState<"receive" | "sell" | "return" | "restock" | null>(null);
   const [serialSearch, setSerialSearch] = useState("");
 
   // Kit State
@@ -436,6 +439,7 @@ function App() {
   const handleBarcodeScan = async () => {
     setScanOutput(null);
     if (!scanValue) return;
+    setIsScanning(true);
     try {
       const res = await fetch(`${API_BASE}/barcodes/scan`, {
         method: "POST",
@@ -467,12 +471,15 @@ function App() {
       }
     } catch (err) {
       setScanOutput(JSON.stringify({ error: "Express backend API connection failed." }, null, 2));
+    } finally {
+      setIsScanning(false);
     }
   };
 
   const handleRegisterSerial = async (e: React.FormEvent) => {
     e.preventDefault();
     setSerialMsg(null);
+    setIsRegisteringSerial(true);
     try {
       const res = await fetch(`${API_BASE}/serials/register`, {
         method: "POST",
@@ -496,6 +503,8 @@ function App() {
       }
     } catch (err) {
       setSerialMsg({ type: "error", text: "API connection error." });
+    } finally {
+      setIsRegisteringSerial(false);
     }
   };
 
@@ -505,6 +514,7 @@ function App() {
       setSerialMsg({ type: "error", text: "Please query or enter a Serial Number first." });
       return;
     }
+    setIsSerialLifecycleAction(action);
     try {
       const payload: any = {
         serialNumber: serialQuery,
@@ -535,6 +545,8 @@ function App() {
       }
     } catch (err) {
       setSerialMsg({ type: "error", text: "API connection failure." });
+    } finally {
+      setIsSerialLifecycleAction(null);
     }
   };
 
@@ -820,13 +832,15 @@ function App() {
                   </select>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                  <button className="btn btn-secondary" onClick={() => handleQuickRestock(valSku, 10)}>
+                  <button className="btn btn-secondary" onClick={() => handleQuickRestock(valSku, 10)} disabled={!valSku} aria-disabled={!valSku} aria-label={!valSku ? "Select a SKU first" : `Receive 10 units of ${valSku}`} title={!valSku ? "Select a SKU first" : `Receive 10 units of ${valSku}`}>
                     + Receive 10 Units
                   </button>
                   <button
                     className="btn btn-danger"
                     disabled={!valSku || (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0}
+                    aria-disabled={!valSku || (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0}
                     title={!valSku ? "Select a SKU first" : (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0 ? "Insufficient stock" : "Dispatch 1 unit"}
+                    aria-label={!valSku ? "Select a SKU first" : (inventoryList.find(i => i.sku === valSku)?.quantity || 0) <= 0 ? "Insufficient stock" : `Dispatch 1 unit of ${valSku}`}
                     onClick={async () => {
                       const res = await fetch(`${API_BASE}/inventory/dispatch`, {
                         method: "POST",
@@ -919,12 +933,12 @@ function App() {
           <form onSubmit={handleOnboardingSubmit}>
             <div className="form-grid-2">
               <div className="form-group">
-                <label>Location ID</label>
-                <input className="form-control" type="text" value={locationId} onChange={(e) => setLocationId(e.target.value)} required />
+                <label htmlFor="location-id">Location ID</label>
+                <input id="location-id" className="form-control" type="text" value={locationId} onChange={(e) => setLocationId(e.target.value)} required />
               </div>
               <div className="form-group">
-                <label>Opening Costing Date</label>
-                <input className="form-control" type="date" value={asOfDate} onChange={(e) => setAsOfDate(e.target.value)} required />
+                <label htmlFor="as-of-date">Opening Costing Date</label>
+                <input id="as-of-date" className="form-control" type="date" value={asOfDate} onChange={(e) => setAsOfDate(e.target.value)} required />
               </div>
             </div>
 
@@ -1063,9 +1077,10 @@ function App() {
               </div>
 
               <div className="form-group" style={{ marginBottom: "15px" }}>
-                <label>Barcode ID Value</label>
+                <label htmlFor="barcode-id-value">Barcode ID Value</label>
                 <div style={{ display: "flex", gap: "10px" }}>
                   <input
+                    id="barcode-id-value"
                     className="form-control"
                     style={{ flex: 1 }}
                     type="text"
@@ -1187,8 +1202,9 @@ function App() {
 
               <div className="form-grid-2" style={{ marginBottom: "15px" }}>
                 <div className="form-group">
-                  <label>Barcode String</label>
+                  <label htmlFor="barcode-string">Barcode String</label>
                   <input
+                    id="barcode-string"
                     className="form-control"
                     type="text"
                     placeholder="Enter or select barcode from table"
@@ -1207,8 +1223,8 @@ function App() {
                 </div>
               </div>
 
-              <button className="btn btn-primary" style={{ width: "100%", marginBottom: "15px" }} onClick={handleBarcodeScan}>
-                Trigger Scanner Ingestion Event
+              <button className="btn btn-primary" style={{ width: "100%", marginBottom: "15px" }} onClick={handleBarcodeScan} disabled={isScanning} aria-busy={isScanning} title={isScanning ? "Processing scan..." : "Trigger Scanner Ingestion Event"} aria-label={isScanning ? "Processing scan..." : "Trigger Scanner Ingestion Event"}>
+                {isScanning ? <><span role="img" aria-hidden="true">⏳</span> Processing...</> : "Trigger Scanner Ingestion Event"}
               </button>
 
               {scanOutput && (
@@ -1240,8 +1256,8 @@ function App() {
             <h2>Pre-Register Serial Units</h2>
             <form onSubmit={handleRegisterSerial} style={{ marginBottom: "25px" }}>
               <div className="form-group" style={{ marginBottom: "12px" }}>
-                <label>Unique Serial Code</label>
-                <input className="form-control" type="text" value={newSerialNum} onChange={(e) => setNewSerialNum(e.target.value)} required />
+                <label htmlFor="new-serial-num">Unique Serial Code</label>
+                <input id="new-serial-num" className="form-control" type="text" value={newSerialNum} onChange={(e) => setNewSerialNum(e.target.value)} required />
               </div>
               <div className="form-group" style={{ marginBottom: "12px" }}>
                 <label htmlFor="serial-variant-mapping">SKU Variant Mapping</label>
@@ -1252,11 +1268,11 @@ function App() {
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: "15px" }}>
-                <label>Opening Location</label>
-                <input className="form-control" type="text" value={serialLocation} onChange={(e) => setSerialLocation(e.target.value)} required />
+                <label htmlFor="serial-location">Opening Location</label>
+                <input id="serial-location" className="form-control" type="text" value={serialLocation} onChange={(e) => setSerialLocation(e.target.value)} required />
               </div>
-              <button type="submit" className="btn btn-primary" style={{ width: "100%" }}>
-                Pre-Register Serial Item
+              <button type="submit" className="btn btn-primary" style={{ width: "100%" }} disabled={isRegisteringSerial} aria-busy={isRegisteringSerial} title={isRegisteringSerial ? "Registering serial item..." : "Pre-Register Serial Item"} aria-label={isRegisteringSerial ? "Registering serial item..." : "Pre-Register Serial Item"}>
+                {isRegisteringSerial ? <><span role="img" aria-hidden="true">⏳</span> Registering...</> : "Pre-Register Serial Item"}
               </button>
             </form>
 
@@ -1266,27 +1282,27 @@ function App() {
             </p>
             <div className="form-grid-2" style={{ marginBottom: "15px" }}>
               <div className="form-group">
-                <label>Authorized Actor</label>
-                <input className="form-control" type="text" value={serialActor} onChange={(e) => setSerialActor(e.target.value)} />
+                <label htmlFor="serial-actor">Authorized Actor</label>
+                <input id="serial-actor" className="form-control" type="text" value={serialActor} onChange={(e) => setSerialActor(e.target.value)} />
               </div>
               <div className="form-group">
-                <label>Ref Invoice / PO ID</label>
-                <input className="form-control" type="text" value={serialRefId} onChange={(e) => setSerialRefId(e.target.value)} />
+                <label htmlFor="serial-ref-id">Ref Invoice / PO ID</label>
+                <input id="serial-ref-id" className="form-control" type="text" value={serialRefId} onChange={(e) => setSerialRefId(e.target.value)} />
               </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("receive")} title="Pending -> InStock">
-                Receive Stock
+              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("receive")} disabled={isSerialLifecycleAction !== null} aria-busy={isSerialLifecycleAction === "receive"} title="Pending -> InStock" aria-label="Receive pending serial stock">
+                {isSerialLifecycleAction === "receive" ? "Processing..." : "Receive Stock"}
               </button>
-              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("sell")} title="InStock -> Sold">
-                POS Sell
+              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("sell")} disabled={isSerialLifecycleAction !== null} aria-busy={isSerialLifecycleAction === "sell"} title="InStock -> Sold" aria-label="Sell instock serial">
+                {isSerialLifecycleAction === "sell" ? "Processing..." : "POS Sell"}
               </button>
-              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("return")} title="Sold -> Returned">
-                Customer Return
+              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("return")} disabled={isSerialLifecycleAction !== null} aria-busy={isSerialLifecycleAction === "return"} title="Sold -> Returned" aria-label="Return sold serial">
+                {isSerialLifecycleAction === "return" ? "Processing..." : "Customer Return"}
               </button>
-              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("restock")} title="Returned -> InStock">
-                Restock Shelf
+              <button className="btn btn-secondary" onClick={() => handleSerialLifecycleAction("restock")} disabled={isSerialLifecycleAction !== null} aria-busy={isSerialLifecycleAction === "restock"} title="Returned -> InStock" aria-label="Restock returned serial">
+                {isSerialLifecycleAction === "restock" ? "Processing..." : "Restock Shelf"}
               </button>
             </div>
 
@@ -1417,12 +1433,12 @@ function App() {
             <h2>Compile Bundle Recipe</h2>
             <form onSubmit={handleCreateKit}>
               <div className="form-group" style={{ marginBottom: "15px" }}>
-                <label>Composite Kit SKU Code</label>
-                <input className="form-control" type="text" placeholder="e.g. BUNDLE-IPHONE-PRO" value={kitSku} onChange={(e) => setKitSku(e.target.value)} required />
+                <label htmlFor="kit-sku">Composite Kit SKU Code</label>
+                <input id="kit-sku" className="form-control" type="text" placeholder="e.g. BUNDLE-IPHONE-PRO" value={kitSku} onChange={(e) => setKitSku(e.target.value)} required />
               </div>
               <div className="form-group" style={{ marginBottom: "15px" }}>
-                <label>Bundle Marketing Name</label>
-                <input className="form-control" type="text" placeholder="iPhone Tech Pack" value={kitName} onChange={(e) => setKitName(e.target.value)} required />
+                <label htmlFor="kit-name">Bundle Marketing Name</label>
+                <input id="kit-name" className="form-control" type="text" placeholder="iPhone Tech Pack" value={kitName} onChange={(e) => setKitName(e.target.value)} required />
               </div>
 
               <h3 style={{ color: "var(--text-primary)", fontSize: "1rem", margin: "20px 0 10px" }}>Formula Components</h3>
@@ -1568,8 +1584,9 @@ function App() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>Quantity to Sell</label>
+                    <label htmlFor="sell-kit-qty">Quantity to Sell</label>
                     <input
+                      id="sell-kit-qty"
                       className="form-control"
                       type="number"
                       value={sellKitQty}
@@ -1597,8 +1614,9 @@ function App() {
             <div className="workspace-panel">
               <h2>Tenant Config Scoping</h2>
               <div className="form-group" style={{ marginBottom: "15px" }}>
-                <label>Active Tenant Context ID</label>
+                <label htmlFor="tenant-id">Active Tenant Context ID</label>
                 <input
+                  id="tenant-id"
                   className="form-control"
                   type="text"
                   placeholder="e.g. DEFAULT, TENANT_A"
@@ -1643,8 +1661,9 @@ function App() {
 
               <div className="form-grid-2" style={{ marginBottom: "15px" }}>
                 <div className="form-group">
-                  <label>Currency ISO</label>
+                  <label htmlFor="tenant-currency-code">Currency ISO</label>
                   <input
+                    id="tenant-currency-code"
                     className="form-control"
                     type="text"
                     value={tenantCurrencyCode}
@@ -1653,8 +1672,9 @@ function App() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Fiscal Year Start</label>
+                  <label htmlFor="tenant-fiscal-year">Fiscal Year Start</label>
                   <input
+                    id="tenant-fiscal-year"
                     className="form-control"
                     type="text"
                     placeholder="MM-DD"
@@ -1717,8 +1737,8 @@ function App() {
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: "12px" }}>
-                <label>Quantity to Consume</label>
-                <input className="form-control" type="number" value={valQty} onChange={(e) => setValQty(parseInt(e.target.value) || 0)} required min="1" />
+                <label htmlFor="val-qty">Quantity to Consume</label>
+                <input id="val-qty" className="form-control" type="number" value={valQty} onChange={(e) => setValQty(parseInt(e.target.value) || 0)} required min="1" />
               </div>
               <div className="form-group" style={{ marginBottom: "15px" }}>
                 <label htmlFor="bookkeeping-valuation-method">Valuation Method</label>
@@ -2033,7 +2053,7 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
             <option value="store-east">Store East</option>
           </select>
 
-          <button className="btn btn-secondary" onClick={fetchReport} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing report..." : "Refresh the report data"} aria-label={loading ? "Refreshing report..." : "Refresh the report data"}>
+          <button className="btn btn-secondary" onClick={loading ? undefined : fetchReport} aria-disabled={loading} aria-busy={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", opacity: loading ? 0.6 : 1, cursor: loading ? "not-allowed" : "pointer" }} title={loading ? "Refreshing report..." : "Refresh the report data"} aria-label={loading ? "Refreshing report..." : "Refresh the report data"}>
 
             {loading ? "⏳ Refreshing..." : "Refresh Report"}
           </button>
@@ -2210,8 +2230,9 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>Forecast Horizon (Days)</label>
+                <label htmlFor="forecast-days" style={{ fontSize: "0.85rem", fontWeight: 600 }}>Forecast Horizon (Days)</label>
                 <input
+                  id="forecast-days"
                   type="number"
                   min="1"
                   max="365"
@@ -2228,8 +2249,9 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>Trend / Seasonality Multiplier</label>
+                <label htmlFor="trend-multiplier" style={{ fontSize: "0.85rem", fontWeight: 600 }}>Trend / Seasonality Multiplier</label>
                 <input
+                  id="trend-multiplier"
                   type="number"
                   step="0.05"
                   min="0.1"
@@ -2254,9 +2276,8 @@ function ForecastingTab({ inventoryList }: { inventoryList: any[] }) {
                 className="btn btn-primary" 
                 disabled={forecastLoading || !selectedSku} 
                 style={{ marginTop: "10px", width: "100%" }}
-
                 title={!selectedSku ? "Select a SKU to generate forecast" : forecastLoading ? "Calculating..." : "Generate and save forecast"}
-
+                aria-label={!selectedSku ? "Select a SKU to generate forecast" : forecastLoading ? "Calculating..." : "Generate and save forecast"}
               >
                 {forecastLoading ? <><span role="img" aria-hidden="true">⏳</span> Calculating Forecast...</> : "Generate & Save Forecast"}
               </button>
@@ -2636,6 +2657,8 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
               <button 
                 type="button"
                 className={`mode-btn ${activeMode === "pick" ? "active" : ""}`}
+                aria-label={activeMode === "pick" ? "Pick mode active" : "Switch to Pick mode"}
+                title={activeMode === "pick" ? "Pick mode active" : "Switch to Pick mode"}
                 onClick={() => {
                   setActiveMode("pick");
                   setResolvedItem(null);
@@ -2647,6 +2670,8 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
               <button 
                 type="button"
                 className={`mode-btn ${activeMode === "receive" ? "active" : ""}`}
+                aria-label={activeMode === "receive" ? "Receive mode active" : "Switch to Receive mode"}
+                title={activeMode === "receive" ? "Receive mode active" : "Switch to Receive mode"}
                 onClick={() => {
                   setActiveMode("receive");
                   setResolvedItem(null);
@@ -2658,6 +2683,8 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
               <button 
                 type="button"
                 className={`mode-btn ${activeMode === "count" ? "active" : ""}`}
+                aria-label={activeMode === "count" ? "Count mode active" : "Switch to Count mode"}
+                title={activeMode === "count" ? "Count mode active" : "Switch to Count mode"}
                 onClick={() => {
                   setActiveMode("count");
                   setResolvedItem(null);
@@ -2753,8 +2780,9 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <label style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Transaction Quantity</label>
+                  <label htmlFor="qty-input" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Transaction Quantity</label>
                   <input
+                    id="qty-input"
                     type="number"
                     min="1"
                     value={qtyInput}
@@ -2795,7 +2823,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                 <div style={{ display: "flex", gap: "8px", marginTop: "5px" }}>
                   <button
                     type="button"
-                    aria-label="Cancel current scan operation"
+                    aria-label="Cancel current scan operation" title="Cancel current scan operation"
                     onClick={() => {
                       setResolvedItem(null);
                       setScanValue("");
@@ -2843,7 +2871,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                     <button 
                       onClick={() => setCycleCountSession([])}
                       style={{ background: "none", border: "none", color: "#f87171", fontSize: "0.7rem", cursor: "pointer", padding: 0 }}
-                      aria-label="Clear All scanned items in session"
+                      aria-label="Clear all scanned items in session"
                     >
                       Clear All
                     </button>
@@ -2907,7 +2935,7 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
 
                     <button
                       type="button"
-                      onClick={handleSubmitCycleCount}
+                      onClick={handleSubmitCycleCount} aria-label="Reconcile Cycle Count" title="Reconcile Cycle Count"
                       style={{
                         padding: "10px",
                         background: "var(--accent-gradient)",
@@ -2932,9 +2960,8 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
               className="physical-trigger-btn"
               disabled={scanLoading || !scanValue}
               onClick={() => handleScan(scanValue)}
-
               title={!scanValue ? "Enter a barcode to scan" : scanLoading ? "Scanning..." : "Trigger scan"}
-
+              aria-label={!scanValue ? "Enter a barcode to scan" : scanLoading ? "Scanning..." : "Trigger scan"}
             >
               {scanLoading ? <><span role="img" aria-hidden="true">⏳</span> Scanning...</> : <><span role="img" aria-hidden="true">⚡</span> Trigger Scan</>}
             </button>
@@ -2999,6 +3026,8 @@ function OutboxTab() {
   const [dlqEvents, setDlqEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [outboxActionMsg, setOutboxActionMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
 
   const fetchStatsAndDlq = async () => {
     try {
@@ -3027,13 +3056,17 @@ function OutboxTab() {
   }, []);
 
   const handleRetry = async (id: string) => {
+    setRetryingId(id);
+    setOutboxActionMsg(null);
     try {
       const res = await fetch(`/api/outbox/${id}/retry`, { method: "POST" });
       if (!res.ok) throw new Error("Failed to retry event");
-      alert("Event re-enqueued successfully!");
+      setOutboxActionMsg({ type: "success", text: `Event ${id.substring(0, 8)}... re-enqueued successfully!` });
       fetchStatsAndDlq();
     } catch (err: any) {
-      alert(`Error retrying event: ${err.message}`);
+      setOutboxActionMsg({ type: "error", text: `Error retrying event: ${err.message}` });
+    } finally {
+      setRetryingId(null);
     }
   };
 
@@ -3045,17 +3078,20 @@ function OutboxTab() {
           <p>Monitor event reliability, analyze message failures, and manage the Dead Letter Queue (DLQ).</p>
         </div>
 
-        <button className="btn btn-secondary" onClick={fetchStatsAndDlq} disabled={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }} title={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"} aria-label={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"}>
+        <button className="btn btn-secondary" onClick={loading ? undefined : fetchStatsAndDlq} aria-disabled={loading} aria-busy={loading} style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", opacity: loading ? 0.6 : 1, cursor: loading ? "not-allowed" : "pointer" }} title={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"} aria-label={loading ? "Refreshing diagnostics..." : "Refresh diagnostic data"}>
 
           {loading ? "⏳ Refreshing..." : "Refresh Diagnostics"}
         </button>
       </div>
 
       {error && (
-
         <div role="status" aria-live="polite" style={{ padding: "12px", background: "rgba(220, 53, 69, 0.1)", border: "1px solid rgba(220, 53, 69, 0.2)", borderRadius: "6px", color: "#ea868f", marginBottom: "20px" }}>
-
           <strong>Error:</strong> {error}
+        </div>
+      )}
+      {outboxActionMsg && (
+        <div role="status" aria-live="polite" style={{ padding: "12px", background: outboxActionMsg.type === "success" ? "rgba(52, 211, 153, 0.15)" : "rgba(248, 113, 113, 0.15)", border: outboxActionMsg.type === "success" ? "1px solid rgba(52, 211, 153, 0.3)" : "1px solid rgba(248, 113, 113, 0.3)", borderRadius: "6px", color: outboxActionMsg.type === "success" ? "#34d399" : "#f87171", marginBottom: "20px" }}>
+          {outboxActionMsg.text}
         </div>
       )}
 
@@ -3123,8 +3159,15 @@ function OutboxTab() {
                           {new Date(event.occurredOn).toLocaleString()}
                         </td>
                         <td>
-                          <button className="btn btn-primary btn-sm" onClick={() => handleRetry(event.id)}>
-                            Retry Event
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handleRetry(event.id)}
+                            disabled={retryingId === event.id}
+                            aria-busy={retryingId === event.id}
+                            title={retryingId === event.id ? "Retrying event..." : "Retry Event"}
+                            aria-label={retryingId === event.id ? "Retrying event..." : `Retry event ${event.id.substring(0, 8)}`}
+                          >
+                            {retryingId === event.id ? "⏳ Retrying..." : "Retry Event"}
                           </button>
                         </td>
                       </tr>
@@ -3405,8 +3448,9 @@ function ShippingTab({
               </div>
 
               <div className="form-group">
-                <label>Quantity</label>
+                <label htmlFor="shipping-qty">Quantity</label>
                 <input
+                  id="shipping-qty"
                   type="number"
                   min="1"
                   value={quantity}
@@ -3416,8 +3460,9 @@ function ShippingTab({
               </div>
 
               <div className="form-group">
-                <label>Destination Address</label>
+                <label htmlFor="shipping-address">Destination Address</label>
                 <input
+                  id="shipping-address"
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
@@ -3427,8 +3472,7 @@ function ShippingTab({
               </div>
 
 
-              <button type="submit" className="btn btn-primary" disabled={loadingRates} title={loadingRates ? "Estimating rates..." : "Estimate shipping rates"}>
-
+              <button type="submit" className="btn btn-primary" disabled={loadingRates} aria-busy={loadingRates} title={loadingRates ? "Estimating rates..." : "Estimate shipping rates"} aria-label={loadingRates ? "Estimating rates..." : "Estimate shipping rates"}>
                 {loadingRates ? <><span role="img" aria-hidden="true">⏳</span> Estimating...</> : "Estimate Shipping"}
               </button>
             </form>
@@ -3468,9 +3512,9 @@ function ShippingTab({
                   style={{ width: "100%", marginTop: "15px" }}
                   onClick={handlePurchaseLabel}
                   disabled={purchasingLabel || !selectedCarrier}
-
+                  aria-busy={purchasingLabel}
                   title={!selectedCarrier ? "Select a carrier to buy a label" : purchasingLabel ? "Purchasing..." : "Buy selected shipping label"}
-
+                  aria-label={!selectedCarrier ? "Select a carrier to buy a label" : purchasingLabel ? "Purchasing..." : "Buy selected shipping label"}
                 >
                   {purchasingLabel ? <><span role="img" aria-hidden="true">⏳</span> Purchasing...</> : "Buy " + selectedCarrier + " Shipping Label"}
                 </button>
@@ -3605,7 +3649,8 @@ function ShippingTab({
                             <button
                               className="btn btn-warning btn-sm"
                               onClick={() => handleTrackShipment(s.id, "IN_TRANSIT")}
-                              disabled={trackingLoading === s.id}
+                              disabled={trackingLoading !== null}
+                              aria-busy={trackingLoading === s.id}
                               title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as in transit"}
                               aria-label={trackingLoading === s.id ? "Updating status..." : `Mark shipment ${s.sku} as in transit`}
 
@@ -3618,7 +3663,8 @@ function ShippingTab({
                               <button
                                 className="btn btn-success btn-sm"
                                 onClick={() => handleTrackShipment(s.id, "DELIVERED")}
-                                disabled={trackingLoading === s.id}
+                                disabled={trackingLoading !== null}
+                                aria-busy={trackingLoading === s.id}
                                 title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as delivered"}
                                 aria-label={trackingLoading === s.id ? "Updating status..." : `Mark shipment ${s.sku} as delivered`}
 
@@ -3628,7 +3674,8 @@ function ShippingTab({
                               <button
                                 className="btn btn-danger btn-sm"
                                 onClick={() => handleTrackShipment(s.id, "FAILED")}
-                                disabled={trackingLoading === s.id}
+                                disabled={trackingLoading !== null}
+                                aria-busy={trackingLoading === s.id}
                                 title={trackingLoading === s.id ? "Updating status..." : "Mark shipment as failed"}
                                 aria-label={trackingLoading === s.id ? "Updating status..." : `Mark shipment ${s.sku} as failed`}
 

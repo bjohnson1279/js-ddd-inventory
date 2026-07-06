@@ -1,9 +1,10 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model InventoryModel {
@@ -238,12 +239,15 @@ model QuarantineItemModel {
 }
 
 model DispatchRecordModel {
-  id           String   @id @default(uuid())
+  id           String   @default(uuid())
   sku          String
   locationId   String
   quantity     Int
-  dispatchedAt DateTime @default(now())
+  dispatchedAt DateTime @default(now()) @map("dispatched_at")
   lotNumber    String?
+
+  @@id([id, dispatchedAt])
+  @@map("dispatch_records")
 }
 
 model DemandForecastModel {
@@ -353,5 +357,41 @@ model NotificationModel {
   type      String   @default("info")
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+model NetsuiteJournalMappingModel {
+  id                 String   @id @default(uuid())
+  journalEntryId     String   @unique
+  netsuiteJournalId  String   @unique
+  createdAt          DateTime @default(now())
+}
+
+model XeroJournalMappingModel {
+  id                 String   @id @default(uuid())
+  journalEntryId     String   @unique
+  xeroJournalId      String   @unique
+  createdAt          DateTime @default(now())
+}
+
+model QuickbooksJournalMappingModel {
+  id                 String   @id @default(uuid())
+  journalEntryId     String   @unique
+  quickbooksJournalId String  @unique
+  createdAt          DateTime @default(now())
+}
+
+model AuditDiscrepancyModel {
+  id              String    @id @default(uuid())
+  tenantId        String    @map("tenant_id")
+  type            String    
+  referenceId     String    @map("reference_id") 
+  externalRefId   String?   @map("external_ref_id")
+  description     String
+  status          String    @default("OPEN") 
+  occurredAt      DateTime  @default(now()) @map("occurred_at")
+  resolvedAt      DateTime? @map("resolved_at")
+  resolutionNotes String?   @map("resolution_notes")
+
+  @@map("audit_discrepancies")
 }
 

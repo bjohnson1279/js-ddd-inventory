@@ -15,7 +15,13 @@ export class AccountingController {
       const journalRepo = req.app.get(
         "journalRepository",
       ) as IJournalRepository;
-      const tenantId = req.query.tenantId as string;
+      if (req.query.tenantId !== undefined && typeof req.query.tenantId !== "string") {
+        return res.status(400).json({ error: "Invalid tenantId parameter." });
+      }
+      if (req.query.tenantId !== undefined && typeof req.query.tenantId !== "string") {
+        return res.status(400).json({ error: "Invalid tenantId parameter." });
+      }
+      const tenantId = req.query.tenantId ? (req.query.tenantId as string).trim() || undefined : undefined;
       const entries = await journalRepo.findAll(tenantId);
 
       res.status(200).json(
@@ -108,7 +114,8 @@ export class AccountingController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "Invalid accounting operation" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -186,7 +193,8 @@ export class AccountingController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("Insufficient"))
       ) {
-        res.status(400).json({ error: error instanceof DomainException ? error.message : "Insufficient stock" });
+        console.error(error instanceof DomainException ? error.message : error);
+        res.status(400).json({ error: "Insufficient stock" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -203,10 +211,33 @@ export class AccountingController {
         "tenantConfigRepository",
       ) as ITenantConfigRepository;
       const { variantId } = req.params;
-      const quantity = parseInt(req.query.quantity as string) || 1;
-      const tenantId = (req.query.tenantId as string) || "DEFAULT";
+      if (req.query.quantity !== undefined && typeof req.query.quantity !== "string") {
+        return res.status(400).json({ error: "Invalid quantity parameter." });
+      }
+      if (req.query.quantity !== undefined && typeof req.query.quantity !== "string") {
+        return res.status(400).json({ error: "Invalid quantity parameter." });
+      }
+      const parsedQuantity = req.query.quantity !== undefined ? parseInt(req.query.quantity as string, 10) : NaN;
+      const quantity = isNaN(parsedQuantity) || parsedQuantity <= 0 ? 1 : parsedQuantity;
 
-      let method = req.query.method as string;
+      if (req.query.tenantId !== undefined && typeof req.query.tenantId !== "string") {
+        return res.status(400).json({ error: "Invalid tenantId parameter." });
+      }
+      if (req.query.tenantId !== undefined && typeof req.query.tenantId !== "string") {
+        return res.status(400).json({ error: "Invalid tenantId parameter." });
+      }
+      let tenantId = req.query.tenantId ? (req.query.tenantId as string).trim() : "";
+      if (!tenantId) {
+        tenantId = "DEFAULT";
+      }
+
+      if (req.query.method !== undefined && typeof req.query.method !== "string") {
+        return res.status(400).json({ error: "Invalid method parameter." });
+      }
+      if (req.query.method !== undefined && typeof req.query.method !== "string") {
+        return res.status(400).json({ error: "Invalid method parameter." });
+      }
+      let method = req.query.method ? (req.query.method as string).trim() : "";
       if (!method) {
         const config = await tenantConfigRepo.findByTenantId(tenantId);
         if (config) {
@@ -252,7 +283,8 @@ export class AccountingController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("Insufficient"))
       ) {
-        res.status(400).json({ error: error instanceof DomainException ? error.message : "Insufficient stock" });
+        console.error(error instanceof DomainException ? error.message : error);
+        res.status(400).json({ error: "Insufficient stock" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -323,7 +355,8 @@ export class AccountingController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        res.status(400).json({ error: error.message, type: error.name });
+        console.error(error.message);
+        res.status(400).json({ error: "Invalid accounting operation" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

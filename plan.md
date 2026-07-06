@@ -1,10 +1,15 @@
-1. **Remove redundant database queries in InventoryService:**
-   - Modify `decrementForSale` to fetch the item once and use it for validation instead of calling `assertSufficientStock`.
-   - Modify `decrementForKitSale` to fetch items once in pass 1, store them in a Map, and reuse them in pass 2.
-   - Remove the `assertSufficientStock` private method, as it leads to an N+1 fetching anti-pattern.
-2. **Verify tests:**
-   - Run the Jest tests to ensure everything works correctly.
-3. **Pre-commit tasks:**
-   - Run pre-commit instructions for quality checks.
-4. **Submit PR:**
-   - Commit and submit changes with a performance-focused PR.
+1. **Understand the problem**:
+   - The user wants me to act as "Sentinel" to identify and fix ONE small security issue or add ONE security enhancement.
+   - We need to look for SQL injection, Command Injection, path traversal, missing auth, etc.
+   - The codebase uses Prisma, so raw SQL injection is unlikely unless using `$executeRawUnsafe` or `$queryRawUnsafe`.
+   - I checked `$executeRawUnsafe` and `$queryRawUnsafe` in `src/index.ts`. They are used for TimescaleDB setup without user input. Safe.
+   - `req.query` is used in many controllers. Usually they are parsed as string directly, but sometimes using `req.query.tenantId as string`. If `req.query.tenantId` is an array `['a', 'b']`, then `req.query.tenantId as string` bypasses TS and at runtime it's still an array, which could cause Prisma error or NoSQL injection like HPP (HTTP Parameter Pollution). I can fix this by explicitly validating `typeof value === 'string'`. I've already seen this being checked in `AccountingController.ts`. Let's check others.
+   - I found that there is an `Express Rate Limit` on `/api/auth/setup` and `/api/auth/login` in `src/infrastructure/http/routes/auth.routes.ts`.
+   - What else? I found `req.body.adminEmail.toLowerCase()` could throw an error if `adminEmail` is not a string, but it's not a severe security issue.
+   - The issue might be related to Express Query Parameter Type Confusion. In `AccountingController`, `req.query.quantity !== undefined && typeof req.query.quantity !== "string"` is explicitly checked, but in `ForecastingController.ts`: `const locationId = (req.query.locationId as string) || "default";`. If `req.query.locationId` is an array, it might crash or cause issues. This is a common pattern in express, but not necessarily a "CRITICAL" security vulnerability unless it leads to NoSQL injection.
+   - How about Information Disclosure via Error Messages? `console.error` followed by returning generic "Internal server error" is secure. However, earlier I found `res.status(400).json({ error: error.message, type: error.name });`. While `error` might be `DomainException`, the error message might contain sensitive info.
+   - Let's check the memory:
+     - `Security/Input Validation Convention: When implementing API controllers, do not implicitly trust req.body or req.query. Express req.query parameters can be parsed as arrays or objects, which bypasses TypeScript as string assertions at runtime and can cause NoSQL/Prisma query injection or HTTP Parameter Pollution (HPP). Always implement explicit runtime type checking (e.g., typeof value === 'string') and boundary assertions (e.g., .trim(), Number.isInteger()) before passing data to domain use cases.`
+     - `Security Convention: To prevent Information Disclosure, never expose raw backend exception details (error.message or error.stack) in HTTP error responses (both 500s and 400s). Even validated domain exceptions (like DomainException) can contain sensitive business logic or state (e.g., internal stock levels). Always map these errors to generic, static safe strings (e.g., 'Insufficient stock') instead of returning the dynamic error.message directly.`
+   - Okay, returning `error.message` is explicitly considered an Information Disclosure vulnerability in this context. Let's fix this in one controller, or across multiple. The problem states "identify and fix ONE small security issue or add ONE security enhancement". So maybe fixing `error.message` in `InventoryController.ts` or `ForecastingController.ts` is a good target. But I need to choose ONE vulnerability. So maybe I can replace all `error.message` with safe messages, or just target the Express `req.query` issue.
+   - Actually, I can fix the `error.message` vulnerability. Let's replace `error.message` with safe strings in one controller, or all if small. Or I can fix the `req.query` parameter pollution in `InventoryController.ts`.

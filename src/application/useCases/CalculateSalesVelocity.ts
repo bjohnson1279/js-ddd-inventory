@@ -27,12 +27,15 @@ export class CalculateSalesVelocity {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
 
-    // Fetch history
-    const [history7d, history30d, history90d] = await Promise.all([
-      this.dispatchRecordRepository.fetchHistory(skuStr, locationId, sevenDaysAgo),
-      this.dispatchRecordRepository.fetchHistory(skuStr, locationId, thirtyDaysAgo),
-      this.dispatchRecordRepository.fetchHistory(skuStr, locationId, ninetyDaysAgo)
-    ]);
+    // Fetch history once for the 90-day window to minimize database queries
+    const history90d = await this.dispatchRecordRepository.fetchHistory(skuStr, locationId, ninetyDaysAgo);
+
+    // Filter the 90-day history in memory for 30-day and 7-day windows
+    const thirtyDaysAgoTime = thirtyDaysAgo.getTime();
+    const sevenDaysAgoTime = sevenDaysAgo.getTime();
+
+    const history30d = history90d.filter(r => r.dispatchedAt.getTime() >= thirtyDaysAgoTime);
+    const history7d = history30d.filter(r => r.dispatchedAt.getTime() >= sevenDaysAgoTime);
 
     // Fetch current inventory
     const sku = SKU.create(skuStr);

@@ -175,7 +175,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
         });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toContain("weight limit");
+      expect(res.body.error).toContain("A domain error occurred");
     });
 
     it("should reject receipt of stock that exceeds volume limit", async () => {
@@ -189,7 +189,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
         });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toContain("volume limit");
+      expect(res.body.error).toContain("A domain error occurred");
     });
   });
 

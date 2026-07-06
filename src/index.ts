@@ -7,6 +7,8 @@ import { PrismaBarcodeRepository } from "./infrastructure/database/PrismaBarcode
 import { PrismaSerializedItemRepository } from "./infrastructure/database/PrismaSerializedItemRepository";
 import { PrismaCostLayerRepository } from "./infrastructure/database/PrismaCostLayerRepository";
 import { PrismaJournalRepository } from "./infrastructure/database/PrismaJournalRepository";
+import { prisma } from "./infrastructure/database/prisma";
+import { enableRowLevelSecurity } from "./infrastructure/database/rls";
 import { PostgresInventoryRepository } from "./infrastructure/database/PostgresInventoryRepository";
 import { IInventoryRepository } from "./domain/repositories/IInventoryRepository";
 import inventoryRoutes from "./infrastructure/http/routes/inventory.routes";
@@ -15,6 +17,8 @@ import onboardingRoutes from "./infrastructure/http/routes/onboarding.routes";
 import { DomainEventDispatcher } from "./domain/events/DomainEventDispatcher";
 import { alertPurchasingOnStockDepleted } from "./application/eventHandlers/AlertPurchasingOnStockDepleted";
 import { syncJournalToQuickBooks } from "./application/eventHandlers/SyncJournalToQuickBooks";
+import { syncJournalToNetSuite } from "./application/eventHandlers/SyncJournalToNetSuite";
+import { syncJournalToXero } from "./application/eventHandlers/SyncJournalToXero";
 
 import { IBarcodeRepository } from "./domain/repositories/IBarcodeRepository";
 import { ISerializedItemRepository } from "./domain/repositories/ISerializedItemRepository";
@@ -38,6 +42,7 @@ import { OutboxProcessor } from "./infrastructure/outbox/OutboxProcessor";
 import { IMessageBroker } from "./application/ports/IMessageBroker";
 import { InMemoryMessageBroker } from "./infrastructure/messaging/InMemoryMessageBroker";
 import { RabbitMQMessageBroker } from "./infrastructure/messaging/RabbitMQMessageBroker";
+import { KafkaMessageBroker } from "./infrastructure/messaging/KafkaMessageBroker";
 
 import barcodeRoutes from "./infrastructure/http/routes/barcode.routes";
 import serialRoutes from "./infrastructure/http/routes/serial.routes";
@@ -82,6 +87,7 @@ import authRoutes from "./infrastructure/http/routes/auth.routes";
 import userRoutes from "./infrastructure/http/routes/user.routes";
 import warehouseLocationRoutes from "./infrastructure/http/routes/warehouseLocation.routes";
 import notificationRoutes from "./infrastructure/http/routes/notification.routes";
+import auditRoutes from "./infrastructure/http/routes/audit.routes";
 import { WebSocketManager } from "./infrastructure/websocket/WebSocketManager";
 import { authMiddleware } from "./infrastructure/http/middleware/auth";
 import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
@@ -93,6 +99,7 @@ import { PrismaProductRepository } from "./infrastructure/database/PrismaProduct
 import { WMSCapacityService } from "./domain/services/WMSCapacityService";
 
 const app = express();
+app.disable("x-powered-by");
 const port = process.env.PORT || 5000;
 
 const allowedOrigins = process.env.FRONTEND_URL
@@ -120,6 +127,8 @@ app.use(express.json());
 // Register Domain Event Handlers
 DomainEventDispatcher.register("StockDepletedEvent", alertPurchasingOnStockDepleted);
 DomainEventDispatcher.register("JournalEntryCreatedEvent", syncJournalToQuickBooks);
+DomainEventDispatcher.register("JournalEntryCreatedEvent", syncJournalToNetSuite);
+DomainEventDispatcher.register("JournalEntryCreatedEvent", syncJournalToXero);
 
 // Define setup function so E2E tests can configure app with custom repository
 export const setupApp = (
@@ -198,10 +207,62 @@ export const setupApp = (
   app.use("/api/shipping", shippingRoutes);
   app.use("/api/warehouse-locations", warehouseLocationRoutes);
   app.use("/api/notifications", notificationRoutes);
+  app.use("/api/audit", auditRoutes);
 };
 
 const start = async () => {
   let repository: IInventoryRepository;
+
+  // Run TimescaleDB migration query when connecting to Postgres
+  try {
+    await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;`;
+    console.log("TimescaleDB extension enabled.");
+    
+    const isHypertable = await prisma.$queryRaw`
+      SELECT 1 FROM timescaledb_information.hypertables 
+      WHERE hypertable_name = 'dispatch_records'
+    `;
+    if ((isHypertable as any[]).length === 0) {
+      await prisma.$executeRaw`SELECT create_hypertable('dispatch_records', 'dispatched_at', if_not_exists => TRUE);`;
+      console.log("dispatch_records table converted to TimescaleDB hypertable.");
+    }
+
+    const isView = await prisma.$queryRaw`
+      SELECT 1 FROM pg_matviews 
+      WHERE matviewname = 'daily_dispatch_summary'
+    `;
+    if ((isView as any[]).length === 0) {
+      await prisma.$executeRaw`
+        CREATE MATERIALIZED VIEW daily_dispatch_summary
+        WITH (timescaledb.continuous) AS
+        SELECT 
+          time_bucket('1 day', dispatched_at) AS bucket,
+          sku,
+          "locationId",
+          sum(quantity) as total_dispatched,
+          count(*) as dispatch_count
+        FROM dispatch_records
+        GROUP BY bucket, sku, "locationId";
+      `;
+      try {
+        await prisma.$executeRaw`
+          SELECT add_continuous_aggregate_policy('daily_dispatch_summary',
+            start_offset => INTERVAL '1 month',
+            end_offset => INTERVAL '1 hour',
+            schedule_interval => INTERVAL '1 hour',
+            if_not_exists => TRUE);
+        `;
+      } catch (policyErr: any) {
+        console.log("TimescaleDB aggregate policy setup warning:", policyErr.message);
+      }
+      console.log("daily_dispatch_summary continuous aggregate created.");
+    }
+    
+    // Set up PostgreSQL Row-Level Security (RLS) policies
+    await enableRowLevelSecurity(prisma);
+  } catch (e) {
+    console.log("Database/TimescaleDB setup skipped/warning:", (e as Error).message);
+  }
 
   if (process.env.DB_HOST) {
     console.log("Initializing PostgreSQL Repository...");
@@ -215,7 +276,7 @@ const start = async () => {
     await pgRepo.initialize();
     repository = pgRepo;
   } else {
-    console.log("Initializing Prisma Repository (SQLite)...");
+    console.log("Initializing Prisma Repository...");
     repository = new PrismaInventoryRepository(new PrismaOutboxRepository());
   }
 
@@ -239,10 +300,13 @@ const start = async () => {
   const warehouseLocationRepo = new PrismaWarehouseLocationRepository();
   const productRepo = new PrismaProductRepository();
 
+  const kafkaUrl = process.env.KAFKA_URL;
   const rabbitMqUrl = process.env.RABBITMQ_URL;
-  const messageBroker = rabbitMqUrl
-    ? new RabbitMQMessageBroker(rabbitMqUrl)
-    : new InMemoryMessageBroker();
+  const messageBroker = kafkaUrl
+    ? new KafkaMessageBroker(kafkaUrl)
+    : rabbitMqUrl
+      ? new RabbitMQMessageBroker(rabbitMqUrl)
+      : new InMemoryMessageBroker();
 
   setupApp(
     repository,
@@ -268,8 +332,10 @@ const start = async () => {
     productRepo
   );
 
-  const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);
-  outboxProcessor.start(3000);
+  if (process.env.DISABLE_WORKERS !== "true") {
+    const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);
+    outboxProcessor.start(3000);
+  }
 
   const server = app.listen(port, () => {
     console.log(`Server is running on port ${port}`);

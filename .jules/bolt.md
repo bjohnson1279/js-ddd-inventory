@@ -104,3 +104,36 @@
 ## 2024-06-21 - Rejected concurrent execution of state-mutating service method
 **Learning:** Blindly replacing a sequential `for...of` loop with `Promise.all` to concurrently execute a state-mutating service method (`consumeFifoLayers`) is an unsafe anti-pattern that introduces critical risks of data corruption (race conditions) and transaction failures.
 **Action:** Never introduce concurrency to financial or inventory mutation loops without dedicated bulk-operation logic. The correct optimization is to implement a batch method inside the service that handles database locks and batch updates safely.
+## 2025-01-01 - Optimizing Overlapping Time-Series Queries
+**Learning:** Overlapping time-series queries (e.g., fetching 7-day, 30-day, and 90-day histories) often result in redundant database scans and increased latency.
+**Action:** Replace multiple overlapping queries with a single query covering the maximum time window, and filter the result set in memory for smaller intervals.
+
+## 2026-06-25 - TimescaleDB Hypertables and Composite Primary Keys
+**Learning:** Standard single-column primary keys (e.g. `id UUID PRIMARY KEY`) are incompatible with TimescaleDB hypertables, which require any primary key or unique constraint to include the time-partitioning column.
+**Action:** When working with append-only time-series tables (like `ledger_entries`, `inventory_transactions`, or `dispatch_records`):
+- Ensure that the primary key is defined as a composite key containing both the unique ID and the timestamp column (e.g. `PRIMARY KEY (id, occurred_at)` or `@@id([id, occurredAt])`).
+- Convert the table to a hypertable immediately upon creation/migration using `SELECT create_hypertable('table_name', 'time_column', if_not_exists => TRUE);`.
+- For Node.js/Prisma setups, ensure the datasource provider is set to PostgreSQL (not SQLite) to maintain database parity across all service variants.
+
+## 2026-06-25 - Optimized PickingRouteOptimizer N+1 location fetches
+**Learning:** Found sequential `await this.locationRepo.findById(locId)` inside a `for...of` loop in `PickingRouteOptimizer.ts`. This causes an N+1 query issue for picking routes with multiple items.
+**Action:** Batched the unique location IDs into a `Set` and fetched them concurrently using `Promise.all` before iterating the items.
+
+## 2026-06-26 - O(N*M) Lookup Optimization
+**Learning:** Found a critical performance bottleneck in `ReceivePurchaseOrder.ts` where an array `.find()` operation was nested inside an asynchronous `.map()` loop iterating over DTO items ($O(N \times M)$ complexity).
+**Action:** When mapping over items and searching another array, always pre-compute a `Map` of the target array keyed by its unique identifier (e.g., `variantId`) outside the loop to reduce the lookup to $O(1)$. Do not attempt to merge the input payload if uniqueness isn't strictly guaranteed by the business logic.
+
+## 2026-06-28 - O(N*M) Lookup Optimization in GetDemandPlanningReport
+**Learning:** Found an O(N*M) lookup bottleneck in `GetDemandPlanningReport.ts` where an array `.find()` operation to search for forecasts was nested inside an asynchronous `.map()` loop iterating over inventory items.
+**Action:** When mapping over items and searching another array, always pre-compute a `Map` of the target array keyed by its unique identifier (e.g., `sku`) outside the loop to reduce the lookup to O(1).
+
+## 2026-06-29 - O(N) Array Allocation Optimization in Variant Lookups
+**Learning:** Found an $O(N)$ memory allocation bottleneck in multiple use cases where looking up a product variant by SKU required iterating through `Product` variants via a getter that executed `Array.from(this._variants.values())`. This creates a new array allocation on every lookup, adding unnecessary GC pressure in bulk operations.
+**Action:** When a domain aggregate exposes internal state (like a `Map`) via a getter that allocates a new array, do not use array methods (like `.find()`) on the getter if called repeatedly. Instead, implement a dedicated lookup method on the aggregate (e.g., `findVariantBySku`) that iterates the internal data structure directly to achieve $O(1)$ allocation overhead.
+## 2026-06-30 - Optimize Find Operation Array Mapping
+**Learning:** In `ReceiveRMA.ts`, the `dto.items.map` loop performed a linear search (`.find()`) on `rma.items` for every item, leading to a nested loop $O(N \times M)$ performance bottleneck. Additionally, `PutawaySuggester.ts` needlessly mapped an array of locations sequentially in memory instead of tracking an index, resulting in poor spatial allocation.
+**Action:** When mapping over items and searching another array, pre-compute a `Map` of the target array keyed by its unique identifier (e.g., `variantId`) outside the loop to reduce the lookup to $O(1)$, minimizing complexity to $O(N + M)$. Furthermore, replace grouped item lookup maps with index-based reverse-mapping when summing properties to avoid unnecessary object allocation and traversal.
+
+## 2026-07-03 - O(N) Array Allocation Optimization in ReorderPolicy Lookups
+**Learning:** Found a performance bottleneck in `GetDemandPlanningReport.ts` where fetching the reorder policy inside an asynchronous `.map()` loop iterated over inventory items and called `this.reorderPolicyRepository.findBySkuAndLocation`, causing an N+1 query issue for database-backed repositories and an $O(N)$ lookup in memory-backed repositories.
+**Action:** When mapping over items and repeatedly fetching the same type of configuration per item (like reorder policies), fetch all relevant configurations (e.g. by location) upfront and pre-compute a `Map` keyed by their unique identifier (e.g., `sku`) outside the loop to reduce the internal lookup to $O(1)$. Also, avoid $O(N)$ mapping overhead by replacing array mappings like `const poItemsMap = new Map(po.items.map((i) => [i.variantId, i]));` and subsequent `.get()` lookups with dedicated aggregate lookup methods (e.g., `po.findItemByVariantId(item.variantId)`) that return directly from the aggregate.

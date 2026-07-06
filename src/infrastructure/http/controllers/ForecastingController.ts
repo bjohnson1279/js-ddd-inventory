@@ -6,6 +6,8 @@ import { IInventoryRepository } from "../../../domain/repositories/IInventoryRep
 import { IReorderPolicyRepository } from "../../../domain/repositories/IReorderPolicyRepository";
 import { IDemandForecastRepository } from "../../../domain/repositories/IDemandForecastRepository";
 import { IDispatchRecordRepository } from "../../../domain/repositories/IDispatchRecordRepository";
+import { DomainException } from "../../../domain/exceptions/DomainException";
+
 
 export class ForecastingController {
   static async getReport(req: Request, res: Response) {
@@ -23,13 +25,21 @@ export class ForecastingController {
         salesVelocityService
       );
 
-      const locationId = (req.query.locationId as string) || "default";
+      if (req.query.locationId !== undefined && typeof req.query.locationId !== "string") {
+        return res.status(400).json({ error: "Invalid locationId parameter" });
+      }
+      const locationId = req.query.locationId ? (req.query.locationId as string).trim() : "default";
       const report = await useCase.execute(locationId);
 
       res.status(200).json(report);
     } catch (error: any) {
-      console.error("Failed to fetch demand planning report:", error);
-      res.status(500).json({ error: "Internal server error" });
+      if (error instanceof DomainException) {
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+      } else {
+        console.error("Failed to fetch demand planning report:", error);
+        res.status(500).json({ error: "Internal server error" });
+      }
     }
   }
 
@@ -68,8 +78,41 @@ export class ForecastingController {
         }
       });
     } catch (error: any) {
-      console.error("Failed to generate demand forecast:", error);
-      res.status(400).json({ error: "Failed to generate demand forecast" });
+      if (error instanceof DomainException) {
+        console.error(error.message);
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+      } else {
+        console.error("Failed to generate demand forecast:", error);
+        res.status(500).json({ error: "Failed to generate demand forecast" });
+      }
+    }
+  }
+
+  static async getDispatchSummary(req: Request, res: Response) {
+    try {
+      const { prisma } = require("../../database/prisma");
+      const sku = req.query.sku as string;
+      
+      if (sku !== undefined && typeof sku !== "string") {
+        return res.status(400).json({ error: "Invalid sku parameter" });
+      }
+
+      let results;
+      if (sku) {
+        results = await prisma.$queryRaw`SELECT bucket::text, sku, "locationId", total_dispatched as "totalDispatched", dispatch_count as "dispatchCount"
+           FROM daily_dispatch_summary
+           WHERE sku = ${sku}
+           ORDER BY bucket DESC`;
+      } else {
+        results = await prisma.$queryRaw`SELECT bucket::text, sku, "locationId", total_dispatched as "totalDispatched", dispatch_count as "dispatchCount"
+           FROM daily_dispatch_summary
+           ORDER BY bucket DESC`;
+      }
+      
+      res.status(200).json(results);
+    } catch (error: any) {
+      console.error("Failed to fetch dispatch summary from continuous aggregate:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 }

@@ -3,6 +3,8 @@ import { DispatchStock } from "../../../application/useCases/DispatchStock";
 import { ShopifyWebhookSecurity } from "../../shopify/ShopifyWebhookSecurity";
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
 import { IProcessedWebhookRepository } from "../../../domain/repositories/IProcessedWebhookRepository";
+import { DomainException } from "../../../domain/exceptions/DomainException";
+
 
 export class ShopifyWebhookController {
   constructor(private readonly security: ShopifyWebhookSecurity) {}
@@ -52,20 +54,34 @@ export class ShopifyWebhookController {
       const order = req.body;
       const lineItems = order.line_items || [];
 
+      // Group by SKU to avoid race conditions when multiple line items have the same SKU
+      const skuQuantities = new Map<string, number>();
       for (const item of lineItems) {
         if (item.sku) {
-          // We skip publishing back to Shopify because this change originated from Shopify
-          await dispatchStock.execute(item.sku, item.quantity, "default", true);
+          const currentQty = skuQuantities.get(item.sku) ?? 0;
+          skuQuantities.set(item.sku, currentQty + (item.quantity ?? 1));
         }
       }
+
+      const dispatchPromises = [];
+      for (const [sku, quantity] of skuQuantities.entries()) {
+        // We skip publishing back to Shopify because this change originated from Shopify
+        dispatchPromises.push(dispatchStock.execute(sku, quantity, "default", true));
+      }
+      await Promise.all(dispatchPromises);
 
       // Mark as processed
       await processedWebhookRepo.save(webhookId);
 
       res.status(200).send("Webhook processed");
     } catch (error: any) {
-      console.error("Error processing Shopify webhook:", error);
-      res.status(500).send("Internal server error");
+      if (error instanceof DomainException) {
+        console.error(error.message);
+        res.status(400).send("A domain error occurred.");
+      } else {
+        console.error("Error processing Shopify webhook:", error);
+        res.status(500).send("Internal server error");
+      }
     }
   }
 }

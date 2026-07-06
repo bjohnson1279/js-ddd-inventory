@@ -26,7 +26,7 @@ export class SuggestFefoPicking {
       throw new Error(`Product variant with SKU ${skuStr} not found.`);
     }
 
-    const variant = product.variants.find((v) => v.sku.getValue() === skuStr);
+    const variant = product.findVariantBySku(skuStr);
     if (!variant) {
       throw new Error(`Product variant with SKU ${skuStr} not found.`);
     }
