@@ -1,6 +1,7 @@
 import { IOutboxRepository } from "../../domain/repositories/IOutboxRepository";
 import { DomainEventDispatcher } from "../../domain/events/DomainEventDispatcher";
 import { IMessageBroker } from "../../application/ports/IMessageBroker";
+import { runWithTrace, generateTraceId } from "../telemetry/traceContext";
 
 export class OutboxProcessor {
   private isProcessing = false;
@@ -41,23 +42,29 @@ export class OutboxProcessor {
       for (const record of pendingEvents) {
         try {
           const parsed = JSON.parse(record.payload);
-          const eventInstance = {
-            ...parsed,
-            occurredOn: new Date(parsed.occurredOn)
-          };
+          const traceId = parsed.traceId || generateTraceId();
 
-          // Dispatch the single event to registered handlers
-          await DomainEventDispatcher.dispatch([eventInstance]);
+          await runWithTrace(traceId, async () => {
+            const eventInstance = {
+              ...parsed,
+              occurredOn: new Date(parsed.occurredOn)
+            };
 
-          // Publish to external message broker if configured
-          if (this.messageBroker) {
-            await this.messageBroker.publish(record.eventName, eventInstance);
-          }
+            // Dispatch the single event to registered handlers
+            await DomainEventDispatcher.dispatch([eventInstance]);
 
-          // Collect successfully processed IDs
-          processedIds.push(record.id);
+            // Publish to external message broker if configured
+            if (this.messageBroker) {
+              await this.messageBroker.publish(record.eventName, eventInstance);
+            }
+
+            // Collect successfully processed IDs
+            processedIds.push(record.id);
+          });
         } catch (error: any) {
-          console.error(`Error processing outbox event ${record.id}:`, error);
+          const parsed = JSON.parse(record.payload);
+          const traceId = parsed.traceId || "unknown";
+          console.error(`[Trace: ${traceId}] Error processing outbox event ${record.id}:`, error);
           failedUpdates.push({ id: record.id, error: error.message || String(error) });
         }
       }

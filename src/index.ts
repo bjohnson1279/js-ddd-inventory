@@ -98,6 +98,8 @@ import { PrismaWarehouseLocationRepository } from "./infrastructure/database/Pri
 import { PrismaProductRepository } from "./infrastructure/database/PrismaProductRepository";
 import { WMSCapacityService } from "./domain/services/WMSCapacityService";
 
+import { traceMiddleware } from "./infrastructure/http/middleware/traceMiddleware";
+
 const app = express();
 app.disable("x-powered-by");
 const port = process.env.PORT || 5000;
@@ -115,6 +117,7 @@ const limiter = rateLimit({
 
 app.use(helmet());
 app.use(cors({ origin: allowedOrigins }));
+app.use(traceMiddleware);
 app.set("trust proxy", 1);
 app.use(limiter);
 app.use("/api/shopify", express.json({

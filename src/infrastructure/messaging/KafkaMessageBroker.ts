@@ -1,6 +1,7 @@
 import { Kafka, Producer } from "kafkajs";
 import { IMessageBroker } from "../../application/ports/IMessageBroker";
 import { IDomainEvent } from "../../domain/events/IDomainEvent";
+import { getTraceId } from "../telemetry/traceContext";
 
 export class KafkaMessageBroker implements IMessageBroker {
   private kafka: Kafka;
@@ -47,19 +48,24 @@ export class KafkaMessageBroker implements IMessageBroker {
       occurredOn: event.occurredOn instanceof Date ? event.occurredOn.toISOString() : event.occurredOn
     };
 
+    const traceId = getTraceId();
+
     try {
       await this.producer.send({
         topic: topic,
         messages: [
           {
             key: event.tenantId || "default",
-            value: JSON.stringify(payload)
+            value: JSON.stringify(payload),
+            headers: {
+              "x-trace-id": traceId
+            }
           }
         ]
       });
-      console.log(`[KafkaMessageBroker] Successfully published event "${event.constructor.name}" to topic "${topic}"`);
+      console.log(`[Trace: ${traceId}] [KafkaMessageBroker] Successfully published event "${event.constructor.name}" to topic "${topic}"`);
     } catch (err: any) {
-      console.error(`[KafkaMessageBroker] Failed to publish event to topic "${topic}":`, err.message || err);
+      console.error(`[Trace: ${traceId}] [KafkaMessageBroker] Failed to publish event to topic "${topic}":`, err.message || err);
       throw err;
     }
   }
