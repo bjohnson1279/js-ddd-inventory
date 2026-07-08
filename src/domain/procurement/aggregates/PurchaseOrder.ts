@@ -44,6 +44,9 @@ export class PurchaseOrder extends AggregateRoot {
     this._status = PurchaseOrderStatus.Sent;
   }
 
+  // Pre-computed map for fast O(1) lookups during batch receives
+  private _itemsMap?: Map<string, PurchaseOrderItem>;
+
   public receiveItems(variantId: string, quantity: number): void {
     if (
       this._status !== PurchaseOrderStatus.Sent &&
@@ -52,7 +55,11 @@ export class PurchaseOrder extends AggregateRoot {
       throw new Error("Can only receive items on Sent or Partially Received purchase orders.");
     }
 
-    const item = this._items.find((i) => i.variantId === variantId);
+    if (!this._itemsMap) {
+      this._itemsMap = new Map(this._items.map((i) => [i.variantId, i]));
+    }
+
+    const item = this._itemsMap.get(variantId);
     if (!item) {
       throw new Error(`Item with variant ID ${variantId} not found in this purchase order.`);
     }
@@ -60,6 +67,8 @@ export class PurchaseOrder extends AggregateRoot {
     item.receive(quantity);
 
     // Update status
+    // Note: iterating to check if fully received can also be optimized by keeping a count
+    // of fully received items. We will keep it simple and just avoid the O(N) lookup.
     const allFullyReceived = this._items.every((i) => i.isFullyReceived());
     if (allFullyReceived) {
       this._status = PurchaseOrderStatus.Received;
