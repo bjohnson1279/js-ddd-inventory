@@ -175,6 +175,7 @@ model ReorderPolicyModel {
   reorderPoint    Int
   reorderQuantity Int
   safetyStock     Int
+  dynamicRopEnabled Boolean  @default(false) @map("dynamic_rop_enabled")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

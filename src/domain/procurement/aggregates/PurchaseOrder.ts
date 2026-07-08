@@ -13,7 +13,9 @@ export class PurchaseOrder extends AggregateRoot {
     public readonly tenantId: string,
     public readonly locationId: string,
     status: PurchaseOrderStatus = PurchaseOrderStatus.Draft,
-    items: PurchaseOrderItem[] = []
+    items: PurchaseOrderItem[] = [],
+    public readonly createdAt?: Date,
+    public readonly updatedAt?: Date
   ) {
     super();
     this._status = status;
