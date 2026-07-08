@@ -4,6 +4,7 @@ import { InMemoryProductRepository } from "../../../src/infrastructure/database/
 import { InMemoryPurchaseOrderRepository } from "../../../src/infrastructure/database/InMemoryPurchaseOrderRepository";
 import { Product } from "../../../src/domain/product/aggregates/Product";
 import { SKU } from "../../../src/domain/valueObjects/SKU";
+import { VariantAttribute } from "../../../src/domain/product/valueObjects/VariantAttribute";
 import { DispatchRecord } from "../../../src/domain/repositories/IDispatchRecordRepository";
 import { PurchaseOrder } from "../../../src/domain/procurement/aggregates/PurchaseOrder";
 import { PurchaseOrderItem } from "../../../src/domain/procurement/aggregates/PurchaseOrderItem";
@@ -37,7 +38,7 @@ describe("ReplenishmentForecaster (Express)", () => {
 
     it("should calculate daily sales average and standard deviation correctly", async () => {
       const product = new Product("prod-1", "Test Product");
-      product.addVariant(SKU.create(skuStr), []);
+      product.addVariant(SKU.create(skuStr), [new VariantAttribute("size", "M")]);
       await productRepo.save(product);
 
       const baseTime = new Date().getTime();
@@ -65,7 +66,7 @@ describe("ReplenishmentForecaster (Express)", () => {
   describe("ReorderPointForecaster", () => {
     it("should forecast reorder point with lead-time variance from received POs", async () => {
       const product = new Product("prod-1", "Test Product");
-      const variant = product.addVariant(SKU.create(skuStr), []);
+      const variant = product.addVariant(SKU.create(skuStr), [new VariantAttribute("size", "M")]);
       await productRepo.save(product);
 
       const baseTime = new Date().getTime();
