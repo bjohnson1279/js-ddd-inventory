@@ -5,6 +5,7 @@ import { IPurchaseOrderRepository } from "../../../domain/repositories/IPurchase
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
 import { ICostLayerRepository } from "../../../domain/repositories/ICostLayerRepository";
 import { DomainException } from "../../../domain/exceptions/DomainException";
+import { AutoRetryDecorator } from "../../../application/decorators/AutoRetryDecorator";
 
 export class PurchaseOrderController {
   static async create(req: Request, res: Response) {
@@ -87,7 +88,7 @@ export class PurchaseOrderController {
       const inventoryRepository = req.app.get("inventoryRepository") as IInventoryRepository;
       const costLayerRepository = req.app.get("costLayerRepository") as ICostLayerRepository;
       
-      const useCase = new ReceivePurchaseOrder(poRepository, inventoryRepository, costLayerRepository);
+      const useCase = AutoRetryDecorator.wrap(new ReceivePurchaseOrder(poRepository, inventoryRepository, costLayerRepository));
       
       await useCase.execute({
         purchaseOrderId: req.params.id,

@@ -12,6 +12,7 @@ import { TraceProductRecall } from "../../../application/useCases/TraceProductRe
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
 import { DomainException } from "../../../domain/exceptions/DomainException";
 import { SKU } from "../../../domain/valueObjects/SKU";
+import { AutoRetryDecorator } from "../../../application/decorators/AutoRetryDecorator";
 
 export class InventoryController {
   static async receive(req: Request, res: Response) {
@@ -30,7 +31,7 @@ export class InventoryController {
       const capacityService = req.app.get("wmsCapacityService");
       const productRepository = req.app.get("productRepository");
       const costLayerRepository = req.app.get("costLayerRepository");
-      const receiveStock = new ReceiveStock(repository, undefined, capacityService, productRepository, costLayerRepository);
+      const receiveStock = AutoRetryDecorator.wrap(new ReceiveStock(repository, undefined, capacityService, productRepository, costLayerRepository));
       await receiveStock.execute(
         sku,
         amount,
@@ -70,14 +71,14 @@ export class InventoryController {
       const dispatchRecordRepository = req.app.get("dispatchRecordRepository");
       const productRepository = req.app.get("productRepository");
       const costLayerRepository = req.app.get("costLayerRepository");
-      const dispatchStock = new DispatchStock(
+      const dispatchStock = AutoRetryDecorator.wrap(new DispatchStock(
         repository,
         undefined,
         reorderPolicyService,
         dispatchRecordRepository,
         productRepository,
         costLayerRepository
-      );
+      ));
       await dispatchStock.execute(sku, amount, locationId, false, lotNumber);
       res.status(200).json({ message: "Stock dispatched successfully" });
     } catch (error: any) {
@@ -147,7 +148,7 @@ export class InventoryController {
         return res.status(400).json({ error: "Invalid locationId" });
       }
 
-      const performFullStoreCount = new PerformFullStoreCount(repository);
+      const performFullStoreCount = AutoRetryDecorator.wrap(new PerformFullStoreCount(repository));
       await performFullStoreCount.execute(counts, locationId);
       res.status(200).json({ message: "Store count performed successfully" });
     } catch (error: any) {
@@ -185,7 +186,7 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId } = req.body;
-      const useCase = new AllocateStock(repository);
+      const useCase = AutoRetryDecorator.wrap(new AllocateStock(repository));
       await useCase.execute(sku, amount, locationId);
       res.status(200).json({ message: "Stock allocated successfully" });
     } catch (error: any) {
@@ -203,7 +204,7 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId } = req.body;
-      const useCase = new ReleaseAllocation(repository);
+      const useCase = AutoRetryDecorator.wrap(new ReleaseAllocation(repository));
       await useCase.execute(sku, amount, locationId);
       res.status(200).json({ message: "Allocation released successfully" });
     } catch (error: any) {
@@ -221,7 +222,7 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId } = req.body;
-      const useCase = new FulfillAllocation(repository);
+      const useCase = AutoRetryDecorator.wrap(new FulfillAllocation(repository));
       await useCase.execute(sku, amount, locationId);
       res.status(200).json({ message: "Allocation fulfilled successfully" });
     } catch (error: any) {
@@ -239,7 +240,7 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId } = req.body;
-      const useCase = new CreateInTransit(repository);
+      const useCase = AutoRetryDecorator.wrap(new CreateInTransit(repository));
       await useCase.execute(sku, amount, locationId);
       res.status(200).json({ message: "In-transit stock created successfully" });
     } catch (error: any) {
@@ -257,7 +258,7 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId } = req.body;
-      const useCase = new ReceiveInTransit(repository);
+      const useCase = AutoRetryDecorator.wrap(new ReceiveInTransit(repository));
       await useCase.execute(sku, amount, locationId);
       res.status(200).json({ message: "In-transit stock received successfully" });
     } catch (error: any) {
