@@ -11,7 +11,7 @@ export class PurchaseOrderController {
   static async create(req: Request, res: Response) {
     try {
       const poRepository = req.app.get("purchaseOrderRepository") as IPurchaseOrderRepository;
-      const useCase = new CreatePurchaseOrder(poRepository);
+      const useCase = AutoRetryDecorator.wrap(new CreatePurchaseOrder(poRepository));
       
       const po = await useCase.execute(req.body);
       res.status(201).json({
