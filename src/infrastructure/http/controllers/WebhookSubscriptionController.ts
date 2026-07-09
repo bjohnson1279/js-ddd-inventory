@@ -23,7 +23,8 @@ export class WebhookSubscriptionController {
       });
       res.status(201).json(subscription);
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      console.error(err.message);
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 
@@ -35,7 +36,8 @@ export class WebhookSubscriptionController {
       });
       res.status(200).json(subscriptions);
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      console.error(err.message);
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 
@@ -61,7 +63,8 @@ export class WebhookSubscriptionController {
       });
       res.status(200).json(updated);
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      console.error(err.message);
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 
@@ -78,7 +81,8 @@ export class WebhookSubscriptionController {
       await prisma.webhookSubscriptionModel.delete({ where: { id } });
       res.status(204).send();
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      console.error(err.message);
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 }
