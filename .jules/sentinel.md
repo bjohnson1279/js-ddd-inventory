@@ -137,6 +137,7 @@
 **Vulnerability:** The application was not explicitly validating that `req.query` parameters were strings, potentially allowing HTTP Parameter Pollution (HPP) by passing arrays or objects, which could cause application crashes or bypass certain logic.
 **Learning:** This is a medium priority vulnerability that could lead to unexpected behavior when `req.query` objects are passed directly to `prisma.$queryRaw` or similar methods.
 **Prevention:** Always validate that `req.query` values are of the expected primitive type (`typeof parameter === "string"`) before processing them in controllers.
+
 ## 2026-07-06 - Replace insecure Math.random with crypto.randomUUID
 **Vulnerability:** Several domain integration clients were using `Math.random().toString(36).substring(7)` to generate unique identifiers for mock Journal Entries in NetSuite, QuickBooks, and Xero.
 **Learning:** `Math.random()` is not a cryptographically secure pseudo-random number generator (CSPRNG). Identifiers generated this way are predictable and susceptible to collision, which could lead to ID collisions and enumeration in external accounting systems.
