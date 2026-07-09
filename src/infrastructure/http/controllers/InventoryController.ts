@@ -12,16 +12,26 @@ import { TraceProductRecall } from "../../../application/useCases/TraceProductRe
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
 import { DomainException } from "../../../domain/exceptions/DomainException";
 import { SKU } from "../../../domain/valueObjects/SKU";
+import { AutoRetryDecorator } from "../../../application/decorators/AutoRetryDecorator";
 
 export class InventoryController {
   static async receive(req: Request, res: Response) {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId, unitCostCents, lotNumber, expirationDate, tenantId, purchaseOrderId } = req.body;
+      if (!sku || typeof sku !== 'string' || sku.trim() === '') {
+        return res.status(400).json({ error: "Invalid or missing sku" });
+      }
+      if (amount == null || typeof amount !== 'number' || amount <= 0 || !Number.isInteger(amount)) {
+        return res.status(400).json({ error: "Invalid or missing amount" });
+      }
+      if (locationId && typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Invalid locationId" });
+      }
       const capacityService = req.app.get("wmsCapacityService");
       const productRepository = req.app.get("productRepository");
       const costLayerRepository = req.app.get("costLayerRepository");
-      const receiveStock = new ReceiveStock(repository, undefined, capacityService, productRepository, costLayerRepository);
+      const receiveStock = AutoRetryDecorator.wrap(new ReceiveStock(repository, undefined, capacityService, productRepository, costLayerRepository));
       await receiveStock.execute(
         sku,
         amount,
@@ -48,18 +58,27 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId, lotNumber } = req.body;
+      if (!sku || typeof sku !== 'string' || sku.trim() === '') {
+        return res.status(400).json({ error: "Invalid or missing sku" });
+      }
+      if (amount == null || typeof amount !== 'number' || amount <= 0 || !Number.isInteger(amount)) {
+        return res.status(400).json({ error: "Invalid or missing amount" });
+      }
+      if (locationId && typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Invalid locationId" });
+      }
       const reorderPolicyService = req.app.get("reorderPolicyService");
       const dispatchRecordRepository = req.app.get("dispatchRecordRepository");
       const productRepository = req.app.get("productRepository");
       const costLayerRepository = req.app.get("costLayerRepository");
-      const dispatchStock = new DispatchStock(
+      const dispatchStock = AutoRetryDecorator.wrap(new DispatchStock(
         repository,
         undefined,
         reorderPolicyService,
         dispatchRecordRepository,
         productRepository,
         costLayerRepository
-      );
+      ));
       await dispatchStock.execute(sku, amount, locationId, false, lotNumber);
       res.status(200).json({ message: "Stock dispatched successfully" });
     } catch (error: any) {
@@ -113,11 +132,23 @@ export class InventoryController {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { counts, locationId } = req.body;
       if (!Array.isArray(counts)) {
-        return res
-          .status(400)
-          .json({ error: "Expected 'counts' to be an array" });
+        return res.status(400).json({ error: "Expected 'counts' to be an array" });
       }
-      const performFullStoreCount = new PerformFullStoreCount(repository);
+
+      // Validate counts array items
+      for (const count of counts) {
+        if (!count.sku || typeof count.sku !== 'string' || count.sku.trim() === '') {
+          return res.status(400).json({ error: "Invalid sku in counts array" });
+        }
+        if (count.count == null || typeof count.count !== 'number' || count.count < 0 || !Number.isInteger(count.count)) {
+          return res.status(400).json({ error: "Invalid quantity in counts array" });
+        }
+      }
+      if (locationId && typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Invalid locationId" });
+      }
+
+      const performFullStoreCount = AutoRetryDecorator.wrap(new PerformFullStoreCount(repository));
       await performFullStoreCount.execute(counts, locationId);
       res.status(200).json({ message: "Store count performed successfully" });
     } catch (error: any) {
@@ -155,7 +186,7 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId } = req.body;
-      const useCase = new AllocateStock(repository);
+      const useCase = AutoRetryDecorator.wrap(new AllocateStock(repository));
       await useCase.execute(sku, amount, locationId);
       res.status(200).json({ message: "Stock allocated successfully" });
     } catch (error: any) {
@@ -173,7 +204,7 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId } = req.body;
-      const useCase = new ReleaseAllocation(repository);
+      const useCase = AutoRetryDecorator.wrap(new ReleaseAllocation(repository));
       await useCase.execute(sku, amount, locationId);
       res.status(200).json({ message: "Allocation released successfully" });
     } catch (error: any) {
@@ -191,7 +222,7 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId } = req.body;
-      const useCase = new FulfillAllocation(repository);
+      const useCase = AutoRetryDecorator.wrap(new FulfillAllocation(repository));
       await useCase.execute(sku, amount, locationId);
       res.status(200).json({ message: "Allocation fulfilled successfully" });
     } catch (error: any) {
@@ -209,7 +240,7 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId } = req.body;
-      const useCase = new CreateInTransit(repository);
+      const useCase = AutoRetryDecorator.wrap(new CreateInTransit(repository));
       await useCase.execute(sku, amount, locationId);
       res.status(200).json({ message: "In-transit stock created successfully" });
     } catch (error: any) {
@@ -227,7 +258,7 @@ export class InventoryController {
     try {
       const repository = req.app.get("repository") as IInventoryRepository;
       const { sku, amount, locationId } = req.body;
-      const useCase = new ReceiveInTransit(repository);
+      const useCase = AutoRetryDecorator.wrap(new ReceiveInTransit(repository));
       await useCase.execute(sku, amount, locationId);
       res.status(200).json({ message: "In-transit stock received successfully" });
     } catch (error: any) {
@@ -265,9 +296,16 @@ export class InventoryController {
 
       res.status(200).json(suggestions);
     } catch (error: any) {
-      if (error instanceof DomainException) {
+      const isDomainOrExpectedError = error instanceof DomainException ||
+        (error.message && (
+          error.message.includes("No lot-controlled inventory layers") ||
+          error.message.includes("Product variant with SKU") ||
+          error.message.includes("Insufficient lot-controlled inventory")
+        ));
+
+      if (isDomainOrExpectedError) {
         console.error(error.message);
-        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name || "Error" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
