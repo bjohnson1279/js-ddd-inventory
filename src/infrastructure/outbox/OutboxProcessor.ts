@@ -2,6 +2,7 @@ import { IOutboxRepository } from "../../domain/repositories/IOutboxRepository";
 import { DomainEventDispatcher } from "../../domain/events/DomainEventDispatcher";
 import { IMessageBroker } from "../../application/ports/IMessageBroker";
 import { runWithTrace, generateTraceId } from "../telemetry/traceContext";
+import { prisma } from "../database/prisma";
 
 export class OutboxProcessor {
   private isProcessing = false;
@@ -56,6 +57,39 @@ export class OutboxProcessor {
             // Publish to external message broker if configured
             if (this.messageBroker) {
               await this.messageBroker.publish(record.eventName, eventInstance);
+            }
+
+            // Enqueue webhooks for active subscriptions matching tenant and event type
+            let eventTenantId = "tenant-1";
+            try {
+              const payloadObj = JSON.parse(record.payload);
+              eventTenantId = payloadObj?.tenantId || (payloadObj?.tenantId && typeof payloadObj.tenantId === "object" ? payloadObj.tenantId.value : payloadObj?.tenantId) || "tenant-1";
+            } catch (e) {}
+
+            const subscriptions = await prisma.webhookSubscriptionModel.findMany({
+              where: {
+                tenantId: eventTenantId,
+                isActive: true,
+                eventTypes: {
+                  has: record.eventName
+                }
+              }
+            });
+
+            if (subscriptions.length > 0) {
+              await Promise.all(subscriptions.map(sub =>
+                prisma.webhookDeliveryModel.create({
+                  data: {
+                    tenantId: eventTenantId,
+                    subscriptionId: sub.id,
+                    eventType: record.eventName,
+                    payload: record.payload,
+                    status: "Pending",
+                    attempts: 0,
+                    nextAttemptAt: new Date()
+                  }
+                })
+              ));
             }
 
             // Collect successfully processed IDs

@@ -39,6 +39,7 @@ import { PrismaProcessedWebhookRepository } from "./infrastructure/database/Pris
 import { InMemoryOutboxRepository } from "./infrastructure/database/InMemoryOutboxRepository";
 import { PrismaOutboxRepository } from "./infrastructure/database/PrismaOutboxRepository";
 import { OutboxProcessor } from "./infrastructure/outbox/OutboxProcessor";
+import { WebhookDeliveryWorker } from "./infrastructure/workers/WebhookDeliveryWorker";
 import { IMessageBroker } from "./application/ports/IMessageBroker";
 import { InMemoryMessageBroker } from "./infrastructure/messaging/InMemoryMessageBroker";
 import { RabbitMQMessageBroker } from "./infrastructure/messaging/RabbitMQMessageBroker";
@@ -88,6 +89,7 @@ import userRoutes from "./infrastructure/http/routes/user.routes";
 import warehouseLocationRoutes from "./infrastructure/http/routes/warehouseLocation.routes";
 import notificationRoutes from "./infrastructure/http/routes/notification.routes";
 import auditRoutes from "./infrastructure/http/routes/audit.routes";
+import webhookSubscriptionRoutes from "./infrastructure/http/routes/webhookSubscription.routes";
 import { WebSocketManager } from "./infrastructure/websocket/WebSocketManager";
 import { authMiddleware } from "./infrastructure/http/middleware/auth";
 import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
@@ -211,6 +213,7 @@ export const setupApp = (
   app.use("/api/warehouse-locations", warehouseLocationRoutes);
   app.use("/api/notifications", notificationRoutes);
   app.use("/api/audit", auditRoutes);
+  app.use("/api/webhook-subscriptions", webhookSubscriptionRoutes);
 };
 
 const start = async () => {
@@ -338,6 +341,7 @@ const start = async () => {
   if (process.env.DISABLE_WORKERS !== "true") {
     const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);
     outboxProcessor.start(3000);
+    WebhookDeliveryWorker.start(2000);
   }
 
   const server = app.listen(port, () => {

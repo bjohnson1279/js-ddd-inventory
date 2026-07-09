@@ -4,6 +4,7 @@ import { OutboxProcessor } from "./infrastructure/outbox/OutboxProcessor";
 import { KafkaMessageBroker } from "./infrastructure/messaging/KafkaMessageBroker";
 import { RabbitMQMessageBroker } from "./infrastructure/messaging/RabbitMQMessageBroker";
 import { InMemoryMessageBroker } from "./infrastructure/messaging/InMemoryMessageBroker";
+import { WebhookDeliveryWorker } from "./infrastructure/workers/WebhookDeliveryWorker";
 
 const outboxRepo = new PrismaOutboxRepository();
 const kafkaUrl = process.env.KAFKA_URL;
@@ -21,12 +22,14 @@ const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);
 // Start polling
 const intervalMs = process.env.WORKER_INTERVAL_MS ? parseInt(process.env.WORKER_INTERVAL_MS) : 3000;
 outboxProcessor.start(intervalMs);
+WebhookDeliveryWorker.start(intervalMs);
 console.log(`[Worker] Outbox worker started (polling every ${intervalMs}ms)`);
 
 // Graceful shutdown
 process.on("SIGTERM", () => {
   console.log("[Worker] Shutting down outbox worker...");
   outboxProcessor.stop();
+  WebhookDeliveryWorker.stop();
   if (messageBroker.disconnect) {
     messageBroker.disconnect().catch(err => console.error("Error during broker disconnect:", err));
   }
@@ -36,6 +39,7 @@ process.on("SIGTERM", () => {
 process.on("SIGINT", () => {
   console.log("[Worker] Shutting down outbox worker...");
   outboxProcessor.stop();
+  WebhookDeliveryWorker.stop();
   if (messageBroker.disconnect) {
     messageBroker.disconnect().catch(err => console.error("Error during broker disconnect:", err));
   }
