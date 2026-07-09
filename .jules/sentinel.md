@@ -141,3 +141,7 @@
 **Vulnerability:** The application was exposing `error.message` for `DomainException` instances directly in `res.status(404)` responses in `BarcodeController.ts`.
 **Learning:** Even though `DomainException` signifies validated domain logic errors, exposing its dynamic message can leak internal state (like exact inventory numbers or specific failure reasons) to the client, constituting Information Disclosure.
 **Prevention:** Always map domain exception details to a generic, static safe string (e.g., 'Not registered') in the HTTP response, while ensuring the original error details are securely logged server-side (`console.error`) for troubleshooting.
+## 2024-07-09 - Information Disclosure in Webhook Subscription Controller
+**Vulnerability:** The webhook subscription endpoints leaked raw backend error messages directly to the client in HTTP 500 responses.
+**Learning:** Exposing raw backend exception details (error.message or error.stack) in HTTP error responses can leak sensitive business logic or internal states. This was specifically found in a controller handling secrets.
+**Prevention:** Always map these errors to generic, static safe strings (e.g., 'Internal server error') instead of returning the dynamic error.message directly, and ensure original dynamic errors are logged server-side for troubleshooting.
