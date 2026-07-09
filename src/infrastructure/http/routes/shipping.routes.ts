@@ -7,5 +7,6 @@ router.get("/rates", ShippingController.getRates);
 router.post("/labels", ShippingController.purchaseLabel);
 router.get("/shipments", ShippingController.getShipments);
 router.post("/shipments/:id/track", ShippingController.trackShipment);
+router.post("/route", ShippingController.routeOrder);
 
 export default router;
