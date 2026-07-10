@@ -13,7 +13,11 @@ export const syncJournalToXero = async (event: JournalEntryCreatedEvent): Promis
     });
 
     if (existing) {
-      console.log(`[Xero Sync] Local journal ${event.aggregateId} already synced to Xero.`);
+      console.info(JSON.stringify({
+        context: "Xero Sync",
+        message: `Local journal ${event.aggregateId} already synced to Xero.`,
+        journalEntryId: event.aggregateId
+      }));
       return;
     }
 
@@ -32,8 +36,18 @@ export const syncJournalToXero = async (event: JournalEntryCreatedEvent): Promis
       }
     });
 
-    console.log(`[Xero Sync] Successfully mapped local journal ${event.aggregateId} -> Xero ${xeroId}`);
+    console.info(JSON.stringify({
+      context: "Xero Sync",
+      message: `Successfully mapped local journal ${event.aggregateId} -> Xero ${xeroId}`,
+      journalEntryId: event.aggregateId,
+      xeroId
+    }));
   } catch (err: any) {
-    console.error(`[Xero Sync] Failed for journal ${event.aggregateId}:`, err);
+    console.error(JSON.stringify({
+      context: "Xero Sync",
+      message: `Failed for journal ${event.aggregateId}`,
+      journalEntryId: event.aggregateId,
+      error: err instanceof Error ? err.stack || err.message : err
+    }));
   }
 };

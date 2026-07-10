@@ -14,7 +14,11 @@ export const syncJournalToQuickBooks = async (event: JournalEntryCreatedEvent): 
     });
 
     if (existing) {
-      console.log(`[QuickBooks Sync] Local journal ${event.aggregateId} already synced to QuickBooks.`);
+      console.info(JSON.stringify({
+        context: "QuickBooks Sync",
+        message: `Local journal ${event.aggregateId} already synced to QuickBooks.`,
+        journalEntryId: event.aggregateId
+      }));
       return;
     }
 
@@ -33,9 +37,19 @@ export const syncJournalToQuickBooks = async (event: JournalEntryCreatedEvent): 
       }
     });
 
-    console.log(`[QuickBooks Sync] Successfully mapped local journal ${event.aggregateId} -> QuickBooks ${qbId}`);
+    console.info(JSON.stringify({
+      context: "QuickBooks Sync",
+      message: `Successfully mapped local journal ${event.aggregateId} -> QuickBooks ${qbId}`,
+      journalEntryId: event.aggregateId,
+      qbId
+    }));
   } catch (err: any) {
-    console.error(`[QuickBooks Sync] Failed for journal ${event.aggregateId}:`, err);
+    console.error(JSON.stringify({
+      context: "QuickBooks Sync",
+      message: `Failed for journal ${event.aggregateId}`,
+      journalEntryId: event.aggregateId,
+      error: err instanceof Error ? err.stack || err.message : err
+    }));
   }
 };
 
