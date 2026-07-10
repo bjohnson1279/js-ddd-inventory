@@ -230,7 +230,7 @@ const start = async () => {
     `;
     if ((isHypertable as any[]).length === 0) {
       await prisma.$executeRaw`SELECT create_hypertable('dispatch_records', 'dispatched_at', if_not_exists => TRUE);`;
-      console.log("dispatch_records table converted to TimescaleDB hypertable.");
+      console.info(JSON.stringify({ message: "dispatch_records table converted to TimescaleDB hypertable." }));
     }
 
     const isView = await prisma.$queryRaw`
