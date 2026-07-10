@@ -27,9 +27,17 @@ export class KafkaMessageBroker implements IMessageBroker {
     try {
       this.producer = this.kafka.producer();
       await this.producer.connect();
-      console.log(`[KafkaMessageBroker] Connected to Kafka bootstrap brokers at: ${this.brokerUrl}`);
+      console.info(JSON.stringify({
+        context: "KafkaMessageBroker",
+        message: "Connected to Kafka bootstrap brokers",
+        brokerUrl: this.brokerUrl
+      }));
     } catch (err: any) {
-      console.error("[KafkaMessageBroker] Connection failed:", err.message || err);
+      console.error(JSON.stringify({
+        context: "KafkaMessageBroker",
+        message: "Connection failed",
+        error: err.message || err
+      }));
       this.producer = null;
       throw err;
     }
@@ -63,9 +71,21 @@ export class KafkaMessageBroker implements IMessageBroker {
           }
         ]
       });
-      console.log(`[Trace: ${traceId}] [KafkaMessageBroker] Successfully published event "${event.constructor.name}" to topic "${topic}"`);
+      console.info(JSON.stringify({
+        context: "KafkaMessageBroker",
+        message: "Successfully published event",
+        traceId: traceId,
+        event: event.constructor.name,
+        topic: topic
+      }));
     } catch (err: any) {
-      console.error(`[Trace: ${traceId}] [KafkaMessageBroker] Failed to publish event to topic "${topic}":`, err.message || err);
+      console.error(JSON.stringify({
+        context: "KafkaMessageBroker",
+        message: "Failed to publish event",
+        traceId: traceId,
+        topic: topic,
+        error: err.message || err
+      }));
       throw err;
     }
   }
@@ -74,7 +94,10 @@ export class KafkaMessageBroker implements IMessageBroker {
     if (this.producer) {
       await this.producer.disconnect();
       this.producer = null;
-      console.log("[KafkaMessageBroker] Disconnected from Kafka");
+      console.info(JSON.stringify({
+        context: "KafkaMessageBroker",
+        message: "Disconnected from Kafka"
+      }));
     }
   }
 }
