@@ -185,6 +185,7 @@ function App() {
     { sku: "MACBOOK-AIR", quantity: 5, unitCostCents: 120000 },
   ]);
   const [onboardingMsg, setOnboardingMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [isOnboarding, setIsOnboarding] = useState(false);
 
   // Barcode State
   const [barcodeInput, setBarcodeInput] = useState<BarcodeAssignment>({
@@ -224,12 +225,15 @@ function App() {
   const [sellKitSku, setSellKitSku] = useState("");
   const [sellKitQty, setSellKitQty] = useState(1);
   const [kitMsg, setKitMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [isCreatingKit, setIsCreatingKit] = useState(false);
+  const [isDispatchingKit, setIsDispatchingKit] = useState(false);
 
   // Bookkeeping & Valuation State
   const [valSku, setValSku] = useState("IPHONE-15");
   const [valQty, setValQty] = useState(5);
   const [valMethod, setValMethod] = useState("fifo");
   const [valOutput, setValOutput] = useState<ValuationOutput | null>(null);
+  const [isCalculatingValuation, setIsCalculatingValuation] = useState(false);
   
   // Custom interactive chart comparisons
   const [comparisonData, setComparisonData] = useState<{ fifo: number; wac: number; loading: boolean } | null>(null);
@@ -342,6 +346,7 @@ function App() {
   const handleOnboardingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setOnboardingMsg(null);
+    setIsOnboarding(true);
     try {
       const res = await fetch(`${API_BASE}/onboarding/submit`, {
         method: "POST",
@@ -363,6 +368,8 @@ function App() {
       }
     } catch (err) {
       setOnboardingMsg({ type: "error", text: "API Connection issue." });
+    } finally {
+      setIsOnboarding(false);
     }
   };
 
@@ -570,6 +577,7 @@ function App() {
   const handleCreateKit = async (e: React.FormEvent) => {
     e.preventDefault();
     setKitMsg(null);
+    setIsCreatingKit(true);
     try {
       const res = await fetch(`${API_BASE}/kits/create`, {
         method: "POST",
@@ -590,6 +598,8 @@ function App() {
       }
     } catch (err) {
       setKitMsg({ type: "error", text: "Connection issues." });
+    } finally {
+      setIsCreatingKit(false);
     }
   };
 
@@ -600,6 +610,7 @@ function App() {
       setKitMsg({ type: "error", text: "No kit selected." });
       return;
     }
+    setIsDispatchingKit(true);
     try {
       const res = await fetch(`${API_BASE}/kits/dispatch`, {
         method: "POST",
@@ -620,6 +631,8 @@ function App() {
       }
     } catch (err) {
       setKitMsg({ type: "error", text: "Connection error." });
+    } finally {
+      setIsDispatchingKit(false);
     }
   };
 
@@ -627,6 +640,7 @@ function App() {
     e.preventDefault();
     setValOutput(null);
     setBookkeepingMsg(null);
+    setIsCalculatingValuation(true);
     try {
       const res = await fetch(`${API_BASE}/accounting/valuation/${valSku}?quantity=${valQty}&method=${valMethod}&tenantId=${tenantId}`);
       const data = await res.json();
@@ -637,6 +651,8 @@ function App() {
       }
     } catch (err) {
       setBookkeepingMsg({ type: "error", text: "Valuation API issue." });
+    } finally {
+      setIsCalculatingValuation(false);
     }
   };
 
@@ -1028,8 +1044,8 @@ function App() {
               >
                 + Add Row
               </button>
-              <button type="submit" className="btn btn-primary">
-                Initialize Opening Balances & Save layers
+              <button type="submit" className="btn btn-primary" disabled={isOnboarding} aria-busy={isOnboarding}>
+                {isOnboarding ? <><span role="img" aria-hidden="true">⏳</span> Initializing...</> : "Initialize Opening Balances & Save layers"}
               </button>
             </div>
           </form>
@@ -1492,8 +1508,8 @@ function App() {
                 <button type="button" className="btn btn-secondary" onClick={() => setKitComponents([...kitComponents, { variantId: "", quantity: 1 }])}>
                   + Add Component
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Compile Formula
+                <button type="submit" className="btn btn-primary" disabled={isCreatingKit} aria-busy={isCreatingKit}>
+                  {isCreatingKit ? <><span role="img" aria-hidden="true">⏳</span> Compiling...</> : "Compile Formula"}
                 </button>
               </div>
             </form>
@@ -1596,8 +1612,8 @@ function App() {
                   </div>
                 </div>
 
-                <button type="submit" className="btn btn-primary" style={{ width: "100%" }}>
-                  Deduct Components Atomically (POS checkout)
+                <button type="submit" className="btn btn-primary" style={{ width: "100%" }} disabled={isDispatchingKit} aria-busy={isDispatchingKit}>
+                  {isDispatchingKit ? <><span role="img" aria-hidden="true">⏳</span> Deducting...</> : "Deduct Components Atomically (POS checkout)"}
                 </button>
               </form>
             </div>
@@ -1746,8 +1762,8 @@ function App() {
                   <option value="wac">WAC (Weighted Average Pool Cost)</option>
                 </select>
               </div>
-              <button type="submit" className="btn btn-primary" style={{ width: "100%" }}>
-                Compute Cost Allocation
+              <button type="submit" className="btn btn-primary" style={{ width: "100%" }} disabled={isCalculatingValuation} aria-busy={isCalculatingValuation}>
+                {isCalculatingValuation ? <><span role="img" aria-hidden="true">⏳</span> Computing...</> : "Compute Cost Allocation"}
               </button>
             </form>
 

@@ -51,3 +51,6 @@
 ## 2024-06-26 - Replacing alert() with Accessible Toast Notifications
 **Learning:** Native `alert()` calls disrupt the user flow and lack robust accessibility controls. Screen readers may handle them inconsistently, and they freeze the main thread.
 **Action:** Replace `alert()` calls with dynamic in-page toast or banner notifications. Ensure these notifications are wrapped in a container with `role="status"` and `aria-live="polite"` so screen readers announce them automatically without stealing focus.
+## 2026-07-01 - Redundant ARIA Labels
+**Learning:** Adding an `aria-label` that exactly matches the visible text of an element (e.g., `<button aria-label="Submit">Submit</button>`) causes redundant announcements for screen readers and is an accessibility anti-pattern. `aria-label` should be reserved for elements lacking visible text, like icon-only buttons, or when the visible text lacks necessary context.
+**Action:** Before adding an `aria-label` to a button, check if the button already contains sufficient visible text. If it does, rely on the visible text instead of adding a redundant `aria-label`.
