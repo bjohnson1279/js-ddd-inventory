@@ -46,12 +46,8 @@ export class ReconcileInventoryAudit {
       .map(i => SKU.create(i.variantId));
 
     let inventoryItems: InventoryItem[] = [];
-    if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {
+    if (skusToFetch.length > 0) {
       inventoryItems = await this.inventoryRepository.findBySkus(skusToFetch, audit.locationId);
-    } else if (skusToFetch.length > 0) {
-      const fetchPromises = skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, audit.locationId));
-      const results = await Promise.all(fetchPromises);
-      inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
     }
     const inventoryItemsMap = new Map(inventoryItems.map(i => [i.sku.getValue(), i]));
 
