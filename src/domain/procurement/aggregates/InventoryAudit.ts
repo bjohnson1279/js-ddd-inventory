@@ -36,11 +36,19 @@ export class InventoryAudit extends AggregateRoot {
     this._status = AuditStatus.InProgress;
   }
 
+  // Pre-computed map for fast O(1) lookups during batch counts
+  private _itemsMap?: Map<string, InventoryAuditItem>;
+
   public recordCount(variantId: string, quantity: number): void {
     if (this._status !== AuditStatus.InProgress) {
       throw new Error("Can only record counts on in-progress audits.");
     }
-    const item = this._items.find((i) => i.variantId === variantId);
+
+    if (!this._itemsMap) {
+      this._itemsMap = new Map(this._items.map((i) => [i.variantId, i]));
+    }
+
+    const item = this._itemsMap.get(variantId);
     if (!item) {
       throw new Error(`Item with variant ID ${variantId} not found in this audit.`);
     }

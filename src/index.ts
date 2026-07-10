@@ -39,6 +39,7 @@ import { PrismaProcessedWebhookRepository } from "./infrastructure/database/Pris
 import { InMemoryOutboxRepository } from "./infrastructure/database/InMemoryOutboxRepository";
 import { PrismaOutboxRepository } from "./infrastructure/database/PrismaOutboxRepository";
 import { OutboxProcessor } from "./infrastructure/outbox/OutboxProcessor";
+import { WebhookDeliveryWorker } from "./infrastructure/workers/WebhookDeliveryWorker";
 import { IMessageBroker } from "./application/ports/IMessageBroker";
 import { InMemoryMessageBroker } from "./infrastructure/messaging/InMemoryMessageBroker";
 import { RabbitMQMessageBroker } from "./infrastructure/messaging/RabbitMQMessageBroker";
@@ -88,6 +89,7 @@ import userRoutes from "./infrastructure/http/routes/user.routes";
 import warehouseLocationRoutes from "./infrastructure/http/routes/warehouseLocation.routes";
 import notificationRoutes from "./infrastructure/http/routes/notification.routes";
 import auditRoutes from "./infrastructure/http/routes/audit.routes";
+import webhookSubscriptionRoutes from "./infrastructure/http/routes/webhookSubscription.routes";
 import { WebSocketManager } from "./infrastructure/websocket/WebSocketManager";
 import { authMiddleware } from "./infrastructure/http/middleware/auth";
 import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
@@ -97,6 +99,8 @@ import { InMemoryProductRepository } from "./infrastructure/database/InMemoryPro
 import { PrismaWarehouseLocationRepository } from "./infrastructure/database/PrismaWarehouseLocationRepository";
 import { PrismaProductRepository } from "./infrastructure/database/PrismaProductRepository";
 import { WMSCapacityService } from "./domain/services/WMSCapacityService";
+
+import { traceMiddleware } from "./infrastructure/http/middleware/traceMiddleware";
 
 const app = express();
 app.disable("x-powered-by");
@@ -115,6 +119,7 @@ const limiter = rateLimit({
 
 app.use(helmet());
 app.use(cors({ origin: allowedOrigins }));
+app.use(traceMiddleware);
 app.set("trust proxy", 1);
 app.use(limiter);
 app.use("/api/shopify", express.json({
@@ -208,6 +213,7 @@ export const setupApp = (
   app.use("/api/warehouse-locations", warehouseLocationRoutes);
   app.use("/api/notifications", notificationRoutes);
   app.use("/api/audit", auditRoutes);
+  app.use("/api/webhook-subscriptions", webhookSubscriptionRoutes);
 };
 
 const start = async () => {
@@ -216,7 +222,7 @@ const start = async () => {
   // Run TimescaleDB migration query when connecting to Postgres
   try {
     await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;`;
-    console.log("TimescaleDB extension enabled.");
+    console.info(JSON.stringify({ message: "TimescaleDB extension enabled." }));
     
     const isHypertable = await prisma.$queryRaw`
       SELECT 1 FROM timescaledb_information.hypertables 
@@ -224,7 +230,7 @@ const start = async () => {
     `;
     if ((isHypertable as any[]).length === 0) {
       await prisma.$executeRaw`SELECT create_hypertable('dispatch_records', 'dispatched_at', if_not_exists => TRUE);`;
-      console.log("dispatch_records table converted to TimescaleDB hypertable.");
+      console.info(JSON.stringify({ message: "dispatch_records table converted to TimescaleDB hypertable." }));
     }
 
     const isView = await prisma.$queryRaw`
@@ -253,19 +259,19 @@ const start = async () => {
             if_not_exists => TRUE);
         `;
       } catch (policyErr: any) {
-        console.log("TimescaleDB aggregate policy setup warning:", policyErr.message);
+        console.warn(JSON.stringify({ message: "TimescaleDB aggregate policy setup warning", error: policyErr.message }));
       }
-      console.log("daily_dispatch_summary continuous aggregate created.");
+      console.info(JSON.stringify({ message: "daily_dispatch_summary continuous aggregate created." }));
     }
     
     // Set up PostgreSQL Row-Level Security (RLS) policies
     await enableRowLevelSecurity(prisma);
   } catch (e) {
-    console.log("Database/TimescaleDB setup skipped/warning:", (e as Error).message);
+    console.warn(JSON.stringify({ message: "Database/TimescaleDB setup skipped/warning", error: (e as Error).message }));
   }
 
   if (process.env.DB_HOST) {
-    console.log("Initializing PostgreSQL Repository...");
+    console.info(JSON.stringify({ message: "Initializing PostgreSQL Repository..." }));
     const pgRepo = new PostgresInventoryRepository({
       host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT || "5432"),
@@ -276,7 +282,7 @@ const start = async () => {
     await pgRepo.initialize();
     repository = pgRepo;
   } else {
-    console.log("Initializing Prisma Repository...");
+    console.info(JSON.stringify({ message: "Initializing Prisma Repository..." }));
     repository = new PrismaInventoryRepository(new PrismaOutboxRepository());
   }
 
@@ -335,17 +341,18 @@ const start = async () => {
   if (process.env.DISABLE_WORKERS !== "true") {
     const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);
     outboxProcessor.start(3000);
+    WebhookDeliveryWorker.start(2000);
   }
 
   const server = app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    console.info(JSON.stringify({ message: `Server is running on port ${port}` }));
   });
   WebSocketManager.init(server);
 };
 
 if (process.env.NODE_ENV !== "test") {
   start().catch((err) => {
-    console.error("Failed to start server:", err);
+    console.error(JSON.stringify({ message: "Failed to start server", error: err instanceof Error ? err.message : String(err) }));
     process.exit(1);
   });
 }

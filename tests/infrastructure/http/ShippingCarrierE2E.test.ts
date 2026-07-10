@@ -144,4 +144,28 @@ describe("Shipping Carrier HTTP API Endpoints", () => {
     expect(outboxEvents2.length).toBe(2);
     expect(outboxEvents2[1].eventName).toBe("ShipmentStatusUpdatedEvent");
   });
+
+  it("should successfully calculate routing plan through POST /api/shipping/route", async () => {
+    const sku = "ROUTE-SKU-1";
+    // Setup stock in WH-EAST (near NY) and WH-WEST (near LA)
+    const itemEast = InventoryItem.create("item-east", SKU.create(sku), "WH-EAST", Quantity.create(10));
+    const itemWest = InventoryItem.create("item-west", SKU.create(sku), "WH-WEST", Quantity.create(10));
+    await inventoryRepo.save(itemEast);
+    await inventoryRepo.save(itemWest);
+
+    const res = await request(app)
+      .post("/api/shipping/route")
+      .send({
+        sku,
+        quantity: 5,
+        destinationAddress: "120 Broadway, New York, NY 10001",
+        strategyName: "MINIMIZE_COST"
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.splitCount).toBe(0);
+    expect(res.body.allocations).toHaveLength(1);
+    expect(res.body.allocations[0].locationId).toBe("WH-EAST");
+    expect(res.body.allocations[0].quantity).toBe(5);
+  });
 });

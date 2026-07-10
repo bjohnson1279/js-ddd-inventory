@@ -3,7 +3,8 @@ import { InventoryItem } from "../aggregates/InventoryItem";
 
 export interface IInventoryRepository {
   findBySku(sku: SKU, locationId?: string): Promise<InventoryItem | null>;
-  findBySkus?(skus: SKU[], locationId?: string): Promise<InventoryItem[]>;
+  findAllBySku(sku: SKU): Promise<InventoryItem[]>;
+  findBySkus(skus: SKU[], locationId?: string): Promise<InventoryItem[]>;
   findAll(): Promise<InventoryItem[]>;
   findAllByLocation(locationId: string): Promise<InventoryItem[]>;
   save(item: InventoryItem): Promise<void>;
