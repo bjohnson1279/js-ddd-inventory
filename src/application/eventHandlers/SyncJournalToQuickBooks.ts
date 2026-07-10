@@ -19,6 +19,7 @@ export const syncJournalToQuickBooks = async (event: JournalEntryCreatedEvent): 
         message: `Local journal ${event.aggregateId} already synced to QuickBooks.`,
         journalEntryId: event.aggregateId
       }));
+
       return;
     }
 
@@ -50,6 +51,7 @@ export const syncJournalToQuickBooks = async (event: JournalEntryCreatedEvent): 
       journalEntryId: event.aggregateId,
       error: err instanceof Error ? err.stack || err.message : err
     }));
+
   }
 };
 

@@ -120,43 +120,64 @@ export class AuditProcessorService {
         where: { tenantId, entryDate: { gte: sevenDaysAgo } }
       });
 
-      for (const journal of journals) {
-        let hasMapping = false;
+      if (journals.length > 0) {
+        const journalIds = journals.map(j => j.id);
+        const mappedJournalIds = new Set<string>();
+
         if (hasQbo) {
-          const mapping = await prisma.quickbooksJournalMappingModel.findUnique({
-            where: { journalEntryId: journal.id }
+          const qboMappings = await prisma.quickbooksJournalMappingModel.findMany({
+            where: { journalEntryId: { in: journalIds } },
+            select: { journalEntryId: true }
           });
-          if (mapping) hasMapping = true;
-        }
-        if (hasXero && !hasMapping) {
-          const mapping = await prisma.xeroJournalMappingModel.findUnique({
-            where: { journalEntryId: journal.id }
-          });
-          if (mapping) hasMapping = true;
-        }
-        if (hasNetsuite && !hasMapping) {
-          const mapping = await prisma.netsuiteJournalMappingModel.findUnique({
-            where: { journalEntryId: journal.id }
-          });
-          if (mapping) hasMapping = true;
+          qboMappings.forEach(m => mappedJournalIds.add(m.journalEntryId));
         }
 
-        if (!hasMapping) {
-          const existingOpen = await prisma.auditDiscrepancyModel.findFirst({
-            where: { tenantId, type: "ACCOUNTING_JOURNAL_MISSING", referenceId: journal.id, status: "OPEN" }
+        if (hasXero) {
+          const xeroMappings = await prisma.xeroJournalMappingModel.findMany({
+            where: { journalEntryId: { in: journalIds } },
+            select: { journalEntryId: true }
           });
+          xeroMappings.forEach(m => mappedJournalIds.add(m.journalEntryId));
+        }
 
-          if (!existingOpen) {
-            await prisma.auditDiscrepancyModel.create({
-              data: {
-                id: crypto.randomUUID(),
-                tenantId,
-                type: "ACCOUNTING_JOURNAL_MISSING",
-                referenceId: journal.id,
-                description: `Journal entry ${journal.id} (${journal.description || "No description"}) is not mapped to any external accounting transaction.`
-              }
+        if (hasNetsuite) {
+          const netsuiteMappings = await prisma.netsuiteJournalMappingModel.findMany({
+            where: { journalEntryId: { in: journalIds } },
+            select: { journalEntryId: true }
+          });
+          netsuiteMappings.forEach(m => mappedJournalIds.add(m.journalEntryId));
+        }
+
+        const unmappedJournals = journals.filter(j => !mappedJournalIds.has(j.id));
+
+        if (unmappedJournals.length > 0) {
+          const unmappedIds = unmappedJournals.map(j => j.id);
+          const existingDiscrepancies = await prisma.auditDiscrepancyModel.findMany({
+            where: {
+              tenantId,
+              type: "ACCOUNTING_JOURNAL_MISSING",
+              referenceId: { in: unmappedIds },
+              status: "OPEN"
+            },
+            select: { referenceId: true }
+          });
+          const existingIds = new Set(existingDiscrepancies.map(d => d.referenceId));
+
+          const newDiscrepanciesData = unmappedJournals
+            .filter(j => !existingIds.has(j.id))
+            .map(j => ({
+              id: crypto.randomUUID(),
+              tenantId,
+              type: "ACCOUNTING_JOURNAL_MISSING",
+              referenceId: j.id,
+              description: `Journal entry ${j.id} (${j.description || "No description"}) is not mapped to any external accounting transaction.`
+            }));
+
+          if (newDiscrepanciesData.length > 0) {
+            await prisma.auditDiscrepancyModel.createMany({
+              data: newDiscrepanciesData
             });
-            accountingCount++;
+            accountingCount += newDiscrepanciesData.length;
           }
         }
       }

@@ -18,6 +18,7 @@ export const syncJournalToXero = async (event: JournalEntryCreatedEvent): Promis
         message: `Local journal ${event.aggregateId} already synced to Xero.`,
         journalEntryId: event.aggregateId
       }));
+
       return;
     }
 
@@ -49,5 +50,6 @@ export const syncJournalToXero = async (event: JournalEntryCreatedEvent): Promis
       journalEntryId: event.aggregateId,
       error: err instanceof Error ? err.stack || err.message : err
     }));
+
   }
 };

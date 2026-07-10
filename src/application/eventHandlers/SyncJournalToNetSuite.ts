@@ -18,6 +18,7 @@ export const syncJournalToNetSuite = async (event: JournalEntryCreatedEvent): Pr
         message: `Local journal ${event.aggregateId} already synced to NetSuite.`,
         journalEntryId: event.aggregateId
       }));
+
       return;
     }
 
@@ -49,5 +50,6 @@ export const syncJournalToNetSuite = async (event: JournalEntryCreatedEvent): Pr
       journalEntryId: event.aggregateId,
       error: err instanceof Error ? err.stack || err.message : err
     }));
+
   }
 };
