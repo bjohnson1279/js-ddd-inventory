@@ -259,9 +259,9 @@ const start = async () => {
             if_not_exists => TRUE);
         `;
       } catch (policyErr: any) {
-        console.log("TimescaleDB aggregate policy setup warning:", policyErr.message);
+        console.warn(JSON.stringify({ message: "TimescaleDB aggregate policy setup warning", error: policyErr.message }));
       }
-      console.log("daily_dispatch_summary continuous aggregate created.");
+      console.info(JSON.stringify({ message: "daily_dispatch_summary continuous aggregate created." }));
     }
     
     // Set up PostgreSQL Row-Level Security (RLS) policies
