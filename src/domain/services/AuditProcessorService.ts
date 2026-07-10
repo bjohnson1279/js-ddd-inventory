@@ -15,13 +15,15 @@ export class AuditProcessorService {
       // Find all variants in database
       const variants = await prisma.productVariantModel.findMany();
 
-      for (const variant of variants) {
+      const ledgerSums = await prisma.inventoryModel.groupBy({
+        by: ['sku'],
+        _sum: { quantity: true }
+      });
+      const ledgerSumMap = new Map(ledgerSums.map(item => [item.sku, item._sum.quantity || 0]));
+
+      await Promise.all(variants.map(async (variant) => {
         // Aggregate local quantity for this variant across all locations
-        const ledgerSum = await prisma.inventoryModel.aggregate({
-          where: { sku: variant.sku },
-          _sum: { quantity: true }
-        });
-        const localQty = ledgerSum._sum.quantity || 0;
+        const localQty = ledgerSumMap.get(variant.sku) || 0;
 
         // Query Shopify for current stock level
         let shopifyQty = localQty;
@@ -105,7 +107,7 @@ export class AuditProcessorService {
             shopifyCount++;
           }
         }
-      }
+      }));
     }
 
     // 2. Accounting sync audit
@@ -120,7 +122,7 @@ export class AuditProcessorService {
         where: { tenantId, entryDate: { gte: sevenDaysAgo } }
       });
 
-      for (const journal of journals) {
+      await Promise.all(journals.map(async (journal) => {
         let hasMapping = false;
         if (hasQbo) {
           const mapping = await prisma.quickbooksJournalMappingModel.findUnique({
@@ -159,7 +161,7 @@ export class AuditProcessorService {
             accountingCount++;
           }
         }
-      }
+      }));
     }
 
     return { shopifyDiscrepancies: shopifyCount, accountingDiscrepancies: accountingCount };

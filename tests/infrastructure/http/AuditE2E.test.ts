@@ -19,7 +19,8 @@ jest.mock("../../../src/infrastructure/database/prisma", () => {
         findUnique: jest.fn()
       },
       inventoryModel: {
-        aggregate: jest.fn()
+        aggregate: jest.fn(),
+        groupBy: jest.fn()
       },
       journalEntryModel: {
         findMany: jest.fn()
@@ -88,9 +89,9 @@ describe("Audit REST API Endpoints", () => {
     ]);
 
     // 2. Mock ledger aggregate local quantities
-    (prisma.inventoryModel.aggregate as jest.Mock).mockResolvedValueOnce({
-      _sum: { quantity: 10 }
-    });
+    (prisma.inventoryModel.groupBy as jest.Mock).mockResolvedValueOnce([
+      { sku: "SKU-DIFF", _sum: { quantity: 10 } }
+    ]);
 
     // 3. Mock open check findFirst
     (prisma.auditDiscrepancyModel.findFirst as jest.Mock)

@@ -133,3 +133,7 @@
 ## 2026-06-30 - Optimize Find Operation Array Mapping
 **Learning:** In `ReceiveRMA.ts`, the `dto.items.map` loop performed a linear search (`.find()`) on `rma.items` for every item, leading to a nested loop $O(N \times M)$ performance bottleneck. Additionally, `PutawaySuggester.ts` needlessly mapped an array of locations sequentially in memory instead of tracking an index, resulting in poor spatial allocation.
 **Action:** When mapping over items and searching another array, pre-compute a `Map` of the target array keyed by its unique identifier (e.g., `variantId`) outside the loop to reduce the lookup to $O(1)$, minimizing complexity to $O(N + M)$. Furthermore, replace grouped item lookup maps with index-based reverse-mapping when summing properties to avoid unnecessary object allocation and traversal.
+
+## 2026-07-15 - Optimize AuditProcessorService with Prisma groupBy
+**Learning:** Found a critical performance bottleneck in `AuditProcessorService.ts` where a `for...of` loop was running `prisma.inventoryModel.aggregate` sequentially for each variant to calculate ledger sums, leading to an N+1 query issue.
+**Action:** When calculating aggregations over multiple categories/variants in a loop, always extract the aggregation outside the loop using a single `groupBy` query and map the results in memory. Then, wrap the remaining independent loop logic in `Promise.all` to parallelize external API calls and database updates.
