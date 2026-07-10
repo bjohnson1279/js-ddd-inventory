@@ -4,3 +4,6 @@
 ## 2024-05-24 - O(N^2) Lookup in Purchase Order / RMA / Audit receive flows
 **Learning:** In the `ReceivePurchaseOrder`, `ReceiveRMA`, and `RecordAuditCount` flows, passing an array of received/counted items results in O(N^2) time complexity because the aggregate's methods (`receiveItems`, `receiveItem`, `recordCount`) perform a `.find()` on their internal `_items` array for each passed item. When dealing with hundreds or thousands of items, this creates a severe performance bottleneck.
 **Action:** Implemented lazy-initialized `Map` structures inside the aggregate roots (`PurchaseOrder`, `RMA`, `InventoryAudit`) to cache item lookups. This transforms the inner lookup to O(1), improving batch processing times significantly.
+## 2026-07-09 - [Optimize N+1 query in ReorderPolicyService evaluatePolicies]
+**Learning:** Found an N+1 query where `this.poRepository.findAll()` was called inside a loop over `policies` during `evaluatePolicies`.
+**Action:** When a method iterates over a set of items (like policies) and requires checking a global state (like all POs), fetch the global state once before the loop and use it within the loop to avoid N+1 database queries.
