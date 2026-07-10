@@ -675,6 +675,8 @@ function App() {
             <div className="hud-metric">
               <span>Tenant: </span>
               <input
+                id="header-tenant-id"
+                aria-label="Active Tenant Context ID"
                 type="text"
                 value={tenantId}
                 onChange={(e) => setTenantId(e.target.value.toUpperCase())}
@@ -1024,6 +1026,7 @@ function App() {
               <button
                 type="button"
                 className="btn btn-secondary"
+                aria-label="Add Row to Variant Ledger Items"
                 onClick={() => setOnboardingItems([...onboardingItems, { sku: "", quantity: 0, unitCostCents: 0 }])}
               >
                 + Add Row
@@ -1087,7 +1090,7 @@ function App() {
                     onChange={(e) => setBarcodeInput({ ...barcodeInput, barcodeValue: e.target.value })}
                     required
                   />
-                  <button type="button" className="btn btn-secondary" style={{ padding: "0 15px" }} onClick={handleGenerateBarcode}>
+                  <button type="button" className="btn btn-secondary" style={{ padding: "0 15px" }} aria-label="Generate Code-128 Barcode" onClick={handleGenerateBarcode}>
                     Gen Code-128
                   </button>
                 </div>
@@ -1134,6 +1137,8 @@ function App() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                 <h2>Symbology Directory</h2>
                 <input
+                  id="barcode-search-filter"
+                  aria-label="Filter by SKU or barcode"
                   type="text"
                   placeholder="Filter by SKU or barcode..."
                   className="form-control"
@@ -1315,6 +1320,8 @@ function App() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                 <h2>Serial Registry</h2>
                 <input
+                  id="serial-search-filter"
+                  aria-label="Filter serials"
                   type="text"
                   placeholder="Filter serials..."
                   className="form-control"
@@ -2712,6 +2719,8 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
             {/* Barcode input buffer */}
             <div style={{ marginBottom: "15px" }}>
               <input
+                id="scan-barcode-buffer"
+                aria-label="Scan barcode buffer"
                 type="text"
                 placeholder="Scan barcode buffer..."
                 value={scanValue}
@@ -2722,7 +2731,6 @@ function MobileScannerTab({ inventoryList, barcodeList, onRefreshData, tenantId 
                   }
                 }}
                 disabled={scanLoading}
-                aria-label="Scan barcode buffer"
                 aria-busy={scanLoading}
                 style={{
                   background: "rgba(0, 0, 0, 0.4)",
