@@ -7,3 +7,7 @@
 **Vulnerability:** The application was using `$queryRawUnsafe` and `$executeRawUnsafe` in multiple places (`ForecastingController.ts` and `prisma.ts`) with string concatenation/interpolation.
 **Learning:** This is a critical vulnerability as it allows for SQL injection if user input is passed into these strings.
 **Prevention:** Always use Prisma's safe `$queryRaw` and `$executeRaw` with tagged template literals to automatically parameterize inputs, avoiding `Unsafe` methods entirely when dealing with dynamic data.
+## 2026-07-10 - Stop Information Leakage in HTTP Error Responses
+**Vulnerability:** HTTP 404 responses in `BarcodeController.ts` were explicitly returning the dynamic `error.message` from `DomainException` to the client when a scan failed (e.g., "Not registered").
+**Learning:** Returning dynamic, backend-generated error messages directly in HTTP responses exposes internal application state and logic. This can aid attackers in mapping out the system or understanding business rules they shouldn't have access to.
+**Prevention:** To prevent Information Disclosure, never expose raw backend error messages or stack traces directly to the client. Always log the dynamic error server-side using `console.error` (or a structured logger) for troubleshooting, and return a generic, static safe string (e.g., "Barcode not registered or invalid") in the JSON response payload.
