@@ -60,10 +60,10 @@ export class AccountCode {
       case "4100": return AccountCode.inventoryAdjustmentGain();
       case "5300": return AccountCode.inventoryWriteOffExpense();
       default: {
-        const category = code.startsWith("2") ? AccountCategory.Liability 
-                       : code.startsWith("3") ? AccountCategory.Equity 
-                       : code.startsWith("4") ? AccountCategory.Revenue 
-                       : code.startsWith("5") ? AccountCategory.Expense 
+        const category = code.startsWith("2") ? AccountCategory.Liability
+                       : code.startsWith("3") ? AccountCategory.Equity
+                       : code.startsWith("4") ? AccountCategory.Revenue
+                       : code.startsWith("5") ? AccountCategory.Expense
                        : AccountCategory.Asset;
         return new AccountCode(code, `Account ${code}`, category);
       }

@@ -45,6 +45,15 @@ export class Product {
     return this._variants.get(id) || null;
   }
 
+  public findVariantBySku(skuStr: string): ProductVariant | null {
+    for (const variant of this._variants.values()) {
+      if (variant.sku.getValue() === skuStr) {
+        return variant;
+      }
+    }
+    return null;
+  }
+
   public get variants(): ProductVariant[] {
     return Array.from(this._variants.values());
   }

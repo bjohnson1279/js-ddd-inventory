@@ -6,7 +6,12 @@ export class InMemoryMessageBroker implements IMessageBroker {
 
   public async publish(topic: string, event: IDomainEvent): Promise<void> {
     this.publishedEvents.push({ topic, event });
-    console.log(`[InMemoryMessageBroker] Published to topic "${topic}":`, JSON.stringify(event));
+    console.info(JSON.stringify({
+      context: "InMemoryMessageBroker",
+      action: "publish",
+      topic,
+      event
+    }));
   }
 
   public getPublishedEvents() {

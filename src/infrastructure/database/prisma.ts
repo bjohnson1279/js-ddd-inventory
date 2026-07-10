@@ -22,7 +22,7 @@ export const prisma = basePrisma.$extends({
         const tenantId = tenantLocalStorage.getStore();
         if (tenantId && process.env.NODE_ENV !== "test") {
           try {
-            await basePrisma.$executeRawUnsafe(`SELECT set_config('app.current_tenant_id', $1, false)`, tenantId);
+            await basePrisma.$executeRaw`SELECT set_config('app.current_tenant_id', ${tenantId}, false)`;
           } catch (err: any) {
             console.error("[PrismaExtension] Failed to set app.current_tenant_id:", err.message);
           }

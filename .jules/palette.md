@@ -48,3 +48,7 @@
 ## 2024-05-24 - Dynamic ARIA Labels on Emoji-Based State Buttons
 **Learning:** State-change buttons that rely primarily on emojis or brief text (like terminal mode selectors) lack context when read by screen readers. Furthermore, standard `aria-label` or `title` attributes alone don't convey the current active/inactive state dynamically, making navigation confusing.
 **Action:** Always provide explicit, dynamic `aria-label` and `title` attributes (e.g., `aria-label={isActive ? "Mode active" : "Switch to Mode"}`) to state-change buttons to ensure robust accessibility and clear state indication for screen readers and tooltips.
+
+## 2024-06-26 - Replacing alert() with Accessible Toast Notifications
+**Learning:** Native `alert()` calls disrupt the user flow and lack robust accessibility controls. Screen readers may handle them inconsistently, and they freeze the main thread.
+**Action:** Replace `alert()` calls with dynamic in-page toast or banner notifications. Ensure these notifications are wrapped in a container with `role="status"` and `aria-live="polite"` so screen readers announce them automatically without stealing focus.
