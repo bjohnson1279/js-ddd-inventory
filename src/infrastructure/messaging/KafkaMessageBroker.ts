@@ -1,3 +1,4 @@
+import { Logger } from "../logging/logger";
 import { Kafka, Producer } from "kafkajs";
 import { IMessageBroker } from "../../application/ports/IMessageBroker";
 import { IDomainEvent } from "../../domain/events/IDomainEvent";
@@ -27,9 +28,9 @@ export class KafkaMessageBroker implements IMessageBroker {
     try {
       this.producer = this.kafka.producer();
       await this.producer.connect();
-      console.log(`[KafkaMessageBroker] Connected to Kafka bootstrap brokers at: ${this.brokerUrl}`);
+      Logger.info("KafkaMessageBroker", "connect", {}, `Connected to Kafka bootstrap brokers at: ${this.brokerUrl}`);
     } catch (err: any) {
-      console.error("[KafkaMessageBroker] Connection failed:", err.message || err);
+      Logger.error("KafkaMessageBroker", "connect", {}, "Connection failed", err.message || err);
       this.producer = null;
       throw err;
     }
@@ -63,9 +64,9 @@ export class KafkaMessageBroker implements IMessageBroker {
           }
         ]
       });
-      console.log(`[Trace: ${traceId}] [KafkaMessageBroker] Successfully published event "${event.constructor.name}" to topic "${topic}"`);
+      Logger.info("KafkaMessageBroker", "publish", { traceId, topic, eventName: event.constructor.name }, `Successfully published event "${event.constructor.name}" to topic "${topic}"`);
     } catch (err: any) {
-      console.error(`[Trace: ${traceId}] [KafkaMessageBroker] Failed to publish event to topic "${topic}":`, err.message || err);
+      Logger.error("KafkaMessageBroker", "publish", { traceId, topic, eventName: event.constructor.name }, `Failed to publish event to topic "${topic}"`, err.message || err);
       throw err;
     }
   }
@@ -74,7 +75,7 @@ export class KafkaMessageBroker implements IMessageBroker {
     if (this.producer) {
       await this.producer.disconnect();
       this.producer = null;
-      console.log("[KafkaMessageBroker] Disconnected from Kafka");
+      Logger.info("KafkaMessageBroker", "disconnect", {}, "Disconnected from Kafka");
     }
   }
 }

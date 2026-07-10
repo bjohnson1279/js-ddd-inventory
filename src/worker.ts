@@ -30,8 +30,8 @@ process.on("SIGTERM", () => {
   console.log("[Worker] Shutting down outbox worker...");
   outboxProcessor.stop();
   WebhookDeliveryWorker.stop();
-  if (messageBroker.disconnect) {
-    messageBroker.disconnect().catch(err => console.error("Error during broker disconnect:", err));
+  if ('disconnect' in messageBroker && typeof (messageBroker as any).disconnect === 'function') {
+    (messageBroker as any).disconnect().catch((err: any) => console.error("Error during broker disconnect:", err));
   }
   process.exit(0);
 });
@@ -40,8 +40,8 @@ process.on("SIGINT", () => {
   console.log("[Worker] Shutting down outbox worker...");
   outboxProcessor.stop();
   WebhookDeliveryWorker.stop();
-  if (messageBroker.disconnect) {
-    messageBroker.disconnect().catch(err => console.error("Error during broker disconnect:", err));
+  if ('disconnect' in messageBroker && typeof (messageBroker as any).disconnect === 'function') {
+    (messageBroker as any).disconnect().catch((err: any) => console.error("Error during broker disconnect:", err));
   }
   process.exit(0);
 });
