@@ -54,4 +54,19 @@ describe("CalculateShippingRates Use Case", () => {
 
     expect(mockCarrierService.fetchRates).not.toHaveBeenCalled();
   });
+
+  it("should propagate errors thrown by the carrierService", async () => {
+    const error = new Error("Carrier API down");
+    mockCarrierService.fetchRates.mockRejectedValue(error);
+
+    await expect(
+      useCase.execute({
+        sku: "SKU-123",
+        quantity: 1,
+        destinationAddress: "123 Main St"
+      })
+    ).rejects.toThrow("Carrier API down");
+
+    expect(mockCarrierService.fetchRates).toHaveBeenCalledWith("SKU-123", 1, "123 Main St");
+  });
 });
