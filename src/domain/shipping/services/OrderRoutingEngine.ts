@@ -21,6 +21,10 @@ export class OrderRoutingEngine {
     rateCalculator: (locationId: string, sku: string, qty: number) => Promise<number>
   ): Promise<FulfillmentPlan> {
 
+    const activeCandidates = candidates.filter(c => c.availableQuantity > 0);
+    const totalAvailable = activeCandidates.reduce((sum, c) => sum + c.availableQuantity, 0);
+
+    if (totalAvailable < quantity) {
       throw new Error(`Insufficient total stock for SKU ${sku}. Requested: ${quantity}, Available: ${totalAvailable}`);
     }
 

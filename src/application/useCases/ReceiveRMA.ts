@@ -61,15 +61,6 @@ export class ReceiveRMA {
 
     // Optimization: Replaced sequential `for...of` loop with `Promise.all` mapping to process independent
     // RMA items concurrently. This dramatically reduces total processing time for multi-item returns, resolving N+1 wait times.
-    const itemsToSave = new Set<InventoryItem>();
-    const layersToSave: InventoryCostLayer[] = [];
-    const quarantineItemsToSave: QuarantineItem[] = [];
-    const serializedItemsToSave = new Set<any>(); // any due to import types, but we'll use array from set
-
-    // Create an in-memory cache for fetched inventory items during this transaction
-    // to prevent race conditions when the same sku and location are processed in multiple items
-    const inventoryCache = new Map<string, InventoryItem>();
-
     await Promise.all(dto.items.map(async (item) => {
       const rmaItem = rmaItemsMap.get(item.variantId);
       if (!rmaItem) {
@@ -86,24 +77,17 @@ export class ReceiveRMA {
 
       // 2. Increment stock level
       const sku = SKU.create(item.variantId);
-      const cacheKey = `${item.variantId}_${targetLocationId}`;
-
-      let invItem = inventoryCache.get(cacheKey) || null;
+      let invItem = await this.inventoryRepository.findBySku(sku, targetLocationId);
       if (!invItem) {
-        invItem = await this.inventoryRepository.findBySku(sku, targetLocationId) || null;
-        if (!invItem) {
-          invItem = InventoryItem.create(
-            crypto.randomUUID(),
-            sku,
-            targetLocationId,
-            Quantity.create(0)
-          );
-        }
-        inventoryCache.set(cacheKey, invItem);
+        invItem = InventoryItem.create(
+          crypto.randomUUID(),
+          sku,
+          targetLocationId,
+          Quantity.create(0)
+        );
       }
-
       invItem.receiveStock(Quantity.create(item.quantityReceived));
-      itemsToSave.add(invItem);
+      await this.inventoryRepository.save(invItem);
 
       // 3. Create Cost Layer
       const layerId = crypto.randomUUID();
@@ -117,7 +101,7 @@ export class ReceiveRMA {
         `RMA-${rma.id}`,
         targetLocationId
       );
-      layersToSave.push(layer);
+      await this.costLayerRepository.save(layer);
 
       // 4. Create Quarantine record if quarantined
       if (item.disposition === RMADisposition.Quarantine) {
@@ -130,7 +114,7 @@ export class ReceiveRMA {
           rma.locationId,
           rma.tenantId
         );
-        quarantineItemsToSave.push(quarantineItem);
+        await this.quarantineRepository.save(quarantineItem);
       }
 
       // 5. Post return journal entries if Accrual
@@ -150,14 +134,10 @@ export class ReceiveRMA {
       if (item.disposition === RMADisposition.Scrap) {
         // Decrement stock level
         invItem.dispatchStock(Quantity.create(item.quantityReceived));
-        // itemsToSave.add(invItem) was already called above, Set handles uniqueness
+        await this.inventoryRepository.save(invItem);
 
-        // Note: The new layer was added to layersToSave, but costLayerService.consumeFifoLayers
-        // reads from the DB. To prevent InsufficientInventoryException, we must flush the layer to the DB first.
-        // Or simply skip consumeFifoLayers and mark the newly created layer as exhausted in memory.
-
-        // Since we are writing off the exact same amount we just received in this loop iteration:
-        layer.consume(item.quantityReceived);
+        // Consume the cost layer
+        await this.costLayerService.consumeFifoLayers(item.variantId, item.quantityReceived);
 
         // Post write-off journal entry if Accrual
         if (config.accountingMethod === AccountingMethod.Accrual) {
@@ -186,30 +166,10 @@ export class ReceiveRMA {
           } else if (item.disposition === RMADisposition.Scrap) {
             serialItem.writeOff(`RMA return: Scrapped`, "system", `RMA-${rma.id}`);
           }
-          serializedItemsToSave.add(serialItem);
+          await this.serializedItemRepository!.save(serialItem);
         }));
       }
     }));
-
-    if (this.inventoryRepository.saveMany && itemsToSave.size > 0) {
-      await this.inventoryRepository.saveMany(Array.from(itemsToSave));
-    } else if (itemsToSave.size > 0) {
-      await Promise.all(Array.from(itemsToSave).map(item => this.inventoryRepository.save(item)));
-    }
-
-    if (this.costLayerRepository.saveMany && layersToSave.length > 0) {
-      await this.costLayerRepository.saveMany(layersToSave);
-    } else if (layersToSave.length > 0) {
-      await Promise.all(layersToSave.map(layer => this.costLayerRepository.save(layer)));
-    }
-
-    if (quarantineItemsToSave.length > 0) {
-      await Promise.all(quarantineItemsToSave.map(qItem => this.quarantineRepository.save(qItem)));
-    }
-
-    if (this.serializedItemRepository && serializedItemsToSave.size > 0) {
-      await Promise.all(Array.from(serializedItemsToSave).map(sItem => this.serializedItemRepository!.save(sItem)));
-    }
 
     await this.rmaRepository.save(rma);
   }

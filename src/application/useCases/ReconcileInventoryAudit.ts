@@ -51,9 +51,6 @@ export class ReconcileInventoryAudit {
     }
     const inventoryItemsMap = new Map(inventoryItems.map(i => [i.sku.getValue(), i]));
 
-    const itemsToSave = new Set<InventoryItem>();
-    const layersToSave: InventoryCostLayer[] = [];
-
     await Promise.all(audit.items.map(async (item) => {
       const discrepancy = item.discrepancy;
       if (discrepancy === null || discrepancy === 0) {
@@ -71,7 +68,7 @@ export class ReconcileInventoryAudit {
 
         // 1. Decrement stock
         inventoryItem.dispatchStock(Quantity.create(Math.abs(discrepancy)));
-        itemsToSave.add(inventoryItem);
+        await this.inventoryRepository.save(inventoryItem);
 
         // 2. Consume cost layers and post journal entries if Accrual
         if (config.accountingMethod === AccountingMethod.Accrual) {
@@ -104,10 +101,9 @@ export class ReconcileInventoryAudit {
             audit.locationId,
             Quantity.create(0)
           );
-          inventoryItemsMap.set(sku.getValue(), inventoryItem);
         }
         inventoryItem.receiveStock(Quantity.create(discrepancy));
-        itemsToSave.add(inventoryItem);
+        await this.inventoryRepository.save(inventoryItem);
 
         // 2. Find last receipt unit cost, fallback to 0
         const activeLayers = await this.costLayerRepository.getActiveLayers(item.variantId, "desc");
@@ -126,7 +122,7 @@ export class ReconcileInventoryAudit {
           `AUDIT-${audit.id}`,
           audit.locationId
         );
-        layersToSave.push(newLayer);
+        await this.costLayerRepository.save(newLayer);
 
         // 4. Post journal entries if Accrual and cost > 0
         if (totalCostCents > 0) {
@@ -142,18 +138,6 @@ export class ReconcileInventoryAudit {
         }
       }
     }));
-
-    if (this.inventoryRepository.saveMany && itemsToSave.size > 0) {
-      await this.inventoryRepository.saveMany(Array.from(itemsToSave));
-    } else if (itemsToSave.size > 0) {
-      await Promise.all(Array.from(itemsToSave).map(item => this.inventoryRepository.save(item)));
-    }
-
-    if (this.costLayerRepository.saveMany && layersToSave.length > 0) {
-      await this.costLayerRepository.saveMany(layersToSave);
-    } else if (layersToSave.length > 0) {
-      await Promise.all(layersToSave.map(layer => this.costLayerRepository.save(layer)));
-    }
 
     // Save the reconciled audit
     await this.auditRepository.save(audit);

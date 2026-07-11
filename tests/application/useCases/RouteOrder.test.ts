@@ -29,6 +29,7 @@ describe("RouteOrder Use Case", () => {
 
   it("should successfully route an order based on nearest location and low cost", async () => {
     const sku = SKU.create("SKU-ROUTE");
+
     // Setup stock in East (NY area) and West (LA area)
     const itemEast = InventoryItem.create("item-1", sku, "WH-EAST", Quantity.create(10));
     const itemWest = InventoryItem.create("item-2", sku, "WH-WEST", Quantity.create(10));
