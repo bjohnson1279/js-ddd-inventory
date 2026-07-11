@@ -28,4 +28,12 @@ describe("StartInventoryAudit Use Case", () => {
   it("should throw an error if the audit does not exist", async () => {
     await expect(useCase.execute("non-existent-id")).rejects.toThrow(/not found/i);
   });
+
+  it("should throw an error if the audit is not in Draft status", async () => {
+    const auditId = "audit-in-progress";
+    const audit = new InventoryAudit(auditId, "AUD-002", "TEN-1", "loc-1", AuditStatus.InProgress, []);
+    await repository.save(audit);
+
+    await expect(useCase.execute(auditId)).rejects.toThrow(/only draft audits can be started/i);
+  });
 });

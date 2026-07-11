@@ -81,6 +81,15 @@ export class ReceiveRMA {
 
     // Optimization: Replaced sequential `for...of` loop with `Promise.all` mapping to process independent
     // RMA items concurrently. This dramatically reduces total processing time for multi-item returns, resolving N+1 wait times.
+    const itemsToSave = new Set<InventoryItem>();
+    const layersToSave: InventoryCostLayer[] = [];
+    const quarantineItemsToSave: QuarantineItem[] = [];
+    const serializedItemsToSave = new Set<any>(); // any due to import types, but we'll use array from set
+
+    // Create an in-memory cache for fetched inventory items during this transaction
+    // to prevent race conditions when the same sku and location are processed in multiple items
+    const inventoryCache = new Map<string, InventoryItem>();
+
     await Promise.all(dto.items.map(async (item) => {
       const rmaItem = rmaItemsMap.get(item.variantId);
       if (!rmaItem) {
@@ -99,13 +108,18 @@ export class ReceiveRMA {
       const sku = SKU.create(item.variantId);
       let invItem = inventoryItemsMap.get(`${item.variantId}-${targetLocationId}`);
       if (!invItem) {
-        invItem = InventoryItem.create(
-          crypto.randomUUID(),
-          sku,
-          targetLocationId,
-          Quantity.create(0)
-        );
+        invItem = await this.inventoryRepository.findBySku(sku, targetLocationId) || null;
+        if (!invItem) {
+          invItem = InventoryItem.create(
+            crypto.randomUUID(),
+            sku,
+            targetLocationId,
+            Quantity.create(0)
+          );
+        }
+        inventoryCache.set(cacheKey, invItem);
       }
+
       invItem.receiveStock(Quantity.create(item.quantityReceived));
       if (!itemsToSave.includes(invItem)) {
         itemsToSave.push(invItem);
@@ -167,8 +181,8 @@ export class ReceiveRMA {
            itemsToSave.push(invItem);
         }
 
-        // Consume the cost layer
-        await this.costLayerService.consumeFifoLayers(item.variantId, item.quantityReceived);
+        // Since we are writing off the exact same amount we just received in this loop iteration:
+        layer.consume(item.quantityReceived);
 
         // Post write-off journal entry if Accrual
         if (config.accountingMethod === AccountingMethod.Accrual) {
@@ -197,7 +211,7 @@ export class ReceiveRMA {
           } else if (item.disposition === RMADisposition.Scrap) {
             serialItem.writeOff(`RMA return: Scrapped`, "system", `RMA-${rma.id}`);
           }
-          await this.serializedItemRepository!.save(serialItem);
+          serializedItemsToSave.add(serialItem);
         }));
       }
     }));

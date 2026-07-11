@@ -162,3 +162,8 @@
 **Vulnerability:** The application was exposing `error.message` directly in `res.status(500)` responses in `ShippingController.ts` (specifically in `routeOrder`).
 **Learning:** Exposing raw backend exception details in HTTP 500 responses can leak sensitive internal state to end-users, violating defense-in-depth principles. This specific instance was uncovered where a generic 500 error appended the raw message via `"Failed to route order: " + error.message`.
 **Prevention:** Standardize a pattern across API handlers. Never use `res.status(500).json({ error: "..." + error.message });`. Always fallback to generic descriptions (e.g. "Failed to route order.") and rely on robust server-side logging for troubleshooting.
+
+## 2024-05-24 - Timing Attack in Password Verification
+**Vulnerability:** Comparing password hashes using standard string equality operator `===`.
+**Learning:** This is vulnerable to timing attacks, as `===` compares characters sequentially and returns `false` on the first mismatch. Attackers can deduce the hash based on verification time.
+**Prevention:** Always use `crypto.timingSafeEqual` after checking buffer lengths when comparing sensitive cryptographic data like passwords or HMACs to ensure constant-time comparison.
