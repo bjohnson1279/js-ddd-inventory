@@ -1,17 +1,17 @@
 export class Logger {
-  public static info(message: string, context?: Record<string, unknown>): void {
-    console.info(JSON.stringify({ level: "info", message, ...context }));
+  public static info(context: Record<string, any>): void {
+    console.info(JSON.stringify(context));
   }
 
-  public static warn(message: string, context?: Record<string, unknown>): void {
-    console.warn(JSON.stringify({ level: "warn", message, ...context }));
+  public static warn(context: Record<string, any>): void {
+    console.warn(JSON.stringify(context));
   }
 
-  public static error(message: string, err?: unknown, context?: Record<string, unknown>): void {
-    const errorDetails = err !== undefined ? {
-      error: err instanceof Error ? err.stack || err.message : err
-    } : {};
+  public static error(context: Record<string, any>, err?: any): void {
+    const errorContext = err
+      ? { ...context, error: err instanceof Error ? err.stack || err.message : err }
+      : context;
 
-    console.error(JSON.stringify({ level: "error", message, ...errorDetails, ...context }));
+    console.error(JSON.stringify(errorContext));
   }
 }

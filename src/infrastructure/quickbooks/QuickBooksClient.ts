@@ -48,7 +48,8 @@ export class QuickBooksClient {
 
     const url = `${this.baseUrl}/${this.realmId}/journalentry`;
 
-    Logger.info("Publishing Journal Entry to QuickBooks API", {
+    Logger.info({
+      message: "Publishing Journal Entry to QuickBooks API",
       context: "QuickBooksClient",
       action: "publishJournalEntry",
       request: {
