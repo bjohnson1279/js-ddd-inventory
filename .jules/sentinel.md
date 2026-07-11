@@ -157,3 +157,8 @@
 **Vulnerability:** The webhook subscription endpoints leaked raw backend error messages directly to the client in HTTP 500 responses.
 **Learning:** Exposing raw backend exception details (error.message or error.stack) in HTTP error responses can leak sensitive business logic or internal states. This was specifically found in a controller handling secrets.
 **Prevention:** Always map these errors to generic, static safe strings (e.g., 'Internal server error') instead of returning the dynamic error.message directly, and ensure original dynamic errors are logged server-side for troubleshooting.
+
+## 2026-07-11 - [Fix Information Disclosure in ShippingController]
+**Vulnerability:** The application was exposing `error.message` directly in `res.status(500)` responses in `ShippingController.ts` (specifically in `routeOrder`).
+**Learning:** Exposing raw backend exception details in HTTP 500 responses can leak sensitive internal state to end-users, violating defense-in-depth principles. This specific instance was uncovered where a generic 500 error appended the raw message via `"Failed to route order: " + error.message`.
+**Prevention:** Standardize a pattern across API handlers. Never use `res.status(500).json({ error: "..." + error.message });`. Always fallback to generic descriptions (e.g. "Failed to route order.") and rely on robust server-side logging for troubleshooting.
