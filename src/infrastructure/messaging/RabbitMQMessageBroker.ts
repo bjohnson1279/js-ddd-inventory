@@ -16,9 +16,19 @@ export class RabbitMQMessageBroker implements IMessageBroker {
     try {
       this.connection = await amqp.connect(this.url);
       this.channel = await this.connection.createChannel();
-      console.log(`[RabbitMQMessageBroker] Connected to RabbitMQ at ${this.url}`);
+      console.info(JSON.stringify({
+        context: "RabbitMQMessageBroker",
+        action: "connect",
+        url: this.url,
+        message: "Connected to RabbitMQ"
+      }));
     } catch (err: any) {
-      console.error("[RabbitMQMessageBroker] Connection failed:", err.message || err);
+      console.error(JSON.stringify({
+        context: "RabbitMQMessageBroker",
+        action: "connect",
+        message: "Connection failed",
+        error: err.message || err
+      }));
       throw err;
     }
   }
@@ -41,7 +51,13 @@ export class RabbitMQMessageBroker implements IMessageBroker {
 
     const message = Buffer.from(JSON.stringify(payload));
     this.channel.publish(exchangeName, topic, message, { persistent: true });
-    console.log(`[RabbitMQMessageBroker] Published to exchange "${exchangeName}" with routing key "${topic}"`);
+    console.info(JSON.stringify({
+      context: "RabbitMQMessageBroker",
+      action: "publish",
+      exchangeName,
+      topic,
+      message: "Published to exchange"
+    }));
   }
 
   public async disconnect(): Promise<void> {
@@ -53,6 +69,10 @@ export class RabbitMQMessageBroker implements IMessageBroker {
       await this.connection.close();
       this.connection = null;
     }
-    console.log("[RabbitMQMessageBroker] Disconnected from RabbitMQ");
+    console.info(JSON.stringify({
+      context: "RabbitMQMessageBroker",
+      action: "disconnect",
+      message: "Disconnected from RabbitMQ"
+    }));
   }
 }
