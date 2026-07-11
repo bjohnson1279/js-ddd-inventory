@@ -48,7 +48,11 @@ export class WebSocketManager {
       });
     });
 
-    console.log("WebSocket Server initialized and attached to HTTP server.");
+    console.info(JSON.stringify({
+      context: "WebSocketManager",
+      action: "init",
+      message: "WebSocket Server initialized and attached to HTTP server."
+    }));
     return this.wss;
   }
 

@@ -51,50 +51,49 @@ export class PutawaySuggester {
       const itemProducts = await this.productRepo.findBySkus(Array.from(itemSkusMap.values()));
       for (const ip of itemProducts) {
         for (const iv of ip.variants) {
-          itemVariantMap.set(iv.sku.getValue(), iv);
+          const skuValue = iv.sku.getValue();
+          if (!itemVariantMap.has(skuValue)) {
+            itemVariantMap.set(skuValue, iv);
+          }
         }
       }
     }
 
     // Map location items for fast O(1) lookups
-    const itemsByLocation = new Map<string, typeof allItems>();
-    for (const item of allItems) {
-      const locItems = itemsByLocation.get(item.locationId) || [];
-      locItems.push(item);
-      itemsByLocation.set(item.locationId, locItems);
-    }
-
-    // For each location, calculate occupied weight & volume
+    // For each location, calculate occupied weight & volume directly
     const locationCapacities = [];
+    const locationItemsCount = new Map<string, number>(); // track counts if needed
     for (const loc of locations) {
-      const items = itemsByLocation.get(loc.id.value) || [];
-
-      let occupiedWeight = 0;
-      let occupiedVolume = 0;
-
-      for (const item of items) {
-        const v = itemVariantMap.get(item.sku.getValue());
-        if (v) {
-          occupiedWeight += item.quantity.getValue() * (v.weightGrams ?? 0);
-          occupiedVolume += item.quantity.getValue() * (v.volumeCubicMeters ?? 0);
-        }
-      }
-
-      const remainingWeight = loc.maxWeightGrams - occupiedWeight;
-      const remainingVolume = loc.maxVolumeCubicMeters - occupiedVolume;
-
       locationCapacities.push({
         location: loc,
-        remainingWeight,
-        remainingVolume
+        remainingWeight: loc.maxWeightGrams,
+        remainingVolume: loc.maxVolumeCubicMeters
       });
+      locationItemsCount.set(loc.id.value, locationCapacities.length - 1);
+    }
+
+    for (const item of allItems) {
+      const idx = locationItemsCount.get(item.locationId);
+      if (idx !== undefined) {
+        const v = itemVariantMap.get(item.sku.getValue());
+        if (v) {
+          locationCapacities[idx].remainingWeight -= item.quantity.getValue() * (v.weightGrams ?? 0);
+          locationCapacities[idx].remainingVolume -= item.quantity.getValue() * (v.volumeCubicMeters ?? 0);
+        }
+      }
     }
 
     // Filter and score candidates based on matching attributes
     const attrs = variant.attributes.all();
-    const tempZoneAttr = attrs.find(a => a.name === "temperatureZone")?.value;
-    const hazardAttr = attrs.find(a => a.name === "hazardClass")?.value;
-    const velocityAttr = attrs.find(a => a.name === "velocity")?.value;
+
+    let tempZoneAttr: string | undefined;
+    let hazardAttr: string | undefined;
+    let velocityAttr: string | undefined;
+    for (let i = 0; i < attrs.length; i++) {
+      if (attrs[i].name === "temperatureZone") tempZoneAttr = attrs[i].value;
+      else if (attrs[i].name === "hazardClass") hazardAttr = attrs[i].value;
+      else if (attrs[i].name === "velocity") velocityAttr = attrs[i].value;
+    }
 
     const scoredCandidates = locationCapacities.map(c => {
       let score = 0;
