@@ -263,7 +263,6 @@ const start = async () => {
       }
       console.info(JSON.stringify({ message: "daily_dispatch_summary continuous aggregate created." }));
     }
-    
     // Set up PostgreSQL Row-Level Security (RLS) policies
     await enableRowLevelSecurity(prisma);
   } catch (e) {

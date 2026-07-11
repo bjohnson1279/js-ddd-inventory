@@ -33,7 +33,7 @@ describe("OrderRoutingEngine", () => {
 
   // Mock rate calculator: 0.1 cents per km distance
   const mockRateCalculator = async (locationId: string, sku: string, qty: number): Promise<number> => {
-    const originGeo = locationId === "WH-EAST" 
+    const originGeo = locationId === "WH-EAST"
       ? GeoLocation.create(40.7306, -73.9352)
       : locationId === "WH-WEST"
       ? GeoLocation.create(34.0522, -118.2437)

@@ -296,7 +296,7 @@ export class InventoryController {
 
       res.status(200).json(suggestions);
     } catch (error: any) {
-      const isDomainOrExpectedError = error instanceof DomainException || 
+      const isDomainOrExpectedError = error instanceof DomainException ||
         (error.message && (
           error.message.includes("No lot-controlled inventory layers") ||
           error.message.includes("Product variant with SKU") ||
