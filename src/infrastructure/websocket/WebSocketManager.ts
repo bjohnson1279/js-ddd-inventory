@@ -1,5 +1,6 @@
 import { IncomingMessage } from "http";
 import { WebSocket, WebSocketServer } from "ws";
+import { Logger } from "../logging/logger";
 
 // Store active connections: tenantId -> Set of WebSockets
 const tenantClients = new Map<string, Set<WebSocket>>();
@@ -48,11 +49,11 @@ export class WebSocketManager {
       });
     });
 
-    console.info(JSON.stringify({
+    Logger.info({
       context: "WebSocketManager",
       action: "init",
       message: "WebSocket Server initialized and attached to HTTP server."
-    }));
+    });
     return this.wss;
   }
 
