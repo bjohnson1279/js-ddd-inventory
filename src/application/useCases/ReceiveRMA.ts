@@ -59,6 +59,26 @@ export class ReceiveRMA {
     // Optimization: Index RMA items by variantId to prevent O(N*M) nested lookups
     const rmaItemsMap = new Map(rma.items.map((i) => [i.variantId, i]));
 
+    // Optimization: Pre-fetch all target inventory items in a single batch query
+    // to prevent N+1 queries when resolving target location stocks.
+    const skusToFetch = Array.from(new Set(dto.items.map(item => item.variantId))).map(vId => SKU.create(vId));
+    let inventoryItems: InventoryItem[] = [];
+    if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {
+      const normalItems = await this.inventoryRepository.findBySkus(skusToFetch, rma.locationId);
+      const quarantineItems = await this.inventoryRepository.findBySkus(skusToFetch, `${rma.locationId}-quarantine`);
+      inventoryItems = [...normalItems, ...quarantineItems];
+    } else if (skusToFetch.length > 0) {
+      const normalPromises = skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, rma.locationId));
+      const quarantinePromises = skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, `${rma.locationId}-quarantine`));
+      const results = await Promise.all([...normalPromises, ...quarantinePromises]);
+      inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
+    }
+    const inventoryItemsMap = new Map(inventoryItems.map(i => [`${i.sku.getValue()}-${i.locationId}`, i]));
+
+    const itemsToSave: InventoryItem[] = [];
+    const layersToSave: InventoryCostLayer[] = [];
+    const quarantineItemsToSave: QuarantineItem[] = [];
+
     // Optimization: Replaced sequential `for...of` loop with `Promise.all` mapping to process independent
     // RMA items concurrently. This dramatically reduces total processing time for multi-item returns, resolving N+1 wait times.
     await Promise.all(dto.items.map(async (item) => {
@@ -77,7 +97,7 @@ export class ReceiveRMA {
 
       // 2. Increment stock level
       const sku = SKU.create(item.variantId);
-      let invItem = await this.inventoryRepository.findBySku(sku, targetLocationId);
+      let invItem = inventoryItemsMap.get(`${item.variantId}-${targetLocationId}`);
       if (!invItem) {
         invItem = InventoryItem.create(
           crypto.randomUUID(),
@@ -87,7 +107,11 @@ export class ReceiveRMA {
         );
       }
       invItem.receiveStock(Quantity.create(item.quantityReceived));
-      await this.inventoryRepository.save(invItem);
+      if (!itemsToSave.includes(invItem)) {
+        itemsToSave.push(invItem);
+      } else {
+        // If the item is already in the array, we need to replace it or just ignore because it's a reference. Since it's an object reference, modifying it directly updates the instance in itemsToSave.
+      }
 
       // 3. Create Cost Layer
       const layerId = crypto.randomUUID();
@@ -101,7 +125,12 @@ export class ReceiveRMA {
         `RMA-${rma.id}`,
         targetLocationId
       );
-      await this.costLayerRepository.save(layer);
+      // Immediately save layer if scrap so consumeFifoLayers works
+      if (item.disposition === RMADisposition.Scrap) {
+         await this.costLayerRepository.save(layer);
+      } else {
+         layersToSave.push(layer);
+      }
 
       // 4. Create Quarantine record if quarantined
       if (item.disposition === RMADisposition.Quarantine) {
@@ -114,7 +143,7 @@ export class ReceiveRMA {
           rma.locationId,
           rma.tenantId
         );
-        await this.quarantineRepository.save(quarantineItem);
+        quarantineItemsToSave.push(quarantineItem);
       }
 
       // 5. Post return journal entries if Accrual
@@ -134,7 +163,9 @@ export class ReceiveRMA {
       if (item.disposition === RMADisposition.Scrap) {
         // Decrement stock level
         invItem.dispatchStock(Quantity.create(item.quantityReceived));
-        await this.inventoryRepository.save(invItem);
+        if (!itemsToSave.includes(invItem)) {
+           itemsToSave.push(invItem);
+        }
 
         // Consume the cost layer
         await this.costLayerService.consumeFifoLayers(item.variantId, item.quantityReceived);
@@ -170,6 +201,24 @@ export class ReceiveRMA {
         }));
       }
     }));
+
+    if ('saveMany' in this.inventoryRepository && typeof (this.inventoryRepository as any).saveMany === 'function') {
+      await (this.inventoryRepository as any).saveMany(itemsToSave);
+    } else {
+      await Promise.all(itemsToSave.map(item => this.inventoryRepository.save(item)));
+    }
+
+    if ('saveMany' in this.costLayerRepository && typeof (this.costLayerRepository as any).saveMany === 'function') {
+      await (this.costLayerRepository as any).saveMany(layersToSave);
+    } else {
+      await Promise.all(layersToSave.map(layer => this.costLayerRepository.save(layer)));
+    }
+
+    if ('saveMany' in this.quarantineRepository && typeof (this.quarantineRepository as any).saveMany === 'function') {
+      await (this.quarantineRepository as any).saveMany(quarantineItemsToSave);
+    } else {
+      await Promise.all(quarantineItemsToSave.map(item => this.quarantineRepository.save(item)));
+    }
 
     await this.rmaRepository.save(rma);
   }
