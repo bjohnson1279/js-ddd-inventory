@@ -85,31 +85,16 @@ export class AuditProcessorService {
       // Find all variants in database
       const variants = await prisma.productVariantModel.findMany();
 
-      // Aggregate local quantity for all variants across all locations upfront
-      const inventoryAgg = await prisma.inventoryModel.groupBy({
-        by: ['sku'],
-        _sum: { quantity: true }
-      });
-      const localQtyMap = new Map(inventoryAgg.map((agg: any) => [agg.sku, agg._sum.quantity || 0]));
+      for (const variant of variants) {
+        // Aggregate local quantity for this variant across all locations
+        const ledgerSum = await prisma.inventoryModel.aggregate({
+          where: { sku: variant.sku },
+          _sum: { quantity: true }
+        });
+        const localQty = ledgerSum._sum.quantity || 0;
 
-      // Fetch all open SHOPIFY_STOCK_MISMATCH discrepancies upfront
-      const openDiscrepancies = await prisma.auditDiscrepancyModel.findMany({
-        where: { tenantId, type: "SHOPIFY_STOCK_MISMATCH", status: "OPEN" },
-        select: { referenceId: true }
-      });
-      const existingOpenSet = new Set(openDiscrepancies.map((d: any) => d.referenceId));
-
-      const chunkedVariants = [];
-      const chunkSize = 50;
-      for (let i = 0; i < variants.length; i += chunkSize) {
-        chunkedVariants.push(variants.slice(i, i + chunkSize));
-      }
-
-      const newDiscrepanciesData: any[] = [];
-
-      await Promise.all(chunkedVariants.map(async (chunk) => {
-        let shopifyData: Record<string, any> = {};
-
+        // Query Shopify for current stock level
+        let shopifyQty = localQty;
         if (accessToken !== "mock-token" && !storeDomain.includes("mock")) {
           const fetchedQty = await this.fetchShopifyQuantity(
             variant.sku,
@@ -127,53 +112,27 @@ export class AuditProcessorService {
           }
         }
 
-        // Process chunk results
-        for (let i = 0; i < chunk.length; i++) {
-          const variant = chunk[i];
-          const localQty = localQtyMap.get(variant.sku) || 0;
-          let shopifyQty = localQty;
+        if (localQty !== shopifyQty) {
+          // Check if open discrepancy exists
+          const referenceId = `${variant.sku}:default`;
+          const existingOpen = await prisma.auditDiscrepancyModel.findFirst({
+            where: { tenantId, type: "SHOPIFY_STOCK_MISMATCH", referenceId, status: "OPEN" }
+          });
 
-          if (accessToken !== "mock-token" && !storeDomain.includes("mock")) {
-            const variantData = shopifyData[`var${i}`];
-            const edges = variantData?.edges || [];
-            if (edges.length > 0) {
-              const levels = edges[0].node.inventoryLevels?.edges || [];
-              const matchedLevel = levels.find(
-                (e: any) => e.node.location.id === shopifyLocationId
-              );
-              if (matchedLevel) {
-                shopifyQty = matchedLevel.node.quantities[0]?.quantity || 0;
-              }
-            }
-          } else {
-            // Mock mismatch scenario if variant SKU ends with -DIFF
-            if (variant.sku.endsWith("-DIFF")) {
-              shopifyQty = Number(localQty) + 10;
-            }
-          }
-
-          if (localQty !== shopifyQty) {
-            const referenceId = `${variant.sku}:default`;
-
-            if (!existingOpenSet.has(referenceId)) {
-              newDiscrepanciesData.push({
+          if (!existingOpen) {
+            await prisma.auditDiscrepancyModel.create({
+              data: {
                 id: crypto.randomUUID(),
                 tenantId,
                 type: "SHOPIFY_STOCK_MISMATCH",
                 referenceId,
                 externalRefId: "mock-inventory-item-id",
                 description: `Shopify stock mismatch for SKU ${variant.sku}. Local: ${localQty}, Shopify: ${shopifyQty}`
-              });
-            }
+              }
+            });
+            shopifyCount++;
           }
         }
-      }));
-
-      if (newDiscrepanciesData.length > 0) {
-        await prisma.auditDiscrepancyModel.createMany({
-          data: newDiscrepanciesData
-        });
-        shopifyCount += newDiscrepanciesData.length;
       }
     }
 
@@ -190,7 +149,7 @@ export class AuditProcessorService {
       });
 
       if (journals.length > 0) {
-        const journalIds = journals.map((j: any) => j.id);
+        const journalIds = journals.map(j => j.id);
         const mappedJournalIds = new Set<string>();
 
         if (hasQbo) {
@@ -198,7 +157,7 @@ export class AuditProcessorService {
             where: { journalEntryId: { in: journalIds } },
             select: { journalEntryId: true }
           });
-          qboMappings.forEach((m: any) => mappedJournalIds.add(m.journalEntryId));
+          qboMappings.forEach(m => mappedJournalIds.add(m.journalEntryId));
         }
 
         if (hasXero) {
@@ -206,7 +165,7 @@ export class AuditProcessorService {
             where: { journalEntryId: { in: journalIds } },
             select: { journalEntryId: true }
           });
-          xeroMappings.forEach((m: any) => mappedJournalIds.add(m.journalEntryId));
+          xeroMappings.forEach(m => mappedJournalIds.add(m.journalEntryId));
         }
 
         if (hasNetsuite) {
@@ -214,13 +173,13 @@ export class AuditProcessorService {
             where: { journalEntryId: { in: journalIds } },
             select: { journalEntryId: true }
           });
-          netsuiteMappings.forEach((m: any) => mappedJournalIds.add(m.journalEntryId));
+          netsuiteMappings.forEach(m => mappedJournalIds.add(m.journalEntryId));
         }
 
-        const unmappedJournals = journals.filter((j: any) => !mappedJournalIds.has(j.id));
+        const unmappedJournals = journals.filter(j => !mappedJournalIds.has(j.id));
 
         if (unmappedJournals.length > 0) {
-          const unmappedIds = unmappedJournals.map((j: any) => j.id);
+          const unmappedIds = unmappedJournals.map(j => j.id);
           const existingDiscrepancies = await prisma.auditDiscrepancyModel.findMany({
             where: {
               tenantId,
@@ -230,11 +189,11 @@ export class AuditProcessorService {
             },
             select: { referenceId: true }
           });
-          const existingIds = new Set(existingDiscrepancies.map((d: any) => d.referenceId));
+          const existingIds = new Set(existingDiscrepancies.map(d => d.referenceId));
 
           const newDiscrepanciesData = unmappedJournals
-            .filter((j: any) => !existingIds.has(j.id))
-            .map((j: any) => ({
+            .filter(j => !existingIds.has(j.id))
+            .map(j => ({
               id: crypto.randomUUID(),
               tenantId,
               type: "ACCOUNTING_JOURNAL_MISSING",

@@ -18,7 +18,7 @@ const basePrisma = new PrismaClient({ adapter } as any);
 export const prisma = basePrisma.$extends({
   query: {
     $allModels: {
-      async $allOperations({ model, operation, args, query }: any) {
+      async $allOperations({ model, operation, args, query }) {
         const tenantId = tenantLocalStorage.getStore();
         if (tenantId && process.env.NODE_ENV !== "test") {
           try {
