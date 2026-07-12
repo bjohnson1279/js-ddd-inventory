@@ -2,6 +2,72 @@ import { prisma } from "../../infrastructure/database/prisma";
 import crypto from "crypto";
 
 export class AuditProcessorService {
+  private async fetchShopifyQuantity(
+    variantSku: string,
+    storeDomain: string,
+    accessToken: string,
+    shopifyLocationId: string
+  ): Promise<number | null> {
+    try {
+      const response = await fetch(
+        `https://${storeDomain}/admin/api/2024-04/graphql.json`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Shopify-Access-Token": accessToken
+          },
+          body: JSON.stringify({
+            query: `
+              query findInventoryItem($query: String!) {
+                inventoryItems(first: 1, query: $query) {
+                  edges {
+                    node {
+                      id
+                      inventoryLevels(first: 10) {
+                        edges {
+                          node {
+                            location { id }
+                            quantities(names: ["available"]) { quantity }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `,
+            variables: { query: `sku:${variantSku}` }
+          })
+        }
+      );
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const resData = (await response.json()) as any;
+      const edges = resData?.data?.inventoryItems?.edges || [];
+      if (edges.length === 0) {
+        return null;
+      }
+
+      const levels = edges[0].node.inventoryLevels?.edges || [];
+      const matchedLevel = levels.find(
+        (e: any) => e.node.location.id === shopifyLocationId
+      );
+
+      if (!matchedLevel) {
+        return null;
+      }
+
+      return matchedLevel.node.quantities[0]?.quantity || 0;
+    } catch (err) {
+      console.error("Failed to query Shopify stock level:", err);
+      return null;
+    }
+  }
+
   async runAudit(tenantId: string): Promise<{ shopifyDiscrepancies: number; accountingDiscrepancies: number }> {
     let shopifyCount = 0;
     let accountingCount = 0;
@@ -26,56 +92,14 @@ export class AuditProcessorService {
         // Query Shopify for current stock level
         let shopifyQty = localQty;
         if (accessToken !== "mock-token" && !storeDomain.includes("mock")) {
-          try {
-            // Find inventory item ID by SKU on Shopify
-            const response = await fetch(
-              `https://${storeDomain}/admin/api/2024-04/graphql.json`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "X-Shopify-Access-Token": accessToken
-                },
-                body: JSON.stringify({
-                  query: `
-                    query findInventoryItem($query: String!) {
-                      inventoryItems(first: 1, query: $query) {
-                        edges {
-                          node {
-                            id
-                            inventoryLevels(first: 10) {
-                              edges {
-                                node {
-                                  location { id }
-                                  quantities(names: ["available"]) { quantity }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  `,
-                  variables: { query: `sku:${variant.sku}` }
-                })
-              }
-            );
-
-            if (response.ok) {
-              const resData = (await response.json()) as any;
-              const edges = resData?.data?.inventoryItems?.edges || [];
-              if (edges.length > 0) {
-                const levels = edges[0].node.inventoryLevels?.edges || [];
-                const matchedLevel = levels.find(
-                  (e: any) => e.node.location.id === shopifyLocationId
-                );
-                if (matchedLevel) {
-                  shopifyQty = matchedLevel.node.quantities[0]?.quantity || 0;
-                }
-              }
-            }
-          } catch (err) {
-            console.error("Failed to query Shopify stock level:", err);
+          const fetchedQty = await this.fetchShopifyQuantity(
+            variant.sku,
+            storeDomain,
+            accessToken,
+            shopifyLocationId
+          );
+          if (fetchedQty !== null) {
+            shopifyQty = fetchedQty;
           }
         } else {
           // Mock mismatch scenario if variant SKU ends with -DIFF
