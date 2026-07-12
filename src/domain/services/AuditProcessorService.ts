@@ -98,7 +98,7 @@ export class AuditProcessorService {
         // Compare and create discrepancies
         for (const variant of chunk) {
           const localQty = localQuantities.get(variant.sku) || 0;
-          const shopifyQty = shopifyQuantities.has(variant.sku) ? shopifyQuantities.get(variant.sku) : localQty;
+          const shopifyQty = shopifyQuantities.get(variant.sku) ?? localQty;
 
           if (localQty !== shopifyQty) {
             // Check if open discrepancy exists
