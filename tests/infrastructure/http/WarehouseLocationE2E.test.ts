@@ -23,6 +23,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
   let locationRepo: InMemoryWarehouseLocationRepository;
   let adminToken: string;
   let viewerToken: string;
+  let guestToken: string;
 
   beforeEach(() => {
     inventoryRepo = new InMemoryInventoryRepository();
@@ -55,9 +56,18 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
 
     adminToken = jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
     viewerToken = jwt.sign({ actorId: "viewer-user", role: "viewer", tenantId: "tenant-1" }, JWT_SECRET);
+    guestToken = jwt.sign({ actorId: "guest-user", role: "guest", tenantId: "tenant-1" }, JWT_SECRET);
   });
 
   describe("Role Enforcement / RBAC", () => {
+    it("should deny guest from listing locations", async () => {
+      const res = await request(app)
+        .get("/api/warehouse-locations")
+        .set("Authorization", `Bearer ${guestToken}`);
+
+      expect(res.status).toBe(403);
+    });
+
     it("should deny viewer from saving a location", async () => {
       const res = await request(app)
         .post("/api/warehouse-locations")

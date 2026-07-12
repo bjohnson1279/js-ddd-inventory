@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import { Logger } from "./infrastructure/logging/logger";
 import { rateLimit } from "express-rate-limit";
 import { Logger } from "./infrastructure/logging/logger";
 import { PrismaInventoryRepository } from "./infrastructure/database/PrismaInventoryRepository";
