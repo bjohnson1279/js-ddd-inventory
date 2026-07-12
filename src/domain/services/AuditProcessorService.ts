@@ -1,7 +1,73 @@
 import { prisma } from "../../infrastructure/database/prisma";
+import { Logger } from "../../infrastructure/logging/logger";
 import crypto from "crypto";
 
 export class AuditProcessorService {
+  private async getShopifyQuantity(
+    sku: string,
+    storeDomain: string,
+    accessToken: string,
+    shopifyLocationId: string
+  ): Promise<number | null> {
+    try {
+      const response = await fetch(
+        `https://${storeDomain}/admin/api/2024-04/graphql.json`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Shopify-Access-Token": accessToken
+          },
+          body: JSON.stringify({
+            query: `
+              query findInventoryItem($query: String!) {
+                inventoryItems(first: 1, query: $query) {
+                  edges {
+                    node {
+                      id
+                      inventoryLevels(first: 10) {
+                        edges {
+                          node {
+                            location { id }
+                            quantities(names: ["available"]) { quantity }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `,
+            variables: { query: `sku:${sku}` }
+          })
+        }
+      );
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const resData = (await response.json()) as any;
+      const edges = resData?.data?.inventoryItems?.edges || [];
+      if (edges.length === 0) return null;
+
+      const levels = edges[0].node.inventoryLevels?.edges || [];
+      const matchedLevel = levels.find(
+        (e: any) => e.node.location.id === shopifyLocationId
+      );
+
+      if (!matchedLevel) return null;
+
+      return matchedLevel.node.quantities[0]?.quantity ?? null;
+    } catch (err) {
+      Logger.error({
+        message: "Failed to query Shopify stock level",
+        variantSku: sku
+      }, err);
+      return null;
+    }
+  }
+
   async runAudit(tenantId: string): Promise<{ shopifyDiscrepancies: number; accountingDiscrepancies: number }> {
     let shopifyCount = 0;
     let accountingCount = 0;
@@ -79,7 +145,10 @@ export class AuditProcessorService {
               shopifyData = resData?.data || {};
             }
           } catch (err) {
-            console.error("Failed to query Shopify stock level:", err);
+            Logger.error({
+              message: "Failed to query Shopify stock level:",
+              error: err
+            });
           }
         }
 
@@ -282,7 +351,10 @@ export class AuditProcessorService {
             }
           );
         } catch (err) {
-          console.error("Failed to resolve Shopify discrepancy by pushing correct stock:", err);
+          Logger.error({
+            message: "Failed to resolve Shopify discrepancy by pushing correct stock",
+            discrepancyId: id
+          }, err);
         }
       }
     }
