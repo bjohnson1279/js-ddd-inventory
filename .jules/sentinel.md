@@ -167,3 +167,6 @@
 **Vulnerability:** Comparing password hashes using standard string equality operator `===`.
 **Learning:** This is vulnerable to timing attacks, as `===` compares characters sequentially and returns `false` on the first mismatch. Attackers can deduce the hash based on verification time.
 **Prevention:** Always use `crypto.timingSafeEqual` after checking buffer lengths when comparing sensitive cryptographic data like passwords or HMACs to ensure constant-time comparison.
+## 2025-02-14 - Hallucinatory Security Task Resolution
+**Learning:** Sometimes tasks report security vulnerabilities (e.g., missing authentication on Reorder Policy Routes) that are already mitigated in the codebase. In this case, `requireRole` middleware was applied at the controller layer and `authMiddleware` was applied at the global router layer.
+**Action:** When a vulnerability is natively fixed, always explicitly run local tests and verify coverage exists (e.g., triggering a 401 response with mock credentials) before classifying it as hallucinatory. Follow the "Hallucinatory Task Convention" by leaving the repository unmodified and completing the submission process with an empty patch.

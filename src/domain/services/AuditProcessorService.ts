@@ -1,4 +1,5 @@
 import { prisma } from "../../infrastructure/database/prisma";
+import { Logger } from "../../infrastructure/logging/logger";
 import crypto from "crypto";
 
 export class AuditProcessorService {
@@ -63,7 +64,10 @@ export class AuditProcessorService {
 
       return matchedLevel.node.quantities[0]?.quantity || 0;
     } catch (err) {
-      console.error("Failed to query Shopify stock level:", err);
+      Logger.error({
+        message: "Failed to query Shopify stock level",
+        variantSku
+      }, err);
       return null;
     }
   }
@@ -281,7 +285,10 @@ export class AuditProcessorService {
             }
           );
         } catch (err) {
-          console.error("Failed to resolve Shopify discrepancy by pushing correct stock:", err);
+          Logger.error({
+            message: "Failed to resolve Shopify discrepancy by pushing correct stock",
+            discrepancyId: id
+          }, err);
         }
       }
     }

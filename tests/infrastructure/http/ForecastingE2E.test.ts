@@ -2,6 +2,7 @@ process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 
+import jwt from "jsonwebtoken";
 import request from "supertest";
 import { app, setupApp } from "../../../src/index";
 import { InMemoryInventoryRepository } from "../../../src/infrastructure/database/InMemoryInventoryRepository";
@@ -116,5 +117,41 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     // Both conditions match, so it will return f.forecastedQuantity = 18.
     expect(reportItem2.forecastedDemand30d).toBe(18);
     expect(reportItem2.confidenceLevel).toBe(0.85);
+  });
+
+  it("should return 403 Forbidden for unauthorized roles (e.g., viewer)", async () => {
+    // Generate a JWT for a user with the 'viewer' role
+    const viewerToken = jwt.sign({ userId: "viewer-1", role: "viewer" }, process.env.JWT_SECRET || "dummy_test_secret");
+
+    // Force NODE_ENV to something other than 'test' to bypass the auth middleware test shortcut
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      // 1. Test /api/forecasting/report
+      const reportRes = await request(app)
+        .get("/api/forecasting/report?locationId=warehouse-south")
+        .set("Authorization", `Bearer ${viewerToken}`);
+      expect(reportRes.status).toBe(403);
+
+      // 2. Test /api/forecasting/forecast
+      const forecastRes = await request(app)
+        .post("/api/forecasting/forecast")
+        .set("Authorization", `Bearer ${viewerToken}`)
+        .send({
+          sku: "IPHONE-15",
+          locationId: "warehouse-south",
+          forecastDays: 15
+        });
+      expect(forecastRes.status).toBe(403);
+
+      // 3. Test /api/forecasting/dispatch-summary
+      const summaryRes = await request(app)
+        .get("/api/forecasting/dispatch-summary?sku=IPHONE-15")
+        .set("Authorization", `Bearer ${viewerToken}`);
+      expect(summaryRes.status).toBe(403);
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
   });
 });
