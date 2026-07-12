@@ -1,8 +1,8 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import { Logger } from "./infrastructure/logging/logger";
 import { rateLimit } from "express-rate-limit";
+import { Logger } from "./infrastructure/logging/logger";
 import { PrismaInventoryRepository } from "./infrastructure/database/PrismaInventoryRepository";
 import { PrismaBarcodeRepository } from "./infrastructure/database/PrismaBarcodeRepository";
 import { PrismaSerializedItemRepository } from "./infrastructure/database/PrismaSerializedItemRepository";
@@ -260,7 +260,7 @@ const start = async () => {
             if_not_exists => TRUE);
         `;
       } catch (policyErr: any) {
-        Logger.warn({ message: "TimescaleDB aggregate policy setup warning", error: policyErr instanceof Error ? policyErr.stack || policyErr.message : policyErr.message || policyErr });
+        Logger.warn({ message: "TimescaleDB aggregate policy setup warning", error: policyErr.message });
       }
       Logger.info({ message: "daily_dispatch_summary continuous aggregate created." });
     }
@@ -268,7 +268,7 @@ const start = async () => {
     // Set up PostgreSQL Row-Level Security (RLS) policies
     await enableRowLevelSecurity(prisma);
   } catch (e) {
-    Logger.warn({ message: "Database/TimescaleDB setup skipped/warning", error: e instanceof Error ? e.stack || e.message : e });
+    Logger.warn({ message: "Database/TimescaleDB setup skipped/warning", error: (e as Error).message });
   }
 
   if (process.env.DB_HOST) {
@@ -353,7 +353,7 @@ const start = async () => {
 
 if (process.env.NODE_ENV !== "test") {
   start().catch((err) => {
-    Logger.error({ message: "Failed to start server" }, err);
+    Logger.error({ message: "Failed to start server", error: err instanceof Error ? err.message : String(err) });
     process.exit(1);
   });
 }
