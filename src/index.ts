@@ -2,6 +2,7 @@ import { Logger } from "./infrastructure/logging/logger";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import { Logger } from "./infrastructure/logging/logger";
 import { rateLimit } from "express-rate-limit";
 import { PrismaInventoryRepository } from "./infrastructure/database/PrismaInventoryRepository";
 import { PrismaBarcodeRepository } from "./infrastructure/database/PrismaBarcodeRepository";
@@ -260,7 +261,7 @@ const start = async () => {
             if_not_exists => TRUE);
         `;
       } catch (policyErr: any) {
-        Logger.warn({ message: "TimescaleDB aggregate policy setup warning", error: policyErr.message });
+        Logger.warn({ message: "TimescaleDB aggregate policy setup warning", error: policyErr instanceof Error ? policyErr.stack || policyErr.message : policyErr.message || policyErr });
       }
       Logger.info({ message: "daily_dispatch_summary continuous aggregate created." });
     }
@@ -268,7 +269,7 @@ const start = async () => {
     // Set up PostgreSQL Row-Level Security (RLS) policies
     await enableRowLevelSecurity(prisma);
   } catch (e) {
-    Logger.warn({ message: "Database/TimescaleDB setup skipped/warning", error: (e as Error).message });
+    Logger.warn({ message: "Database/TimescaleDB setup skipped/warning", error: e instanceof Error ? e.stack || e.message : e });
   }
 
   if (process.env.DB_HOST) {
