@@ -33,6 +33,11 @@ export class AuthController {
         tenant = await prisma.tenantModel.create({
           data: { id: tenantId, name: orgName }
         });
+      } else {
+        const existingUsersCount = await prisma.userModel.count({ where: { tenantId } });
+        if (existingUsersCount > 0) {
+          return res.status(403).json({ error: "Forbidden: Organization already set up" });
+        }
       }
 
       const roles = ["admin", "warehouse_operator", "accountant", "viewer"];
