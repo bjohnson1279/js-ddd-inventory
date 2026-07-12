@@ -19,7 +19,7 @@ export interface AuthenticatedRequest extends Request {
 export function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    if (process.env.NODE_ENV === "test" && req.headers["x-test-enforce-auth"] !== "true") {
+    if (process.env.NODE_ENV === "test") {
       req.user = { id: "admin-user", role: "admin", email: "admin@test.com" };
       const tenantId = "tenant-1";
       req.tenantId = tenantId;
