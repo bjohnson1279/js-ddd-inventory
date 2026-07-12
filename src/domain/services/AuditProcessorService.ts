@@ -15,19 +15,45 @@ export class AuditProcessorService {
       // Find all variants in database
       const variants = await prisma.productVariantModel.findMany();
 
-      for (const variant of variants) {
-        // Aggregate local quantity for this variant across all locations
-        const ledgerSum = await prisma.inventoryModel.aggregate({
-          where: { sku: variant.sku },
-          _sum: { quantity: true }
-        });
-        const localQty = ledgerSum._sum.quantity || 0;
+      const CHUNK_SIZE = 50;
+      for (let i = 0; i < variants.length; i += CHUNK_SIZE) {
+        const chunk = variants.slice(i, i + CHUNK_SIZE);
+
+        // Pre-fetch all local quantities for the chunk
+        const localQuantities = new Map<string, number>();
+        await Promise.all(
+          chunk.map(async (variant) => {
+            const ledgerSum = await prisma.inventoryModel.aggregate({
+              where: { sku: variant.sku },
+              _sum: { quantity: true }
+            });
+            localQuantities.set(variant.sku, ledgerSum._sum.quantity || 0);
+          })
+        );
 
         // Query Shopify for current stock level
-        let shopifyQty = localQty;
+        const shopifyQuantities = new Map<string, number>();
         if (accessToken !== "mock-token" && !storeDomain.includes("mock")) {
           try {
-            // Find inventory item ID by SKU on Shopify
+            // Construct aliased GraphQL queries for the chunk
+            const aliases = chunk.map((variant, idx) => `
+              var${idx}: inventoryItems(first: 1, query: "sku:${variant.sku}") {
+                edges {
+                  node {
+                    id
+                    inventoryLevels(first: 10) {
+                      edges {
+                        node {
+                          location { id }
+                          quantities(names: ["available"]) { quantity }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `).join("\n");
+
             const response = await fetch(
               `https://${storeDomain}/admin/api/2024-04/graphql.json`,
               {
@@ -37,72 +63,63 @@ export class AuditProcessorService {
                   "X-Shopify-Access-Token": accessToken
                 },
                 body: JSON.stringify({
-                  query: `
-                    query findInventoryItem($query: String!) {
-                      inventoryItems(first: 1, query: $query) {
-                        edges {
-                          node {
-                            id
-                            inventoryLevels(first: 10) {
-                              edges {
-                                node {
-                                  location { id }
-                                  quantities(names: ["available"]) { quantity }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  `,
-                  variables: { query: `sku:${variant.sku}` }
+                  query: `query { ${aliases} }`
                 })
               }
             );
 
             if (response.ok) {
               const resData = (await response.json()) as any;
-              const edges = resData?.data?.inventoryItems?.edges || [];
-              if (edges.length > 0) {
-                const levels = edges[0].node.inventoryLevels?.edges || [];
-                const matchedLevel = levels.find(
-                  (e: any) => e.node.location.id === shopifyLocationId
-                );
-                if (matchedLevel) {
-                  shopifyQty = matchedLevel.node.quantities[0]?.quantity || 0;
+              chunk.forEach((variant, idx) => {
+                const edges = resData?.data?.[(`var${idx}`)]?.edges || [];
+                if (edges.length > 0) {
+                  const levels = edges[0].node.inventoryLevels?.edges || [];
+                  const matchedLevel = levels.find(
+                    (e: any) => e.node.location.id === shopifyLocationId
+                  );
+                  if (matchedLevel) {
+                    shopifyQuantities.set(variant.sku, matchedLevel.node.quantities[0]?.quantity || 0);
+                  }
                 }
-              }
+              });
             }
           } catch (err) {
             console.error("Failed to query Shopify stock level:", err);
           }
         } else {
-          // Mock mismatch scenario if variant SKU ends with -DIFF
-          if (variant.sku.endsWith("-DIFF")) {
-            shopifyQty = localQty + 10;
-          }
+          chunk.forEach((variant) => {
+            // Mock mismatch scenario if variant SKU ends with -DIFF
+            if (variant.sku.endsWith("-DIFF")) {
+              shopifyQuantities.set(variant.sku, (localQuantities.get(variant.sku) || 0) + 10);
+            }
+          });
         }
 
-        if (localQty !== shopifyQty) {
-          // Check if open discrepancy exists
-          const referenceId = `${variant.sku}:default`;
-          const existingOpen = await prisma.auditDiscrepancyModel.findFirst({
-            where: { tenantId, type: "SHOPIFY_STOCK_MISMATCH", referenceId, status: "OPEN" }
-          });
+        // Compare and create discrepancies
+        for (const variant of chunk) {
+          const localQty = localQuantities.get(variant.sku) || 0;
+          const shopifyQty = shopifyQuantities.has(variant.sku) ? shopifyQuantities.get(variant.sku) : localQty;
 
-          if (!existingOpen) {
-            await prisma.auditDiscrepancyModel.create({
-              data: {
-                id: crypto.randomUUID(),
-                tenantId,
-                type: "SHOPIFY_STOCK_MISMATCH",
-                referenceId,
-                externalRefId: "mock-inventory-item-id",
-                description: `Shopify stock mismatch for SKU ${variant.sku}. Local: ${localQty}, Shopify: ${shopifyQty}`
-              }
+          if (localQty !== shopifyQty) {
+            // Check if open discrepancy exists
+            const referenceId = `${variant.sku}:default`;
+            const existingOpen = await prisma.auditDiscrepancyModel.findFirst({
+              where: { tenantId, type: "SHOPIFY_STOCK_MISMATCH", referenceId, status: "OPEN" }
             });
-            shopifyCount++;
+
+            if (!existingOpen) {
+              await prisma.auditDiscrepancyModel.create({
+                data: {
+                  id: crypto.randomUUID(),
+                  tenantId,
+                  type: "SHOPIFY_STOCK_MISMATCH",
+                  referenceId,
+                  externalRefId: "mock-inventory-item-id",
+                  description: `Shopify stock mismatch for SKU ${variant.sku}. Local: ${localQty}, Shopify: ${shopifyQty}`
+                }
+              });
+              shopifyCount++;
+            }
           }
         }
       }
