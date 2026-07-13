@@ -102,7 +102,6 @@ import { PrismaProductRepository } from "./infrastructure/database/PrismaProduct
 import { WMSCapacityService } from "./domain/services/WMSCapacityService";
 
 import { traceMiddleware } from "./infrastructure/http/middleware/traceMiddleware";
-import { Logger } from "./infrastructure/logging/logger";
 
 const app = express();
 app.disable("x-powered-by");
@@ -225,7 +224,7 @@ const start = async () => {
   try {
     await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;`;
     Logger.info({ message: "TimescaleDB extension enabled." });
-    
+
     const isHypertable = await prisma.$queryRaw`
       SELECT 1 FROM timescaledb_information.hypertables 
       WHERE hypertable_name = 'dispatch_records'
