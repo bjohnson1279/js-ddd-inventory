@@ -6,10 +6,9 @@ export class ReorderPolicy extends AggregateRoot {
     public readonly id: string,
     public readonly sku: SKU,
     public readonly locationId: string,
-    public reorderPoint: number,
+    public readonly reorderPoint: number,
     public readonly reorderQuantity: number,
-    public readonly safetyStock: number,
-    public readonly dynamicRopEnabled: boolean = false
+    public readonly safetyStock: number
   ) {
     super();
     if (reorderPoint < 0) {
@@ -21,13 +20,6 @@ export class ReorderPolicy extends AggregateRoot {
     if (safetyStock < 0) {
       throw new Error("Safety stock cannot be negative.");
     }
-  }
-
-  public updateReorderPoint(newRop: number): void {
-    if (newRop < 0) {
-      throw new Error("Reorder point cannot be negative.");
-    }
-    this.reorderPoint = newRop;
   }
 
   public shouldReorder(currentQuantity: number): boolean {

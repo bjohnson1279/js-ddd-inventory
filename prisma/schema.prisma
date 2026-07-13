@@ -146,34 +146,6 @@ model OutboxEventModel {
   nextAttemptAt DateTime  @default(now())
 }
 
-model WebhookSubscriptionModel {
-  id         String   @id @default(uuid())
-  tenantId   String   @map("tenant_id")
-  targetUrl  String   @map("target_url")
-  secret     String
-  eventTypes String[] @map("event_types")
-  isActive   Boolean  @default(true) @map("is_active")
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  @@map("webhook_subscriptions")
-}
-
-model WebhookDeliveryModel {
-  id             String    @id @default(uuid())
-  tenantId       String    @map("tenant_id")
-  subscriptionId String    @map("subscription_id")
-  eventType      String    @map("event_type")
-  payload        String    @db.Text
-  status         String    @default("Pending")
-  attempts       Int       @default(0)
-  lastError      String?   @map("last_error") @db.Text
-  nextAttemptAt  DateTime  @default(now()) @map("next_attempt_at")
-  processedAt    DateTime? @map("processed_at")
-  createdAt      DateTime  @default(now()) @map("created_at")
-
-  @@map("webhook_deliveries")
-}
-
 model PurchaseOrderModel {
   id                  String                    @id
   purchaseOrderNumber String                    @unique
@@ -203,7 +175,6 @@ model ReorderPolicyModel {
   reorderPoint    Int
   reorderQuantity Int
   safetyStock     Int
-  dynamicRopEnabled Boolean  @default(false) @map("dynamic_rop_enabled")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

@@ -13,8 +13,7 @@ export class PrismaReorderPolicyRepository implements IReorderPolicyRepository {
       record.locationId,
       record.reorderPoint,
       record.reorderQuantity,
-      record.safetyStock,
-      record.dynamicRopEnabled
+      record.safetyStock
     );
   }
 
@@ -43,8 +42,7 @@ export class PrismaReorderPolicyRepository implements IReorderPolicyRepository {
       update: {
         reorderPoint: policy.reorderPoint,
         reorderQuantity: policy.reorderQuantity,
-        safetyStock: policy.safetyStock,
-        dynamicRopEnabled: policy.dynamicRopEnabled
+        safetyStock: policy.safetyStock
       },
       create: {
         id: policy.id,
@@ -52,15 +50,9 @@ export class PrismaReorderPolicyRepository implements IReorderPolicyRepository {
         locationId: policy.locationId,
         reorderPoint: policy.reorderPoint,
         reorderQuantity: policy.reorderQuantity,
-        safetyStock: policy.safetyStock,
-        dynamicRopEnabled: policy.dynamicRopEnabled
+        safetyStock: policy.safetyStock
       }
     });
-  }
-
-  async findAllByLocation(locationId: string): Promise<ReorderPolicy[]> {
-    const records = await this.prisma.reorderPolicyModel.findMany({ where: { locationId } });
-    return records.map(record => this.mapToDomain(record));
   }
 
   async findAll(): Promise<ReorderPolicy[]> {

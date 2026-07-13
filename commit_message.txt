@@ -1,7 +1,0 @@
-🛡️ Sentinel: [MEDIUM] Fix information disclosure in ShippingController
-
-🚨 Severity: MEDIUM
-💡 Vulnerability: The ShippingController's routeOrder endpoint was appending the raw error message (`error.message`) in its catch-all error handler (`res.status(500).json({ error: "Failed to route order: " + error.message });`).
-🎯 Impact: This could potentially leak internal implementation details or backend system information to the client on unhandled exceptions.
-🔧 Fix: Removed `+ error.message` from the HTTP 500 response, returning a static string instead. The error details are still preserved via `console.error` server-side.
-✅ Verification: Code logic confirmed by testing that the error details no longer leak into the response. Test suite passes.

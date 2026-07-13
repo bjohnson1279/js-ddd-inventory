@@ -1,5 +1,4 @@
 import express from "express";
-import { Logger } from "./infrastructure/logging/logger";
 import cors from "cors";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
@@ -9,7 +8,6 @@ import { PrismaSerializedItemRepository } from "./infrastructure/database/Prisma
 import { PrismaCostLayerRepository } from "./infrastructure/database/PrismaCostLayerRepository";
 import { PrismaJournalRepository } from "./infrastructure/database/PrismaJournalRepository";
 import { prisma } from "./infrastructure/database/prisma";
-import { enableRowLevelSecurity } from "./infrastructure/database/rls";
 import { PostgresInventoryRepository } from "./infrastructure/database/PostgresInventoryRepository";
 import { IInventoryRepository } from "./domain/repositories/IInventoryRepository";
 import inventoryRoutes from "./infrastructure/http/routes/inventory.routes";
@@ -40,7 +38,6 @@ import { PrismaProcessedWebhookRepository } from "./infrastructure/database/Pris
 import { InMemoryOutboxRepository } from "./infrastructure/database/InMemoryOutboxRepository";
 import { PrismaOutboxRepository } from "./infrastructure/database/PrismaOutboxRepository";
 import { OutboxProcessor } from "./infrastructure/outbox/OutboxProcessor";
-import { WebhookDeliveryWorker } from "./infrastructure/workers/WebhookDeliveryWorker";
 import { IMessageBroker } from "./application/ports/IMessageBroker";
 import { InMemoryMessageBroker } from "./infrastructure/messaging/InMemoryMessageBroker";
 import { RabbitMQMessageBroker } from "./infrastructure/messaging/RabbitMQMessageBroker";
@@ -90,7 +87,6 @@ import userRoutes from "./infrastructure/http/routes/user.routes";
 import warehouseLocationRoutes from "./infrastructure/http/routes/warehouseLocation.routes";
 import notificationRoutes from "./infrastructure/http/routes/notification.routes";
 import auditRoutes from "./infrastructure/http/routes/audit.routes";
-import webhookSubscriptionRoutes from "./infrastructure/http/routes/webhookSubscription.routes";
 import { WebSocketManager } from "./infrastructure/websocket/WebSocketManager";
 import { authMiddleware } from "./infrastructure/http/middleware/auth";
 import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
@@ -100,8 +96,6 @@ import { InMemoryProductRepository } from "./infrastructure/database/InMemoryPro
 import { PrismaWarehouseLocationRepository } from "./infrastructure/database/PrismaWarehouseLocationRepository";
 import { PrismaProductRepository } from "./infrastructure/database/PrismaProductRepository";
 import { WMSCapacityService } from "./domain/services/WMSCapacityService";
-
-import { traceMiddleware } from "./infrastructure/http/middleware/traceMiddleware";
 
 const app = express();
 app.disable("x-powered-by");
@@ -120,7 +114,6 @@ const limiter = rateLimit({
 
 app.use(helmet());
 app.use(cors({ origin: allowedOrigins }));
-app.use(traceMiddleware);
 app.set("trust proxy", 1);
 app.use(limiter);
 app.use("/api/shopify", express.json({
@@ -214,7 +207,6 @@ export const setupApp = (
   app.use("/api/warehouse-locations", warehouseLocationRoutes);
   app.use("/api/notifications", notificationRoutes);
   app.use("/api/audit", auditRoutes);
-  app.use("/api/webhook-subscriptions", webhookSubscriptionRoutes);
 };
 
 const start = async () => {
@@ -222,24 +214,24 @@ const start = async () => {
 
   // Run TimescaleDB migration query when connecting to Postgres
   try {
-    await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;`;
-    Logger.info({ message: "TimescaleDB extension enabled." });
+    await prisma.$executeRawUnsafe(`CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;`);
+    console.log("TimescaleDB extension enabled.");
 
-    const isHypertable = await prisma.$queryRaw`
+    const isHypertable = await prisma.$queryRawUnsafe(`
       SELECT 1 FROM timescaledb_information.hypertables 
       WHERE hypertable_name = 'dispatch_records'
-    `;
+    `);
     if ((isHypertable as any[]).length === 0) {
-      await prisma.$executeRaw`SELECT create_hypertable('dispatch_records', 'dispatched_at', if_not_exists => TRUE);`;
-      Logger.info({ message: "dispatch_records table converted to TimescaleDB hypertable." });
+      await prisma.$executeRawUnsafe(`SELECT create_hypertable('dispatch_records', 'dispatched_at', if_not_exists => TRUE);`);
+      console.log("dispatch_records table converted to TimescaleDB hypertable.");
     }
 
-    const isView = await prisma.$queryRaw`
+    const isView = await prisma.$queryRawUnsafe(`
       SELECT 1 FROM pg_matviews 
       WHERE matviewname = 'daily_dispatch_summary'
-    `;
+    `);
     if ((isView as any[]).length === 0) {
-      await prisma.$executeRaw`
+      await prisma.$executeRawUnsafe(`
         CREATE MATERIALIZED VIEW daily_dispatch_summary
         WITH (timescaledb.continuous) AS
         SELECT 
@@ -250,29 +242,27 @@ const start = async () => {
           count(*) as dispatch_count
         FROM dispatch_records
         GROUP BY bucket, sku, "locationId";
-      `;
+      `);
       try {
-        await prisma.$executeRaw`
+        await prisma.$executeRawUnsafe(`
           SELECT add_continuous_aggregate_policy('daily_dispatch_summary',
             start_offset => INTERVAL '1 month',
             end_offset => INTERVAL '1 hour',
             schedule_interval => INTERVAL '1 hour',
             if_not_exists => TRUE);
-        `;
+        `);
       } catch (policyErr: any) {
-        Logger.warn({ message: "TimescaleDB aggregate policy setup warning", error: policyErr.message });
+        console.log("TimescaleDB aggregate policy setup warning:", policyErr.message);
       }
-      Logger.info({ message: "daily_dispatch_summary continuous aggregate created." });
+      console.log("daily_dispatch_summary continuous aggregate created.");
     }
-    
-    // Set up PostgreSQL Row-Level Security (RLS) policies
-    await enableRowLevelSecurity(prisma);
   } catch (e) {
-    Logger.warn({ message: "Database/TimescaleDB setup skipped/warning", error: (e as Error).message });
+    console.log("TimescaleDB setup skipped/warning:", (e as Error).message);
   }
 
   if (process.env.DB_HOST) {
-    Logger.info({ message: "Initializing PostgreSQL Repository..." });
+    console.log("Initializing PostgreSQL Repository...");
+    const pgRepo = new PostgresInventoryRepository({
       host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT || "5432"),
       user: process.env.DB_USER,
@@ -282,7 +272,7 @@ const start = async () => {
     await pgRepo.initialize();
     repository = pgRepo;
   } else {
-    Logger.info({ message: "Initializing Prisma Repository..." });
+    console.log("Initializing Prisma Repository...");
     repository = new PrismaInventoryRepository(new PrismaOutboxRepository());
   }
 
@@ -338,21 +328,18 @@ const start = async () => {
     productRepo
   );
 
-  if (process.env.DISABLE_WORKERS !== "true") {
-    const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);
-    outboxProcessor.start(3000);
-    WebhookDeliveryWorker.start(2000);
-  }
+  const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);
+  outboxProcessor.start(3000);
 
   const server = app.listen(port, () => {
-    Logger.info({ message: `Server is running on port ${port}` });
+    console.log(`Server is running on port ${port}`);
   });
   WebSocketManager.init(server);
 };
 
 if (process.env.NODE_ENV !== "test") {
   start().catch((err) => {
-    Logger.error({ message: "Failed to start server", error: err instanceof Error ? err.message : String(err) });
+    console.error("Failed to start server:", err);
     process.exit(1);
   });
 }

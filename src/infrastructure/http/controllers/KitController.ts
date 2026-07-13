@@ -8,7 +8,6 @@ import { IInventoryRepository } from "../../../domain/repositories/IInventoryRep
 import { DomainException } from "../../../domain/exceptions/DomainException";
 import { AssembleKit } from "../../../application/useCases/AssembleKit";
 import { DisassembleKit } from "../../../application/useCases/DisassembleKit";
-import { AutoRetryDecorator } from "../../../application/decorators/AutoRetryDecorator";
 
 export class KitController {
   static async create(req: Request, res: Response) {
@@ -146,12 +145,12 @@ export class KitController {
       const tenantConfigRepository = req.app.get("tenantConfigRepository");
       const journalRepository = req.app.get("journalRepository");
 
-      const useCase = AutoRetryDecorator.wrap(new AssembleKit(
+      const useCase = new AssembleKit(
         inventoryRepository,
         costLayerRepository,
         tenantConfigRepository,
         journalRepository
-      ));
+      );
 
       await useCase.execute({
         tenantId,
@@ -184,12 +183,12 @@ export class KitController {
       const tenantConfigRepository = req.app.get("tenantConfigRepository");
       const journalRepository = req.app.get("journalRepository");
 
-      const useCase = AutoRetryDecorator.wrap(new DisassembleKit(
+      const useCase = new DisassembleKit(
         inventoryRepository,
         costLayerRepository,
         tenantConfigRepository,
         journalRepository
-      ));
+      );
 
       await useCase.execute({
         tenantId,

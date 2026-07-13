@@ -14,23 +14,6 @@ services:
     volumes:
       - postgres_data_pg15:/var/lib/postgresql/data
 
-  db-backup:
-    image: prodrigestivill/postgres-backup-local:15-alpine
-    restart: always
-    environment:
-      - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=${DB_NAME:-inventory}
-      - POSTGRES_USER=${DB_USER:-postgres}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-password}
-      - BACKUP_NUM_KEEP=7
-      - BACKUP_FREQUENCY=daily
-      - SCHEDULE=@daily
-    volumes:
-      - ./infra/db/backups:/backups
-    depends_on:
-      - db
-
   rabbitmq:
     image: rabbitmq:3-management
     container_name: inventory-rabbitmq
@@ -76,33 +59,20 @@ services:
       - SHOPIFY_ACCESS_TOKEN=${SHOPIFY_ACCESS_TOKEN}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672
       - KAFKA_URL=kafka:9092
-      - DISABLE_WORKERS=true
     depends_on:
       - db
       - rabbitmq
       - kafka
 
-  worker:
-    build: .
-    container_name: inventory-worker
+  webapp:
+    build:
+      context: ./webapp
+    container_name: inventory-webapp
     restart: always
-    command: ["node", "dist/worker.js"]
-    environment:
-      - NODE_ENV=production
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_USER=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-password}
-      - DB_NAME=${DB_NAME:-inventory}
-      - SHOPIFY_API_SECRET=${SHOPIFY_API_SECRET}
-      - SHOPIFY_SHOP_URL=${SHOPIFY_SHOP_URL}
-      - SHOPIFY_ACCESS_TOKEN=${SHOPIFY_ACCESS_TOKEN}
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672
-      - KAFKA_URL=kafka:9092
+    ports:
+      - "3080:80"
     depends_on:
-      - db
-      - rabbitmq
-      - kafka
+      - app
 
 volumes:
   postgres_data_pg15:

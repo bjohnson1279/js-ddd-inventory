@@ -83,33 +83,4 @@ describe("ReorderPolicyService", () => {
     const pos = await poRepo.findAll();
     expect(pos.length).toBe(1);
   });
-
-  it("should dynamically calculate ROP and trigger replenishment during evaluation", async () => {
-    const policy = new ReorderPolicy("p-1", SKU.create("SKU-1"), "warehouse-1", 5, 20, 2, true);
-    await reorderPolicyRepo.save(policy);
-
-    // Mock forecaster
-    const mockForecaster = {
-      forecastReorderPoint: jest.fn().mockResolvedValue(15)
-    };
-
-    // Mock inventory repo
-    const mockInventoryRepo = {
-      findBySku: jest.fn().mockResolvedValue({
-        quantity: { getValue: () => 10 } // 10 < 15, should trigger reorder
-      })
-    };
-
-    const results = await service.evaluatePolicies("tenant-1", mockForecaster, mockInventoryRepo);
-
-    // Verify ROP was updated
-    const updatedPolicy = await reorderPolicyRepo.findBySkuAndLocation(SKU.create("SKU-1"), "warehouse-1");
-    expect(updatedPolicy?.reorderPoint).toBe(15);
-
-    // Verify PO draft was created
-    const pos = await poRepo.findAll();
-    expect(pos.length).toBe(1);
-    expect(results[0].triggered).toBe(true);
-    expect(results[0].reorderPoint).toBe(15);
-  });
 });

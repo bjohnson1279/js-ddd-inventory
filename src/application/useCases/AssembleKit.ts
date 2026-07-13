@@ -51,26 +51,19 @@ export class AssembleKit {
       throw new Error(`Kit with SKU ${kitSku} not found.`);
     }
 
-    // 2. First pass: Validate component stock level (Optimized N+1 lookup)
-    const skusToFetch = kitRecord.components.map(comp => SKU.create(comp.variantId));
-    let inventoryItems: InventoryItem[] = [];
-    if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {
-      inventoryItems = await this.inventoryRepository.findBySkus(skusToFetch, locationId);
-    } else if (skusToFetch.length > 0) {
-      const results = await Promise.all(skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, locationId)));
-      inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
-    }
-    const inventoryItemsMap = new Map(inventoryItems.map(i => [i.sku.getValue(), i]));
-
-    const componentItems = kitRecord.components.map((comp) => {
-      const invItem = inventoryItemsMap.get(comp.variantId);
-      const needed = comp.quantity * quantity;
-      const available = invItem ? invItem.quantity.getValue() : 0;
-      if (available < needed) {
-        throw new Error(`Insufficient stock for component variant ID ${comp.variantId}. Needed: ${needed}, Available: ${available}`);
-      }
-      return { invItem: invItem!, needed };
-    });
+    // 2. First pass: Validate component stock level
+    const componentItems = await Promise.all(
+      kitRecord.components.map(async (comp) => {
+        const sku = SKU.create(comp.variantId);
+        const invItem = await this.inventoryRepository.findBySku(sku, locationId);
+        const needed = comp.quantity * quantity;
+        const available = invItem ? invItem.quantity.getValue() : 0;
+        if (available < needed) {
+          throw new Error(`Insufficient stock for component variant ID ${comp.variantId}. Needed: ${needed}, Available: ${available}`);
+        }
+        return { invItem: invItem!, needed };
+      })
+    );
 
     // 3. Second pass: Consume FIFO costing layers for components and calculate total components cost
     const componentsBatch = kitRecord.components.map(comp => ({

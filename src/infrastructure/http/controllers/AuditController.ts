@@ -25,10 +25,6 @@ export class AuditController {
       const tenantId = (req as any).tenantId;
       const { status } = req.query;
 
-      if (status !== undefined && typeof status !== "string") {
-        return res.status(400).json({ error: "Invalid status parameter" });
-      }
-
       const repo = new PrismaAuditDiscrepancyRepository();
       const discrepancies = await repo.findAll(tenantId, status as string || undefined);
 

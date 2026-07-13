@@ -1,7 +1,6 @@
 import amqp from "amqplib";
 import { IMessageBroker } from "../../application/ports/IMessageBroker";
 import { IDomainEvent } from "../../domain/events/IDomainEvent";
-import { Logger } from "../logging/logger";
 
 export class RabbitMQMessageBroker implements IMessageBroker {
   private connection: amqp.ChannelModel | null = null;
@@ -17,18 +16,9 @@ export class RabbitMQMessageBroker implements IMessageBroker {
     try {
       this.connection = await amqp.connect(this.url);
       this.channel = await this.connection.createChannel();
-      Logger.info({
-        context: "RabbitMQMessageBroker",
-        action: "connect",
-        url: this.url,
-        message: "Connected to RabbitMQ"
-      });
+      console.log(`[RabbitMQMessageBroker] Connected to RabbitMQ at ${this.url}`);
     } catch (err: any) {
-      Logger.error({
-        context: "RabbitMQMessageBroker",
-        action: "connect",
-        message: "Connection failed"
-      }, err);
+      console.error("[RabbitMQMessageBroker] Connection failed:", err.message || err);
       throw err;
     }
   }
@@ -51,13 +41,7 @@ export class RabbitMQMessageBroker implements IMessageBroker {
 
     const message = Buffer.from(JSON.stringify(payload));
     this.channel.publish(exchangeName, topic, message, { persistent: true });
-    Logger.info({
-      context: "RabbitMQMessageBroker",
-      action: "publish",
-      exchangeName,
-      topic,
-      message: "Published to exchange"
-    });
+    console.log(`[RabbitMQMessageBroker] Published to exchange "${exchangeName}" with routing key "${topic}"`);
   }
 
   public async disconnect(): Promise<void> {
@@ -69,10 +53,6 @@ export class RabbitMQMessageBroker implements IMessageBroker {
       await this.connection.close();
       this.connection = null;
     }
-    Logger.info({
-      context: "RabbitMQMessageBroker",
-      action: "disconnect",
-      message: "Disconnected from RabbitMQ"
-    });
+    console.log("[RabbitMQMessageBroker] Disconnected from RabbitMQ");
   }
 }

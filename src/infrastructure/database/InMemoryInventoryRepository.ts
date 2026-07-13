@@ -41,17 +41,6 @@ export class InMemoryInventoryRepository implements IInventoryRepository {
     return null;
   }
 
-  async findAllBySku(sku: SKU): Promise<InventoryItem[]> {
-    const results: InventoryItem[] = [];
-    const skuStr = sku.getValue();
-    for (const item of this.items.values()) {
-      if (item.sku.getValue() === skuStr) {
-        results.push(this.cloneItem(item));
-      }
-    }
-    return results;
-  }
-
   async findBySkus(skus: SKU[], locationId: string = "default"): Promise<InventoryItem[]> {
     const results: InventoryItem[] = [];
     for (const sku of skus) {

@@ -13,10 +13,6 @@ export class InMemoryReorderPolicyRepository implements IReorderPolicyRepository
     this.policies.set(`${policy.sku.getValue()}:${policy.locationId}`, policy);
   }
 
-  async findAllByLocation(locationId: string): Promise<ReorderPolicy[]> {
-    return Array.from(this.policies.values()).filter((p: any) => p.locationId === locationId);
-  }
-
   async findAll(): Promise<ReorderPolicy[]> {
     return Array.from(this.policies.values());
   }
