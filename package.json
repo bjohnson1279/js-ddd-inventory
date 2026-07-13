@@ -5,13 +5,10 @@
   "main": "src/index.ts",
   "scripts": {
     "start": "ts-node src/index.ts",
-    "start:worker": "ts-node src/worker.ts",
     "dev": "nodemon src/index.ts",
-    "dev:worker": "nodemon src/worker.ts",
     "build": "tsc",
     "test": "jest --runInBand",
     "start:prod": "node dist/index.js",
-    "start:worker:prod": "node dist/worker.js",
     "postinstall": "prisma generate"
   },
   "dependencies": {

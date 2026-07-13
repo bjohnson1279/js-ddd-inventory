@@ -133,8 +133,7 @@ export class BarcodeController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("not registered"))
       ) {
-        console.error(error instanceof DomainException ? error.message : error);
-        res.status(404).json({ error: "Not registered" });
+        res.status(404).json({ error: error instanceof DomainException ? error.message : "Not registered" });
       } else {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

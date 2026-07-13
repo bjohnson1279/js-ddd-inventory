@@ -39,13 +39,6 @@ export class GetDemandPlanningReport {
     // 1. Fetch all stock items at location
     const inventoryItems = await this.inventoryRepository.findAllByLocation(locationId);
 
-    // 1.5. Fetch all policies for location
-    let policyMap: Map<string, any> | undefined = undefined;
-    if (this.reorderPolicyRepository.findAllByLocation) {
-      const policies = await this.reorderPolicyRepository.findAllByLocation(locationId);
-      policyMap = new Map(policies.map(p => [p.sku.getValue(), p]));
-    }
-
     // 2. Fetch all forecasts for location
     const forecasts = await this.demandForecastRepository.findAllForLocation(locationId);
 
@@ -62,9 +55,10 @@ export class GetDemandPlanningReport {
       const skuStr = item.sku.getValue();
 
       // Calculate Sales Velocity and Fetch Reorder Policy concurrently
-      // We pass the current stock to execute to avoid an N+1 query inside CalculateSalesVelocity
-      const velocity = await this.calculateSalesVelocity.execute(skuStr, locationId, item.quantity.getValue());
-      const policy = policyMap ? policyMap.get(skuStr) : await this.reorderPolicyRepository.findBySkuAndLocation(item.sku, locationId);
+      const [velocity, policy] = await Promise.all([
+        this.calculateSalesVelocity.execute(skuStr, locationId),
+        this.reorderPolicyRepository.findBySkuAndLocation(item.sku, locationId)
+      ]);
       const reorderPoint = policy ? policy.reorderPoint : 10;
       const reorderQuantity = policy ? policy.reorderQuantity : 20;
       const safetyStock = policy ? policy.safetyStock : 5;

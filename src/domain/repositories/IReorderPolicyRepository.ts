@@ -5,5 +5,4 @@ export interface IReorderPolicyRepository {
   findBySkuAndLocation(sku: SKU, locationId: string): Promise<ReorderPolicy | null>;
   save(policy: ReorderPolicy): Promise<void>;
   findAll(): Promise<ReorderPolicy[]>;
-  findAllByLocation?(locationId: string): Promise<ReorderPolicy[]>;
 }

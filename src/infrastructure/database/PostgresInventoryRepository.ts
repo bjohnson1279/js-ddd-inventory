@@ -51,20 +51,6 @@ export class PostgresInventoryRepository implements IInventoryRepository {
     );
   }
 
-  async findAllBySku(sku: SKU): Promise<InventoryItem[]> {
-    const res = await this.pool.query('SELECT * FROM inventory_items WHERE sku = $1', [sku.getValue()]);
-    return res.rows.map(row => InventoryItem.create(
-      row.id,
-      SKU.create(row.sku),
-      row.location_id,
-      Quantity.create(row.quantity),
-      Quantity.create(row.allocated),
-      Quantity.create(row.in_transit),
-      row.version,
-      row.shopify_inventory_item_id
-    ));
-  }
-
   async findBySkus(skus: SKU[], locationId: string = "default"): Promise<InventoryItem[]> {
     const skuValues = skus.map(s => s.getValue());
     const res = await this.pool.query(

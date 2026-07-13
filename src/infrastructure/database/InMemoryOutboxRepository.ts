@@ -1,6 +1,5 @@
 import { IOutboxRepository } from "../../domain/repositories/IOutboxRepository";
 import { IDomainEvent } from "../../domain/events/IDomainEvent";
-import { getTraceId } from "../telemetry/traceContext";
 
 export class InMemoryOutboxRepository implements IOutboxRepository {
   public entries: any[] = [];
@@ -8,7 +7,6 @@ export class InMemoryOutboxRepository implements IOutboxRepository {
   async save(event: IDomainEvent, tx?: any): Promise<void> {
     const payload = JSON.stringify({
       ...event,
-      traceId: (event as any).traceId || getTraceId(),
       occurredOn: event.occurredOn.toISOString()
     });
 

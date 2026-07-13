@@ -2,9 +2,8 @@ import { CostLayerService } from "../../../src/domain/accounting/services/CostLa
 import { InMemoryCostLayerRepository } from "../../../src/infrastructure/database/InMemoryCostLayerRepository";
 import { InventoryCostLayer } from "../../../src/domain/accounting/entities/InventoryCostLayer";
 import { InsufficientInventoryException } from "../../../src/domain/exceptions/InsufficientInventoryException";
-import { CostingMethod } from "../../../src/domain/accounting/enums/CostingMethod";
 
-describe("Cost Layer Valuations (FIFO, LIFO & WAC)", () => {
+describe("Cost Layer Valuations (FIFO & WAC)", () => {
   let repository: InMemoryCostLayerRepository;
   let service: CostLayerService;
 
@@ -36,41 +35,10 @@ describe("Cost Layer Valuations (FIFO, LIFO & WAC)", () => {
     expect(consumedCost.totalCostCents).toBe(8600);
 
     // Quantities should be updated in database
-    const activeLayers = await repository.getActiveLayers("VAR-A");
-    const nonExhausted = activeLayers.filter(l => l.remainingQuantity > 0);
-    expect(nonExhausted.length).toBe(1); // Layer 1 is exhausted
-    expect(nonExhausted[0].id).toBe("L2");
-    expect(nonExhausted[0].remainingQuantity).toBe(7); // 10 - 3 = 7
-  });
-
-  it("should calculate and consume cost layers using LIFO (newest first)", async () => {
-    const now = Date.now();
-    // Layer 1: 5 units at $10.00 each (older)
-    const layer1 = new InventoryCostLayer("L1", "VAR-A", "TEN-1", 5, 1000, new Date(now - 10000), "PO-1");
-    // Layer 2: 10 units at $12.00 each (newer)
-    const layer2 = new InventoryCostLayer("L2", "VAR-A", "TEN-1", 10, 1200, new Date(now), "PO-2");
-
-    await repository.save(layer1);
-    await repository.save(layer2);
-
-    // Calculate LIFO cost for 8 units: needs 8 from L2 ($12.00 each) = $96.00
-    const calcCost = await service.calculateCost("VAR-A", 8, CostingMethod.LIFO);
-    expect(calcCost.totalCostCents).toBe(9600);
-    expect(calcCost.unitCostCents).toBe(1200);
-
-    // Calculation should have no side-effects on remaining quantities
-    expect(layer2.remainingQuantity).toBe(10);
-
-    // Consume layers
-    const consumedCost = await service.consumeLayers("VAR-A", 8, CostingMethod.LIFO);
-    expect(consumedCost.totalCostCents).toBe(9600);
-
-    // Quantities should be updated in database
-    const activeLayers = await repository.getActiveLayers("VAR-A");
-    const l2Remaining = activeLayers.find(l => l.id === "L2");
-    const l1Remaining = activeLayers.find(l => l.id === "L1");
-    expect(l2Remaining?.remainingQuantity).toBe(2);
-    expect(l1Remaining?.remainingQuantity).toBe(5);
+    const activeLayers = await repository.getActiveLayers("VAR-A", "asc");
+    expect(activeLayers.length).toBe(1); // Layer 1 is exhausted
+    expect(activeLayers[0].id).toBe("L2");
+    expect(activeLayers[0].remainingQuantity).toBe(7); // 10 - 3 = 7
   });
 
   it("should calculate cost using Weighted Average Cost", async () => {
