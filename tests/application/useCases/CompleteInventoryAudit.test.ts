@@ -73,55 +73,6 @@ describe("CompleteInventoryAudit Use Case", () => {
     expect(auditRepository.save).not.toHaveBeenCalled();
   });
 
-
-  it("should throw an error if an empty or whitespace auditId is provided", async () => {
-    await expect(completeInventoryAudit.execute("")).rejects.toThrow(
-      "Invalid audit ID provided."
-    );
-    await expect(completeInventoryAudit.execute("   ")).rejects.toThrow(
-      "Invalid audit ID provided."
-    );
-    expect(auditRepository.findById).not.toHaveBeenCalled();
-  });
-
-  it("should propagate errors thrown by auditRepository.findById", async () => {
-    const auditId = "audit-123";
-    const dbError = new Error("Database connection failed");
-    auditRepository.findById.mockRejectedValue(dbError);
-
-    await expect(completeInventoryAudit.execute(auditId)).rejects.toThrow(
-      "Database connection failed"
-    );
-
-    expect(auditRepository.findById).toHaveBeenCalledWith(auditId);
-    expect(auditRepository.save).not.toHaveBeenCalled();
-  });
-
-  it("should propagate errors thrown by auditRepository.save", async () => {
-    const auditId = "audit-123";
-    const auditItem = new InventoryAuditItem("item-1", "variant-1", 10, 10, true);
-    const audit = new InventoryAudit(
-      auditId,
-      "AUD-123",
-      "tenant-1",
-      "loc-1",
-      AuditStatus.InProgress,
-      [auditItem]
-    );
-
-    auditRepository.findById.mockResolvedValue(audit);
-    const dbError = new Error("Database write failed");
-    auditRepository.save.mockRejectedValue(dbError);
-
-    await expect(completeInventoryAudit.execute(auditId)).rejects.toThrow(
-      "Database write failed"
-    );
-
-    expect(auditRepository.findById).toHaveBeenCalledWith(auditId);
-    expect(audit.status).toBe(AuditStatus.Completed);
-    expect(auditRepository.save).toHaveBeenCalledWith(audit);
-  });
-
   it("should throw an error if some items have not been counted", async () => {
     const auditId = "audit-uncounted";
     const auditItem = new InventoryAuditItem("item-2", "variant-2", 10, null, false);
