@@ -1,4 +1,5 @@
 import express from "express";
+import { Logger } from "./infrastructure/logging/logger";
 import cors from "cors";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
