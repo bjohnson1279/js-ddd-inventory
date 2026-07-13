@@ -1,36 +1,59 @@
-import { IPurchaseOrderRepository } from "../../domain/repositories/IPurchaseOrderRepository";
+const fs = require('fs');
+
+const file = 'src/application/useCases/ReceivePurchaseOrder.ts';
+let code = fs.readFileSync(file, 'utf8');
+
+code = code.replace(
+`import { IPurchaseOrderRepository } from "../../domain/repositories/IPurchaseOrderRepository";
+import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
+import { ICostLayerRepository } from "../../domain/repositories/ICostLayerRepository";
+import { ReceiveStock } from "./ReceiveStock";
+import { InventoryCostLayer } from "../../domain/accounting/entities/InventoryCostLayer";`,
+`import { IPurchaseOrderRepository } from "../../domain/repositories/IPurchaseOrderRepository";
 import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
 import { ICostLayerRepository } from "../../domain/repositories/ICostLayerRepository";
 import { InventoryCostLayer } from "../../domain/accounting/entities/InventoryCostLayer";
 import { SKU } from "../../domain/valueObjects/SKU";
 import { Quantity } from "../../domain/valueObjects/Quantity";
 import { InventoryItem } from "../../domain/aggregates/InventoryItem";
-import crypto from "crypto";
+import crypto from "crypto";`
+);
 
-export interface ReceivePurchaseOrderItemDTO {
-  variantId: string;
-  quantityReceived: number;
-}
-
-export interface ReceivePurchaseOrderDTO {
-  purchaseOrderId: string;
-  items: ReceivePurchaseOrderItemDTO[];
-}
-
-export class ReceivePurchaseOrder {
-  constructor(
-    private readonly poRepository: IPurchaseOrderRepository,
-    private readonly inventoryRepository: IInventoryRepository,
-    private readonly costLayerRepository: ICostLayerRepository
-  ) {}
-
-  async execute(dto: ReceivePurchaseOrderDTO): Promise<void> {
-    const po = await this.poRepository.findById(dto.purchaseOrderId);
-    if (!po) {
-      throw new Error(`Purchase order with ID ${dto.purchaseOrderId} not found.`);
-    }
+code = code.replace(
+`    const receiveStock = new ReceiveStock(this.inventoryRepository);
 
     const costLayers: InventoryCostLayer[] = [];
+
+    // Optimization: Index purchase order items by variantId to prevent O(N*M) nested lookups
+    const poItemsMap = new Map(po.items.map((i) => [i.variantId, i]));
+
+    await Promise.all(dto.items.map(async (item) => {
+      const poItem = poItemsMap.get(item.variantId);
+      if (!poItem) {
+        throw new Error(\`Item \${item.variantId} not found in purchase order \${po.purchaseOrderNumber}.\`);
+      }
+
+      // 1. Update PO received quantity & state
+      po.receiveItems(item.variantId, item.quantityReceived);
+
+      // 2. Receive physical stock
+      await receiveStock.execute(item.variantId, item.quantityReceived, po.locationId);
+
+      // 3. Prepare Cost Layer
+      const layerId = crypto.randomUUID();
+      const costLayer = new InventoryCostLayer(
+        layerId,
+        item.variantId,
+        po.tenantId,
+        item.quantityReceived,
+        poItem.unitCostCents,
+        new Date(),
+        po.id,
+        po.locationId
+      );
+      costLayers.push(costLayer);
+    }));`,
+`    const costLayers: InventoryCostLayer[] = [];
 
     // Optimization: Index purchase order items by variantId to prevent O(N*M) nested lookups
     const poItemsMap = new Map(po.items.map((i) => [i.variantId, i]));
@@ -53,7 +76,7 @@ export class ReceivePurchaseOrder {
     for (const item of dto.items) {
       const poItem = poItemsMap.get(item.variantId);
       if (!poItem) {
-        throw new Error(`Item ${item.variantId} not found in purchase order ${po.purchaseOrderNumber}.`);
+        throw new Error(\`Item \${item.variantId} not found in purchase order \${po.purchaseOrderNumber}.\`);
       }
 
       // 1. Update PO received quantity & state
@@ -92,15 +115,7 @@ export class ReceivePurchaseOrder {
       await this.inventoryRepository.saveMany(Array.from(itemsToSave));
     } else if (itemsToSave.size > 0) {
       await Promise.all(Array.from(itemsToSave).map((invItem) => this.inventoryRepository.save(invItem)));
-    }
+    }`
+);
 
-    if (this.costLayerRepository.saveMany && costLayers.length > 0) {
-      await this.costLayerRepository.saveMany(costLayers);
-    } else {
-      await Promise.all(costLayers.map(layer => this.costLayerRepository.save(layer)));
-    }
-
-    // 4. Save updated PO
-    await this.poRepository.save(po);
-  }
-}
+fs.writeFileSync(file, code);
