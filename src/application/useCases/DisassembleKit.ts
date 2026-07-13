@@ -115,11 +115,8 @@ export class DisassembleKit {
     // on a single retrieved instance.
     const skusToFetch = componentAvgCosts.map(item => SKU.create(item.variantId));
     let inventoryItems: InventoryItem[] = [];
-    if ('findBySkus' in this.inventoryRepository && typeof (this.inventoryRepository as any).findBySkus === 'function') {
-      inventoryItems = await (this.inventoryRepository as any).findBySkus(skusToFetch, locationId);
-    } else {
-      const results = await Promise.all(skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, locationId)));
-      inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
+    if (skusToFetch.length > 0) {
+      inventoryItems = await this.inventoryRepository.findBySkus(skusToFetch, locationId);
     }
     const inventoryItemsMap = new Map(
       inventoryItems.filter((i): i is InventoryItem => i !== null).map(i => [i.sku.getValue(), i])
