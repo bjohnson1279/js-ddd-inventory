@@ -1,3 +1,4 @@
+import * as crypto from "crypto";
 import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreatedEvent";
 
 export class NetSuiteClient {
@@ -13,7 +14,7 @@ export class NetSuiteClient {
 
   public async publishJournalEntry(event: JournalEntryCreatedEvent): Promise<string> {
     if (!this.accountId || this.accountId.includes("mock") || !this.token || this.token.includes("mock")) {
-      return `mock-netsuite-journal-${Math.random().toString(36).substring(7)}`;
+      return `mock-netsuite-journal-${crypto.randomUUID()}`;
     }
 
     const nsLines = event.lines.map((line) => {
@@ -72,6 +73,6 @@ export class NetSuiteClient {
     }
 
     const data: any = await response.json();
-    return data.id || `mock-netsuite-journal-${Math.random().toString(36).substring(7)}`;
+    return data.id || `mock-netsuite-journal-${crypto.randomUUID()}`;
   }
 }
