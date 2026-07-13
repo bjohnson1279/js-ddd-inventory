@@ -28,4 +28,34 @@ describe("StartInventoryAudit Use Case", () => {
   it("should throw an error if the audit does not exist", async () => {
     await expect(useCase.execute("non-existent-id")).rejects.toThrow(/not found/i);
   });
+
+  it("should throw an error if the audit is not in Draft status", async () => {
+    const auditId = "audit-in-progress";
+    const audit = new InventoryAudit(auditId, "AUD-002", "TEN-1", "loc-1", AuditStatus.InProgress, []);
+    await repository.save(audit);
+
+    await expect(useCase.execute(auditId)).rejects.toThrow(/only draft audits can be started/i);
+  });
+
+
+  it("should propagate errors thrown by the repository on findById", async () => {
+    jest.spyOn(repository, "findById").mockRejectedValue(new Error("Database connection failed"));
+    await expect(useCase.execute("audit-1")).rejects.toThrow("Database connection failed");
+  });
+
+  it("should propagate errors thrown by the repository on save", async () => {
+    const auditId = "audit-1";
+    const audit = new InventoryAudit(auditId, "AUD-001", "TEN-1", "loc-1", AuditStatus.Draft, []);
+    await repository.save(audit);
+    jest.spyOn(repository, "save").mockRejectedValue(new Error("Database save failed"));
+
+    await expect(useCase.execute(auditId)).rejects.toThrow("Database save failed");
+  });
+
+  it("should throw an error or handle empty auditId appropriately", async () => {
+    // If the use case doesn't explicitly validate, the repository might throw 'not found'
+    // but typically we'd expect an explicit validation or at minimum it rejecting
+    await expect(useCase.execute("")).rejects.toThrow();
+  });
+
 });
