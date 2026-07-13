@@ -1,11 +1,17 @@
-export const Logger = {
-  info: (context: string, action: string, data: Record<string, any> = {}, message?: string) => {
-    console.info(JSON.stringify({ context, action, ...data, ...(message ? { message } : {}) }));
-  },
-  warn: (context: string, action: string, data: Record<string, any> = {}, message?: string) => {
-    console.warn(JSON.stringify({ context, action, ...data, ...(message ? { message } : {}) }));
-  },
-  error: (context: string, action: string, data: Record<string, any> = {}, message?: string, error?: any) => {
-    console.error(JSON.stringify({ context, action, ...data, ...(message ? { message } : {}), ...(error ? { error } : {}) }));
+export class Logger {
+  public static info(context: Record<string, any>): void {
+    console.info(JSON.stringify(context));
   }
-};
+
+  public static warn(context: Record<string, any>): void {
+    console.warn(JSON.stringify(context));
+  }
+
+  public static error(context: Record<string, any>, err?: any): void {
+    const errorContext = err
+      ? { ...context, error: err instanceof Error ? err.stack || err.message : err }
+      : context;
+
+    console.error(JSON.stringify(errorContext));
+  }
+}

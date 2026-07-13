@@ -3,6 +3,11 @@
 **Learning:** Even though `DomainException` signifies validated domain logic errors, exposing its dynamic message can leak internal state (like exact inventory numbers or specific failure reasons) to the client, constituting Information Disclosure.
 **Prevention:** Always map domain exception details to a generic, static safe string (e.g., 'A domain error occurred') in the HTTP response, while ensuring the original error details are securely logged server-side (`console.error`) for troubleshooting.
 
+## 2026-07-10 - Fix error handling exposing internal details in BarcodeController
+**Vulnerability:** Raw backend error messages from DomainExceptions (error.message) were directly returned to the client in HTTP 404 responses.
+**Learning:** Returning dynamic exception messages exposes potentially sensitive business logic or internal state details (like stock levels) to users.
+**Prevention:** Always log dynamic errors server-side (console.error) and return a static, generic safe string ("Not registered") to the client.
+
 ## 2026-06-29 - [Fix SQL Injection Vulnerabilities]
 **Vulnerability:** The application was using `$queryRawUnsafe` and `$executeRawUnsafe` in multiple places (`ForecastingController.ts` and `prisma.ts`) with string concatenation/interpolation.
 **Learning:** This is a critical vulnerability as it allows for SQL injection if user input is passed into these strings.
@@ -107,6 +112,7 @@
 **Vulnerability:** Several domain services, use cases, and repositories were using `Math.random().toString(36)` or `Date.now() + Math.random()` to generate unique identifiers for entities like SerializedItems, Audits, Purchase Orders, and RMAs.
 **Learning:** `Math.random()` is not a cryptographically secure pseudo-random number generator (CSPRNG). Identifiers generated this way are predictable and susceptible to collision, especially in high-throughput environments.
 **Prevention:** Always use Node's native `crypto.randomUUID()` (or a proven library like `uuid` v4) when generating unique, unpredictable identifiers to ensure system integrity and security.
+
 ## 2024-06-12 - Prevent Information Leakage in API Controllers
 **Vulnerability:** API controllers returned raw error messages (`error.message`) in HTTP 500 and 400 responses unconditionally, leaking internal stack details or database states to end-users.
 **Learning:** Exposing dynamic backend error messages directly in unhandled exception blocks is a medium/high severity risk. Only explicit domain exceptions (`DomainException`) are safe to expose to users, as their payloads are controlled.
@@ -121,27 +127,43 @@
 **Vulnerability:** The `InventoryController` (for endpoints like receive, dispatch, performCount) lacked explicit input validation. This could allow malformed payloads (e.g., negative amounts, non-string SKUs) to trigger unhandled domain exceptions or database errors, which is a potential vector for DoS or unexpected internal states.
 **Learning:** Trusting input directly from `req.body` without verification violates the principle of "Trust nothing, verify everything." Missing boundary checks on numbers can bypass domain logic if type coercion behaves unexpectedly.
 **Prevention:** Always implement explicit input validation, type checking, and boundary assertions (like `amount <= 0` or `!Number.isInteger`) before invoking domain use cases.
+
 ## 2026-06-18 - Fix hardcoded JWT secret
 **Vulnerability:** Hardcoded JWT secret fallback (`"super-secret-key"`) existed in `AuthController.ts` and `auth.ts` middleware.
 **Learning:** Developers sometimes use a hardcoded fallback secret to prevent the application from crashing locally, but this risks unauthorized token signing if not explicitly set in production environments.
 **Prevention:** Always enforce the presence of critical security environment variables on startup (e.g., throwing an error if missing) and provide dummy values explicitly for testing environments instead of relying on unsafe fallbacks.
+
 ## 2024-06-20 - Prevent Information Leakage in API Controllers
 **Vulnerability:** API controllers returned raw error messages (`error.message`) in HTTP 500 responses unconditionally, leaking internal stack details or database states to end-users.
 **Learning:** Exposing dynamic backend error messages directly in unhandled exception blocks is a medium/high severity risk. Only explicit domain exceptions (`DomainException`) are safe to expose to users, as their payloads are controlled.
 **Prevention:** Standardize a pattern across API handlers. Never use `res.status(500).json({ error: error.message });`. Always fallback to generic descriptions (e.g. "Internal server error") or wrap the validation with a domain-specific error class.
+
 ## 2026-06-25 - Missing Strict Rate Limiting on Authentication Endpoint
 **Vulnerability:** The application had a global rate limiter, but the login endpoint (`/api/auth/login`) lacked a strict, endpoint-specific rate limiter, making it susceptible to brute-force password guessing attacks.
 **Learning:** Global rate limiters (e.g., 100 requests per 15 minutes) are often too permissive for sensitive endpoints like login, allowing attackers sufficient attempts to guess passwords or enumerate users.
 **Prevention:** Always implement strict, configurable rate limiting (e.g., 5 attempts per 15 minutes) specifically on authentication and password reset endpoints to effectively mitigate brute-force and credential stuffing attacks.
+
 ## 2026-07-02 - [Fix HTTP Parameter Pollution]
 **Vulnerability:** The application was not explicitly validating that `req.query` parameters were strings, potentially allowing HTTP Parameter Pollution (HPP) by passing arrays or objects, which could cause application crashes or bypass certain logic.
 **Learning:** This is a medium priority vulnerability that could lead to unexpected behavior when `req.query` objects are passed directly to `prisma.$queryRaw` or similar methods.
 **Prevention:** Always validate that `req.query` values are of the expected primitive type (`typeof parameter === "string"`) before processing them in controllers.
+
 ## 2026-07-06 - [Fix Information Disclosure in BarcodeController]
 **Vulnerability:** The application was exposing `error.message` for `DomainException` instances directly in `res.status(404)` responses in `BarcodeController.ts`.
 **Learning:** Even though `DomainException` signifies validated domain logic errors, exposing its dynamic message can leak internal state (like exact inventory numbers or specific failure reasons) to the client, constituting Information Disclosure.
 **Prevention:** Always map domain exception details to a generic, static safe string (e.g., 'Not registered') in the HTTP response, while ensuring the original error details are securely logged server-side (`console.error`) for troubleshooting.
+
 ## 2024-07-09 - Information Disclosure in Webhook Subscription Controller
 **Vulnerability:** The webhook subscription endpoints leaked raw backend error messages directly to the client in HTTP 500 responses.
 **Learning:** Exposing raw backend exception details (error.message or error.stack) in HTTP error responses can leak sensitive business logic or internal states. This was specifically found in a controller handling secrets.
 **Prevention:** Always map these errors to generic, static safe strings (e.g., 'Internal server error') instead of returning the dynamic error.message directly, and ensure original dynamic errors are logged server-side for troubleshooting.
+
+## 2026-07-11 - [Fix Information Disclosure in ShippingController]
+**Vulnerability:** The application was exposing `error.message` directly in `res.status(500)` responses in `ShippingController.ts` (specifically in `routeOrder`).
+**Learning:** Exposing raw backend exception details in HTTP 500 responses can leak sensitive internal state to end-users, violating defense-in-depth principles. This specific instance was uncovered where a generic 500 error appended the raw message via `"Failed to route order: " + error.message`.
+**Prevention:** Standardize a pattern across API handlers. Never use `res.status(500).json({ error: "..." + error.message });`. Always fallback to generic descriptions (e.g. "Failed to route order.") and rely on robust server-side logging for troubleshooting.
+
+## 2024-05-24 - Timing Attack in Password Verification
+**Vulnerability:** Comparing password hashes using standard string equality operator `===`.
+**Learning:** This is vulnerable to timing attacks, as `===` compares characters sequentially and returns `false` on the first mismatch. Attackers can deduce the hash based on verification time.
+**Prevention:** Always use `crypto.timingSafeEqual` after checking buffer lengths when comparing sensitive cryptographic data like passwords or HMACs to ensure constant-time comparison.
