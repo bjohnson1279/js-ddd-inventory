@@ -261,7 +261,7 @@ const start = async () => {
   }
 
   if (process.env.DB_HOST) {
-    console.log("Initializing PostgreSQL Repository...");
+    Logger.info({ message: "Initializing PostgreSQL Repository..." });
     const pgRepo = new PostgresInventoryRepository({
       host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT || "5432"),
@@ -339,7 +339,7 @@ const start = async () => {
 
 if (process.env.NODE_ENV !== "test") {
   start().catch((err) => {
-    console.error("Failed to start server:", err);
+    Logger.error({ message: "Failed to start server" }, err);
     process.exit(1);
   });
 }
