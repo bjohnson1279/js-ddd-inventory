@@ -171,3 +171,8 @@
 **Vulnerability:** HTTP 404 responses in `BarcodeController.ts` were explicitly returning the dynamic `error.message` from `DomainException` to the client when a scan failed (e.g., "Not registered").
 **Learning:** Returning dynamic, backend-generated error messages directly in HTTP responses exposes internal application state and logic. This can aid attackers in mapping out the system or understanding business rules they shouldn't have access to.
 **Prevention:** To prevent Information Disclosure, never expose raw backend error messages or stack traces directly to the client. Always log the dynamic error server-side using `console.error` (or a structured logger) for troubleshooting, and return a generic, static safe string (e.g., "Barcode not registered or invalid") in the JSON response payload.
+
+## 2026-07-13 - [Fix Information Disclosure via Error Messages]
+**Vulnerability:** Controller catch blocks were exposing `error.message` on `500` server errors.
+**Learning:** Exposing raw backend exception details (`error.message`) in HTTP 500 error responses can leak sensitive business logic or internal state. Even logging `error.message` on the backend limits context; instead, logging the entire `error` object provides better context without exposing it to the client.
+**Prevention:** Always log the entire error object (`console.error(error)`) on the server to preserve the stack trace and context for debugging, but map the client response to a generic, static safe string (e.g., 'Internal server error') to avoid Information Disclosure.

@@ -44,7 +44,7 @@ export class ShippingController {
       res.status(200).json(rates);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error("Failed to estimate shipping rates:", error);
@@ -90,7 +90,7 @@ export class ShippingController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error("Failed to purchase shipping label:", error);
@@ -121,7 +121,7 @@ export class ShippingController {
       );
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error("Failed to list shipments:", error);
@@ -147,7 +147,7 @@ export class ShippingController {
       res.status(200).json({ message: "Shipment status updated successfully.", status });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error("Failed to update tracking status:", error);
@@ -179,7 +179,7 @@ export class ShippingController {
       res.status(200).json(plan);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while routing the order.", type: error.name });
       } else {
         console.error("Failed to route order:", error);
