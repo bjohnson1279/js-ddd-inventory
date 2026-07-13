@@ -50,7 +50,7 @@ export class RouteOrder {
     const candidates = stockItems.map(item => {
       const locationId = item.locationId;
       const geoLocation = this.getWarehouseGeoLocation(locationId);
-      
+
       // Calculate available stock (on-hand - allocated)
       const availableQuantity = item.quantity.getValue() - item.allocated.getValue();
 
@@ -102,7 +102,7 @@ export class RouteOrder {
     for (let i = 0; i < address.length; i++) {
       hash = address.charCodeAt(i) + ((hash << 5) - hash);
     }
-    
+
     // Map hash to US bounding box: Latitude [25, 49], Longitude [-125, -67]
     const lat = 25 + Math.abs(hash % 24);
     const lon = -125 + Math.abs(hash % 58);
