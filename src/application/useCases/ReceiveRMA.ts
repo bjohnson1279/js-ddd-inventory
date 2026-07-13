@@ -66,11 +66,36 @@ export class ReceiveRMA {
     const quarantineItemsToSave: QuarantineItem[] = [];
     const serializedItemsToSave = new Set<any>(); // any due to import types, but we'll use array from set
 
+    // Optimization: Prefetch all needed inventory items in bulk
+    const skusToFetch = Array.from(new Set(dto.items.map(i => i.variantId))).map(v => SKU.create(v));
+    let fetchedInvItems: InventoryItem[] = [];
+
+    // We fetch for both potential locations (normal and quarantine) using the repository
+    const normalLocationId = rma.locationId;
+    const quarantineLocationId = `${rma.locationId}-quarantine`;
+
+    if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {
+      const [normalItems, quarantineItems] = await Promise.all([
+        this.inventoryRepository.findBySkus(skusToFetch, normalLocationId),
+        this.inventoryRepository.findBySkus(skusToFetch, quarantineLocationId)
+      ]);
+      fetchedInvItems = [...normalItems, ...quarantineItems];
+    } else if (skusToFetch.length > 0) {
+      const normalResults = await Promise.all(skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, normalLocationId)));
+      const quarantineResults = await Promise.all(skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, quarantineLocationId)));
+      fetchedInvItems = [...normalResults, ...quarantineResults].filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
+    }
+
     // Create an in-memory cache for fetched inventory items during this transaction
     // to prevent race conditions when the same sku and location are processed in multiple items
     const inventoryCache = new Map<string, InventoryItem>();
+    for(const item of fetchedInvItems) {
+        inventoryCache.set(`${item.sku.getValue()}_${item.locationId}`, item);
+    }
 
-    await Promise.all(dto.items.map(async (item) => {
+    // Process items sequentially instead of Promise.all mapping to eliminate race conditions
+    // since we've eliminated the N+1 DB lookup bottleneck anyway.
+    for (const item of dto.items) {
       const rmaItem = rmaItemsMap.get(item.variantId);
       if (!rmaItem) {
         throw new Error(`Item with variant ID ${item.variantId} not found in RMA ${rma.rmaNumber}.`);
@@ -81,8 +106,8 @@ export class ReceiveRMA {
 
       const targetLocationId =
         item.disposition === RMADisposition.Quarantine
-          ? `${rma.locationId}-quarantine`
-          : rma.locationId;
+          ? quarantineLocationId
+          : normalLocationId;
 
       // 2. Increment stock level
       const sku = SKU.create(item.variantId);
@@ -90,15 +115,12 @@ export class ReceiveRMA {
 
       let invItem = inventoryCache.get(cacheKey) || null;
       if (!invItem) {
-        invItem = await this.inventoryRepository.findBySku(sku, targetLocationId) || null;
-        if (!invItem) {
-          invItem = InventoryItem.create(
-            crypto.randomUUID(),
-            sku,
-            targetLocationId,
-            Quantity.create(0)
-          );
-        }
+        invItem = InventoryItem.create(
+          crypto.randomUUID(),
+          sku,
+          targetLocationId,
+          Quantity.create(0)
+        );
         inventoryCache.set(cacheKey, invItem);
       }
 
@@ -189,7 +211,7 @@ export class ReceiveRMA {
           serializedItemsToSave.add(serialItem);
         }));
       }
-    }));
+    }
 
     if (this.inventoryRepository.saveMany && itemsToSave.size > 0) {
       await this.inventoryRepository.saveMany(Array.from(itemsToSave));
