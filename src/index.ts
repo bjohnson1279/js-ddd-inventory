@@ -1,4 +1,5 @@
 import express from "express";
+import { Logger } from "./infrastructure/logging/logger";
 import cors from "cors";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
@@ -264,7 +265,7 @@ const start = async () => {
       }
       Logger.info({ message: "daily_dispatch_summary continuous aggregate created." });
     }
-    
+
     // Set up PostgreSQL Row-Level Security (RLS) policies
     await enableRowLevelSecurity(prisma);
   } catch (e) {
