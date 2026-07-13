@@ -33,7 +33,7 @@ export class OutboxController {
       );
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error("Failed to list dead lettered outbox events:", error);
@@ -52,7 +52,7 @@ export class OutboxController {
       res.status(200).json({ message: "Event successfully scheduled for retry" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(`Failed to retry outbox event ${req.params.id}:`, error);
@@ -91,7 +91,7 @@ export class OutboxController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error("Failed to get outbox metrics:", error);

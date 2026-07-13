@@ -31,7 +31,7 @@ export class PurchaseOrderController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -52,7 +52,7 @@ export class PurchaseOrderController {
       res.status(200).json({ message: "Purchase order approved successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -73,7 +73,7 @@ export class PurchaseOrderController {
       res.status(200).json({ message: "Purchase order sent to vendor successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -97,7 +97,7 @@ export class PurchaseOrderController {
       res.status(200).json({ message: "Items received successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
