@@ -1,4 +1,3 @@
-import { Logger } from "../logging/logger";
 import { Kafka, Producer } from "kafkajs";
 import { IMessageBroker } from "../../application/ports/IMessageBroker";
 import { IDomainEvent } from "../../domain/events/IDomainEvent";
