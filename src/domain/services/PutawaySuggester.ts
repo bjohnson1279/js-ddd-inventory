@@ -51,7 +51,10 @@ export class PutawaySuggester {
       const itemProducts = await this.productRepo.findBySkus(Array.from(itemSkusMap.values()));
       for (const ip of itemProducts) {
         for (const iv of ip.variants) {
-          itemVariantMap.set(iv.sku.getValue(), iv);
+          const skuValue = iv.sku.getValue();
+          if (!itemVariantMap.has(skuValue)) {
+            itemVariantMap.set(skuValue, iv);
+          }
         }
       }
     }
@@ -82,9 +85,15 @@ export class PutawaySuggester {
 
     // Filter and score candidates based on matching attributes
     const attrs = variant.attributes.all();
-    const tempZoneAttr = attrs.find(a => a.name === "temperatureZone")?.value;
-    const hazardAttr = attrs.find(a => a.name === "hazardClass")?.value;
-    const velocityAttr = attrs.find(a => a.name === "velocity")?.value;
+
+    let tempZoneAttr: string | undefined;
+    let hazardAttr: string | undefined;
+    let velocityAttr: string | undefined;
+    for (let i = 0; i < attrs.length; i++) {
+      if (attrs[i].name === "temperatureZone") tempZoneAttr = attrs[i].value;
+      else if (attrs[i].name === "hazardClass") hazardAttr = attrs[i].value;
+      else if (attrs[i].name === "velocity") velocityAttr = attrs[i].value;
+    }
 
     const scoredCandidates = locationCapacities.map(c => {
       let score = 0;
