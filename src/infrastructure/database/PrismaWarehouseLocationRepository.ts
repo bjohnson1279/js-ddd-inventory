@@ -52,6 +52,28 @@ export class PrismaWarehouseLocationRepository implements IWarehouseLocationRepo
     );
   }
 
+  async findByIds(ids: LocationId[]): Promise<WarehouseLocation[]> {
+    const models = await this.prisma.warehouseLocationModel.findMany({
+      where: {
+        id: {
+          in: ids.map(id => id.value)
+        }
+      }
+    });
+
+    return models.map(model => new WarehouseLocation(
+      new LocationId(model.id),
+      model.warehouseId,
+      model.zone,
+      model.aisle,
+      model.rack,
+      model.shelf,
+      model.bin,
+      model.maxWeightGrams,
+      model.maxVolumeCubicMeters
+    ));
+  }
+
   async delete(id: LocationId): Promise<void> {
     await this.prisma.warehouseLocationModel.delete({
       where: { id: id.value }

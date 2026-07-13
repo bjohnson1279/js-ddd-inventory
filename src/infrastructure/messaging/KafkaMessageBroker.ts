@@ -2,6 +2,7 @@ import { Kafka, Producer } from "kafkajs";
 import { IMessageBroker } from "../../application/ports/IMessageBroker";
 import { IDomainEvent } from "../../domain/events/IDomainEvent";
 import { getTraceId } from "../telemetry/traceContext";
+import { Logger } from "../logging/logger";
 
 export class KafkaMessageBroker implements IMessageBroker {
   private kafka: Kafka;
@@ -27,17 +28,17 @@ export class KafkaMessageBroker implements IMessageBroker {
     try {
       this.producer = this.kafka.producer();
       await this.producer.connect();
-      console.info(JSON.stringify({
+      Logger.info({
         context: "KafkaMessageBroker",
-        message: "Connected to Kafka bootstrap brokers",
-        brokerUrl: this.brokerUrl
-      }));
+        action: "connect",
+        message: `Connected to Kafka bootstrap brokers at: ${this.brokerUrl}`
+      });
     } catch (err: any) {
-      console.error(JSON.stringify({
+      Logger.error({
         context: "KafkaMessageBroker",
-        message: "Connection failed",
-        error: err.message || err
-      }));
+        action: "connect",
+        message: "Connection failed"
+      }, err);
       this.producer = null;
       throw err;
     }
@@ -71,21 +72,22 @@ export class KafkaMessageBroker implements IMessageBroker {
           }
         ]
       });
-      console.info(JSON.stringify({
+      Logger.info({
         context: "KafkaMessageBroker",
-        message: "Successfully published event",
-        traceId: traceId,
-        event: event.constructor.name,
-        topic: topic
-      }));
-    } catch (err: any) {
-      console.error(JSON.stringify({
-        context: "KafkaMessageBroker",
-        message: "Failed to publish event",
+        action: "publish",
         traceId: traceId,
         topic: topic,
-        error: err.message || err
-      }));
+        eventName: event.constructor.name,
+        message: "Successfully published event"
+      });
+    } catch (err: any) {
+      Logger.error({
+        context: "KafkaMessageBroker",
+        action: "publish",
+        traceId: traceId,
+        topic: topic,
+        message: "Failed to publish event"
+      }, err);
       throw err;
     }
   }
@@ -94,10 +96,11 @@ export class KafkaMessageBroker implements IMessageBroker {
     if (this.producer) {
       await this.producer.disconnect();
       this.producer = null;
-      console.info(JSON.stringify({
+      Logger.info({
         context: "KafkaMessageBroker",
+        action: "disconnect",
         message: "Disconnected from Kafka"
-      }));
+      });
     }
   }
 }
