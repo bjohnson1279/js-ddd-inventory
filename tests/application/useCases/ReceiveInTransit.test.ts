@@ -76,4 +76,28 @@ describe("ReceiveInTransit Use Case", () => {
     await expect(useCase.execute("SKU-123", -5)).rejects.toThrow(InvalidQuantityException);
     expect(mockRepo.findBySku).not.toHaveBeenCalled();
   });
+
+  it("should propagate error when repository.findBySku fails", async () => {
+    const dbError = new Error("Database connection timeout");
+    mockRepo.findBySku.mockRejectedValue(dbError);
+
+    await expect(useCase.execute("SKU-123", 5)).rejects.toThrow("Database connection timeout");
+
+    expect(mockRepo.findBySku).toHaveBeenCalledWith(expect.any(SKU), "default");
+    expect(mockRepo.save).not.toHaveBeenCalled();
+  });
+
+  it("should propagate error when repository.save fails", async () => {
+    const sku = SKU.create("SKU-123");
+    const item = InventoryItem.create("item-1", sku, "default", Quantity.create(10), Quantity.create(0), Quantity.create(5));
+
+    mockRepo.findBySku.mockResolvedValue(item);
+    const dbError = new Error("Database save constraint violation");
+    mockRepo.save.mockRejectedValue(dbError);
+
+    await expect(useCase.execute("SKU-123", 5)).rejects.toThrow("Database save constraint violation");
+
+    expect(mockRepo.findBySku).toHaveBeenCalledWith(expect.any(SKU), "default");
+    expect(mockRepo.save).toHaveBeenCalledWith(item);
+  });
 });
