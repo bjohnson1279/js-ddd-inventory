@@ -62,7 +62,8 @@ export class GetDemandPlanningReport {
       const skuStr = item.sku.getValue();
 
       // Calculate Sales Velocity and Fetch Reorder Policy concurrently
-      const velocity = await this.calculateSalesVelocity.execute(skuStr, locationId);
+      // We pass the current stock to execute to avoid an N+1 query inside CalculateSalesVelocity
+      const velocity = await this.calculateSalesVelocity.execute(skuStr, locationId, item.quantity.getValue());
       const policy = policyMap ? policyMap.get(skuStr) : await this.reorderPolicyRepository.findBySkuAndLocation(item.sku, locationId);
       const reorderPoint = policy ? policy.reorderPoint : 10;
       const reorderQuantity = policy ? policy.reorderQuantity : 20;

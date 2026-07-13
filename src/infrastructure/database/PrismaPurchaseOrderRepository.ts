@@ -25,7 +25,9 @@ export class PrismaPurchaseOrderRepository implements IPurchaseOrderRepository {
       record.tenantId,
       record.locationId,
       record.status as PurchaseOrderStatus,
-      items
+      items,
+      record.createdAt,
+      record.updatedAt
     );
   }
 

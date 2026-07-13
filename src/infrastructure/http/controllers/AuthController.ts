@@ -18,6 +18,16 @@ export class AuthController {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
+      if (
+        typeof orgName !== "string" ||
+        typeof tenantId !== "string" ||
+        typeof adminName !== "string" ||
+        typeof adminEmail !== "string" ||
+        typeof adminPassword !== "string"
+      ) {
+        return res.status(400).json({ error: "Invalid field types" });
+      }
+
       let tenant = await prisma.tenantModel.findUnique({ where: { id: tenantId } });
       if (!tenant) {
         tenant = await prisma.tenantModel.create({
@@ -82,6 +92,10 @@ export class AuthController {
 
       if (!tenantId || !email || !password) {
         return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      if (typeof tenantId !== "string" || typeof email !== "string" || typeof password !== "string") {
+        return res.status(400).json({ error: "Invalid field types" });
       }
 
       const user = await prisma.userModel.findFirst({
@@ -159,6 +173,10 @@ export class AuthController {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
+      if (typeof email !== "string" || typeof role !== "string") {
+        return res.status(400).json({ error: "Invalid field types" });
+      }
+
       const normalizedEmail = email.toLowerCase().trim();
       const existing = await prisma.userModel.findFirst({
         where: { tenantId, email: normalizedEmail }
@@ -215,6 +233,10 @@ export class AuthController {
 
       if (!role) {
         return res.status(400).json({ error: "Role is required" });
+      }
+
+      if (typeof role !== "string") {
+        return res.status(400).json({ error: "Invalid field types" });
       }
 
       const user = await prisma.userModel.findFirst({

@@ -13,7 +13,8 @@ export class PrismaReorderPolicyRepository implements IReorderPolicyRepository {
       record.locationId,
       record.reorderPoint,
       record.reorderQuantity,
-      record.safetyStock
+      record.safetyStock,
+      record.dynamicRopEnabled
     );
   }
 
@@ -42,7 +43,8 @@ export class PrismaReorderPolicyRepository implements IReorderPolicyRepository {
       update: {
         reorderPoint: policy.reorderPoint,
         reorderQuantity: policy.reorderQuantity,
-        safetyStock: policy.safetyStock
+        safetyStock: policy.safetyStock,
+        dynamicRopEnabled: policy.dynamicRopEnabled
       },
       create: {
         id: policy.id,
@@ -50,7 +52,8 @@ export class PrismaReorderPolicyRepository implements IReorderPolicyRepository {
         locationId: policy.locationId,
         reorderPoint: policy.reorderPoint,
         reorderQuantity: policy.reorderQuantity,
-        safetyStock: policy.safetyStock
+        safetyStock: policy.safetyStock,
+        dynamicRopEnabled: policy.dynamicRopEnabled
       }
     });
   }

@@ -1,4 +1,4 @@
-import * as crypto from "crypto";
+import { Logger } from "../logging/logger";
 import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreatedEvent";
 
 export class QuickBooksClient {
@@ -48,7 +48,8 @@ export class QuickBooksClient {
 
     const url = `${this.baseUrl}/${this.realmId}/journalentry`;
 
-    console.info(JSON.stringify({
+    Logger.info({
+      message: "Publishing Journal Entry to QuickBooks API",
       context: "QuickBooksClient",
       action: "publishJournalEntry",
       request: {
@@ -61,7 +62,7 @@ export class QuickBooksClient {
         }
       },
       payload: qboPayload
-    }));
+    });
 
     const response = await fetch(url, {
       method: "POST",
