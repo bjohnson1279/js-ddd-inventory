@@ -1,9 +1,9 @@
 import express from "express";
 import { Logger } from "./infrastructure/logging/logger";
+
 import cors from "cors";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
-import { Logger } from "./infrastructure/logging/logger";
 import { PrismaInventoryRepository } from "./infrastructure/database/PrismaInventoryRepository";
 import { PrismaBarcodeRepository } from "./infrastructure/database/PrismaBarcodeRepository";
 import { PrismaSerializedItemRepository } from "./infrastructure/database/PrismaSerializedItemRepository";
@@ -103,8 +103,6 @@ import { PrismaProductRepository } from "./infrastructure/database/PrismaProduct
 import { WMSCapacityService } from "./domain/services/WMSCapacityService";
 
 import { traceMiddleware } from "./infrastructure/http/middleware/traceMiddleware";
-import { Logger } from "./infrastructure/logging/logger";
-
 
 const app = express();
 app.disable("x-powered-by");
@@ -356,7 +354,7 @@ const start = async () => {
 
 if (process.env.NODE_ENV !== "test") {
   start().catch((err) => {
-    Logger.error({ message: "Failed to start server", error: err instanceof Error ? err.message : String(err) });
+    Logger.error({ message: "Failed to start server" }, err);
     process.exit(1);
   });
 }
