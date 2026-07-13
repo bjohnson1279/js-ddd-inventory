@@ -100,7 +100,7 @@ describe("Notification & WebSocket E2E Suite", () => {
 
         // Connect client A for tenant-1
         const clientA = new WebSocket(`ws://localhost:${port}?tenantId=tenant-1`);
-        
+
         // Connect client B for tenant-2
         const clientB = new WebSocket(`ws://localhost:${port}?tenantId=tenant-2`);
 

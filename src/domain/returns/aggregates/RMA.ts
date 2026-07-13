@@ -38,6 +38,9 @@ export class RMA extends AggregateRoot {
     this._status = RMAStatus.Authorized;
   }
 
+  // Pre-computed map for fast O(1) lookups during batch receives
+  private _itemsMap?: Map<string, RMAItem>;
+
   public receiveItem(variantId: string, quantity: number, disposition: RMADisposition): void {
     if (
       this._status !== RMAStatus.Authorized &&
@@ -46,7 +49,11 @@ export class RMA extends AggregateRoot {
       throw new Error("Can only receive items on Authorized or partially Received RMAs.");
     }
 
-    const item = this._items.find((i) => i.variantId === variantId);
+    if (!this._itemsMap) {
+      this._itemsMap = new Map(this._items.map((i) => [i.variantId, i]));
+    }
+
+    const item = this._itemsMap.get(variantId);
     if (!item) {
       throw new Error(`Item ${variantId} not found in this RMA.`);
     }
