@@ -52,6 +52,44 @@ export class PrismaCostLayerRepository implements ICostLayerRepository {
     return records.map((r) => this.mapToDomain(r));
   }
 
+
+  async getActiveLayersBatch(
+    variantIds: string[],
+    orderBy?: string
+  ): Promise<Map<string, InventoryCostLayer[]>> {
+    const isExpiration = orderBy?.toLowerCase().includes("expiration");
+    const orderDirection = orderBy?.toLowerCase().includes("desc") ? "desc" : "asc";
+
+    const records = await this.prisma.inventoryCostLayerModel.findMany({
+      where: {
+        variantId: { in: variantIds },
+        remainingQuantity: { gt: 0 },
+      },
+      orderBy: isExpiration
+        ? [
+            { expirationDate: orderDirection },
+            { receivedAt: "asc" }
+          ]
+        : orderBy
+        ? {
+            receivedAt: orderDirection as any,
+          }
+        : undefined,
+    });
+
+    const layerMap = new Map<string, InventoryCostLayer[]>();
+    for (const vId of variantIds) {
+      layerMap.set(vId, []);
+    }
+
+    for (const record of records) {
+      const layer = this.mapToDomain(record);
+      layerMap.get(record.variantId)!.push(layer);
+    }
+
+    return layerMap;
+  }
+
   async save(layer: InventoryCostLayer): Promise<void> {
     await this.prisma.inventoryCostLayerModel.upsert({
       where: { id: layer.id },

@@ -45,7 +45,7 @@ export class InventoryController {
       res.status(200).json({ message: "Stock received successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -83,7 +83,7 @@ export class InventoryController {
       res.status(200).json({ message: "Stock dispatched successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -118,7 +118,7 @@ export class InventoryController {
       res.status(200).json(responseBody);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -153,7 +153,7 @@ export class InventoryController {
       res.status(200).json({ message: "Store count performed successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -191,7 +191,7 @@ export class InventoryController {
       res.status(200).json({ message: "Stock allocated successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -209,7 +209,7 @@ export class InventoryController {
       res.status(200).json({ message: "Allocation released successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -227,7 +227,7 @@ export class InventoryController {
       res.status(200).json({ message: "Allocation fulfilled successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -245,7 +245,7 @@ export class InventoryController {
       res.status(200).json({ message: "In-transit stock created successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -263,7 +263,7 @@ export class InventoryController {
       res.status(200).json({ message: "In-transit stock received successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -297,14 +297,14 @@ export class InventoryController {
       res.status(200).json(suggestions);
     } catch (error: any) {
       const isDomainOrExpectedError = error instanceof DomainException ||
-        (error.message && (
+        (error instanceof Error && error.message && (
           error.message.includes("No lot-controlled inventory layers") ||
           error.message.includes("Product variant with SKU") ||
           error.message.includes("Insufficient lot-controlled inventory")
         ));
 
       if (isDomainOrExpectedError) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name || "Error" });
       } else {
         console.error(error);
@@ -328,7 +328,7 @@ export class InventoryController {
       res.status(200).json(dispatches);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
