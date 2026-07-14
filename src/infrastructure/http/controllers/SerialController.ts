@@ -45,7 +45,7 @@ export class SerialController {
         });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -79,9 +79,9 @@ export class SerialController {
     } catch (error: any) {
       if (
         error instanceof DomainException ||
-        (typeof error?.message === "string" && error.message.includes("not found"))
+        (error instanceof Error && typeof error.message === "string" && error.message.includes("not found"))
       ) {
-        console.error(error instanceof DomainException ? error.message : error);
+        console.error(error);
       res.status(400).json({ error: "Not found" });
       } else {
         console.error(error);
@@ -108,9 +108,9 @@ export class SerialController {
     } catch (error: any) {
       if (
         error instanceof DomainException ||
-        (typeof error?.message === "string" && error.message.includes("not found"))
+        (error instanceof Error && typeof error.message === "string" && error.message.includes("not found"))
       ) {
-        console.error(error instanceof DomainException ? error.message : error);
+        console.error(error);
       res.status(400).json({ error: "Not found" });
       } else {
         console.error(error);

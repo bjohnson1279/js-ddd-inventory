@@ -19,7 +19,7 @@ export class CalculateSalesVelocity {
     private readonly inventoryRepository: IInventoryRepository
   ) {}
 
-  async execute(skuStr: string, locationId: string = "default"): Promise<SalesVelocityResult> {
+  async execute(skuStr: string, locationId: string = "default", preFetchedStock?: number): Promise<SalesVelocityResult> {
     const now = new Date();
     
     // Define dates for intervals
@@ -37,10 +37,13 @@ export class CalculateSalesVelocity {
     const history30d = history90d.filter(r => r.dispatchedAt.getTime() >= thirtyDaysAgoTime);
     const history7d = history30d.filter(r => r.dispatchedAt.getTime() >= sevenDaysAgoTime);
 
-    // Fetch current inventory
-    const sku = SKU.create(skuStr);
-    const inventoryItem = await this.inventoryRepository.findBySku(sku, locationId);
-    const currentStock = inventoryItem ? inventoryItem.quantity.getValue() : 0;
+    // Fetch current inventory (avoiding query if preFetchedStock is provided)
+    let currentStock = preFetchedStock;
+    if (currentStock === undefined) {
+      const sku = SKU.create(skuStr);
+      const inventoryItem = await this.inventoryRepository.findBySku(sku, locationId);
+      currentStock = inventoryItem ? inventoryItem.quantity.getValue() : 0;
+    }
 
     // Sum quantities
     const sum7d = history7d.reduce((acc, r) => acc + r.quantity, 0);
