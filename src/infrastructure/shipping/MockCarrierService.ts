@@ -5,14 +5,14 @@ export class MockCarrierService implements ICarrierService {
   private getDistance(origin: string, destination: string): number {
     const org = origin.toUpperCase();
     const dest = destination.toLowerCase();
-    
+
     let baseDist = 1000; // default 1000 km
     if (org.includes("EAST") && (dest.includes("ny") || dest.includes("new york") || dest.includes("10001"))) baseDist = 100;
     else if (org.includes("WEST") && (dest.includes("la") || dest.includes("los angeles") || dest.includes("ca") || dest.includes("90210"))) baseDist = 100;
     else if (org.includes("CENTRAL") && (dest.includes("chicago") || dest.includes("il") || dest.includes("60601"))) baseDist = 100;
     else if (org.includes("EAST") && (dest.includes("la") || dest.includes("ca") || dest.includes("90210"))) baseDist = 4000;
     else if (org.includes("WEST") && (dest.includes("ny") || dest.includes("new york") || dest.includes("10001"))) baseDist = 4000;
-    
+
     return baseDist;
   }
 
@@ -23,7 +23,7 @@ export class MockCarrierService implements ICarrierService {
     
     const distanceKm = this.getDistance(originLocationId || "default", destinationAddress);
     const distanceCost = Math.ceil(distanceKm * 0.1); // 0.1 cents per km
-    
+
     return [
       {
         carrier: "UPS Ground",

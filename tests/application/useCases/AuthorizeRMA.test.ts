@@ -34,6 +34,33 @@ describe("AuthorizeRMA Use Case", () => {
     expect(updatedRma?.status).toBe(RMAStatus.Authorized);
   });
 
+  it("should throw an error if RMA ID is empty", async () => {
+    await expect(authorizeRmaUseCase.execute("")).rejects.toThrow("RMA ID cannot be empty.");
+    await expect(authorizeRmaUseCase.execute("   ")).rejects.toThrow("RMA ID cannot be empty.");
+  });
+
+  it("should propagate errors thrown by rmaRepository.findById", async () => {
+    jest.spyOn(rmaRepository, "findById").mockRejectedValue(new Error("Database connection error"));
+    await expect(authorizeRmaUseCase.execute("RMA-ID-1")).rejects.toThrow("Database connection error");
+  });
+
+  it("should propagate errors thrown by rmaRepository.save", async () => {
+    const rma = new RMA(
+      "RMA-ID-1",
+      "RMA-100",
+      "TEN-1",
+      "CUST-1",
+      "LOC-1",
+      RMAStatus.Requested,
+      []
+    );
+    await rmaRepository.save(rma);
+
+    jest.spyOn(rmaRepository, "save").mockRejectedValue(new Error("Database write error"));
+
+    await expect(authorizeRmaUseCase.execute("RMA-ID-1")).rejects.toThrow("Database write error");
+  });
+
   it("should throw an error if RMA does not exist", async () => {
     // Attempt to authorize an unknown RMA
     await expect(authorizeRmaUseCase.execute("UNKNOWN-ID")).rejects.toThrow(

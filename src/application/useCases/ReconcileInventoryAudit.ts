@@ -143,16 +143,12 @@ export class ReconcileInventoryAudit {
       }
     }));
 
-    if (this.inventoryRepository.saveMany && itemsToSave.size > 0) {
+    if (itemsToSave.size > 0) {
       await this.inventoryRepository.saveMany(Array.from(itemsToSave));
-    } else if (itemsToSave.size > 0) {
-      await Promise.all(Array.from(itemsToSave).map(item => this.inventoryRepository.save(item)));
     }
 
-    if (this.costLayerRepository.saveMany && layersToSave.length > 0) {
+    if (layersToSave.length > 0) {
       await this.costLayerRepository.saveMany(layersToSave);
-    } else if (layersToSave.length > 0) {
-      await Promise.all(layersToSave.map(layer => this.costLayerRepository.save(layer)));
     }
 
     // Save the reconciled audit

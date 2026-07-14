@@ -265,7 +265,7 @@ const start = async () => {
       }
       Logger.info({ message: "daily_dispatch_summary continuous aggregate created." });
     }
-    
+
     // Set up PostgreSQL Row-Level Security (RLS) policies
     await enableRowLevelSecurity(prisma);
   } catch (e) {
@@ -354,7 +354,7 @@ const start = async () => {
 
 if (process.env.NODE_ENV !== "test") {
   start().catch((err) => {
-    Logger.error({ message: "Failed to start server", error: err instanceof Error ? err.message : String(err) });
+    Logger.error({ message: "Failed to start server" }, err);
     process.exit(1);
   });
 }
