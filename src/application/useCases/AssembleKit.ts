@@ -54,11 +54,8 @@ export class AssembleKit {
     // 2. First pass: Validate component stock level (Optimized N+1 lookup)
     const skusToFetch = kitRecord.components.map(comp => SKU.create(comp.variantId));
     let inventoryItems: InventoryItem[] = [];
-    if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {
+    if (skusToFetch.length > 0) {
       inventoryItems = await this.inventoryRepository.findBySkus(skusToFetch, locationId);
-    } else if (skusToFetch.length > 0) {
-      const results = await Promise.all(skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, locationId)));
-      inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
     }
     const inventoryItemsMap = new Map(inventoryItems.map(i => [i.sku.getValue(), i]));
 
@@ -91,11 +88,7 @@ export class AssembleKit {
       itemsToSave.push(invItem);
     }
 
-    if ('saveMany' in this.inventoryRepository && typeof (this.inventoryRepository as any).saveMany === 'function') {
-      await (this.inventoryRepository as any).saveMany(itemsToSave);
-    } else {
-      await Promise.all(itemsToSave.map(item => this.inventoryRepository.save(item)));
-    }
+    await this.inventoryRepository.saveMany(itemsToSave);
 
     // 5. Calculate assembled unit cost
     const unitCostCents = Math.round(totalCostCents / quantity);
