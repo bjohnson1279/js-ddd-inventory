@@ -10,8 +10,13 @@ export function verifyPassword(password: string, storedHash: string): boolean {
   const [salt, hash] = storedHash.split(':');
   if (!salt || !hash) return false;
   const verifyHash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
-  const hashBuffer = Buffer.from(hash, 'hex');
-  const verifyHashBuffer = Buffer.from(verifyHash, 'hex');
-  if (hashBuffer.length !== verifyHashBuffer.length) return false;
+
+  const hashBuffer = Buffer.from(hash, 'utf8');
+  const verifyHashBuffer = Buffer.from(verifyHash, 'utf8');
+
+  if (hashBuffer.length !== verifyHashBuffer.length) {
+    return false;
+  }
+
   return crypto.timingSafeEqual(hashBuffer, verifyHashBuffer);
 }
