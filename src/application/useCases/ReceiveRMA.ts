@@ -59,26 +59,6 @@ export class ReceiveRMA {
     // Optimization: Index RMA items by variantId to prevent O(N*M) nested lookups
     const rmaItemsMap = new Map(rma.items.map((i) => [i.variantId, i]));
 
-    // Optimization: Pre-fetch all target inventory items in a single batch query
-    // to prevent N+1 queries when resolving target location stocks.
-    const skusToFetch = Array.from(new Set(dto.items.map(item => item.variantId))).map(vId => SKU.create(vId));
-    let inventoryItems: InventoryItem[] = [];
-    if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {
-      const normalItems = await this.inventoryRepository.findBySkus(skusToFetch, rma.locationId);
-      const quarantineItems = await this.inventoryRepository.findBySkus(skusToFetch, `${rma.locationId}-quarantine`);
-      inventoryItems = [...normalItems, ...quarantineItems];
-    } else if (skusToFetch.length > 0) {
-      const normalPromises = skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, rma.locationId));
-      const quarantinePromises = skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, `${rma.locationId}-quarantine`));
-      const results = await Promise.all([...normalPromises, ...quarantinePromises]);
-      inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
-    }
-    const inventoryItemsMap = new Map(inventoryItems.map(i => [`${i.sku.getValue()}-${i.locationId}`, i]));
-
-    const itemsToSave: InventoryItem[] = [];
-    const layersToSave: InventoryCostLayer[] = [];
-    const quarantineItemsToSave: QuarantineItem[] = [];
-
     // Optimization: Replaced sequential `for...of` loop with `Promise.all` mapping to process independent
     // RMA items concurrently. This dramatically reduces total processing time for multi-item returns, resolving N+1 wait times.
     const itemsToSave = new Set<InventoryItem>();
@@ -86,11 +66,32 @@ export class ReceiveRMA {
     const quarantineItemsToSave: QuarantineItem[] = [];
     const serializedItemsToSave = new Set<any>(); // any due to import types, but we'll use array from set
 
+    // Optimization: Prefetch all needed inventory items in bulk
+    const skusToFetch = Array.from(new Set(dto.items.map(i => i.variantId))).map(v => SKU.create(v));
+    let fetchedInvItems: InventoryItem[] = [];
+
+    // We fetch for both potential locations (normal and quarantine) using the repository
+    const normalLocationId = rma.locationId;
+    const quarantineLocationId = `${rma.locationId}-quarantine`;
+
+    if (skusToFetch.length > 0) {
+      const [normalItems, quarantineItems] = await Promise.all([
+        this.inventoryRepository.findBySkus(skusToFetch, normalLocationId),
+        this.inventoryRepository.findBySkus(skusToFetch, quarantineLocationId)
+      ]);
+      fetchedInvItems = [...normalItems, ...quarantineItems];
+    }
+
     // Create an in-memory cache for fetched inventory items during this transaction
     // to prevent race conditions when the same sku and location are processed in multiple items
     const inventoryCache = new Map<string, InventoryItem>();
+    for(const item of fetchedInvItems) {
+        inventoryCache.set(`${item.sku.getValue()}_${item.locationId}`, item);
+    }
 
-    await Promise.all(dto.items.map(async (item) => {
+    // Process items sequentially instead of Promise.all mapping to eliminate race conditions
+    // since we've eliminated the N+1 DB lookup bottleneck anyway.
+    for (const item of dto.items) {
       const rmaItem = rmaItemsMap.get(item.variantId);
       if (!rmaItem) {
         throw new Error(`Item with variant ID ${item.variantId} not found in RMA ${rma.rmaNumber}.`);
@@ -101,31 +102,26 @@ export class ReceiveRMA {
 
       const targetLocationId =
         item.disposition === RMADisposition.Quarantine
-          ? `${rma.locationId}-quarantine`
-          : rma.locationId;
+          ? quarantineLocationId
+          : normalLocationId;
 
       // 2. Increment stock level
       const sku = SKU.create(item.variantId);
-      let invItem = inventoryItemsMap.get(`${item.variantId}-${targetLocationId}`);
+      const cacheKey = `${item.variantId}_${targetLocationId}`;
+
+      let invItem = inventoryCache.get(cacheKey) || null;
       if (!invItem) {
-        invItem = await this.inventoryRepository.findBySku(sku, targetLocationId) || null;
-        if (!invItem) {
-          invItem = InventoryItem.create(
-            crypto.randomUUID(),
-            sku,
-            targetLocationId,
-            Quantity.create(0)
-          );
-        }
+        invItem = InventoryItem.create(
+          crypto.randomUUID(),
+          sku,
+          targetLocationId,
+          Quantity.create(0)
+        );
         inventoryCache.set(cacheKey, invItem);
       }
 
       invItem.receiveStock(Quantity.create(item.quantityReceived));
-      if (!itemsToSave.includes(invItem)) {
-        itemsToSave.push(invItem);
-      } else {
-        // If the item is already in the array, we need to replace it or just ignore because it's a reference. Since it's an object reference, modifying it directly updates the instance in itemsToSave.
-      }
+      itemsToSave.add(invItem);
 
       // 3. Create Cost Layer
       const layerId = crypto.randomUUID();
@@ -139,12 +135,7 @@ export class ReceiveRMA {
         `RMA-${rma.id}`,
         targetLocationId
       );
-      // Immediately save layer if scrap so consumeFifoLayers works
-      if (item.disposition === RMADisposition.Scrap) {
-         await this.costLayerRepository.save(layer);
-      } else {
-         layersToSave.push(layer);
-      }
+      layersToSave.push(layer);
 
       // 4. Create Quarantine record if quarantined
       if (item.disposition === RMADisposition.Quarantine) {
@@ -177,9 +168,11 @@ export class ReceiveRMA {
       if (item.disposition === RMADisposition.Scrap) {
         // Decrement stock level
         invItem.dispatchStock(Quantity.create(item.quantityReceived));
-        if (!itemsToSave.includes(invItem)) {
-           itemsToSave.push(invItem);
-        }
+        // itemsToSave.add(invItem) was already called above, Set handles uniqueness
+
+        // Note: The new layer was added to layersToSave, but costLayerService.consumeFifoLayers
+        // reads from the DB. To prevent InsufficientInventoryException, we must flush the layer to the DB first.
+        // Or simply skip consumeFifoLayers and mark the newly created layer as exhausted in memory.
 
         // Since we are writing off the exact same amount we just received in this loop iteration:
         layer.consume(item.quantityReceived);
@@ -214,24 +207,22 @@ export class ReceiveRMA {
           serializedItemsToSave.add(serialItem);
         }));
       }
-    }));
-
-    if ('saveMany' in this.inventoryRepository && typeof (this.inventoryRepository as any).saveMany === 'function') {
-      await (this.inventoryRepository as any).saveMany(itemsToSave);
-    } else {
-      await Promise.all(itemsToSave.map(item => this.inventoryRepository.save(item)));
     }
 
-    if ('saveMany' in this.costLayerRepository && typeof (this.costLayerRepository as any).saveMany === 'function') {
-      await (this.costLayerRepository as any).saveMany(layersToSave);
-    } else {
-      await Promise.all(layersToSave.map(layer => this.costLayerRepository.save(layer)));
+    if (itemsToSave.size > 0) {
+      await this.inventoryRepository.saveMany(Array.from(itemsToSave));
     }
 
-    if ('saveMany' in this.quarantineRepository && typeof (this.quarantineRepository as any).saveMany === 'function') {
-      await (this.quarantineRepository as any).saveMany(quarantineItemsToSave);
-    } else {
-      await Promise.all(quarantineItemsToSave.map(item => this.quarantineRepository.save(item)));
+    if (layersToSave.length > 0) {
+      await this.costLayerRepository.saveMany(layersToSave);
+    }
+
+    if (quarantineItemsToSave.length > 0) {
+      await Promise.all(quarantineItemsToSave.map(qItem => this.quarantineRepository.save(qItem)));
+    }
+
+    if (this.serializedItemRepository && serializedItemsToSave.size > 0) {
+      await Promise.all(Array.from(serializedItemsToSave).map(sItem => this.serializedItemRepository!.save(sItem)));
     }
 
     await this.rmaRepository.save(rma);
