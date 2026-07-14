@@ -4,7 +4,7 @@ import { CandidateLocation, FulfillmentPlan, FulfillmentAllocation, IRoutingStra
 export class OrderRoutingEngine {
   /**
    * Evaluates all potential fulfillment plans and returns the optimal one.
-   * 
+   *
    * @param sku The product SKU to route.
    * @param quantity The target quantity to fulfill.
    * @param destination The target destination coordinates.
@@ -20,7 +20,7 @@ export class OrderRoutingEngine {
     strategy: IRoutingStrategy,
     rateCalculator: (locationId: string, sku: string, qty: number) => Promise<number>
   ): Promise<FulfillmentPlan> {
-    
+
     const activeCandidates = candidates.filter(c => c.availableQuantity > 0);
     const totalAvailable = activeCandidates.reduce((sum, c) => sum + c.availableQuantity, 0);
 
@@ -30,7 +30,7 @@ export class OrderRoutingEngine {
 
     // 1. Generate combinations of allocations
     const rawPlans = this.generatePlans(activeCandidates, quantity);
-    
+
     if (rawPlans.length === 0) {
       throw new Error(`Could not find any valid allocation combinations for quantity ${quantity}`);
     }
