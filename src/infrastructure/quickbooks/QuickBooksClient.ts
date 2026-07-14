@@ -1,3 +1,4 @@
+import { Logger } from "../logging/logger";
 import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreatedEvent";
 
 export class QuickBooksClient {
@@ -15,7 +16,7 @@ export class QuickBooksClient {
 
   public async publishJournalEntry(event: JournalEntryCreatedEvent): Promise<string> {
     if (!this.realmId || this.realmId.includes("mock") || !this.accessToken || this.accessToken.includes("mock")) {
-      return `mock-qbo-journal-${Math.random().toString(36).substring(7)}`;
+      return `mock-qbo-journal-${crypto.randomUUID()}`;
     }
 
     // Map lines to QuickBooks API Schema
@@ -47,7 +48,8 @@ export class QuickBooksClient {
 
     const url = `${this.baseUrl}/${this.realmId}/journalentry`;
 
-    console.info(JSON.stringify({
+    Logger.info({
+      message: "Publishing Journal Entry to QuickBooks API",
       context: "QuickBooksClient",
       action: "publishJournalEntry",
       request: {
@@ -60,7 +62,7 @@ export class QuickBooksClient {
         }
       },
       payload: qboPayload
-    }));
+    });
 
     const response = await fetch(url, {
       method: "POST",
@@ -78,6 +80,6 @@ export class QuickBooksClient {
     }
 
     const data: any = await response.json();
-    return data.JournalEntry?.Id || data.Id || `mock-qbo-journal-${Math.random().toString(36).substring(7)}`;
+    return data.JournalEntry?.Id || data.Id || `mock-qbo-journal-${crypto.randomUUID()}`;
   }
 }

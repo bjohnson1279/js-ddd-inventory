@@ -5,12 +5,13 @@ import { IPurchaseOrderRepository } from "../../../domain/repositories/IPurchase
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
 import { ICostLayerRepository } from "../../../domain/repositories/ICostLayerRepository";
 import { DomainException } from "../../../domain/exceptions/DomainException";
+import { AutoRetryDecorator } from "../../../application/decorators/AutoRetryDecorator";
 
 export class PurchaseOrderController {
   static async create(req: Request, res: Response) {
     try {
       const poRepository = req.app.get("purchaseOrderRepository") as IPurchaseOrderRepository;
-      const useCase = new CreatePurchaseOrder(poRepository);
+      const useCase = AutoRetryDecorator.wrap(new CreatePurchaseOrder(poRepository));
       
       const po = await useCase.execute(req.body);
       res.status(201).json({
@@ -30,7 +31,7 @@ export class PurchaseOrderController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -51,7 +52,7 @@ export class PurchaseOrderController {
       res.status(200).json({ message: "Purchase order approved successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -72,7 +73,7 @@ export class PurchaseOrderController {
       res.status(200).json({ message: "Purchase order sent to vendor successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -87,7 +88,7 @@ export class PurchaseOrderController {
       const inventoryRepository = req.app.get("inventoryRepository") as IInventoryRepository;
       const costLayerRepository = req.app.get("costLayerRepository") as ICostLayerRepository;
       
-      const useCase = new ReceivePurchaseOrder(poRepository, inventoryRepository, costLayerRepository);
+      const useCase = AutoRetryDecorator.wrap(new ReceivePurchaseOrder(poRepository, inventoryRepository, costLayerRepository));
       
       await useCase.execute({
         purchaseOrderId: req.params.id,
@@ -96,7 +97,7 @@ export class PurchaseOrderController {
       res.status(200).json({ message: "Items received successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);

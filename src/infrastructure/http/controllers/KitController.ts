@@ -8,6 +8,7 @@ import { IInventoryRepository } from "../../../domain/repositories/IInventoryRep
 import { DomainException } from "../../../domain/exceptions/DomainException";
 import { AssembleKit } from "../../../application/useCases/AssembleKit";
 import { DisassembleKit } from "../../../application/useCases/DisassembleKit";
+import { AutoRetryDecorator } from "../../../application/decorators/AutoRetryDecorator";
 
 export class KitController {
   static async create(req: Request, res: Response) {
@@ -107,9 +108,9 @@ export class KitController {
     } catch (error: any) {
       if (
         error instanceof DomainException ||
-        (typeof error?.message === "string" && error.message.includes("Insufficient"))
+        (error instanceof Error && typeof error.message === "string" && error.message.includes("Insufficient"))
       ) {
-        console.error(error instanceof DomainException ? error.message : error);
+        console.error(error);
       res.status(400).json({ error: "Insufficient stock" });
       } else {
         console.error(error);
@@ -145,12 +146,12 @@ export class KitController {
       const tenantConfigRepository = req.app.get("tenantConfigRepository");
       const journalRepository = req.app.get("journalRepository");
 
-      const useCase = new AssembleKit(
+      const useCase = AutoRetryDecorator.wrap(new AssembleKit(
         inventoryRepository,
         costLayerRepository,
         tenantConfigRepository,
         journalRepository
-      );
+      ));
 
       await useCase.execute({
         tenantId,
@@ -183,12 +184,12 @@ export class KitController {
       const tenantConfigRepository = req.app.get("tenantConfigRepository");
       const journalRepository = req.app.get("journalRepository");
 
-      const useCase = new DisassembleKit(
+      const useCase = AutoRetryDecorator.wrap(new DisassembleKit(
         inventoryRepository,
         costLayerRepository,
         tenantConfigRepository,
         journalRepository
-      );
+      ));
 
       await useCase.execute({
         tenantId,
@@ -202,7 +203,7 @@ export class KitController {
       res.status(200).json({ message: `Successfully disassembled ${quantity} units of Kit ${kitSku}.` });
     } catch (error: any) {
       console.error(error);
-      console.error(error instanceof DomainException ? error.message : error);
+      console.error(error);
       res.status(400).json({ error: "Failed to disassemble kit" });
     }
   }

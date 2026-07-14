@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { CalculateShippingRates } from "../../../application/useCases/CalculateShippingRates";
 import { PurchaseShippingLabel } from "../../../application/useCases/PurchaseShippingLabel";
 import { UpdateShipmentStatus } from "../../../application/useCases/UpdateShipmentStatus";
+import { RouteOrder } from "../../../application/useCases/RouteOrder";
 import { IShipmentRepository } from "../../../domain/repositories/IShipmentRepository";
 import { ICarrierService } from "../../../application/ports/ICarrierService";
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
@@ -43,7 +44,7 @@ export class ShippingController {
       res.status(200).json(rates);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error("Failed to estimate shipping rates:", error);
@@ -89,7 +90,7 @@ export class ShippingController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error("Failed to purchase shipping label:", error);
@@ -120,7 +121,7 @@ export class ShippingController {
       );
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error("Failed to list shipments:", error);
@@ -146,11 +147,43 @@ export class ShippingController {
       res.status(200).json({ message: "Shipment status updated successfully.", status });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        console.error(error);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error("Failed to update tracking status:", error);
         res.status(500).json({ error: "Failed to update tracking." });
+      }
+    }
+  }
+
+  static async routeOrder(req: Request, res: Response) {
+    try {
+      const inventoryRepository = req.app.get("inventoryRepository") as IInventoryRepository;
+      const carrierService = req.app.get("carrierService") as ICarrierService;
+
+      const useCase = new RouteOrder(inventoryRepository, carrierService);
+
+      const { sku, quantity, destinationAddress, strategyName } = req.body;
+
+      if (!sku || !quantity || !destinationAddress) {
+        return res.status(400).json({ error: "Missing required body fields: sku, quantity, and destinationAddress." });
+      }
+
+      const plan = await useCase.execute({
+        sku,
+        quantity: parseInt(quantity),
+        destinationAddress,
+        strategyName
+      });
+
+      res.status(200).json(plan);
+    } catch (error: any) {
+      if (error instanceof DomainException) {
+        console.error(error);
+        res.status(400).json({ error: "A domain error occurred while routing the order.", type: error.name });
+      } else {
+        console.error("Failed to route order:", error);
+        res.status(500).json({ error: "Failed to route order." });
       }
     }
   }
