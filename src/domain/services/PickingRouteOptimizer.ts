@@ -33,14 +33,13 @@ export class PickingRouteOptimizer {
     }
 
     const uniqueLocationIds = Array.from(new Set(items.map(i => i.locationId)));
-    const locationsResult = await Promise.all(
-      uniqueLocationIds.map(async id => {
-        const loc = await this.locationRepo.findById(new LocationId(id));
-        return { id, loc };
-      })
+
+    // N+1 Optimization: Batch fetch all required locations at once
+    const locationsResult = await this.locationRepo.findByIds(
+      uniqueLocationIds.map(id => new LocationId(id))
     );
 
-    const locationMap = new Map(locationsResult.map(({ id, loc }) => [id, loc]));
+    const locationMap = new Map(locationsResult.map(loc => [loc.id.value, loc]));
 
     const routeItems: PickRouteItem[] = [];
     for (const item of items) {
