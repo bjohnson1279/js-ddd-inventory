@@ -46,13 +46,14 @@ export class ReconcileInventoryAudit {
       .map(i => SKU.create(i.variantId));
 
     let inventoryItems: InventoryItem[] = [];
-    if (skusToFetch.length > 0) {
+    if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {
       inventoryItems = await this.inventoryRepository.findBySkus(skusToFetch, audit.locationId);
+    } else if (skusToFetch.length > 0) {
+      const fetchPromises = skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, audit.locationId));
+      const results = await Promise.all(fetchPromises);
+      inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
     }
     const inventoryItemsMap = new Map(inventoryItems.map(i => [i.sku.getValue(), i]));
-
-    const itemsToSave = new Set<InventoryItem>();
-    const layersToSave: InventoryCostLayer[] = [];
 
     await Promise.all(audit.items.map(async (item) => {
       const discrepancy = item.discrepancy;
@@ -71,7 +72,7 @@ export class ReconcileInventoryAudit {
 
         // 1. Decrement stock
         inventoryItem.dispatchStock(Quantity.create(Math.abs(discrepancy)));
-        itemsToSave.add(inventoryItem);
+        await this.inventoryRepository.save(inventoryItem);
 
         // 2. Consume cost layers and post journal entries if Accrual
         if (config.accountingMethod === AccountingMethod.Accrual) {
@@ -104,10 +105,9 @@ export class ReconcileInventoryAudit {
             audit.locationId,
             Quantity.create(0)
           );
-          inventoryItemsMap.set(sku.getValue(), inventoryItem);
         }
         inventoryItem.receiveStock(Quantity.create(discrepancy));
-        itemsToSave.add(inventoryItem);
+        await this.inventoryRepository.save(inventoryItem);
 
         // 2. Find last receipt unit cost, fallback to 0
         const activeLayers = await this.costLayerRepository.getActiveLayers(item.variantId, "desc");
@@ -126,7 +126,7 @@ export class ReconcileInventoryAudit {
           `AUDIT-${audit.id}`,
           audit.locationId
         );
-        layersToSave.push(newLayer);
+        await this.costLayerRepository.save(newLayer);
 
         // 4. Post journal entries if Accrual and cost > 0
         if (totalCostCents > 0) {
@@ -142,14 +142,6 @@ export class ReconcileInventoryAudit {
         }
       }
     }));
-
-    if (itemsToSave.size > 0) {
-      await this.inventoryRepository.saveMany(Array.from(itemsToSave));
-    }
-
-    if (layersToSave.length > 0) {
-      await this.costLayerRepository.saveMany(layersToSave);
-    }
 
     // Save the reconciled audit
     await this.auditRepository.save(audit);

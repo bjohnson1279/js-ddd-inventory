@@ -34,7 +34,7 @@ export class OnboardingController {
       res.status(200).json({ message: "Initial inventory setup successful" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error);
+        console.error(error.message);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error("Onboarding submission failed:", error);

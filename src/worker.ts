@@ -26,28 +26,22 @@ WebhookDeliveryWorker.start(intervalMs);
 console.log(`[Worker] Outbox worker started (polling every ${intervalMs}ms)`);
 
 // Graceful shutdown
-  const safeDisconnect = async () => {
-    if ('disconnect' in messageBroker && typeof (messageBroker as any).disconnect === 'function') {
-      try {
-        await (messageBroker as any).disconnect();
-      } catch (err) {
-        console.error(err);
-      }
-    }
-  };
+process.on("SIGTERM", () => {
+  console.log("[Worker] Shutting down outbox worker...");
+  outboxProcessor.stop();
+  WebhookDeliveryWorker.stop();
+  if (messageBroker.disconnect) {
+    messageBroker.disconnect().catch(err => console.error("Error during broker disconnect:", err));
+  }
+  process.exit(0);
+});
 
-  process.on("SIGTERM", async () => {
-    console.log("[Worker] Shutting down outbox worker...");
-    outboxProcessor.stop();
-    WebhookDeliveryWorker.stop();
-    await safeDisconnect();
-    process.exit(0);
-  });
-
-  process.on("SIGINT", async () => {
-    console.log("[Worker] Shutting down outbox worker...");
-    outboxProcessor.stop();
-    WebhookDeliveryWorker.stop();
-    await safeDisconnect();
-    process.exit(0);
-  });
+process.on("SIGINT", () => {
+  console.log("[Worker] Shutting down outbox worker...");
+  outboxProcessor.stop();
+  WebhookDeliveryWorker.stop();
+  if (messageBroker.disconnect) {
+    messageBroker.disconnect().catch(err => console.error("Error during broker disconnect:", err));
+  }
+  process.exit(0);
+});

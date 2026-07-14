@@ -1,34 +1,5 @@
 import { prisma } from "../database/prisma";
 import crypto from "crypto";
-import dns from "dns/promises";
-
-
-async function isSafeUrl(urlStr: string): Promise<boolean> {
-  try {
-    const url = new URL(urlStr);
-    if (url.protocol !== "https:" && url.protocol !== "http:") return false;
-
-    const { address } = await dns.lookup(url.hostname);
-
-    if (address === "127.0.0.1" || address === "::1" || address === "0.0.0.0") return false;
-
-    const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
-    const match = address.match(ipv4Regex);
-    if (match) {
-      const p1 = parseInt(match[1], 10);
-      const p2 = parseInt(match[2], 10);
-
-      if (p1 === 10) return false;
-      if (p1 === 172 && p2 >= 16 && p2 <= 31) return false;
-      if (p1 === 192 && p2 === 168) return false;
-      if (p1 === 169 && p2 === 254) return false;
-    }
-
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 export class WebhookDeliveryWorker {
   private static isRunning = false;
@@ -87,14 +58,7 @@ export class WebhookDeliveryWorker {
           const signature = hmac.update(delivery.payload).digest("hex");
 
           // Send POST request
-          if (!(await isSafeUrl(subscription.targetUrl))) {
-            throw new Error(`SSRF detected: ${subscription.targetUrl} resolves to a private IP`);
-          }
-
-          // Send POST request
-          // Note: using redirect: "error" or "manual" is crucial to prevent redirect-based SSRF
           const response = await fetch(subscription.targetUrl, {
-            redirect: "error",
             method: "POST",
             headers: {
               "Content-Type": "application/json",

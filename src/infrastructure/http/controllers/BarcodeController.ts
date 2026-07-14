@@ -44,7 +44,7 @@ export class BarcodeController {
         });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error);
+        console.error(error.message);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);
@@ -131,9 +131,9 @@ export class BarcodeController {
     } catch (error: any) {
       if (
         error instanceof DomainException ||
-        (error instanceof Error && typeof error.message === "string" && error.message.includes("not registered"))
+        (typeof error?.message === "string" && error.message.includes("not registered"))
       ) {
-        console.error(error);
+        console.error(error instanceof DomainException ? error.message : error);
         res.status(404).json({ error: "Not registered" });
       } else {
         console.error(error);

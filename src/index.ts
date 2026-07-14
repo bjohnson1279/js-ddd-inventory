@@ -1,5 +1,4 @@
 import express from "express";
-import { Logger } from "./infrastructure/logging/logger";
 import cors from "cors";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
@@ -223,7 +222,7 @@ const start = async () => {
   // Run TimescaleDB migration query when connecting to Postgres
   try {
     await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;`;
-    Logger.info({ message: "TimescaleDB extension enabled." });
+    console.log("TimescaleDB extension enabled.");
 
     const isHypertable = await prisma.$queryRaw`
       SELECT 1 FROM timescaledb_information.hypertables 
@@ -231,7 +230,7 @@ const start = async () => {
     `;
     if ((isHypertable as any[]).length === 0) {
       await prisma.$executeRaw`SELECT create_hypertable('dispatch_records', 'dispatched_at', if_not_exists => TRUE);`;
-      Logger.info({ message: "dispatch_records table converted to TimescaleDB hypertable." });
+      console.log("dispatch_records table converted to TimescaleDB hypertable.");
     }
 
     const isView = await prisma.$queryRaw`
@@ -260,19 +259,19 @@ const start = async () => {
             if_not_exists => TRUE);
         `;
       } catch (policyErr: any) {
-        Logger.warn({ message: "TimescaleDB aggregate policy setup warning", error: policyErr.message });
+        console.log("TimescaleDB aggregate policy setup warning:", policyErr.message);
       }
-      Logger.info({ message: "daily_dispatch_summary continuous aggregate created." });
+      console.log("daily_dispatch_summary continuous aggregate created.");
     }
 
     // Set up PostgreSQL Row-Level Security (RLS) policies
     await enableRowLevelSecurity(prisma);
   } catch (e) {
-    Logger.warn({ message: "Database/TimescaleDB setup skipped/warning", error: (e as Error).message });
+    console.log("Database/TimescaleDB setup skipped/warning:", (e as Error).message);
   }
 
   if (process.env.DB_HOST) {
-    Logger.info({ message: "Initializing PostgreSQL Repository..." });
+    console.log("Initializing PostgreSQL Repository...");
     const pgRepo = new PostgresInventoryRepository({
       host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT || "5432"),
@@ -283,7 +282,7 @@ const start = async () => {
     await pgRepo.initialize();
     repository = pgRepo;
   } else {
-    Logger.info({ message: "Initializing Prisma Repository..." });
+    console.log("Initializing Prisma Repository...");
     repository = new PrismaInventoryRepository(new PrismaOutboxRepository());
   }
 
@@ -346,14 +345,14 @@ const start = async () => {
   }
 
   const server = app.listen(port, () => {
-    Logger.info({ message: `Server is running on port ${port}` });
+    console.log(`Server is running on port ${port}`);
   });
   WebSocketManager.init(server);
 };
 
 if (process.env.NODE_ENV !== "test") {
   start().catch((err) => {
-    Logger.error({ message: "Failed to start server" }, err);
+    console.error("Failed to start server:", err);
     process.exit(1);
   });
 }
