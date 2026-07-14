@@ -74,16 +74,12 @@ export class ReceiveRMA {
     const normalLocationId = rma.locationId;
     const quarantineLocationId = `${rma.locationId}-quarantine`;
 
-    if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {
+    if (skusToFetch.length > 0) {
       const [normalItems, quarantineItems] = await Promise.all([
         this.inventoryRepository.findBySkus(skusToFetch, normalLocationId),
         this.inventoryRepository.findBySkus(skusToFetch, quarantineLocationId)
       ]);
       fetchedInvItems = [...normalItems, ...quarantineItems];
-    } else if (skusToFetch.length > 0) {
-      const normalResults = await Promise.all(skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, normalLocationId)));
-      const quarantineResults = await Promise.all(skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, quarantineLocationId)));
-      fetchedInvItems = [...normalResults, ...quarantineResults].filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
     }
 
     // Create an in-memory cache for fetched inventory items during this transaction
@@ -213,16 +209,12 @@ export class ReceiveRMA {
       }
     }
 
-    if (this.inventoryRepository.saveMany && itemsToSave.size > 0) {
+    if (itemsToSave.size > 0) {
       await this.inventoryRepository.saveMany(Array.from(itemsToSave));
-    } else if (itemsToSave.size > 0) {
-      await Promise.all(Array.from(itemsToSave).map(item => this.inventoryRepository.save(item)));
     }
 
-    if (this.costLayerRepository.saveMany && layersToSave.length > 0) {
+    if (layersToSave.length > 0) {
       await this.costLayerRepository.saveMany(layersToSave);
-    } else if (layersToSave.length > 0) {
-      await Promise.all(layersToSave.map(layer => this.costLayerRepository.save(layer)));
     }
 
     if (quarantineItemsToSave.length > 0) {

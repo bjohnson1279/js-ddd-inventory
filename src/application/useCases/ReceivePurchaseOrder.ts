@@ -38,13 +38,8 @@ export class ReceivePurchaseOrder {
     // Optimization: Prefetch all necessary inventory items to avoid N+1 queries and race conditions during concurrent execution
     const skusToFetch = dto.items.map((i) => SKU.create(i.variantId));
     let inventoryItems: InventoryItem[] = [];
-    if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {
+    if (skusToFetch.length > 0) {
       inventoryItems = await this.inventoryRepository.findBySkus(skusToFetch, po.locationId);
-    } else if (skusToFetch.length > 0) {
-      const results = await Promise.all(
-        skusToFetch.map((sku) => this.inventoryRepository.findBySku(sku, po.locationId))
-      );
-      inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
     }
     const inventoryItemsMap = new Map(inventoryItems.map((i) => [i.sku.getValue(), i]));
 
@@ -88,16 +83,12 @@ export class ReceivePurchaseOrder {
       costLayers.push(costLayer);
     }
 
-    if (this.inventoryRepository.saveMany && itemsToSave.size > 0) {
+    if (itemsToSave.size > 0) {
       await this.inventoryRepository.saveMany(Array.from(itemsToSave));
-    } else if (itemsToSave.size > 0) {
-      await Promise.all(Array.from(itemsToSave).map((invItem) => this.inventoryRepository.save(invItem)));
     }
 
-    if (this.costLayerRepository.saveMany && costLayers.length > 0) {
+    if (costLayers.length > 0) {
       await this.costLayerRepository.saveMany(costLayers);
-    } else {
-      await Promise.all(costLayers.map(layer => this.costLayerRepository.save(layer)));
     }
 
     // 4. Save updated PO

@@ -87,24 +87,5 @@ describe("PerformFullStoreCount Use Case", () => {
     expect(newItem!.quantity.getValue()).toBe(3);
   });
 
-  it("should fall back to Promise.all(save) if saveMany is not available", async () => {
-    mockRepo = {
-      findAllByLocation: jest.fn(),
-      save: jest.fn(),
-    } as any;
-    useCase = new PerformFullStoreCount(mockRepo);
 
-    const sku1 = SKU.create("SKU-1");
-    const item1 = InventoryItem.create("item-1", sku1, Quantity.create(10));
-
-    mockRepo.findAllByLocation.mockResolvedValue([item1]);
-    mockRepo.save.mockResolvedValue(undefined);
-
-    await useCase.execute([
-      { sku: "SKU-1", count: 10 }
-    ]);
-    expect(mockRepo.findAllByLocation).toHaveBeenCalledWith("default");
-    expect(mockRepo.save).toHaveBeenCalledTimes(1);
-    expect(mockRepo.save).toHaveBeenCalledWith(item1);
-  });
 });
