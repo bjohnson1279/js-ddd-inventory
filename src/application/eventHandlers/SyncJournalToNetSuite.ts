@@ -13,7 +13,7 @@ export const syncJournalToNetSuite = async (event: JournalEntryCreatedEvent): Pr
     });
 
     if (existing) {
-      console.log(`[NetSuite Sync] Local journal ${event.aggregateId} already synced to NetSuite.`);
+      console.info(JSON.stringify({ message: `[NetSuite Sync] Local journal ${event.aggregateId} already synced to NetSuite.`, journalEntryId: event.aggregateId }));
       return;
     }
 
@@ -32,8 +32,8 @@ export const syncJournalToNetSuite = async (event: JournalEntryCreatedEvent): Pr
       }
     });
 
-    console.log(`[NetSuite Sync] Successfully mapped local journal ${event.aggregateId} -> NetSuite ${nsId}`);
+    console.info(JSON.stringify({ message: `[NetSuite Sync] Successfully mapped local journal ${event.aggregateId} -> NetSuite ${nsId}`, journalEntryId: event.aggregateId, nsId }));
   } catch (err: any) {
-    console.error(`[NetSuite Sync] Failed for journal ${event.aggregateId}:`, err);
+    console.error(JSON.stringify({ message: `[NetSuite Sync] Failed for journal ${event.aggregateId}`, journalEntryId: event.aggregateId, error: err?.message || String(err), stack: err?.stack }));
   }
 };

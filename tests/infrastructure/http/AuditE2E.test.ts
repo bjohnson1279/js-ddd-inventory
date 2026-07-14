@@ -19,22 +19,25 @@ jest.mock("../../../src/infrastructure/database/prisma", () => {
         findUnique: jest.fn()
       },
       inventoryModel: {
-        aggregate: jest.fn(),
-        groupBy: jest.fn()
+        aggregate: jest.fn()
       },
       journalEntryModel: {
         findMany: jest.fn()
       },
       quickbooksJournalMappingModel: {
+        findMany: jest.fn(),
         findUnique: jest.fn()
       },
       xeroJournalMappingModel: {
+        findMany: jest.fn(),
         findUnique: jest.fn()
       },
       netsuiteJournalMappingModel: {
+        findMany: jest.fn(),
         findUnique: jest.fn()
       },
       auditDiscrepancyModel: {
+        createMany: jest.fn(),
         findMany: jest.fn(),
         findFirst: jest.fn(),
         create: jest.fn(),
@@ -89,9 +92,9 @@ describe("Audit REST API Endpoints", () => {
     ]);
 
     // 2. Mock ledger aggregate local quantities
-    (prisma.inventoryModel.groupBy as jest.Mock).mockResolvedValueOnce([
-      { sku: "SKU-DIFF", _sum: { quantity: 10 } }
-    ]);
+    (prisma.inventoryModel.aggregate as jest.Mock).mockResolvedValueOnce({
+      _sum: { quantity: 10 }
+    });
 
     // 3. Mock open check findFirst
     (prisma.auditDiscrepancyModel.findFirst as jest.Mock)
@@ -104,7 +107,10 @@ describe("Audit REST API Endpoints", () => {
     ]);
 
     // 5. Mock mapping check
-    (prisma.quickbooksJournalMappingModel.findUnique as jest.Mock).mockResolvedValueOnce(null);
+    (prisma.quickbooksJournalMappingModel.findMany as jest.Mock).mockResolvedValueOnce([]);
+    (prisma.xeroJournalMappingModel.findMany as jest.Mock).mockResolvedValueOnce([]);
+    (prisma.netsuiteJournalMappingModel.findMany as jest.Mock).mockResolvedValueOnce([]);
+    (prisma.auditDiscrepancyModel.findMany as jest.Mock).mockResolvedValueOnce([]);
 
     const res = await request(app)
       .post("/api/audit/run")
@@ -114,10 +120,13 @@ describe("Audit REST API Endpoints", () => {
     expect(res.body.shopifyDiscrepancies).toBe(1);
     expect(res.body.accountingDiscrepancies).toBe(1);
 
-    expect(prisma.auditDiscrepancyModel.create).toHaveBeenCalledTimes(2);
+    expect(prisma.auditDiscrepancyModel.create).toHaveBeenCalledTimes(1);
+    expect(prisma.auditDiscrepancyModel.createMany).toHaveBeenCalledTimes(1);
   });
 
   it("should resolve discrepancy", async () => {
+    // Reset the mock in case it was consumed by runAudit before this test ran
+    (prisma.auditDiscrepancyModel.findFirst as jest.Mock).mockReset();
     (prisma.auditDiscrepancyModel.findFirst as jest.Mock).mockResolvedValueOnce({
       id: "disc-1",
       tenantId: "tenant-1",
