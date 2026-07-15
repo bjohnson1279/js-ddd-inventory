@@ -5,6 +5,7 @@ import { KafkaMessageBroker } from "./infrastructure/messaging/KafkaMessageBroke
 import { RabbitMQMessageBroker } from "./infrastructure/messaging/RabbitMQMessageBroker";
 import { InMemoryMessageBroker } from "./infrastructure/messaging/InMemoryMessageBroker";
 import { WebhookDeliveryWorker } from "./infrastructure/workers/WebhookDeliveryWorker";
+import { Logger } from "./infrastructure/logging/logger";
 
 const outboxRepo = new PrismaOutboxRepository();
 const kafkaUrl = process.env.KAFKA_URL;
@@ -16,14 +17,14 @@ const messageBroker = kafkaUrl
     ? new RabbitMQMessageBroker(rabbitMqUrl)
     : new InMemoryMessageBroker();
 
-console.log("[Worker] Starting js-ddd-inventory Outbox Worker...");
+Logger.info({ context: "Worker", message: "Starting js-ddd-inventory Outbox Worker..." });
 const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);
 
 // Start polling
 const intervalMs = process.env.WORKER_INTERVAL_MS ? parseInt(process.env.WORKER_INTERVAL_MS) : 3000;
 outboxProcessor.start(intervalMs);
 WebhookDeliveryWorker.start(intervalMs);
-console.log(`[Worker] Outbox worker started (polling every ${intervalMs}ms)`);
+Logger.info({ context: "Worker", message: `Outbox worker started (polling every ${intervalMs}ms)` });
 
 // Graceful shutdown
   const safeDisconnect = async () => {
@@ -31,13 +32,13 @@ console.log(`[Worker] Outbox worker started (polling every ${intervalMs}ms)`);
       try {
         await (messageBroker as any).disconnect();
       } catch (err) {
-        console.error(err);
+        Logger.error({ context: "Worker", message: "Error disconnecting message broker" }, err);
       }
     }
   };
 
   process.on("SIGTERM", async () => {
-    console.log("[Worker] Shutting down outbox worker...");
+    Logger.info({ context: "Worker", message: "Shutting down outbox worker..." });
     outboxProcessor.stop();
     WebhookDeliveryWorker.stop();
     await safeDisconnect();
@@ -45,7 +46,7 @@ console.log(`[Worker] Outbox worker started (polling every ${intervalMs}ms)`);
   });
 
   process.on("SIGINT", async () => {
-    console.log("[Worker] Shutting down outbox worker...");
+    Logger.info({ context: "Worker", message: "Shutting down outbox worker..." });
     outboxProcessor.stop();
     WebhookDeliveryWorker.stop();
     await safeDisconnect();
