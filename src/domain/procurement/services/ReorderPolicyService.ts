@@ -21,9 +21,6 @@ export class ReorderPolicyService {
     const policies = await this.reorderPolicyRepository.findAll();
     const results: any[] = [];
 
-    // Optimization: Pre-fetch all POs once to prevent N+1 queries in the loop below
-    const allPos = await this.poRepository.findAll();
-
     for (const policy of policies) {
       let rop = policy.reorderPoint;
       if (policy.dynamicRopEnabled) {
@@ -52,6 +49,7 @@ export class ReorderPolicyService {
       let reason = "";
 
       if (policy.shouldReorder(currentQty)) {
+        const allPos = await this.poRepository.findAll();
         const alreadyOrdered = allPos.some((po) => {
           if (po.tenantId !== tenantId || po.locationId !== policy.locationId) return false;
           if (

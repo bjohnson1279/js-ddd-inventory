@@ -71,15 +71,12 @@ export class DisassembleKit {
     let totalEstimatedComponentsCost = 0;
     const componentAvgCosts: { variantId: string; quantity: number; avgUnitCost: number }[] = [];
 
-    const componentVariantIds = kitRecord.components.map(c => c.variantId);
-    const activeLayersMap = await this.costLayerRepository.getActiveLayersBatch(componentVariantIds, "asc");
-
-    const componentEstimates = kitRecord.components.map((component) => {
+    const componentEstimates = await Promise.all(kitRecord.components.map(async (component) => {
       const needed = component.quantity * quantity;
       let avgUnitCost = 0;
 
       try {
-        const activeLayers = activeLayersMap.get(component.variantId) || [];
+        const activeLayers = await this.costLayerRepository.getActiveLayers(component.variantId, "asc");
         let totalUnits = 0;
         let totalValue = 0;
         for (const layer of activeLayers) {
@@ -100,7 +97,7 @@ export class DisassembleKit {
         quantity: needed,
         avgUnitCost
       };
-    });
+    }));
 
     for (const item of componentEstimates) {
       componentAvgCosts.push(item);
@@ -118,8 +115,11 @@ export class DisassembleKit {
     // on a single retrieved instance.
     const skusToFetch = componentAvgCosts.map(item => SKU.create(item.variantId));
     let inventoryItems: InventoryItem[] = [];
-    if (skusToFetch.length > 0) {
-      inventoryItems = await this.inventoryRepository.findBySkus(skusToFetch, locationId);
+    if ('findBySkus' in this.inventoryRepository && typeof (this.inventoryRepository as any).findBySkus === 'function') {
+      inventoryItems = await (this.inventoryRepository as any).findBySkus(skusToFetch, locationId);
+    } else {
+      const results = await Promise.all(skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, locationId)));
+      inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
     }
     const inventoryItemsMap = new Map(
       inventoryItems.filter((i): i is InventoryItem => i !== null).map(i => [i.sku.getValue(), i])
@@ -164,10 +164,18 @@ export class DisassembleKit {
     }
 
     // Batch save inventory items if possible, otherwise Promise.all
-    await this.inventoryRepository.saveMany(itemsToSave);
+    if ('saveMany' in this.inventoryRepository && typeof (this.inventoryRepository as any).saveMany === 'function') {
+      await (this.inventoryRepository as any).saveMany(itemsToSave);
+    } else {
+      await Promise.all(itemsToSave.map(item => this.inventoryRepository.save(item)));
+    }
 
     // Batch save cost layers if possible, otherwise Promise.all
-    await this.costLayerRepository.saveMany(restoreLayers);
+    if ('saveMany' in this.costLayerRepository && typeof (this.costLayerRepository as any).saveMany === 'function') {
+      await (this.costLayerRepository as any).saveMany(restoreLayers);
+    } else {
+      await Promise.all(restoreLayers.map(l => this.costLayerRepository.save(l)));
+    }
 
     // 7. Write balanced journal entry if Accrual
     const config = await this.tenantConfigRepository.findByTenantId(tenantId);

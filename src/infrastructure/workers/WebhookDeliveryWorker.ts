@@ -88,14 +88,7 @@ export class WebhookDeliveryWorker {
           const signature = hmac.update(delivery.payload).digest("hex");
 
           // Send POST request
-          if (!(await isSafeUrl(subscription.targetUrl))) {
-            throw new Error(`SSRF detected: ${subscription.targetUrl} resolves to a private IP`);
-          }
-
-          // Send POST request
-          // Note: using redirect: "error" or "manual" is crucial to prevent redirect-based SSRF
           const response = await fetch(subscription.targetUrl, {
-            redirect: "error",
             method: "POST",
             headers: {
               "Content-Type": "application/json",

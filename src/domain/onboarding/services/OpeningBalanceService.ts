@@ -32,20 +32,18 @@ export class OpeningBalanceService {
         );
       }
     } else {
-      await Promise.all(
-        items.map(async (item) => {
-          if (
-            await this.inventoryRepository.hasAnyEntries(
-              item.variantId,
-              onboarding.locationId
-            )
-          ) {
-            throw new Error(
-              `Opening balance conflict for variant ${item.variantId} at location ${onboarding.locationId}`
-            );
-          }
-        })
-      );
+      for (const item of items) {
+        if (
+          await this.inventoryRepository.hasAnyEntries(
+            item.variantId,
+            onboarding.locationId
+          )
+        ) {
+          throw new Error(
+            `Opening balance conflict for variant ${item.variantId} at location ${onboarding.locationId}`
+          );
+        }
+      }
     }
 
     // --- Pass 2: Post ledger entries ---

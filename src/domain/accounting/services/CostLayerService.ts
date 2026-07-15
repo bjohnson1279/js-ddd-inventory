@@ -26,7 +26,13 @@ export class CostLayerService {
     const strategy = CostingStrategyRegistry.get(method);
     const breakdown = strategy.consumeLayers(activeLayers, quantity, variantId);
 
-    await this.layers.saveMany(activeLayers);
+    if (this.layers.saveMany) {
+      await this.layers.saveMany(activeLayers);
+    } else {
+      await Promise.all(
+        activeLayers.map((layer) => this.layers.save(layer))
+      );
+    }
 
     return breakdown;
   }
@@ -62,7 +68,13 @@ export class CostLayerService {
     const variantIds = Array.from(new Set(components.map((c) => c.variantId)));
 
     // 2. Prefetch all active layers in batch to reduce queries
-    const activeLayersByVariant = await this.layers.getActiveLayersBatch(variantIds);
+    const activeLayersByVariant = new Map<string, InventoryCostLayer[]>();
+    await Promise.all(
+      variantIds.map(async (vId) => {
+        const layers = await this.layers.getActiveLayers(vId);
+        activeLayersByVariant.set(vId, layers);
+      })
+    );
 
     // 3. Sequentially consume layers in-memory
     const breakdowns: CostBreakdown[] = [];
@@ -83,7 +95,11 @@ export class CostLayerService {
     // 4. Batch save all modified layers at once
     const layersToSave = Array.from(modifiedLayers);
     if (layersToSave.length > 0) {
-      await this.layers.saveMany(layersToSave);
+      if (this.layers.saveMany) {
+        await this.layers.saveMany(layersToSave);
+      } else {
+        await Promise.all(layersToSave.map((layer) => this.layers.save(layer)));
+      }
     }
 
     return breakdowns;

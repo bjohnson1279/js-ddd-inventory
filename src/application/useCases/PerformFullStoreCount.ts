@@ -47,6 +47,10 @@ export class PerformFullStoreCount {
       itemsToSave.push(newItem);
     }
 
-    await this.inventoryRepository.saveMany(itemsToSave);
+    if (this.inventoryRepository.saveMany) {
+      await this.inventoryRepository.saveMany(itemsToSave);
+    } else {
+      await Promise.all(itemsToSave.map(item => this.inventoryRepository.save(item)));
+    }
   }
 }

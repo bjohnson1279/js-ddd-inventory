@@ -115,7 +115,7 @@ export class WarehouseLocationController {
       res.status(200).json({ message: "Warehouse location deleted successfully." });
     } catch (error: any) {
       console.error(error);
-      console.error(error);
+      console.error(error instanceof DomainException ? error.message : error);
       res.status(400).json({ error: "Failed to delete location." });
     }
   }
@@ -137,7 +137,7 @@ export class WarehouseLocationController {
       res.status(200).json(suggestions);
     } catch (error: any) {
       console.error(error);
-      console.error(error);
+      console.error(error instanceof DomainException ? error.message : error);
       res.status(400).json({ error: "Failed to generate putaway suggestions." });
     }
   }
@@ -182,6 +182,7 @@ export class WarehouseLocationController {
       res.status(200).json(optimized);
     } catch (error: any) {
       console.error(error);
+      console.error(error instanceof DomainException ? error.message : error);
       res.status(400).json({ error: "Failed to optimize picking route." });
     }
   }
