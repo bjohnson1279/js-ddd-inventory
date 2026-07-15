@@ -235,3 +235,22 @@ Modify user permissions/role (Admin role required).
 *   **Outbox Event Log Status**: `GET /api/outbox/stats`
 *   **Retry Dead-Lettered Messages**: `POST /api/outbox/:id/retry`
 
+---
+
+## 🔒 Compliance Ledger (Audit Trails)
+
+### 1. Fetch Compliance Audit Logs
+*   **URL**: `/api/compliance/ledger`
+*   **Method**: `GET`
+*   **Query**: `?tenantId=tenant-1` (Optional)
+*   **Success Response**: `200 OK` (Array of cryptographically signed block entries in reverse chronological order)
+
+### 2. Verify Ledger Integrity
+*   **URL**: `/api/compliance/verify`
+*   **Method**: `POST`
+*   **Query**: `?tenantId=tenant-1` (Optional)
+*   **Success Response**: `200 OK`
+    ```json
+    { "isValid": true }
+    ```
+
