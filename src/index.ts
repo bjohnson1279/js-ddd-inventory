@@ -3,7 +3,6 @@ import { Logger } from "./infrastructure/logging/logger";
 import cors from "cors";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
-import { Logger } from "./infrastructure/logging/logger";
 import { PrismaInventoryRepository } from "./infrastructure/database/PrismaInventoryRepository";
 import { PrismaBarcodeRepository } from "./infrastructure/database/PrismaBarcodeRepository";
 import { PrismaSerializedItemRepository } from "./infrastructure/database/PrismaSerializedItemRepository";
