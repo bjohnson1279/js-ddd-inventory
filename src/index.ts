@@ -226,7 +226,7 @@ const start = async () => {
   try {
     await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;`;
     Logger.info({ message: "TimescaleDB extension enabled." });
-
+    
     const isHypertable = await prisma.$queryRaw`
       SELECT 1 FROM timescaledb_information.hypertables 
       WHERE hypertable_name = 'dispatch_records'
