@@ -185,4 +185,16 @@ export class WarehouseLocationController {
       res.status(400).json({ error: "Failed to optimize picking route." });
     }
   }
+
+  static async suggestSlotting(req: Request, res: Response) {
+    try {
+      const { SlottingOptimizer } = await import("../../../domain/services/SlottingOptimizer");
+      const optimizer = new SlottingOptimizer(prisma);
+      const suggestions = await optimizer.generateSuggestions();
+      res.status(200).json(suggestions);
+    } catch (error: any) {
+      console.error(error);
+      res.status(400).json({ error: "Failed to generate slotting suggestions." });
+    }
+  }
 }
