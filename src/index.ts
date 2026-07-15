@@ -355,7 +355,7 @@ const start = async () => {
 
 if (process.env.NODE_ENV !== "test") {
   start().catch((err) => {
-    Logger.error({ message: "Failed to start server" }, err);
+    Logger.error({ message: "Failed to start server", error: err instanceof Error ? err.message : String(err) });
     process.exit(1);
   });
 }
