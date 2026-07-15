@@ -226,7 +226,7 @@ const start = async () => {
   try {
     await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;`;
     Logger.info({ message: "TimescaleDB extension enabled." });
-
+    
     const isHypertable = await prisma.$queryRaw`
       SELECT 1 FROM timescaledb_information.hypertables 
       WHERE hypertable_name = 'dispatch_records'
@@ -355,7 +355,7 @@ const start = async () => {
 
 if (process.env.NODE_ENV !== "test") {
   start().catch((err) => {
-    Logger.error({ message: "Failed to start server" }, err);
+    Logger.error({ message: "Failed to start server", error: err instanceof Error ? err.message : String(err) });
     process.exit(1);
   });
 }
