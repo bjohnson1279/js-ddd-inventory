@@ -1,6 +1,7 @@
 import { prisma } from "../database/prisma";
 import crypto from "crypto";
 import dns from "dns/promises";
+import { WebSocketManager } from "../websocket/WebSocketManager";
 
 
 async function isSafeUrl(urlStr: string): Promise<boolean> {
@@ -134,6 +135,18 @@ export class WebhookDeliveryWorker {
               lastError: err.message,
               nextAttemptAt
             }
+          });
+
+          // Broadcast webhook failure
+          const tenantId = delivery.tenantId || "tenant-1";
+          WebSocketManager.broadcastToTenant(tenantId, {
+            type: "webhook_failed",
+            id: delivery.id,
+            subscriptionId: delivery.subscriptionId,
+            eventType: delivery.eventType,
+            attempts: nextAttempts,
+            status: nextStatus,
+            lastError: err.message
           });
         }
       }

@@ -91,6 +91,7 @@ import warehouseLocationRoutes from "./infrastructure/http/routes/warehouseLocat
 import notificationRoutes from "./infrastructure/http/routes/notification.routes";
 import auditRoutes from "./infrastructure/http/routes/audit.routes";
 import webhookSubscriptionRoutes from "./infrastructure/http/routes/webhookSubscription.routes";
+import complianceRoutes from "./infrastructure/http/routes/compliance.routes";
 import { WebSocketManager } from "./infrastructure/websocket/WebSocketManager";
 import { authMiddleware } from "./infrastructure/http/middleware/auth";
 import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
@@ -215,6 +216,7 @@ export const setupApp = (
   app.use("/api/notifications", notificationRoutes);
   app.use("/api/audit", auditRoutes);
   app.use("/api/webhook-subscriptions", webhookSubscriptionRoutes);
+  app.use("/api/compliance", complianceRoutes);
 };
 
 const start = async () => {

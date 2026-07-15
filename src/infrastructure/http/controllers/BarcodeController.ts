@@ -116,10 +116,14 @@ export class BarcodeController {
       // Broadcast via WebSocket to the tenant
       const tenantId = (req as any).tenantId || "tenant-1";
       WebSocketManager.broadcastToTenant(tenantId, {
+        type: "barcode_scanned",
         rawScan,
+        scanValue: rawScan,
         context,
+        variantId,
+        status: "success",
         payload: payload || {},
-        variantId
+        time: new Date().toISOString()
       });
 
       res.status(200).json({

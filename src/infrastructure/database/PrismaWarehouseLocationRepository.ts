@@ -17,7 +17,11 @@ export class PrismaWarehouseLocationRepository implements IWarehouseLocationRepo
         shelf: location.shelf,
         bin: location.bin,
         maxWeightGrams: location.maxWeightGrams,
-        maxVolumeCubicMeters: location.maxVolumeCubicMeters
+        maxVolumeCubicMeters: location.maxVolumeCubicMeters,
+        gridX: location.gridX,
+        gridY: location.gridY,
+        width: location.width,
+        height: location.height
       },
       create: {
         id: location.id.value,
@@ -28,7 +32,11 @@ export class PrismaWarehouseLocationRepository implements IWarehouseLocationRepo
         shelf: location.shelf,
         bin: location.bin,
         maxWeightGrams: location.maxWeightGrams,
-        maxVolumeCubicMeters: location.maxVolumeCubicMeters
+        maxVolumeCubicMeters: location.maxVolumeCubicMeters,
+        gridX: location.gridX,
+        gridY: location.gridY,
+        width: location.width,
+        height: location.height
       }
     });
   }
@@ -48,7 +56,11 @@ export class PrismaWarehouseLocationRepository implements IWarehouseLocationRepo
       model.shelf,
       model.bin,
       model.maxWeightGrams,
-      model.maxVolumeCubicMeters
+      model.maxVolumeCubicMeters,
+      model.gridX,
+      model.gridY,
+      model.width,
+      model.height
     );
   }
 
@@ -70,7 +82,11 @@ export class PrismaWarehouseLocationRepository implements IWarehouseLocationRepo
       model.shelf,
       model.bin,
       model.maxWeightGrams,
-      model.maxVolumeCubicMeters
+      model.maxVolumeCubicMeters,
+      model.gridX,
+      model.gridY,
+      model.width,
+      model.height
     ));
   }
 
@@ -91,7 +107,11 @@ export class PrismaWarehouseLocationRepository implements IWarehouseLocationRepo
       model.shelf,
       model.bin,
       model.maxWeightGrams,
-      model.maxVolumeCubicMeters
+      model.maxVolumeCubicMeters,
+      model.gridX,
+      model.gridY,
+      model.width,
+      model.height
     ));
   }
 }

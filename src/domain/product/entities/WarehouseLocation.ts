@@ -10,7 +10,11 @@ export class WarehouseLocation {
     public readonly shelf: string,
     public readonly bin: string,
     public readonly maxWeightGrams: number,
-    public readonly maxVolumeCubicMeters: number
+    public readonly maxVolumeCubicMeters: number,
+    public readonly gridX: number = 0,
+    public readonly gridY: number = 0,
+    public readonly width: number = 1,
+    public readonly height: number = 1
   ) {
     if (!warehouseId || warehouseId.trim().length === 0) {
       throw new Error("Warehouse ID cannot be empty.");
