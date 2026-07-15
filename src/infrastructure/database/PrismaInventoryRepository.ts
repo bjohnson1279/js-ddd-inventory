@@ -237,7 +237,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
       const existingItems = await this.prisma.inventoryModel.findMany({
         where: { id: { in: items.map(i => i.id) } }
       });
-      const existingIds = new Set(existingItems.map((e: any) => e.id));
+      const existingIds = new Set(existingItems.map(e => e.id));
 
       // Run bulk writes in parallel via Promise.all
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -286,7 +286,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
       const existingItems = await this.prisma.inventoryModel.findMany({
         where: { id: { in: items.map(i => i.id) } }
       });
-      const existingIds = new Set(existingItems.map((e: any) => e.id));
+      const existingIds = new Set(existingItems.map(e => e.id));
 
       // Run bulk writes in parallel via Promise.all
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
