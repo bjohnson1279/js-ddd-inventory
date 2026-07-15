@@ -15,19 +15,49 @@ export class AuditProcessorService {
       // Find all variants in database
       const variants = await prisma.productVariantModel.findMany();
 
-      for (const variant of variants) {
-        // Aggregate local quantity for this variant across all locations
-        const ledgerSum = await prisma.inventoryModel.aggregate({
-          where: { sku: variant.sku },
-          _sum: { quantity: true }
-        });
-        const localQty = ledgerSum._sum.quantity || 0;
+      // Optimize local quantity fetching by aggregating all variants at once
+      const localStockMap = new Map<string, number>();
 
-        // Query Shopify for current stock level
-        let shopifyQty = localQty;
-        if (accessToken !== "mock-token" && !storeDomain.includes("mock")) {
+      const ledgerSums = await prisma.inventoryModel.groupBy({
+        by: ['sku'],
+        _sum: { quantity: true },
+        where: { sku: { in: variants.map(v => v.sku) } }
+      });
+
+      ledgerSums.forEach(sum => {
+        localStockMap.set(sum.sku, sum._sum.quantity || 0);
+      });
+
+      // Optimize Shopify fetching by chunking and aliasing
+      const shopifyStockMap = new Map<string, number>();
+
+      if (accessToken !== "mock-token" && !storeDomain.includes("mock")) {
+        const chunkSize = 50;
+        for (let i = 0; i < variants.length; i += chunkSize) {
+          const chunk = variants.slice(i, i + chunkSize);
+
+          let queryBody = 'query findInventoryItems {\n';
+          chunk.forEach((variant, idx) => {
+            queryBody += `
+              var${idx}: inventoryItems(first: 1, query: "sku:${variant.sku}") {
+                edges {
+                  node {
+                    id
+                    inventoryLevels(first: 10) {
+                      edges {
+                        node {
+                          location { id }
+                          quantities(names: ["available"]) { quantity }
+                        }
+                      }
+                    }
+                  }
+                }
+              }\n`;
+          });
+          queryBody += '}';
+
           try {
-            // Find inventory item ID by SKU on Shopify
             const response = await fetch(
               `https://${storeDomain}/admin/api/2024-04/graphql.json`,
               {
@@ -36,53 +66,41 @@ export class AuditProcessorService {
                   "Content-Type": "application/json",
                   "X-Shopify-Access-Token": accessToken
                 },
-                body: JSON.stringify({
-                  query: `
-                    query findInventoryItem($query: String!) {
-                      inventoryItems(first: 1, query: $query) {
-                        edges {
-                          node {
-                            id
-                            inventoryLevels(first: 10) {
-                              edges {
-                                node {
-                                  location { id }
-                                  quantities(names: ["available"]) { quantity }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  `,
-                  variables: { query: `sku:${variant.sku}` }
-                })
+                body: JSON.stringify({ query: queryBody })
               }
             );
 
             if (response.ok) {
               const resData = (await response.json()) as any;
-              const edges = resData?.data?.inventoryItems?.edges || [];
-              if (edges.length > 0) {
-                const levels = edges[0].node.inventoryLevels?.edges || [];
-                const matchedLevel = levels.find(
-                  (e: any) => e.node.location.id === shopifyLocationId
-                );
-                if (matchedLevel) {
-                  shopifyQty = matchedLevel.node.quantities[0]?.quantity || 0;
+              chunk.forEach((variant, idx) => {
+                const edges = resData?.data?.[(`var${idx}`)]?.edges || [];
+                if (edges.length > 0) {
+                  const levels = edges[0].node.inventoryLevels?.edges || [];
+                  const matchedLevel = levels.find(
+                    (e: any) => e.node.location.id === shopifyLocationId
+                  );
+                  if (matchedLevel) {
+                    shopifyStockMap.set(variant.sku, matchedLevel.node.quantities[0]?.quantity || 0);
+                  }
                 }
-              }
+              });
             }
           } catch (err) {
             console.error("Failed to query Shopify stock level:", err);
           }
-        } else {
-          // Mock mismatch scenario if variant SKU ends with -DIFF
-          if (variant.sku.endsWith("-DIFF")) {
-            shopifyQty = localQty + 10;
-          }
         }
+      } else {
+        // Mock mismatch scenario if variant SKU ends with -DIFF
+        variants.forEach(variant => {
+          if (variant.sku.endsWith("-DIFF")) {
+            shopifyStockMap.set(variant.sku, (localStockMap.get(variant.sku) || 0) + 10);
+          }
+        });
+      }
+
+      for (const variant of variants) {
+        const localQty = localStockMap.get(variant.sku) || 0;
+        let shopifyQty = shopifyStockMap.has(variant.sku) ? shopifyStockMap.get(variant.sku)! : localQty;
 
         if (localQty !== shopifyQty) {
           // Check if open discrepancy exists
@@ -98,7 +116,7 @@ export class AuditProcessorService {
                 tenantId,
                 type: "SHOPIFY_STOCK_MISMATCH",
                 referenceId,
-                externalRefId: "mock-inventory-item-id",
+                externalRefId: "mock-inventory-item-id", // Could be improved but we'll leave it to match existing behavior
                 description: `Shopify stock mismatch for SKU ${variant.sku}. Local: ${localQty}, Shopify: ${shopifyQty}`
               }
             });
