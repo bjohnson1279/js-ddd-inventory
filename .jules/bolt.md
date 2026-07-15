@@ -5,6 +5,10 @@
 **Learning:** In the `ReceivePurchaseOrder`, `ReceiveRMA`, and `RecordAuditCount` flows, passing an array of received/counted items results in O(N^2) time complexity because the aggregate's methods (`receiveItems`, `receiveItem`, `recordCount`) perform a `.find()` on their internal `_items` array for each passed item. When dealing with hundreds or thousands of items, this creates a severe performance bottleneck.
 **Action:** Implemented lazy-initialized `Map` structures inside the aggregate roots (`PurchaseOrder`, `RMA`, `InventoryAudit`) to cache item lookups. This transforms the inner lookup to O(1), improving batch processing times significantly.
 
+## 2026-07-04 - [AuditProcessorService Optimize]
+**Learning:** Found N+1 queries in AuditProcessorService.ts when fetching external accounting journal mappings inside a loop, and aggregating inventory models.
+**Action:** Pre-fetched data using `groupBy` and `findMany` using `in` clause to do it in O(1) inside loop to resolve N+1 queries. Used Set for O(1) mapping verification inside the loop instead of multiple sequential `findUnique` operations.
+
 ## 2026-07-09 - [Optimize N+1 query in ReorderPolicyService evaluatePolicies]
 **Learning:** Found an N+1 query where `this.poRepository.findAll()` was called inside a loop over `policies` during `evaluatePolicies`.
 **Action:** When a method iterates over a set of items (like policies) and requires checking a global state (like all POs), fetch the global state once before the loop and use it within the loop to avoid N+1 database queries.

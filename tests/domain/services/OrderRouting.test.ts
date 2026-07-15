@@ -114,4 +114,39 @@ describe("OrderRoutingService", () => {
       service.routeOrder(orderLines, destination, warehouses);
     }).toThrow(/Unable to fulfill order/);
   });
+
+  it("should return empty result for empty order lines", () => {
+    const result = service.routeOrder([], destination, warehouses);
+
+    expect(result.allocations).toHaveLength(0);
+    expect(result.totalCostCents).toBe(0);
+    expect(result.splitCount).toBe(0);
+  });
+
+  it("should choose the warehouse with cheaper base shipping when distances are equal", () => {
+    // Add another warehouse at the exact same location as WH-NEAR but with cheaper base fee
+    const cheaperWarehouse: Warehouse = {
+      id: "WH-NEAR-CHEAP",
+      name: "Near Warehouse Cheaper",
+      latitude: 40.7306,
+      longitude: -73.9352, // Same distance
+      inventory: new Map([
+        ["SKU-A", 10]
+      ]),
+      baseShippingFeeCents: 400, // Cheaper than 500
+      shippingCostPerMileCents: 10
+    };
+
+    warehouses.push(cheaperWarehouse);
+
+    const orderLines: OrderLine[] = [
+      { sku: "SKU-A", quantity: 5 }
+    ];
+
+    const result = service.routeOrder(orderLines, destination, warehouses);
+
+    expect(result.splitCount).toBe(1);
+    expect(result.allocations).toHaveLength(1);
+    expect(result.allocations[0].warehouseId).toBe("WH-NEAR-CHEAP");
+  });
 });

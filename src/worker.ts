@@ -6,6 +6,7 @@ import { KafkaMessageBroker } from "./infrastructure/messaging/KafkaMessageBroke
 import { RabbitMQMessageBroker } from "./infrastructure/messaging/RabbitMQMessageBroker";
 import { InMemoryMessageBroker } from "./infrastructure/messaging/InMemoryMessageBroker";
 import { WebhookDeliveryWorker } from "./infrastructure/workers/WebhookDeliveryWorker";
+import { Logger } from "./infrastructure/logging/logger";
 
 const outboxRepo = new PrismaOutboxRepository();
 const kafkaUrl = process.env.KAFKA_URL;
@@ -35,7 +36,8 @@ Logger.info({ context: "Worker", message: `Outbox worker started (polling every 
         Logger.error({ context: "Worker", message: "Error disconnecting message broker" }, err);
       }
     }
-  };
+  }
+};
 
   process.on("SIGTERM", async () => {
     Logger.info({ context: "Worker", message: "Shutting down outbox worker..." });

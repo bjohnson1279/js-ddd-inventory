@@ -39,16 +39,6 @@ export class InMemoryCostLayerRepository implements ICostLayerRepository {
     return list;
   }
 
-
-  public async getActiveLayersBatch(variantIds: string[], orderBy?: string): Promise<Map<string, InventoryCostLayer[]>> {
-    const map = new Map<string, InventoryCostLayer[]>();
-    for (const vId of variantIds) {
-      const layers = await this.getActiveLayers(vId, orderBy);
-      map.set(vId, layers);
-    }
-    return map;
-  }
-
   public async save(layer: InventoryCostLayer): Promise<void> {
     this.layers.set(layer.id, layer);
   }

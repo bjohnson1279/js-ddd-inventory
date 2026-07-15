@@ -76,7 +76,7 @@ export class ShopifyWebhookController {
       res.status(200).send("Webhook processed");
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error);
+        console.error(error.message);
         res.status(400).send("A domain error occurred.");
       } else {
         console.error("Error processing Shopify webhook:", error);

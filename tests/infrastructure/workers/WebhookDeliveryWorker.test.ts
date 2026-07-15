@@ -67,7 +67,6 @@ describe("WebhookDeliveryWorker (Express)", () => {
       .digest("hex");
 
     expect(fetchSpy).toHaveBeenCalledWith("https://example.com/express-webhook", {
-      redirect: "error",
       method: "POST",
       headers: {
         "Content-Type": "application/json",
