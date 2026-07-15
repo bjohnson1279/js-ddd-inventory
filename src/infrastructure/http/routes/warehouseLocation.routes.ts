@@ -6,6 +6,7 @@ const router = Router();
 
 router.post("/", requireRole(["admin", "warehouse_operator"]), WarehouseLocationController.save);
 router.get("/", WarehouseLocationController.list);
+router.get("/slotting-suggestions", requireRole(["admin", "warehouse_operator"]), WarehouseLocationController.suggestSlotting);
 router.delete("/:id", requireRole(["admin", "warehouse_operator"]), WarehouseLocationController.delete);
 router.post("/putaway-suggestions", WarehouseLocationController.suggestPutaway);
 router.post("/optimize-pick-route", WarehouseLocationController.optimizePickRoute);

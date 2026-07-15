@@ -5,16 +5,33 @@ import { LocationId } from "../../../domain/valueObjects/LocationId";
 import { SKU } from "../../../domain/valueObjects/SKU";
 import { PutawaySuggester } from "../../../domain/services/PutawaySuggester";
 import { PickingRouteOptimizer } from "../../../domain/services/PickingRouteOptimizer";
+import { prisma } from "../../database/prisma";
 
 export class WarehouseLocationController {
   static async save(req: Request, res: Response) {
     try {
-      const { path, warehouseId, zone, aisle, rack, shelf, bin, maxWeightGrams, maxVolumeCubicMeters } = req.body;
+      const { path, warehouseId, zone, aisle, rack, shelf, bin, maxWeightGrams, maxVolumeCubicMeters, gridX, gridY, width, height } = req.body;
       const repo = req.app.get("warehouseLocationRepository");
 
       let location: WarehouseLocation;
       if (path) {
-        location = WarehouseLocation.parsePath(path, maxWeightGrams, maxVolumeCubicMeters);
+        // Parse grid details if available, otherwise fallback
+        const parsed = WarehouseLocation.parsePath(path, maxWeightGrams, maxVolumeCubicMeters);
+        location = new WarehouseLocation(
+          parsed.id,
+          parsed.warehouseId,
+          parsed.zone,
+          parsed.aisle,
+          parsed.rack,
+          parsed.shelf,
+          parsed.bin,
+          parsed.maxWeightGrams,
+          parsed.maxVolumeCubicMeters,
+          gridX !== undefined ? Number(gridX) : 0,
+          gridY !== undefined ? Number(gridY) : 0,
+          width !== undefined ? Number(width) : 1,
+          height !== undefined ? Number(height) : 1
+        );
       } else {
         const idStr = `${warehouseId}-${zone}-${aisle}-${rack}-${shelf}-${bin}`;
         location = new WarehouseLocation(
@@ -26,7 +43,11 @@ export class WarehouseLocationController {
           shelf,
           bin,
           maxWeightGrams,
-          maxVolumeCubicMeters
+          maxVolumeCubicMeters,
+          gridX !== undefined ? Number(gridX) : 0,
+          gridY !== undefined ? Number(gridY) : 0,
+          width !== undefined ? Number(width) : 1,
+          height !== undefined ? Number(height) : 1
         );
       }
 
@@ -43,7 +64,11 @@ export class WarehouseLocationController {
           shelf: location.shelf,
           bin: location.bin,
           maxWeightGrams: location.maxWeightGrams,
-          maxVolumeCubicMeters: location.maxVolumeCubicMeters
+          maxVolumeCubicMeters: location.maxVolumeCubicMeters,
+          gridX: location.gridX,
+          gridY: location.gridY,
+          width: location.width,
+          height: location.height
         }
       });
     } catch (error: any) {
@@ -67,7 +92,11 @@ export class WarehouseLocationController {
           shelf: loc.shelf,
           bin: loc.bin,
           maxWeightGrams: loc.maxWeightGrams,
-          maxVolumeCubicMeters: loc.maxVolumeCubicMeters
+          maxVolumeCubicMeters: loc.maxVolumeCubicMeters,
+          gridX: loc.gridX,
+          gridY: loc.gridY,
+          width: loc.width,
+          height: loc.height
         }))
       );
     } catch (error: any) {
@@ -115,21 +144,58 @@ export class WarehouseLocationController {
 
   static async optimizePickRoute(req: Request, res: Response) {
     try {
-      const { items } = req.body;
-      if (!Array.isArray(items)) {
-        return res.status(400).json({ error: "Items array is required." });
+      const { items, skus } = req.body;
+      let pickItems = items;
+
+      if (!pickItems && Array.isArray(skus)) {
+        const records = await prisma.inventoryModel.findMany({
+          where: { sku: { in: skus } }
+        });
+        const foundSkus = new Set(records.map(r => r.sku));
+        pickItems = records.map(r => ({
+          sku: r.sku,
+          quantity: 1,
+          locationId: r.locationId
+        }));
+        // Fallback for SKUs with no inventory record
+        for (const sku of skus) {
+          if (!foundSkus.has(sku)) {
+            const firstLoc = await prisma.warehouseLocationModel.findFirst();
+            pickItems.push({
+              sku,
+              quantity: 1,
+              locationId: firstLoc ? firstLoc.id : "default"
+            });
+          }
+        }
+      }
+
+      if (!Array.isArray(pickItems)) {
+        return res.status(400).json({ error: "Items array or SKUs array is required." });
       }
 
       const locationRepo = req.app.get("warehouseLocationRepository");
       const optimizer = new PickingRouteOptimizer(locationRepo);
 
-      const optimized = await optimizer.optimizeRoute(items);
+      const optimized = await optimizer.optimizeRoute(pickItems);
 
       res.status(200).json(optimized);
     } catch (error: any) {
       console.error(error);
       console.error(error instanceof DomainException ? error.message : error);
       res.status(400).json({ error: "Failed to optimize picking route." });
+    }
+  }
+
+  static async suggestSlotting(req: Request, res: Response) {
+    try {
+      const { SlottingOptimizer } = await import("../../../domain/services/SlottingOptimizer");
+      const optimizer = new SlottingOptimizer(prisma);
+      const suggestions = await optimizer.generateSuggestions();
+      res.status(200).json(suggestions);
+    } catch (error: any) {
+      console.error(error);
+      res.status(400).json({ error: "Failed to generate slotting suggestions." });
     }
   }
 }

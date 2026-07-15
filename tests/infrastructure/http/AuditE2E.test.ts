@@ -93,10 +93,7 @@ describe("Audit REST API Endpoints", () => {
       { id: "var-1", sku: "SKU-DIFF" } // ends with -DIFF to mock Shopify mismatch
     ]);
 
-        // 2. Mock ledger aggregate local quantities
-    (prisma.inventoryModel.aggregate as jest.Mock).mockResolvedValueOnce({
-      _sum: { quantity: 10 }
-    });
+    // 2. Mock ledger aggregate local quantities
     (prisma.inventoryModel.groupBy as jest.Mock).mockResolvedValueOnce([
       { sku: "SKU-DIFF", _sum: { quantity: 10 } }
     ]);

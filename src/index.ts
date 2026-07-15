@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
+import { Logger } from "./infrastructure/logging/logger";
 import { PrismaInventoryRepository } from "./infrastructure/database/PrismaInventoryRepository";
 import { PrismaBarcodeRepository } from "./infrastructure/database/PrismaBarcodeRepository";
 import { PrismaSerializedItemRepository } from "./infrastructure/database/PrismaSerializedItemRepository";
@@ -90,6 +91,7 @@ import warehouseLocationRoutes from "./infrastructure/http/routes/warehouseLocat
 import notificationRoutes from "./infrastructure/http/routes/notification.routes";
 import auditRoutes from "./infrastructure/http/routes/audit.routes";
 import webhookSubscriptionRoutes from "./infrastructure/http/routes/webhookSubscription.routes";
+import complianceRoutes from "./infrastructure/http/routes/compliance.routes";
 import { WebSocketManager } from "./infrastructure/websocket/WebSocketManager";
 import { authMiddleware } from "./infrastructure/http/middleware/auth";
 import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
@@ -214,6 +216,7 @@ export const setupApp = (
   app.use("/api/notifications", notificationRoutes);
   app.use("/api/audit", auditRoutes);
   app.use("/api/webhook-subscriptions", webhookSubscriptionRoutes);
+  app.use("/api/compliance", complianceRoutes);
 };
 
 const start = async () => {
@@ -222,8 +225,7 @@ const start = async () => {
   // Run TimescaleDB migration query when connecting to Postgres
   try {
     await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;`;
-    console.log("TimescaleDB extension enabled.");
-
+    Logger.info({ message: "TimescaleDB extension enabled." });
     const isHypertable = await prisma.$queryRaw`
       SELECT 1 FROM timescaledb_information.hypertables 
       WHERE hypertable_name = 'dispatch_records'
@@ -352,7 +354,7 @@ const start = async () => {
 
 if (process.env.NODE_ENV !== "test") {
   start().catch((err) => {
-    console.error("Failed to start server:", err);
+    Logger.error({ message: "Failed to start server", error: err instanceof Error ? err.message : String(err) });
     process.exit(1);
   });
 }

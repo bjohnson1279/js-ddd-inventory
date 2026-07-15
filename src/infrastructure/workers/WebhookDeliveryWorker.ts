@@ -1,5 +1,35 @@
 import { prisma } from "../database/prisma";
 import crypto from "crypto";
+import dns from "dns/promises";
+import { WebSocketManager } from "../websocket/WebSocketManager";
+
+
+async function isSafeUrl(urlStr: string): Promise<boolean> {
+  try {
+    const url = new URL(urlStr);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+
+    const { address } = await dns.lookup(url.hostname);
+
+    if (address === "127.0.0.1" || address === "::1" || address === "0.0.0.0") return false;
+
+    const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    const match = address.match(ipv4Regex);
+    if (match) {
+      const p1 = parseInt(match[1], 10);
+      const p2 = parseInt(match[2], 10);
+
+      if (p1 === 10) return false;
+      if (p1 === 172 && p2 >= 16 && p2 <= 31) return false;
+      if (p1 === 192 && p2 === 168) return false;
+      if (p1 === 169 && p2 === 254) return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export class WebhookDeliveryWorker {
   private static isRunning = false;
@@ -98,6 +128,18 @@ export class WebhookDeliveryWorker {
               lastError: err.message,
               nextAttemptAt
             }
+          });
+
+          // Broadcast webhook failure
+          const tenantId = delivery.tenantId || "tenant-1";
+          WebSocketManager.broadcastToTenant(tenantId, {
+            type: "webhook_failed",
+            id: delivery.id,
+            subscriptionId: delivery.subscriptionId,
+            eventType: delivery.eventType,
+            attempts: nextAttempts,
+            status: nextStatus,
+            lastError: err.message
           });
         }
       }
