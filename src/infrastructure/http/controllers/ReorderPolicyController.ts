@@ -38,7 +38,7 @@ export class ReorderPolicyController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error);
+        console.error(error.message);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         console.error(error);

@@ -13,12 +13,6 @@ export class InMemoryWarehouseLocationRepository implements IWarehouseLocationRe
     return this.locations.get(id.value) || null;
   }
 
-  async findByIds(ids: LocationId[]): Promise<WarehouseLocation[]> {
-    return ids
-      .map(id => this.locations.get(id.value))
-      .filter((loc): loc is WarehouseLocation => loc !== undefined);
-  }
-
   async delete(id: LocationId): Promise<void> {
     this.locations.delete(id.value);
   }

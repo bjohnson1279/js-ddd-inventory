@@ -89,7 +89,6 @@ export class PrismaWarehouseLocationRepository implements IWarehouseLocationRepo
       model.height
     ));
   }
-
   async delete(id: LocationId): Promise<void> {
     await this.prisma.warehouseLocationModel.delete({
       where: { id: id.value }

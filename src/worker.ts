@@ -1,3 +1,4 @@
+import { Logger } from "./infrastructure/logging/logger";
 import { prisma } from "./infrastructure/database/prisma";
 import { PrismaOutboxRepository } from "./infrastructure/database/PrismaOutboxRepository";
 import { OutboxProcessor } from "./infrastructure/outbox/OutboxProcessor";
@@ -35,7 +36,8 @@ Logger.info({ context: "Worker", message: `[Worker] Outbox worker started (polli
         Logger.error({ context: "Worker", message: "Failed to disconnect message broker" }, err);
       }
     }
-  };
+  }
+};
 
   process.on("SIGTERM", async () => {
     Logger.info({ context: "Worker", message: "[Worker] Shutting down outbox worker..." });

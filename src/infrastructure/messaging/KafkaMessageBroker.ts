@@ -2,7 +2,6 @@ import { Kafka, Producer } from "kafkajs";
 import { IMessageBroker } from "../../application/ports/IMessageBroker";
 import { IDomainEvent } from "../../domain/events/IDomainEvent";
 import { getTraceId } from "../telemetry/traceContext";
-import { Logger } from "../logging/logger";
 
 export class KafkaMessageBroker implements IMessageBroker {
   private kafka: Kafka;
@@ -28,17 +27,9 @@ export class KafkaMessageBroker implements IMessageBroker {
     try {
       this.producer = this.kafka.producer();
       await this.producer.connect();
-      Logger.info({
-        context: "KafkaMessageBroker",
-        action: "connect",
-        message: `Connected to Kafka bootstrap brokers at: ${this.brokerUrl}`
-      });
+      console.log(`[KafkaMessageBroker] Connected to Kafka bootstrap brokers at: ${this.brokerUrl}`);
     } catch (err: any) {
-      Logger.error({
-        context: "KafkaMessageBroker",
-        action: "connect",
-        message: "Connection failed"
-      }, err);
+      console.error("[KafkaMessageBroker] Connection failed:", err.message || err);
       this.producer = null;
       throw err;
     }
@@ -72,22 +63,9 @@ export class KafkaMessageBroker implements IMessageBroker {
           }
         ]
       });
-      Logger.info({
-        context: "KafkaMessageBroker",
-        action: "publish",
-        traceId: traceId,
-        topic: topic,
-        eventName: event.constructor.name,
-        message: "Successfully published event"
-      });
+      console.log(`[Trace: ${traceId}] [KafkaMessageBroker] Successfully published event "${event.constructor.name}" to topic "${topic}"`);
     } catch (err: any) {
-      Logger.error({
-        context: "KafkaMessageBroker",
-        action: "publish",
-        traceId: traceId,
-        topic: topic,
-        message: "Failed to publish event"
-      }, err);
+      console.error(`[Trace: ${traceId}] [KafkaMessageBroker] Failed to publish event to topic "${topic}":`, err.message || err);
       throw err;
     }
   }
@@ -96,11 +74,7 @@ export class KafkaMessageBroker implements IMessageBroker {
     if (this.producer) {
       await this.producer.disconnect();
       this.producer = null;
-      Logger.info({
-        context: "KafkaMessageBroker",
-        action: "disconnect",
-        message: "Disconnected from Kafka"
-      });
+      console.log("[KafkaMessageBroker] Disconnected from Kafka");
     }
   }
 }

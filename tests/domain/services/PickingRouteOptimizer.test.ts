@@ -13,7 +13,6 @@ describe("PickingRouteOptimizer", () => {
       findById: jest.fn(),
       delete: jest.fn(),
       findAll: jest.fn(),
-      findByIds: jest.fn(),
     };
     optimizer = new PickingRouteOptimizer(mockLocationRepo);
   });
@@ -25,7 +24,6 @@ describe("PickingRouteOptimizer", () => {
 
   it("should throw an error if a location is not found", async () => {
     mockLocationRepo.findById.mockResolvedValue(null);
-    mockLocationRepo.findByIds.mockResolvedValue([]);
     const input: PickItemInput[] = [{ sku: "SKU1", quantity: 1, locationId: "WH1-A1" }];
     await expect(optimizer.optimizeRoute(input)).rejects.toThrow("Warehouse location with ID WH1-A1 not found.");
   });
@@ -35,15 +33,6 @@ describe("PickingRouteOptimizer", () => {
     const loc2 = WarehouseLocation.parsePath("WH1-Z1-2-R1-S1-B1");
     const loc3 = WarehouseLocation.parsePath("WH2-Z1-1-R1-S1-B1");
 
-    mockLocationRepo.findByIds.mockImplementation(async (ids: LocationId[]) => {
-      const results: WarehouseLocation[] = [];
-      for (const id of ids) {
-        if (id.value === loc1.id.value) results.push(loc1);
-        if (id.value === loc2.id.value) results.push(loc2);
-        if (id.value === loc3.id.value) results.push(loc3);
-      }
-      return results;
-    });
     mockLocationRepo.findById.mockImplementation(async (id: LocationId) => {
       if (id.value === loc1.id.value) return loc1;
       if (id.value === loc2.id.value) return loc2;
@@ -85,7 +74,7 @@ describe("PickingRouteOptimizer", () => {
     const locEven2 = WarehouseLocation.parsePath("WH1-Z1-2-R2-S1-B1");
     const locEven3 = WarehouseLocation.parsePath("WH1-Z1-2-R2-S2-B1");
 
-    mockLocationRepo.findByIds.mockImplementation(async (ids: LocationId[]) => {
+    mockLocationRepo.findById.mockImplementation(async (id: LocationId) => {
       const map: Record<string, WarehouseLocation> = {
         [locOdd1.id.value]: locOdd1,
         [locOdd2.id.value]: locOdd2,
@@ -94,11 +83,7 @@ describe("PickingRouteOptimizer", () => {
         [locEven2.id.value]: locEven2,
         [locEven3.id.value]: locEven3,
       };
-      const results: WarehouseLocation[] = [];
-      for (const id of ids) {
-        if (map[id.value]) results.push(map[id.value]);
-      }
-      return results;
+      return map[id.value] || null;
     });
 
     const input: PickItemInput[] = [
@@ -137,18 +122,14 @@ describe("PickingRouteOptimizer", () => {
      const locB1 = WarehouseLocation.parsePath("WH1-Z1-B-R1-S1-B1");
      const locB2 = WarehouseLocation.parsePath("WH1-Z1-B-R2-S1-B1");
 
-     mockLocationRepo.findByIds.mockImplementation(async (ids: LocationId[]) => {
+     mockLocationRepo.findById.mockImplementation(async (id: LocationId) => {
       const map: Record<string, WarehouseLocation> = {
         [locA1.id.value]: locA1,
         [locA2.id.value]: locA2,
         [locB1.id.value]: locB1,
         [locB2.id.value]: locB2,
       };
-      const results: WarehouseLocation[] = [];
-      for (const id of ids) {
-        if (map[id.value]) results.push(map[id.value]);
-      }
-      return results;
+      return map[id.value] || null;
     });
 
     const input: PickItemInput[] = [
@@ -173,13 +154,10 @@ describe("PickingRouteOptimizer", () => {
     const locEvenBin1 = WarehouseLocation.parsePath("WH1-Z1-2-R1-S1-B1");
     const locEvenBin2 = WarehouseLocation.parsePath("WH1-Z1-2-R1-S1-B2");
 
-    mockLocationRepo.findByIds.mockImplementation(async (ids: LocationId[]) => {
-      const results: WarehouseLocation[] = [];
-      for (const id of ids) {
-        if (id.value === locEvenBin1.id.value) results.push(locEvenBin1);
-        if (id.value === locEvenBin2.id.value) results.push(locEvenBin2);
-      }
-      return results;
+    mockLocationRepo.findById.mockImplementation(async (id: LocationId) => {
+      if (id.value === locEvenBin1.id.value) return locEvenBin1;
+      if (id.value === locEvenBin2.id.value) return locEvenBin2;
+      return null;
     });
 
     const input: PickItemInput[] = [
@@ -196,13 +174,10 @@ describe("PickingRouteOptimizer", () => {
     const locOddBin1 = WarehouseLocation.parsePath("WH1-Z1-1-R1-S1-B1");
     const locOddBin2 = WarehouseLocation.parsePath("WH1-Z1-1-R1-S1-B2");
 
-    mockLocationRepo.findByIds.mockImplementation(async (ids: LocationId[]) => {
-      const results: WarehouseLocation[] = [];
-      for (const id of ids) {
-        if (id.value === locOddBin1.id.value) results.push(locOddBin1);
-        if (id.value === locOddBin2.id.value) results.push(locOddBin2);
-      }
-      return results;
+    mockLocationRepo.findById.mockImplementation(async (id: LocationId) => {
+      if (id.value === locOddBin1.id.value) return locOddBin1;
+      if (id.value === locOddBin2.id.value) return locOddBin2;
+      return null;
     });
 
     const input: PickItemInput[] = [
@@ -219,13 +194,10 @@ describe("PickingRouteOptimizer", () => {
     const loc1 = WarehouseLocation.parsePath("WH1-Z1-@-R1-S1-B1");
     const loc2 = WarehouseLocation.parsePath("WH1-Z1-@-R1-S1-B2");
 
-    mockLocationRepo.findByIds.mockImplementation(async (ids: LocationId[]) => {
-      const results: WarehouseLocation[] = [];
-      for (const id of ids) {
-        if (id.value === loc1.id.value) results.push(loc1);
-        if (id.value === loc2.id.value) results.push(loc2);
-      }
-      return results;
+    mockLocationRepo.findById.mockImplementation(async (id: LocationId) => {
+      if (id.value === loc1.id.value) return loc1;
+      if (id.value === loc2.id.value) return loc2;
+      return null;
     });
 
     const input: PickItemInput[] = [
