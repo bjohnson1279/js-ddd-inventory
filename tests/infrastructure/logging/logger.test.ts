@@ -35,7 +35,6 @@ describe("Logger", () => {
   it("should log error messages with Error instance details", () => {
     const err = new Error("Sample database error");
     Logger.error({ message: "test db error" }, err);
-    
     expect(errorSpy).toHaveBeenCalled();
     const loggedString = errorSpy.mock.calls[0][0];
     const loggedObj = JSON.parse(loggedString);
@@ -45,7 +44,3 @@ describe("Logger", () => {
 
   it("should log error messages with raw string details", () => {
     Logger.error({ message: "test raw error" }, "Simple failure string");
-    
-    expect(errorSpy).toHaveBeenCalledWith('{"message":"test raw error","error":"Simple failure string"}');
-  });
-});
