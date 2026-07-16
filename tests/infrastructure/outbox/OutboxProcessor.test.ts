@@ -197,6 +197,7 @@ describe("Transactional Outbox Pattern", () => {
 
   it("should prevent concurrent processing of pending events", async () => {
     const fetchPendingSpy = jest.spyOn(outboxRepo, "fetchPending").mockResolvedValue([]);
+    
     // Call processPending once but mock isProcessing flag behavior or concurrent calls
     const promise1 = processor.processPending();
     const promise2 = processor.processPending();

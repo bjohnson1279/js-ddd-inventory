@@ -24,6 +24,7 @@ describe("KafkaMessageBroker", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     broker = new KafkaMessageBroker("localhost:9092,localhost:9093");
+    
     // Retrieve mock producer instance
     const kafkaInstance = new Kafka({ clientId: 't', brokers: [] });
     mockProducerInstance = kafkaInstance.producer();
@@ -68,6 +69,7 @@ describe("KafkaMessageBroker", () => {
   it("should disconnect producer successfully", async () => {
     const mockEvent = { occurredOn: new Date() } as any;
     await broker.publish("test-topic", mockEvent);
+    
     await broker.disconnect();
 
     expect(mockProducerInstance.disconnect).toHaveBeenCalledTimes(1);

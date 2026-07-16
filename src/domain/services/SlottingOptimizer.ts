@@ -75,7 +75,7 @@ export class SlottingOptimizer {
       for (const target of itemRecords) {
         if (target.locationId === item.locationId) continue;
         if (matchedLocations.has(target.locationId)) continue;
-
+        
         // Target must be closer to (0,0) than the current item location
         if (target.distance < item.distance) {
           // Target velocity must be lower

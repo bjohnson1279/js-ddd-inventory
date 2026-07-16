@@ -22,6 +22,7 @@ export class ComplianceController {
     try {
       const tenantId = (req.query.tenantId as string) || undefined;
       const result = await ComplianceLedgerService.validateLedger(tenantId);
+      
       res.status(200).json(result);
     } catch (error: any) {
       console.error("[ComplianceController] Error verifying ledger:", error);
