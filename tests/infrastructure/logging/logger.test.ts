@@ -44,3 +44,5 @@ describe("Logger", () => {
 
   it("should log error messages with raw string details", () => {
     Logger.error({ message: "test raw error" }, "Simple failure string");
+  })
+});
