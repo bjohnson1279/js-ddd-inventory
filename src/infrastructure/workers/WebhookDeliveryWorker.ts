@@ -87,6 +87,11 @@ export class WebhookDeliveryWorker {
           const hmac = crypto.createHmac("sha256", subscription.secret);
           const signature = hmac.update(delivery.payload).digest("hex");
 
+          // Verify target URL is safe to prevent SSRF
+          if (!(await isSafeUrl(subscription.targetUrl))) {
+            throw new Error("Unsafe webhook target URL blocked");
+          }
+
           // Send POST request
           const response = await fetch(subscription.targetUrl, {
             method: "POST",

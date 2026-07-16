@@ -145,3 +145,7 @@
 **Vulnerability:** The webhook subscription endpoints leaked raw backend error messages directly to the client in HTTP 500 responses.
 **Learning:** Exposing raw backend exception details (error.message or error.stack) in HTTP error responses can leak sensitive business logic or internal states. This was specifically found in a controller handling secrets.
 **Prevention:** Always map these errors to generic, static safe strings (e.g., 'Internal server error') instead of returning the dynamic error.message directly, and ensure original dynamic errors are logged server-side for troubleshooting.
+## 2026-07-16 - [Fix SSRF Vulnerability in Webhook Delivery Worker]
+**Vulnerability:** The application had an `isSafeUrl` function defined to prevent Server-Side Request Forgery (SSRF) when firing webhooks, but it wasn't being invoked before the actual `fetch()` call. This allowed potential SSRF against internal network IPs or cloud metadata endpoints.
+**Learning:** Having security functions defined is not enough; they must be actively invoked at the Time-of-Use. This omission could lead to severe SSRF vulnerabilities where the application can be used as a proxy.
+**Prevention:** Always ensure that network calls to user-controlled URLs are preceded by a strict validation mechanism that resolves hostnames (e.g. `dns.lookup`) and blocks local/private IP ranges.
