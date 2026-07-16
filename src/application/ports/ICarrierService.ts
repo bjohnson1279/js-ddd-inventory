@@ -11,6 +11,6 @@ export interface LabelResult {
 }
 
 export interface ICarrierService {
-  fetchRates(sku: string, quantity: number, destinationAddress: string): Promise<CarrierRate[]>;
-  generateLabel(sku: string, quantity: number, destinationAddress: string, carrier: string): Promise<LabelResult>;
+  fetchRates(sku: string, quantity: number, destinationAddress: string, originLocationId?: string): Promise<CarrierRate[]>;
+  generateLabel(sku: string, quantity: number, destinationAddress: string, carrier: string, originLocationId?: string): Promise<LabelResult>;
 }

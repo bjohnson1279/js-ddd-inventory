@@ -7,6 +7,9 @@ import { IOutboxRepository } from "../../domain/repositories/IOutboxRepository";
 import { ConcurrencyException } from "../../domain/exceptions/ConcurrencyException";
 import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
+import { WebSocketManager } from "../websocket/WebSocketManager";
+import { tenantLocalStorage } from "./tenantContext";
+import { ComplianceLedgerService } from "../../domain/services/ComplianceLedgerService";
 
 export class PrismaInventoryRepository implements IInventoryRepository {
   private readonly prisma = prisma;
@@ -45,6 +48,24 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     );
   }
 
+  async findAllBySku(sku: SKU): Promise<InventoryItem[]> {
+    const records = await this.prisma.inventoryModel.findMany({
+      where: { sku: sku.getValue() }
+    });
+
+    return records.map((record: any) =>
+      InventoryItem.create(
+        record.id,
+        SKU.create(record.sku),
+        record.locationId,
+        Quantity.create(record.quantity),
+        Quantity.create(record.allocated),
+        Quantity.create(record.inTransit),
+        record.version
+      )
+    );
+  }
+
   async findBySkus(skus: SKU[], locationId: string = "default"): Promise<InventoryItem[]> {
     const records = await this.prisma.inventoryModel.findMany({
       where: {
@@ -68,7 +89,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
 
   async findAll(): Promise<InventoryItem[]> {
     const records = await this.prisma.inventoryModel.findMany();
-    return records.map((record: { id: string; sku: string; locationId: string; quantity: number; allocated: number; inTransit: number; version: number }) => 
+    return records.map((record: { id: string; sku: string; locationId: string; quantity: number; allocated: number; inTransit: number; version: number }) =>
       InventoryItem.create(
         record.id,
         SKU.create(record.sku),
@@ -85,7 +106,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     const records = await this.prisma.inventoryModel.findMany({
       where: { locationId }
     });
-    return records.map((record: { id: string; sku: string; locationId: string; quantity: number; allocated: number; inTransit: number; version: number }) => 
+    return records.map((record: { id: string; sku: string; locationId: string; quantity: number; allocated: number; inTransit: number; version: number }) =>
       InventoryItem.create(
         record.id,
         SKU.create(record.sku),
@@ -182,6 +203,29 @@ export class PrismaInventoryRepository implements IInventoryRepository {
 
       await DomainEventDispatcher.dispatch(events);
     }
+
+    const tenantId = tenantLocalStorage.getStore() || "tenant-1";
+
+    // Log Stock Adjustment to Compliance Ledger
+    await ComplianceLedgerService.logEvent(tenantId, "STOCK_ADJUSTED", {
+      sku: item.sku.getValue(),
+      locationId: item.locationId,
+      quantity: item.quantity.getValue(),
+      allocated: item.allocated.getValue(),
+      inTransit: item.inTransit.getValue(),
+      version: item.version,
+      reason: "Inventory repository save operation"
+    });
+
+    WebSocketManager.broadcastToTenant(tenantId, {
+      type: "stock_changed",
+      sku: item.sku.getValue(),
+      locationId: item.locationId,
+      quantity: item.quantity.getValue(),
+      allocated: item.allocated.getValue(),
+      inTransit: item.inTransit.getValue(),
+      version: item.version
+    });
 
     item.clearDomainEvents();
   }
@@ -291,6 +335,29 @@ export class PrismaInventoryRepository implements IInventoryRepository {
       if (allEvents.length > 0) {
         await DomainEventDispatcher.dispatch(allEvents);
       }
+    }
+
+    const tenantId = tenantLocalStorage.getStore() || "tenant-1";
+    for (const item of items) {
+      await ComplianceLedgerService.logEvent(tenantId, "STOCK_ADJUSTED", {
+        sku: item.sku.getValue(),
+        locationId: item.locationId,
+        quantity: item.quantity.getValue(),
+        allocated: item.allocated.getValue(),
+        inTransit: item.inTransit.getValue(),
+        version: item.version,
+        reason: "Inventory repository saveMany operation"
+      });
+
+      WebSocketManager.broadcastToTenant(tenantId, {
+        type: "stock_changed",
+        sku: item.sku.getValue(),
+        locationId: item.locationId,
+        quantity: item.quantity.getValue(),
+        allocated: item.allocated.getValue(),
+        inTransit: item.inTransit.getValue(),
+        version: item.version
+      });
     }
   }
 

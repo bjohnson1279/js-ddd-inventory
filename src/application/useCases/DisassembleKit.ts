@@ -126,6 +126,8 @@ export class DisassembleKit {
     );
 
     // Prepare components updates
+    // We cannot parallelize stock increments safely due to possible race conditions
+    // on identical component SKUs in the kit. However, we CAN batch save everything at the end.
     for (const item of componentAvgCosts) {
       const allocatedUnitCost = scaleFactor > 0 ? Math.round(item.avgUnitCost * scaleFactor) : 0;
 

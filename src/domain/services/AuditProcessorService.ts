@@ -15,19 +15,57 @@ export class AuditProcessorService {
       // Find all variants in database
       const variants = await prisma.productVariantModel.findMany();
 
-      for (const variant of variants) {
-        // Aggregate local quantity for this variant across all locations
-        const ledgerSum = await prisma.inventoryModel.aggregate({
-          where: { sku: variant.sku },
-          _sum: { quantity: true }
-        });
-        const localQty = ledgerSum._sum.quantity || 0;
+      // Optimize local quantity fetching by aggregating all variants at once
+      const localStockMap = new Map<string, number>();
 
-        // Query Shopify for current stock level
-        let shopifyQty = localQty;
-        if (accessToken !== "mock-token" && !storeDomain.includes("mock")) {
+      const ledgerSums = await prisma.inventoryModel.groupBy({
+        by: ['sku'],
+        _sum: { quantity: true },
+        where: { sku: { in: variants.map(v => v.sku) } }
+      });
+
+      ledgerSums.forEach(sum => {
+        localStockMap.set(sum.sku, sum._sum.quantity || 0);
+      });
+
+      // Pre-fetch all open shopify mismatch discrepancies to avoid N+1 queries inside loop
+      const openShopifyDiscrepancies = await prisma.auditDiscrepancyModel.findMany({
+        where: { tenantId, type: "SHOPIFY_STOCK_MISMATCH", status: "OPEN" }
+      });
+      const openShopifyDiscrepancySet = new Set(openShopifyDiscrepancies.map(d => d.referenceId));
+
+      const newShopifyDiscrepancies = [];
+
+      // Optimize Shopify fetching by chunking and aliasing
+      const shopifyStockMap = new Map<string, number>();
+
+      if (accessToken !== "mock-token" && !storeDomain.includes("mock")) {
+        const chunkSize = 50;
+        for (let i = 0; i < variants.length; i += chunkSize) {
+          const chunk = variants.slice(i, i + chunkSize);
+
+          let queryBody = 'query findInventoryItems {\n';
+          chunk.forEach((variant, idx) => {
+            queryBody += `
+              var${idx}: inventoryItems(first: 1, query: "sku:${variant.sku}") {
+                edges {
+                  node {
+                    id
+                    inventoryLevels(first: 10) {
+                      edges {
+                        node {
+                          location { id }
+                          quantities(names: ["available"]) { quantity }
+                        }
+                      }
+                    }
+                  }
+                }
+              }\n`;
+          });
+          queryBody += '}';
+
           try {
-            // Find inventory item ID by SKU on Shopify
             const response = await fetch(
               `https://${storeDomain}/admin/api/2024-04/graphql.json`,
               {
@@ -36,75 +74,63 @@ export class AuditProcessorService {
                   "Content-Type": "application/json",
                   "X-Shopify-Access-Token": accessToken
                 },
-                body: JSON.stringify({
-                  query: `
-                    query findInventoryItem($query: String!) {
-                      inventoryItems(first: 1, query: $query) {
-                        edges {
-                          node {
-                            id
-                            inventoryLevels(first: 10) {
-                              edges {
-                                node {
-                                  location { id }
-                                  quantities(names: ["available"]) { quantity }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  `,
-                  variables: { query: `sku:${variant.sku}` }
-                })
+                body: JSON.stringify({ query: queryBody })
               }
             );
 
             if (response.ok) {
               const resData = (await response.json()) as any;
-              const edges = resData?.data?.inventoryItems?.edges || [];
-              if (edges.length > 0) {
-                const levels = edges[0].node.inventoryLevels?.edges || [];
-                const matchedLevel = levels.find(
-                  (e: any) => e.node.location.id === shopifyLocationId
-                );
-                if (matchedLevel) {
-                  shopifyQty = matchedLevel.node.quantities[0]?.quantity || 0;
+              chunk.forEach((variant, idx) => {
+                const edges = resData?.data?.[(`var${idx}`)]?.edges || [];
+                if (edges.length > 0) {
+                  const levels = edges[0].node.inventoryLevels?.edges || [];
+                  const matchedLevel = levels.find(
+                    (e: any) => e.node.location.id === shopifyLocationId
+                  );
+                  if (matchedLevel) {
+                    shopifyStockMap.set(variant.sku, matchedLevel.node.quantities[0]?.quantity || 0);
+                  }
                 }
-              }
+              });
             }
           } catch (err) {
             console.error("Failed to query Shopify stock level:", err);
           }
-        } else {
-          // Mock mismatch scenario if variant SKU ends with -DIFF
-          if (variant.sku.endsWith("-DIFF")) {
-            shopifyQty = localQty + 10;
-          }
         }
+      } else {
+        // Mock mismatch scenario if variant SKU ends with -DIFF
+        variants.forEach(variant => {
+          if (variant.sku.endsWith("-DIFF")) {
+            shopifyStockMap.set(variant.sku, (localStockMap.get(variant.sku) || 0) + 10);
+          }
+        });
+      }
+
+      for (const variant of variants) {
+        const localQty = localStockMap.get(variant.sku) || 0;
+        let shopifyQty = shopifyStockMap.has(variant.sku) ? shopifyStockMap.get(variant.sku)! : localQty;
 
         if (localQty !== shopifyQty) {
-          // Check if open discrepancy exists
           const referenceId = `${variant.sku}:default`;
-          const existingOpen = await prisma.auditDiscrepancyModel.findFirst({
-            where: { tenantId, type: "SHOPIFY_STOCK_MISMATCH", referenceId, status: "OPEN" }
-          });
 
-          if (!existingOpen) {
-            await prisma.auditDiscrepancyModel.create({
-              data: {
-                id: crypto.randomUUID(),
-                tenantId,
-                type: "SHOPIFY_STOCK_MISMATCH",
-                referenceId,
-                externalRefId: "mock-inventory-item-id",
-                description: `Shopify stock mismatch for SKU ${variant.sku}. Local: ${localQty}, Shopify: ${shopifyQty}`
-              }
+          if (!openShopifyDiscrepancySet.has(referenceId)) {
+            newShopifyDiscrepancies.push({
+              id: crypto.randomUUID(),
+              tenantId,
+              type: "SHOPIFY_STOCK_MISMATCH",
+              referenceId,
+              externalRefId: "mock-inventory-item-id",
+              description: `Shopify stock mismatch for SKU ${variant.sku}. Local: ${localQty}, Shopify: ${shopifyQty}`
             });
             shopifyCount++;
           }
         }
+      }
+
+      if (newShopifyDiscrepancies.length > 0) {
+        await prisma.auditDiscrepancyModel.createMany({
+          data: newShopifyDiscrepancies
+        });
       }
     }
 
@@ -120,45 +146,51 @@ export class AuditProcessorService {
         where: { tenantId, entryDate: { gte: sevenDaysAgo } }
       });
 
+      // Pre-fetch all mappings for the retrieved journals to avoid N+1 queries
+      const journalIds = journals.map(j => j.id);
+
+      const [qboMappings, xeroMappings, netsuiteMappings] = await Promise.all([
+        hasQbo ? prisma.quickbooksJournalMappingModel.findMany({ where: { journalEntryId: { in: journalIds } } }) : [],
+        hasXero ? prisma.xeroJournalMappingModel.findMany({ where: { journalEntryId: { in: journalIds } } }) : [],
+        hasNetsuite ? prisma.netsuiteJournalMappingModel.findMany({ where: { journalEntryId: { in: journalIds } } }) : []
+      ]);
+
+      const qboMappingSet = new Set(qboMappings.map(m => m.journalEntryId));
+      const xeroMappingSet = new Set(xeroMappings.map(m => m.journalEntryId));
+      const netsuiteMappingSet = new Set(netsuiteMappings.map(m => m.journalEntryId));
+
+      // Pre-fetch all open accounting discrepancies
+      const openDiscrepancies = await prisma.auditDiscrepancyModel.findMany({
+        where: { tenantId, type: "ACCOUNTING_JOURNAL_MISSING", referenceId: { in: journalIds }, status: "OPEN" }
+      });
+      const openDiscrepancySet = new Set(openDiscrepancies.map(d => d.referenceId));
+
+      const newDiscrepancies = [];
+
       for (const journal of journals) {
         let hasMapping = false;
-        if (hasQbo) {
-          const mapping = await prisma.quickbooksJournalMappingModel.findUnique({
-            where: { journalEntryId: journal.id }
-          });
-          if (mapping) hasMapping = true;
-        }
-        if (hasXero && !hasMapping) {
-          const mapping = await prisma.xeroJournalMappingModel.findUnique({
-            where: { journalEntryId: journal.id }
-          });
-          if (mapping) hasMapping = true;
-        }
-        if (hasNetsuite && !hasMapping) {
-          const mapping = await prisma.netsuiteJournalMappingModel.findUnique({
-            where: { journalEntryId: journal.id }
-          });
-          if (mapping) hasMapping = true;
-        }
+        if (hasQbo && qboMappingSet.has(journal.id)) hasMapping = true;
+        if (hasXero && !hasMapping && xeroMappingSet.has(journal.id)) hasMapping = true;
+        if (hasNetsuite && !hasMapping && netsuiteMappingSet.has(journal.id)) hasMapping = true;
 
         if (!hasMapping) {
-          const existingOpen = await prisma.auditDiscrepancyModel.findFirst({
-            where: { tenantId, type: "ACCOUNTING_JOURNAL_MISSING", referenceId: journal.id, status: "OPEN" }
-          });
-
-          if (!existingOpen) {
-            await prisma.auditDiscrepancyModel.create({
-              data: {
-                id: crypto.randomUUID(),
-                tenantId,
-                type: "ACCOUNTING_JOURNAL_MISSING",
-                referenceId: journal.id,
-                description: `Journal entry ${journal.id} (${journal.description || "No description"}) is not mapped to any external accounting transaction.`
-              }
+          if (!openDiscrepancySet.has(journal.id)) {
+            newDiscrepancies.push({
+              id: crypto.randomUUID(),
+              tenantId,
+              type: "ACCOUNTING_JOURNAL_MISSING",
+              referenceId: journal.id,
+              description: `Journal entry ${journal.id} (${journal.description || "No description"}) is not mapped to any external accounting transaction.`
             });
             accountingCount++;
           }
         }
+      }
+
+      if (newDiscrepancies.length > 0) {
+        await prisma.auditDiscrepancyModel.createMany({
+          data: newDiscrepancies
+        });
       }
     }
 

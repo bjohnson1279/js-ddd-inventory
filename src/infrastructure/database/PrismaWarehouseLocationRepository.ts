@@ -17,7 +17,11 @@ export class PrismaWarehouseLocationRepository implements IWarehouseLocationRepo
         shelf: location.shelf,
         bin: location.bin,
         maxWeightGrams: location.maxWeightGrams,
-        maxVolumeCubicMeters: location.maxVolumeCubicMeters
+        maxVolumeCubicMeters: location.maxVolumeCubicMeters,
+        gridX: location.gridX,
+        gridY: location.gridY,
+        width: location.width,
+        height: location.height
       },
       create: {
         id: location.id.value,
@@ -28,7 +32,11 @@ export class PrismaWarehouseLocationRepository implements IWarehouseLocationRepo
         shelf: location.shelf,
         bin: location.bin,
         maxWeightGrams: location.maxWeightGrams,
-        maxVolumeCubicMeters: location.maxVolumeCubicMeters
+        maxVolumeCubicMeters: location.maxVolumeCubicMeters,
+        gridX: location.gridX,
+        gridY: location.gridY,
+        width: location.width,
+        height: location.height
       }
     });
   }
@@ -48,10 +56,39 @@ export class PrismaWarehouseLocationRepository implements IWarehouseLocationRepo
       model.shelf,
       model.bin,
       model.maxWeightGrams,
-      model.maxVolumeCubicMeters
+      model.maxVolumeCubicMeters,
+      model.gridX,
+      model.gridY,
+      model.width,
+      model.height
     );
   }
 
+  async findByIds(ids: LocationId[]): Promise<WarehouseLocation[]> {
+    const models = await this.prisma.warehouseLocationModel.findMany({
+      where: {
+        id: {
+          in: ids.map(id => id.value)
+        }
+      }
+    });
+
+    return models.map(model => new WarehouseLocation(
+      new LocationId(model.id),
+      model.warehouseId,
+      model.zone,
+      model.aisle,
+      model.rack,
+      model.shelf,
+      model.bin,
+      model.maxWeightGrams,
+      model.maxVolumeCubicMeters,
+      model.gridX,
+      model.gridY,
+      model.width,
+      model.height
+    ));
+  }
   async delete(id: LocationId): Promise<void> {
     await this.prisma.warehouseLocationModel.delete({
       where: { id: id.value }
@@ -69,7 +106,11 @@ export class PrismaWarehouseLocationRepository implements IWarehouseLocationRepo
       model.shelf,
       model.bin,
       model.maxWeightGrams,
-      model.maxVolumeCubicMeters
+      model.maxVolumeCubicMeters,
+      model.gridX,
+      model.gridY,
+      model.width,
+      model.height
     ));
   }
 }

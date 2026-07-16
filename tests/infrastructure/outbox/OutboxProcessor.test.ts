@@ -173,4 +173,38 @@ describe("Transactional Outbox Pattern", () => {
 
     consoleSpy.mockRestore();
   });
+
+  it("should start and stop the scheduler interval correctly", () => {
+    jest.useFakeTimers();
+    const intervalSpy = jest.spyOn(global, "setInterval");
+    const clearIntervalSpy = jest.spyOn(global, "clearInterval");
+    const processPendingSpy = jest.spyOn(processor, "processPending").mockResolvedValue();
+
+    // Start
+    processor.start(3000);
+    expect(intervalSpy).toHaveBeenCalledWith(expect.any(Function), 3000);
+
+    // Tick
+    jest.advanceTimersByTime(3000);
+    expect(processPendingSpy).toHaveBeenCalledTimes(1);
+
+    // Stop
+    processor.stop();
+    expect(clearIntervalSpy).toHaveBeenCalled();
+
+    jest.useRealTimers();
+  });
+
+  it("should prevent concurrent processing of pending events", async () => {
+    const fetchPendingSpy = jest.spyOn(outboxRepo, "fetchPending").mockResolvedValue([]);
+
+    // Call processPending once but mock isProcessing flag behavior or concurrent calls
+    const promise1 = processor.processPending();
+    const promise2 = processor.processPending();
+
+    await Promise.all([promise1, promise2]);
+
+    // fetchPending should only have been called once because of the isProcessing lock
+    expect(fetchPendingSpy).toHaveBeenCalledTimes(1);
+  });
 });

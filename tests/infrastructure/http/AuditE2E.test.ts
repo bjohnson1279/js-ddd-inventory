@@ -19,24 +19,29 @@ jest.mock("../../../src/infrastructure/database/prisma", () => {
         findUnique: jest.fn()
       },
       inventoryModel: {
-        aggregate: jest.fn()
+        aggregate: jest.fn(),
+        groupBy: jest.fn()
       },
       journalEntryModel: {
         findMany: jest.fn()
       },
       quickbooksJournalMappingModel: {
-        findUnique: jest.fn()
+        findUnique: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([])
       },
       xeroJournalMappingModel: {
-        findUnique: jest.fn()
+        findUnique: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([])
       },
       netsuiteJournalMappingModel: {
-        findUnique: jest.fn()
+        findUnique: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([])
       },
       auditDiscrepancyModel: {
-        findMany: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
         findFirst: jest.fn(),
         create: jest.fn(),
+        createMany: jest.fn(),
         update: jest.fn()
       }
     }
@@ -55,6 +60,7 @@ describe("Audit REST API Endpoints", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (prisma.inventoryModel.groupBy as jest.Mock).mockResolvedValue([]);
     // Initialize routes
     setupApp(new InMemoryInventoryRepository());
   });
@@ -88,14 +94,14 @@ describe("Audit REST API Endpoints", () => {
     ]);
 
     // 2. Mock ledger aggregate local quantities
-    (prisma.inventoryModel.aggregate as jest.Mock).mockResolvedValueOnce({
-      _sum: { quantity: 10 }
-    });
+    (prisma.inventoryModel.groupBy as jest.Mock).mockResolvedValueOnce([
+      { sku: "SKU-DIFF", _sum: { quantity: 10 } }
+    ]);
 
-    // 3. Mock open check findFirst
-    (prisma.auditDiscrepancyModel.findFirst as jest.Mock)
-      .mockResolvedValueOnce(null) // no existing Shopify discrepancy
-      .mockResolvedValueOnce(null); // no existing accounting discrepancy
+    // 3. Mock open check findMany
+    (prisma.auditDiscrepancyModel.findMany as jest.Mock)
+      .mockResolvedValueOnce([]) // open shopify
+      .mockResolvedValueOnce([]); // open accounting
 
     // 4. Mock recent journal entries
     (prisma.journalEntryModel.findMany as jest.Mock).mockResolvedValueOnce([
@@ -113,11 +119,12 @@ describe("Audit REST API Endpoints", () => {
     expect(res.body.shopifyDiscrepancies).toBe(1);
     expect(res.body.accountingDiscrepancies).toBe(1);
 
-    expect(prisma.auditDiscrepancyModel.create).toHaveBeenCalledTimes(2);
+    expect(prisma.auditDiscrepancyModel.createMany).toHaveBeenCalledTimes(2);
   });
 
   it("should resolve discrepancy", async () => {
-    (prisma.auditDiscrepancyModel.findFirst as jest.Mock).mockResolvedValueOnce({
+    (prisma.auditDiscrepancyModel.findFirst as jest.Mock).mockReset();
+    (prisma.auditDiscrepancyModel.findFirst as jest.Mock).mockResolvedValue({
       id: "disc-1",
       tenantId: "tenant-1",
       type: "ACCOUNTING_JOURNAL_MISSING",

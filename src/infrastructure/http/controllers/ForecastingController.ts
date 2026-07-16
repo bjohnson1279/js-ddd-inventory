@@ -50,7 +50,7 @@ export class ForecastingController {
       const dispatchRecordRepository = req.app.get("dispatchRecordRepository") as IDispatchRecordRepository;
 
       const salesVelocityService = new CalculateSalesVelocity(dispatchRecordRepository, inventoryRepository);
-      const useCase = new GenerateDemandForecast(demandForecastRepository, salesVelocityService);
+      const useCase = new GenerateDemandForecast(demandForecastRepository, salesVelocityService, dispatchRecordRepository);
 
       const { sku, locationId, forecastDays, trendMultiplier } = req.body;
       if (!sku) {

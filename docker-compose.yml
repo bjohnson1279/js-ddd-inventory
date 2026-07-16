@@ -104,15 +104,5 @@ services:
       - rabbitmq
       - kafka
 
-  webapp:
-    build:
-      context: ./webapp
-    container_name: inventory-webapp
-    restart: always
-    ports:
-      - "3080:80"
-    depends_on:
-      - app
-
 volumes:
   postgres_data_pg15:

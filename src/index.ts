@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
+import { Logger } from "./infrastructure/logging/logger";
 import { PrismaInventoryRepository } from "./infrastructure/database/PrismaInventoryRepository";
 import { PrismaBarcodeRepository } from "./infrastructure/database/PrismaBarcodeRepository";
 import { PrismaSerializedItemRepository } from "./infrastructure/database/PrismaSerializedItemRepository";
@@ -39,6 +40,7 @@ import { PrismaProcessedWebhookRepository } from "./infrastructure/database/Pris
 import { InMemoryOutboxRepository } from "./infrastructure/database/InMemoryOutboxRepository";
 import { PrismaOutboxRepository } from "./infrastructure/database/PrismaOutboxRepository";
 import { OutboxProcessor } from "./infrastructure/outbox/OutboxProcessor";
+import { WebhookDeliveryWorker } from "./infrastructure/workers/WebhookDeliveryWorker";
 import { IMessageBroker } from "./application/ports/IMessageBroker";
 import { InMemoryMessageBroker } from "./infrastructure/messaging/InMemoryMessageBroker";
 import { RabbitMQMessageBroker } from "./infrastructure/messaging/RabbitMQMessageBroker";
@@ -88,6 +90,8 @@ import userRoutes from "./infrastructure/http/routes/user.routes";
 import warehouseLocationRoutes from "./infrastructure/http/routes/warehouseLocation.routes";
 import notificationRoutes from "./infrastructure/http/routes/notification.routes";
 import auditRoutes from "./infrastructure/http/routes/audit.routes";
+import webhookSubscriptionRoutes from "./infrastructure/http/routes/webhookSubscription.routes";
+import complianceRoutes from "./infrastructure/http/routes/compliance.routes";
 import { WebSocketManager } from "./infrastructure/websocket/WebSocketManager";
 import { authMiddleware } from "./infrastructure/http/middleware/auth";
 import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
@@ -97,6 +101,8 @@ import { InMemoryProductRepository } from "./infrastructure/database/InMemoryPro
 import { PrismaWarehouseLocationRepository } from "./infrastructure/database/PrismaWarehouseLocationRepository";
 import { PrismaProductRepository } from "./infrastructure/database/PrismaProductRepository";
 import { WMSCapacityService } from "./domain/services/WMSCapacityService";
+
+import { traceMiddleware } from "./infrastructure/http/middleware/traceMiddleware";
 
 const app = express();
 app.disable("x-powered-by");
@@ -115,6 +121,7 @@ const limiter = rateLimit({
 
 app.use(helmet());
 app.use(cors({ origin: allowedOrigins }));
+app.use(traceMiddleware);
 app.set("trust proxy", 1);
 app.use(limiter);
 app.use("/api/shopify", express.json({
@@ -208,6 +215,8 @@ export const setupApp = (
   app.use("/api/warehouse-locations", warehouseLocationRoutes);
   app.use("/api/notifications", notificationRoutes);
   app.use("/api/audit", auditRoutes);
+  app.use("/api/webhook-subscriptions", webhookSubscriptionRoutes);
+  app.use("/api/compliance", complianceRoutes);
 };
 
 const start = async () => {
@@ -216,8 +225,7 @@ const start = async () => {
   // Run TimescaleDB migration query when connecting to Postgres
   try {
     await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;`;
-    console.log("TimescaleDB extension enabled.");
-    
+    Logger.info({ message: "TimescaleDB extension enabled." });
     const isHypertable = await prisma.$queryRaw`
       SELECT 1 FROM timescaledb_information.hypertables 
       WHERE hypertable_name = 'dispatch_records'
@@ -257,7 +265,7 @@ const start = async () => {
       }
       console.log("daily_dispatch_summary continuous aggregate created.");
     }
-    
+
     // Set up PostgreSQL Row-Level Security (RLS) policies
     await enableRowLevelSecurity(prisma);
   } catch (e) {
@@ -335,6 +343,7 @@ const start = async () => {
   if (process.env.DISABLE_WORKERS !== "true") {
     const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);
     outboxProcessor.start(3000);
+    WebhookDeliveryWorker.start(2000);
   }
 
   const server = app.listen(port, () => {
@@ -345,7 +354,7 @@ const start = async () => {
 
 if (process.env.NODE_ENV !== "test") {
   start().catch((err) => {
-    console.error("Failed to start server:", err);
+    Logger.error({ message: "Failed to start server", error: err instanceof Error ? err.message : String(err) });
     process.exit(1);
   });
 }

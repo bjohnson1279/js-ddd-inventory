@@ -1,6 +1,7 @@
 import { IOutboxRepository } from "../../domain/repositories/IOutboxRepository";
 import { IDomainEvent } from "../../domain/events/IDomainEvent";
 import { prisma } from "./prisma";
+import { getTraceId } from "../telemetry/traceContext";
 
 export class PrismaOutboxRepository implements IOutboxRepository {
   private prisma = prisma;
@@ -8,9 +9,10 @@ export class PrismaOutboxRepository implements IOutboxRepository {
   async save(event: IDomainEvent, tx?: any): Promise<void> {
     const client = tx || this.prisma;
     
-    // Serialize all fields of the event
+    // Serialize all fields of the event including traceId
     const payload = JSON.stringify({
       ...event,
+      traceId: (event as any).traceId || getTraceId(),
       occurredOn: event.occurredOn.toISOString()
     });
 
