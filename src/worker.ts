@@ -18,14 +18,14 @@ const messageBroker = kafkaUrl
     ? new RabbitMQMessageBroker(rabbitMqUrl)
     : new InMemoryMessageBroker();
 
-Logger.info({ context: "Worker", message: "Starting js-ddd-inventory Outbox Worker..." });
+Logger.info({ context: "Worker", message: "[Worker] Starting js-ddd-inventory Outbox Worker..." });
 const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);
 
 // Start polling
 const intervalMs = process.env.WORKER_INTERVAL_MS ? parseInt(process.env.WORKER_INTERVAL_MS) : 3000;
 outboxProcessor.start(intervalMs);
 WebhookDeliveryWorker.start(intervalMs);
-Logger.info({ context: "Worker", message: `Outbox worker started (polling every ${intervalMs}ms)` });
+Logger.info({ context: "Worker", message: `[Worker] Outbox worker started (polling every ${intervalMs}ms)` });
 
 // Graceful shutdown
   const safeDisconnect = async () => {
@@ -33,14 +33,14 @@ Logger.info({ context: "Worker", message: `Outbox worker started (polling every 
       try {
         await (messageBroker as any).disconnect();
       } catch (err) {
-        Logger.error({ context: "Worker", message: "Error disconnecting message broker" }, err);
+        Logger.error({ context: "Worker", message: "Failed to disconnect message broker" }, err);
       }
     }
   }
 };
 
   process.on("SIGTERM", async () => {
-    Logger.info({ context: "Worker", message: "Shutting down outbox worker..." });
+    Logger.info({ context: "Worker", message: "[Worker] Shutting down outbox worker..." });
     outboxProcessor.stop();
     WebhookDeliveryWorker.stop();
     await safeDisconnect();
@@ -48,7 +48,7 @@ Logger.info({ context: "Worker", message: `Outbox worker started (polling every 
   });
 
   process.on("SIGINT", async () => {
-    Logger.info({ context: "Worker", message: "Shutting down outbox worker..." });
+    Logger.info({ context: "Worker", message: "[Worker] Shutting down outbox worker..." });
     outboxProcessor.stop();
     WebhookDeliveryWorker.stop();
     await safeDisconnect();
