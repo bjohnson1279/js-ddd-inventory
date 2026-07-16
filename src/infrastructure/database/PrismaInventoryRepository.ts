@@ -205,7 +205,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     }
 
     const tenantId = tenantLocalStorage.getStore() || "tenant-1";
-    
+
     // Log Stock Adjustment to Compliance Ledger
     await ComplianceLedgerService.logEvent(tenantId, "STOCK_ADJUSTED", {
       sku: item.sku.getValue(),

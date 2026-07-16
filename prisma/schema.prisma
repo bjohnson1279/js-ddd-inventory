@@ -439,4 +439,3 @@ model ComplianceLedgerModel {
   hash           String
   signature      String
 }
-

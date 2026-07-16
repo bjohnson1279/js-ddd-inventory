@@ -253,4 +253,3 @@ Modify user permissions/role (Admin role required).
     ```json
     { "isValid": true }
     ```
-

@@ -28,29 +28,28 @@ WebhookDeliveryWorker.start(intervalMs);
 Logger.info({ context: "Worker", message: `[Worker] Outbox worker started (polling every ${intervalMs}ms)` });
 
 // Graceful shutdown
-  const safeDisconnect = async () => {
-    if ('disconnect' in messageBroker && typeof (messageBroker as any).disconnect === 'function') {
-      try {
-        await (messageBroker as any).disconnect();
-      } catch (err) {
-        Logger.error({ context: "Worker", message: "Failed to disconnect message broker" }, err);
-      }
+const safeDisconnect = async () => {
+  if ('disconnect' in messageBroker && typeof (messageBroker as any).disconnect === 'function') {
+    try {
+      await (messageBroker as any).disconnect();
+    } catch (err) {
+      Logger.error({ context: "Worker", message: "Error during disconnect" }, err);
     }
   }
 };
 
-  process.on("SIGTERM", async () => {
-    Logger.info({ context: "Worker", message: "[Worker] Shutting down outbox worker..." });
-    outboxProcessor.stop();
-    WebhookDeliveryWorker.stop();
-    await safeDisconnect();
-    process.exit(0);
-  });
+process.on("SIGTERM", async () => {
+  Logger.info({ context: "Worker", message: "Shutting down outbox worker..." });
+  outboxProcessor.stop();
+  WebhookDeliveryWorker.stop();
+  await safeDisconnect();
+  process.exit(0);
+});
 
-  process.on("SIGINT", async () => {
-    Logger.info({ context: "Worker", message: "[Worker] Shutting down outbox worker..." });
-    outboxProcessor.stop();
-    WebhookDeliveryWorker.stop();
-    await safeDisconnect();
-    process.exit(0);
-  });
+process.on("SIGINT", async () => {
+  Logger.info({ context: "Worker", message: "Shutting down outbox worker..." });
+  outboxProcessor.stop();
+  WebhookDeliveryWorker.stop();
+  await safeDisconnect();
+  process.exit(0);
+});

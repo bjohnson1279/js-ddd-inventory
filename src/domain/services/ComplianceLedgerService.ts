@@ -20,7 +20,6 @@ export class ComplianceLedgerService {
   public static async logEvent(tenantId: string, eventType: string, payload: LedgerLogPayload): Promise<any> {
     const privateKey = this.getPrivateKey();
     const payloadStr = JSON.stringify(payload);
-    
     // Find the latest ledger entry to chain
     const lastEntry = await prisma.complianceLedgerModel.findFirst({
       orderBy: { sequenceNumber: "desc" }
@@ -56,7 +55,6 @@ export class ComplianceLedgerService {
 
   public static async validateLedger(tenantId?: string): Promise<{ isValid: boolean; failedSequenceNumber?: number; reason?: string }> {
     const privateKey = this.getPrivateKey();
-    
     // Fetch all entries in sequence
     const entries = await prisma.complianceLedgerModel.findMany({
       where: tenantId ? { tenantId } : undefined,
@@ -65,7 +63,6 @@ export class ComplianceLedgerService {
 
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
-      
       // 1. Verify previous hash chaining (except for first entry)
       if (i > 0) {
         const prevEntry = entries[i - 1];

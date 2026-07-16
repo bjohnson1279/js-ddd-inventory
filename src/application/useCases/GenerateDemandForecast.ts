@@ -35,7 +35,7 @@ export class GenerateDemandForecast {
       // Group historical sales by month
       const monthlySales = Array(12).fill(0);
       const monthlyCounts = Array(12).fill(0);
-      
+
       history.forEach(record => {
         const month = record.dispatchedAt.getMonth(); // 0-11
         monthlySales[month] += record.quantity;
@@ -51,7 +51,7 @@ export class GenerateDemandForecast {
         // Target month is the forecast period start month
         const targetMonth = new Date().getMonth();
         const targetMonthSales = monthlySales[targetMonth];
-        
+
         // If target month has historical data, compute index, otherwise default to 1.0
         if (targetMonthSales > 0) {
           seasonalMultiplier = targetMonthSales / overallMonthlyAverage;
