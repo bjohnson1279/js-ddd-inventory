@@ -1,3 +1,4 @@
+import { Logger } from "./infrastructure/logging/logger";
 import { prisma } from "./infrastructure/database/prisma";
 import { PrismaOutboxRepository } from "./infrastructure/database/PrismaOutboxRepository";
 import { OutboxProcessor } from "./infrastructure/outbox/OutboxProcessor";
@@ -17,14 +18,14 @@ const messageBroker = kafkaUrl
     ? new RabbitMQMessageBroker(rabbitMqUrl)
     : new InMemoryMessageBroker();
 
-Logger.info({ context: "Worker", message: "Starting js-ddd-inventory Outbox Worker..." });
+Logger.info({ context: "Worker", message: "[Worker] Starting js-ddd-inventory Outbox Worker..." });
 const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);
 
 // Start polling
 const intervalMs = process.env.WORKER_INTERVAL_MS ? parseInt(process.env.WORKER_INTERVAL_MS) : 3000;
 outboxProcessor.start(intervalMs);
 WebhookDeliveryWorker.start(intervalMs);
-Logger.info({ context: "Worker", message: `Outbox worker started (polling every ${intervalMs}ms)` });
+Logger.info({ context: "Worker", message: `[Worker] Outbox worker started (polling every ${intervalMs}ms)` });
 
 // Graceful shutdown
 const safeDisconnect = async () => {
