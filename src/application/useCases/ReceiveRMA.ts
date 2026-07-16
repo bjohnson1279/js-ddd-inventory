@@ -59,9 +59,40 @@ export class ReceiveRMA {
     // Optimization: Index RMA items by variantId to prevent O(N*M) nested lookups
     const rmaItemsMap = new Map(rma.items.map((i) => [i.variantId, i]));
 
-    // Optimization: Replaced sequential `for...of` loop with `Promise.all` mapping to process independent
-    // RMA items concurrently. This dramatically reduces total processing time for multi-item returns, resolving N+1 wait times.
-    await Promise.all(dto.items.map(async (item) => {
+    // Optimization: Pre-fetch all required inventory items in batches to avoid N+1 DB lookups
+    const skusByLocation = new Map<string, SKU[]>();
+    for (const item of dto.items) {
+      const targetLoc = item.disposition === RMADisposition.Quarantine
+          ? `${rma.locationId}-quarantine`
+          : rma.locationId;
+      if (!skusByLocation.has(targetLoc)) skusByLocation.set(targetLoc, []);
+      skusByLocation.get(targetLoc)!.push(SKU.create(item.variantId));
+    }
+
+    const inventoryItemsMap = new Map<string, InventoryItem>();
+    if (this.inventoryRepository.findBySkus) {
+      for (const [loc, skus] of skusByLocation.entries()) {
+        const fetched = await this.inventoryRepository.findBySkus(skus, loc);
+        for (const item of fetched) {
+          inventoryItemsMap.set(`${item.sku.getValue()}__${loc}`, item);
+        }
+      }
+    } else {
+      // Fallback if findBySkus is not implemented
+      for (const [loc, skus] of skusByLocation.entries()) {
+        const fetchPromises = skus.map(async (sku) => {
+          const item = await this.inventoryRepository.findBySku(sku, loc);
+          if (item) inventoryItemsMap.set(`${item.sku.getValue()}__${loc}`, item);
+        });
+        await Promise.all(fetchPromises);
+      }
+    }
+
+    const modifiedInventoryItems = new Map<string, InventoryItem>();
+    const newCostLayers: InventoryCostLayer[] = [];
+
+    // Optimization: Replaced Promise.all map loop with sequential for-of loop to avoid DB concurrency exceptions on identical SKUs
+    for (const item of dto.items) {
       const rmaItem = rmaItemsMap.get(item.variantId);
       if (!rmaItem) {
         throw new Error(`Item with variant ID ${item.variantId} not found in RMA ${rma.rmaNumber}.`);
@@ -77,7 +108,9 @@ export class ReceiveRMA {
 
       // 2. Increment stock level
       const sku = SKU.create(item.variantId);
-      let invItem = await this.inventoryRepository.findBySku(sku, targetLocationId);
+      const cacheKey = `${item.variantId}__${targetLocationId}`;
+      let invItem = modifiedInventoryItems.get(cacheKey) || inventoryItemsMap.get(cacheKey);
+
       if (!invItem) {
         invItem = InventoryItem.create(
           crypto.randomUUID(),
@@ -87,7 +120,7 @@ export class ReceiveRMA {
         );
       }
       invItem.receiveStock(Quantity.create(item.quantityReceived));
-      await this.inventoryRepository.save(invItem);
+      modifiedInventoryItems.set(cacheKey, invItem);
 
       // 3. Create Cost Layer
       const layerId = crypto.randomUUID();
@@ -101,7 +134,7 @@ export class ReceiveRMA {
         `RMA-${rma.id}`,
         targetLocationId
       );
-      await this.costLayerRepository.save(layer);
+      newCostLayers.push(layer);
 
       // 4. Create Quarantine record if quarantined
       if (item.disposition === RMADisposition.Quarantine) {
@@ -130,26 +163,10 @@ export class ReceiveRMA {
         );
       }
 
-      // 6. Handle immediate scrap write-off
+      // 6. Handle immediate scrap write-off (stock only)
       if (item.disposition === RMADisposition.Scrap) {
-        // Decrement stock level
         invItem.dispatchStock(Quantity.create(item.quantityReceived));
-        await this.inventoryRepository.save(invItem);
-
-        // Consume the cost layer
-        await this.costLayerService.consumeFifoLayers(item.variantId, item.quantityReceived);
-
-        // Post write-off journal entry if Accrual
-        if (config.accountingMethod === AccountingMethod.Accrual) {
-          const totalCostCents = rmaItem.unitCostCents * item.quantityReceived;
-          await this.journalService.onInventoryWriteOff(
-            rma.id,
-            totalCostCents,
-            new Date(),
-            config,
-            rma.tenantId
-          );
-        }
+        modifiedInventoryItems.set(cacheKey, invItem);
       }
 
       // 7. Handle Serialized items transitions
@@ -169,7 +186,44 @@ export class ReceiveRMA {
           await this.serializedItemRepository!.save(serialItem);
         }));
       }
-    }));
+    }
+
+    // Save batch inventory items
+    if (modifiedInventoryItems.size > 0) {
+      if (this.inventoryRepository.saveMany) {
+        await this.inventoryRepository.saveMany(Array.from(modifiedInventoryItems.values()));
+      } else {
+        await Promise.all(Array.from(modifiedInventoryItems.values()).map(item => this.inventoryRepository.save(item)));
+      }
+    }
+
+    // Save batch cost layers
+    if (newCostLayers.length > 0) {
+      if (this.costLayerRepository.saveMany) {
+        await this.costLayerRepository.saveMany(newCostLayers);
+      } else {
+        await Promise.all(newCostLayers.map(layer => this.costLayerRepository.save(layer)));
+      }
+    }
+
+    // Process immediate scrap write-offs (cost consumption & journal) AFTER cost layers have been persisted
+    for (const item of dto.items) {
+      if (item.disposition === RMADisposition.Scrap) {
+        const rmaItem = rmaItemsMap.get(item.variantId);
+        await this.costLayerService.consumeFifoLayers(item.variantId, item.quantityReceived);
+
+        if (config.accountingMethod === AccountingMethod.Accrual) {
+          const totalCostCents = (rmaItem?.unitCostCents || 0) * item.quantityReceived;
+          await this.journalService.onInventoryWriteOff(
+            rma.id,
+            totalCostCents,
+            new Date(),
+            config,
+            rma.tenantId
+          );
+        }
+      }
+    }
 
     await this.rmaRepository.save(rma);
   }
