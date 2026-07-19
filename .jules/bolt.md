@@ -38,3 +38,7 @@
 ## 2026-11-20 - [Optimize N+1 query and Race Condition in ReceivePurchaseOrder]
 **Learning:** Found N+1 queries when mapping `dto.items` concurrently with `Promise.all` in `ReceivePurchaseOrder.ts`. This executes N db lookups via `receiveStock.execute` and individual `save` operations, which can also trigger race conditions for identical SKUs.
 **Action:** Transformed the `Promise.all` loop into a sequential `for...of` loop combined with a batched pre-fetch (`findBySkus`) into a `Map` and batched `saveMany`. Inlined the minimal physical stock addition logic from `ReceiveStock` to decouple the batched approach from single-item nested repository calls. This eliminates N+1 DB operations and race conditions without polluting unrelated files.
+
+## 2026-11-20 - [Optimize N+1 query and Race Condition in ReconcileInventoryAudit]
+**Learning:** Found N+1 queries when mapping `audit.items` concurrently with `Promise.all` in `ReconcileInventoryAudit.ts`. This executes N db lookups via individual `save` operations, which can trigger race conditions on identical SKUs.
+**Action:** Transformed the `Promise.all` loop into a sequential `for...of` loop combined with a batched in-memory update process and batched `saveMany` for inventory items and cost layers. This eliminates N+1 DB operations and race conditions while preserving the fallback logic for interfaces not implementing `saveMany`.
