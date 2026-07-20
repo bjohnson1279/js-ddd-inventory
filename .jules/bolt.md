@@ -42,3 +42,6 @@
 ## 2026-11-20 - [Optimize N+1 query and Race Condition in ReconcileInventoryAudit]
 **Learning:** Found N+1 queries when mapping `audit.items` concurrently with `Promise.all` in `ReconcileInventoryAudit.ts`. This executes N db lookups via individual `save` operations, which can trigger race conditions on identical SKUs.
 **Action:** Transformed the `Promise.all` loop into a sequential `for...of` loop combined with a batched in-memory update process and batched `saveMany` for inventory items and cost layers. This eliminates N+1 DB operations and race conditions while preserving the fallback logic for interfaces not implementing `saveMany`.
+## 2024-05-18 - Optimize Prisma Transactions
+**Learning:** Using `Promise.all()` to execute multiple queries concurrently inside a Prisma interactive `$transaction` causes connection pool exhaustion and concurrency exceptions, as Prisma allocates only one physical connection per interactive transaction.
+**Action:** When performing bulk writes (like `saveMany` or `createMany`) inside a Prisma `$transaction`, always use a sequential `for...of` loop or native batching methods instead of `Promise.all()`.
