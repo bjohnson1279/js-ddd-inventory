@@ -153,3 +153,7 @@
 **Vulnerability:** The `ComplianceLedgerService.ts` file contained a hardcoded fallback value (`system-secret-compliance-ledger-key-2026`) for its private key used for HMAC signatures.
 **Learning:** Hardcoded cryptographic keys allow attackers who gain source code access to forge cryptographic signatures on the compliance ledger, defeating its non-repudiation and integrity guarantees. It bypasses any environmental secure key management.
 **Prevention:** Cryptographic keys and secrets must never be hardcoded, even as fallbacks. They should exclusively be injected via environment variables or secret management services, throwing fatal errors during initialization if missing.
+## 2024-07-19 - Hardcoded Compliance Ledger Secret Key
+**Vulnerability:** A hardcoded string ("system-secret-compliance-ledger-key-2026") was used as a fallback private key for the compliance ledger in `ComplianceLedgerService.ts`.
+**Learning:** Even internal backend services might incorrectly use hardcoded fallbacks to "fail gracefully" or ensure development ease, completely negating the security value of cryptographic signing mechanisms like HMAC-SHA256 if the environment variable is omitted.
+**Prevention:** Strictly enforce that missing cryptographic secrets throw explicit errors at runtime rather than defaulting to hardcoded values. There are no safe default secrets.
