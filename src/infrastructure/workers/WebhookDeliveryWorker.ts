@@ -1,3 +1,4 @@
+import { Logger } from "../logging/logger";
 import { prisma } from "../database/prisma";
 import crypto from "crypto";
 import dns from "dns/promises";
@@ -123,7 +124,7 @@ export class WebhookDeliveryWorker {
           const nextAttemptAt = new Date(Date.now() + backoffMs);
           const nextStatus = nextAttempts >= 5 ? "Failed" : "Pending";
 
-          console.error(`[WebhookDeliveryWorker] Failed to deliver webhook ${delivery.id}:`, err.message);
+          Logger.error({ context: "WebhookDeliveryWorker", message: `Failed to deliver webhook ${delivery.id}` }, err);
 
           await prisma.webhookDeliveryModel.update({
             where: { id: delivery.id },
@@ -149,7 +150,7 @@ export class WebhookDeliveryWorker {
         }
       }
     } catch (error) {
-      console.error("[WebhookDeliveryWorker] Error in background worker loop:", error);
+      Logger.error({ context: "WebhookDeliveryWorker", message: "Error in background worker loop" }, error);
     } finally {
       this.isRunning = false;
     }

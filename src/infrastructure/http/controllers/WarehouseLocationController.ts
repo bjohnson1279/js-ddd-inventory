@@ -1,3 +1,4 @@
+import { Logger } from "../../logging/logger";
 import { DomainException } from "../../../domain/exceptions/DomainException";
 import { Request, Response } from "express";
 import { WarehouseLocation } from "../../../domain/product/entities/WarehouseLocation";
@@ -72,7 +73,7 @@ export class WarehouseLocationController {
         }
       });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "WarehouseLocationController" }, error);
       res.status(400).json({ error: "Failed to save location." });
     }
   }
@@ -100,7 +101,7 @@ export class WarehouseLocationController {
         }))
       );
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "WarehouseLocationController" }, error);
       res.status(500).json({ error: "Failed to list locations." });
     }
   }
@@ -114,8 +115,7 @@ export class WarehouseLocationController {
 
       res.status(200).json({ message: "Warehouse location deleted successfully." });
     } catch (error: any) {
-      console.error(error);
-      console.error(error instanceof DomainException ? error.message : error);
+      Logger.error({ context: "WarehouseLocationController" }, error instanceof DomainException ? error.message : error);
       res.status(400).json({ error: "Failed to delete location." });
     }
   }
@@ -136,8 +136,7 @@ export class WarehouseLocationController {
 
       res.status(200).json(suggestions);
     } catch (error: any) {
-      console.error(error);
-      console.error(error instanceof DomainException ? error.message : error);
+      Logger.error({ context: "WarehouseLocationController" }, error instanceof DomainException ? error.message : error);
       res.status(400).json({ error: "Failed to generate putaway suggestions." });
     }
   }
@@ -181,8 +180,7 @@ export class WarehouseLocationController {
 
       res.status(200).json(optimized);
     } catch (error: any) {
-      console.error(error);
-      console.error(error instanceof DomainException ? error.message : error);
+      Logger.error({ context: "WarehouseLocationController" }, error instanceof DomainException ? error.message : error);
       res.status(400).json({ error: "Failed to optimize picking route." });
     }
   }
@@ -194,7 +192,7 @@ export class WarehouseLocationController {
       const suggestions = await optimizer.generateSuggestions();
       res.status(200).json(suggestions);
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "WarehouseLocationController" }, error);
       res.status(400).json({ error: "Failed to generate slotting suggestions." });
     }
   }
