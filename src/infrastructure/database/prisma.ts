@@ -1,3 +1,4 @@
+import { Logger } from "../logging/logger";
 import { PrismaClient } from "@prisma/client";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -24,7 +25,7 @@ export const prisma = basePrisma.$extends({
           try {
             await basePrisma.$executeRaw`SELECT set_config('app.current_tenant_id', ${tenantId}, false)`;
           } catch (err: any) {
-            console.error("[PrismaExtension] Failed to set app.current_tenant_id:", err.message);
+            Logger.error({ context: "PrismaExtension", message: "Failed to set app.current_tenant_id" }, err);
           }
         }
         return query(args);

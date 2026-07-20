@@ -1,3 +1,4 @@
+import { Logger } from "../../logging/logger";
 import { Request, Response } from "express";
 import { IReorderPolicyRepository } from "../../../domain/repositories/IReorderPolicyRepository";
 import { ReorderPolicy } from "../../../domain/procurement/aggregates/ReorderPolicy";
@@ -38,10 +39,10 @@ export class ReorderPolicyController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "ReorderPolicyController" }, error.message);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "ReorderPolicyController" }, error);
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -67,7 +68,7 @@ export class ReorderPolicyController {
         dynamicRopEnabled: policy.dynamicRopEnabled
       });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "ReorderPolicyController" }, error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -88,7 +89,7 @@ export class ReorderPolicyController {
 
       res.status(200).json({ results });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "ReorderPolicyController" }, error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
