@@ -1,3 +1,4 @@
+import { Logger } from "../../logging/logger";
 import { Request, Response } from "express";
 import { IOutboxRepository } from "../../../domain/repositories/IOutboxRepository";
 import { DomainException } from "../../../domain/exceptions/DomainException";
@@ -33,10 +34,10 @@ export class OutboxController {
       );
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "OutboxController" }, error.message);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error("Failed to list dead lettered outbox events:", error);
+        Logger.error({ context: "OutboxController", message: "Failed to list dead lettered outbox events:" }, error);
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -52,10 +53,10 @@ export class OutboxController {
       res.status(200).json({ message: "Event successfully scheduled for retry" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "OutboxController" }, error.message);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(`Failed to retry outbox event ${req.params.id}:`, error);
+        Logger.error({ context: "OutboxController", message: `Failed to retry outbox event ${req.params.id}:` }, error);
         res.status(500).json({ error: "Failed to retry event" });
       }
     }
@@ -91,10 +92,10 @@ export class OutboxController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "OutboxController" }, error.message);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error("Failed to get outbox metrics:", error);
+        Logger.error({ context: "OutboxController", message: "Failed to get outbox metrics:" }, error);
         res.status(500).json({ error: "Internal server error" });
       }
     }

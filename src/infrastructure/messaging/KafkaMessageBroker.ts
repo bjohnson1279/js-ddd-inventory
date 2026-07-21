@@ -1,3 +1,4 @@
+import { Logger } from "../logging/logger";
 import { Kafka, Producer } from "kafkajs";
 import { IMessageBroker } from "../../application/ports/IMessageBroker";
 import { IDomainEvent } from "../../domain/events/IDomainEvent";
@@ -29,7 +30,7 @@ export class KafkaMessageBroker implements IMessageBroker {
       await this.producer.connect();
       console.log(`[KafkaMessageBroker] Connected to Kafka bootstrap brokers at: ${this.brokerUrl}`);
     } catch (err: any) {
-      console.error("[KafkaMessageBroker] Connection failed:", err.message || err);
+      Logger.error({ context: "KafkaMessageBroker", message: "Connection failed" }, err);
       this.producer = null;
       throw err;
     }
@@ -65,7 +66,7 @@ export class KafkaMessageBroker implements IMessageBroker {
       });
       console.log(`[Trace: ${traceId}] [KafkaMessageBroker] Successfully published event "${event.constructor.name}" to topic "${topic}"`);
     } catch (err: any) {
-      console.error(`[Trace: ${traceId}] [KafkaMessageBroker] Failed to publish event to topic "${topic}":`, err.message || err);
+      Logger.error({ context: "KafkaMessageBroker", traceId, topic, message: "Failed to publish event" }, err);
       throw err;
     }
   }

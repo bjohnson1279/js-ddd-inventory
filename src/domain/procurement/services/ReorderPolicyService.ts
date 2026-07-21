@@ -1,3 +1,4 @@
+import { Logger } from "../../../infrastructure/logging/logger";
 import { IReorderPolicyRepository } from "../../repositories/IReorderPolicyRepository";
 import { IPurchaseOrderRepository } from "../../repositories/IPurchaseOrderRepository";
 import { CreatePurchaseOrder } from "../../../application/useCases/CreatePurchaseOrder";
@@ -37,7 +38,7 @@ export class ReorderPolicyService {
           await this.reorderPolicyRepository.save(policy);
           rop = newRop;
         } catch (error) {
-          console.error(`Error forecasting ROP for SKU ${policy.sku.getValue()}:`, error);
+          Logger.error({ context: "ReorderPolicyService", sku: policy.sku.getValue(), message: "Error forecasting ROP for SKU" }, error);
         }
       }
 
