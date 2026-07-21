@@ -6,8 +6,15 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+const user = process.env.DB_USER || 'postgres';
+const password = process.env.DB_PASSWORD;
+const auth = password ? `${user}:${password}` : user;
+const host = process.env.DB_HOST || '127.0.0.1';
+const port = process.env.DB_PORT || '5432';
+const dbName = process.env.DB_NAME || 'inventory';
+
 const connectionString = process.env.DATABASE_URL || 
-  `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'password'}@${process.env.DB_HOST || '127.0.0.1'}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'inventory'}?schema=public`;
+  `postgresql://${auth}@${host}:${port}/${dbName}?schema=public`;
 
 import { tenantLocalStorage } from "./tenantContext";
 
