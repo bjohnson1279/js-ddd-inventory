@@ -1,3 +1,4 @@
+import { Logger } from "../../logging/logger";
 import { Request, Response } from "express";
 import { prisma } from "../../database/prisma";
 import { ISerializedItemRepository } from "../../../domain/repositories/ISerializedItemRepository";
@@ -45,10 +46,10 @@ export class SerialController {
         });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "SerialController" }, error.message);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "SerialController" }, error);
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -81,10 +82,10 @@ export class SerialController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("not found"))
       ) {
-        console.error(error instanceof DomainException ? error.message : error);
+        Logger.error({ context: "SerialController" }, error instanceof DomainException ? error.message : error);
       res.status(400).json({ error: "Not found" });
       } else {
-        console.error(error);
+        Logger.error({ context: "SerialController" }, error);
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -110,10 +111,10 @@ export class SerialController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("not found"))
       ) {
-        console.error(error instanceof DomainException ? error.message : error);
+        Logger.error({ context: "SerialController" }, error instanceof DomainException ? error.message : error);
       res.status(400).json({ error: "Not found" });
       } else {
-        console.error(error);
+        Logger.error({ context: "SerialController" }, error);
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -138,7 +139,7 @@ export class SerialController {
 
       res.status(200).json({ message: "Serial return accepted." });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "SerialController" }, error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -159,7 +160,7 @@ export class SerialController {
         .status(200)
         .json({ message: "Serial number restocked and stock incremented." });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "SerialController" }, error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -206,7 +207,7 @@ export class SerialController {
         })),
       });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "SerialController" }, error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -236,7 +237,7 @@ export class SerialController {
         })),
       );
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "SerialController" }, error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
