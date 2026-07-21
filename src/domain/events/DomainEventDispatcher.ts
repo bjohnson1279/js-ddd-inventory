@@ -1,3 +1,4 @@
+import { Logger } from "../../infrastructure/logging/logger";
 import { IDomainEvent } from "./IDomainEvent";
 
 export type DomainEventHandler<T extends IDomainEvent> = (event: T) => void | Promise<void>;
@@ -24,7 +25,7 @@ export class DomainEventDispatcher {
             try {
               await handler(event);
             } catch (error) {
-              console.error(`Error handling domain event ${event.eventName} in handler ${handler.name || 'anonymous'}:`, error);
+              Logger.error({ context: "DomainEventDispatcher", eventName: event.eventName, handler: handler.name || "anonymous", message: "Error handling domain event" }, error);
               errors.push(error);
             }
           })

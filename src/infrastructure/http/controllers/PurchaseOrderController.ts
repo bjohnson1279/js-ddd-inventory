@@ -1,3 +1,4 @@
+import { Logger } from "../../logging/logger";
 import { Request, Response } from "express";
 import { CreatePurchaseOrder } from "../../../application/useCases/CreatePurchaseOrder";
 import { ReceivePurchaseOrder } from "../../../application/useCases/ReceivePurchaseOrder";
@@ -31,10 +32,10 @@ export class PurchaseOrderController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "PurchaseOrderController" }, error.message);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "PurchaseOrderController" }, error);
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -52,10 +53,10 @@ export class PurchaseOrderController {
       res.status(200).json({ message: "Purchase order approved successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "PurchaseOrderController" }, error.message);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "PurchaseOrderController" }, error);
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -73,10 +74,10 @@ export class PurchaseOrderController {
       res.status(200).json({ message: "Purchase order sent to vendor successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "PurchaseOrderController" }, error.message);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "PurchaseOrderController" }, error);
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -97,10 +98,10 @@ export class PurchaseOrderController {
       res.status(200).json({ message: "Items received successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "PurchaseOrderController" }, error.message);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "PurchaseOrderController" }, error);
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -129,7 +130,7 @@ export class PurchaseOrderController {
         }))
       });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "PurchaseOrderController" }, error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
