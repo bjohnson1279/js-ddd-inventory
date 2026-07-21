@@ -1,6 +1,7 @@
 process.env.NODE_ENV = "test";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 process.env.JWT_SECRET = "dummy_jwt_secret";
+process.env.COMPLIANCE_PRIVATE_KEY = "test-key";
 jest.setTimeout(30000);
 
 import request from "supertest";
