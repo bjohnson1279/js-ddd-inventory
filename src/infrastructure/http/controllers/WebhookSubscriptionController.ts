@@ -1,3 +1,4 @@
+import { Logger } from "../../logging/logger";
 import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { prisma } from "../../database/prisma";
@@ -23,7 +24,7 @@ export class WebhookSubscriptionController {
       });
       res.status(201).json(subscription);
     } catch (err: any) {
-      console.error(err.message);
+      Logger.error({ context: "WebhookSubscriptionController" }, err.message);
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -36,7 +37,7 @@ export class WebhookSubscriptionController {
       });
       res.status(200).json(subscriptions);
     } catch (err: any) {
-      console.error(err.message);
+      Logger.error({ context: "WebhookSubscriptionController" }, err.message);
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -63,7 +64,7 @@ export class WebhookSubscriptionController {
       });
       res.status(200).json(updated);
     } catch (err: any) {
-      console.error(err.message);
+      Logger.error({ context: "WebhookSubscriptionController" }, err.message);
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -81,7 +82,7 @@ export class WebhookSubscriptionController {
       await prisma.webhookSubscriptionModel.delete({ where: { id } });
       res.status(204).send();
     } catch (err: any) {
-      console.error(err.message);
+      Logger.error({ context: "WebhookSubscriptionController" }, err.message);
       res.status(500).json({ error: "Internal server error" });
     }
   }
