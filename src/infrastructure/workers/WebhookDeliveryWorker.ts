@@ -3,7 +3,6 @@ import crypto from "crypto";
 import dns from "dns/promises";
 import { WebSocketManager } from "../websocket/WebSocketManager";
 
-
 async function isSafeUrl(urlStr: string): Promise<boolean> {
   try {
     const url = new URL(urlStr);
@@ -11,7 +10,8 @@ async function isSafeUrl(urlStr: string): Promise<boolean> {
 
     const { address } = await dns.lookup(url.hostname);
 
-    if (address === "127.0.0.1" || address === "::1" || address === "0.0.0.0") return false;
+    if (address === "127.0.0.1" || address === "::1" || address === "0.0.0.0")
+      return false;
 
     const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
     const match = address.match(ipv4Regex);
@@ -38,7 +38,9 @@ export class WebhookDeliveryWorker {
   public static start(intervalMs = 2000) {
     if (this.timer) return;
     this.timer = setInterval(() => this.processPendingDeliveries(), intervalMs);
-    console.log(`[WebhookDeliveryWorker] Started background worker (polling every ${intervalMs}ms)`);
+    console.log(
+      `[WebhookDeliveryWorker] Started background worker (polling every ${intervalMs}ms)`,
+    );
   }
 
   public static stop() {
@@ -58,8 +60,8 @@ export class WebhookDeliveryWorker {
         where: {
           status: "Pending",
           nextAttemptAt: {
-            lte: new Date()
-          }
+            lte: new Date(),
+          },
         },
         orderBy: { createdAt: "asc" },
         take: 10,
@@ -73,14 +75,24 @@ export class WebhookDeliveryWorker {
         data: { status: "Processing" },
       });
 
+      // Extract unique subscription IDs and bulk fetch them
+      const uniqueSubscriptionIds = Array.from(
+        new Set(deliveries.map((d: any) => d.subscriptionId)),
+      );
+      const subscriptions = await prisma.webhookSubscriptionModel.findMany({
+        where: { id: { in: uniqueSubscriptionIds } },
+      });
+
+      const subscriptionMap = new Map(subscriptions.map((s: any) => [s.id, s]));
+
       for (const delivery of deliveries) {
         try {
-          const subscription = await prisma.webhookSubscriptionModel.findUnique({
-            where: { id: delivery.subscriptionId }
-          });
+          const subscription = subscriptionMap.get(delivery.subscriptionId);
 
           if (!subscription || !subscription.isActive) {
-            throw new Error(`Subscription ${delivery.subscriptionId} not found or inactive`);
+            throw new Error(
+              `Subscription ${delivery.subscriptionId} not found or inactive`,
+            );
           }
 
           // Calculate signature
@@ -98,9 +110,9 @@ export class WebhookDeliveryWorker {
             headers: {
               "Content-Type": "application/json",
               "X-Webhook-Signature-256": signature,
-              "X-Webhook-Event": delivery.eventType
+              "X-Webhook-Event": delivery.eventType,
             },
-            body: delivery.payload
+            body: delivery.payload,
           });
 
           if (!response.ok) {
@@ -113,17 +125,25 @@ export class WebhookDeliveryWorker {
             data: {
               status: "Success",
               attempts: delivery.attempts + 1,
-              processedAt: new Date()
-            }
+              processedAt: new Date(),
+            },
           });
-          console.log(`[WebhookDeliveryWorker] Successfully delivered webhook ${delivery.id} to ${subscription.targetUrl}`);
+          console.log(
+            `[WebhookDeliveryWorker] Successfully delivered webhook ${delivery.id} to ${subscription.targetUrl}`,
+          );
         } catch (err: any) {
           const nextAttempts = delivery.attempts + 1;
-          const backoffMs = Math.min(Math.pow(2, nextAttempts) * 1000, 24 * 60 * 60 * 1000);
+          const backoffMs = Math.min(
+            Math.pow(2, nextAttempts) * 1000,
+            24 * 60 * 60 * 1000,
+          );
           const nextAttemptAt = new Date(Date.now() + backoffMs);
           const nextStatus = nextAttempts >= 5 ? "Failed" : "Pending";
 
-          console.error(`[WebhookDeliveryWorker] Failed to deliver webhook ${delivery.id}:`, err.message);
+          console.error(
+            `[WebhookDeliveryWorker] Failed to deliver webhook ${delivery.id}:`,
+            err.message,
+          );
 
           await prisma.webhookDeliveryModel.update({
             where: { id: delivery.id },
@@ -131,8 +151,8 @@ export class WebhookDeliveryWorker {
               status: nextStatus,
               attempts: nextAttempts,
               lastError: err.message,
-              nextAttemptAt
-            }
+              nextAttemptAt,
+            },
           });
 
           // Broadcast webhook failure
@@ -144,12 +164,15 @@ export class WebhookDeliveryWorker {
             eventType: delivery.eventType,
             attempts: nextAttempts,
             status: nextStatus,
-            lastError: err.message
+            lastError: err.message,
           });
         }
       }
     } catch (error) {
-      console.error("[WebhookDeliveryWorker] Error in background worker loop:", error);
+      console.error(
+        "[WebhookDeliveryWorker] Error in background worker loop:",
+        error,
+      );
     } finally {
       this.isRunning = false;
     }
