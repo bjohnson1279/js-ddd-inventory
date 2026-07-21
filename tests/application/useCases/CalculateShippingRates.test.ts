@@ -51,6 +51,50 @@ describe("CalculateShippingRates Use Case", () => {
     expect(mockCarrierService.fetchRates).not.toHaveBeenCalled();
   });
 
+  it("should throw an error if sku is null or undefined (runtime validation)", async () => {
+    const queryWithNull = {
+      sku: null as any,
+      quantity: 1,
+      destinationAddress: "123 Main St",
+    };
+
+    const queryWithUndefined = {
+      sku: undefined as any,
+      quantity: 1,
+      destinationAddress: "123 Main St",
+    };
+
+    await expect(useCase.execute(queryWithNull)).rejects.toThrow(
+      "Missing required rate fields: sku and destinationAddress."
+    );
+    await expect(useCase.execute(queryWithUndefined)).rejects.toThrow(
+      "Missing required rate fields: sku and destinationAddress."
+    );
+    expect(mockCarrierService.fetchRates).not.toHaveBeenCalled();
+  });
+
+  it("should throw an error if destinationAddress is null or undefined (runtime validation)", async () => {
+    const queryWithNull = {
+      sku: "SKU-123",
+      quantity: 1,
+      destinationAddress: null as any,
+    };
+
+    const queryWithUndefined = {
+      sku: "SKU-123",
+      quantity: 1,
+      destinationAddress: undefined as any,
+    };
+
+    await expect(useCase.execute(queryWithNull)).rejects.toThrow(
+      "Missing required rate fields: sku and destinationAddress."
+    );
+    await expect(useCase.execute(queryWithUndefined)).rejects.toThrow(
+      "Missing required rate fields: sku and destinationAddress."
+    );
+    expect(mockCarrierService.fetchRates).not.toHaveBeenCalled();
+  });
+
   it("should throw an error if destinationAddress is missing", async () => {
     const query: CalculateShippingRatesQuery = {
       sku: "SKU-123",
