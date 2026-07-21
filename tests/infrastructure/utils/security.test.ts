@@ -15,6 +15,33 @@ describe('Security Utilities', () => {
       expect(parts[1].length).toBeGreaterThan(0);
     });
 
+    it('should enforce strict output format lengths (32-char salt, 128-char hash)', () => {
+      const password = 'strictFormatTest123!';
+      const result = hashPassword(password);
+      const [salt, hash] = result.split(':');
+
+      // 16 bytes random salt = 32 hex chars
+      expect(salt).toHaveLength(32);
+      expect(/^[0-9a-f]{32}$/i.test(salt)).toBe(true);
+
+      // 64 bytes pbkdf2 hash = 128 hex chars
+      expect(hash).toHaveLength(128);
+      expect(/^[0-9a-f]{128}$/i.test(hash)).toBe(true);
+    });
+
+    it('should throw an error for null or undefined input', () => {
+      expect(() => hashPassword(null as any)).toThrow();
+      expect(() => hashPassword(undefined as any)).toThrow();
+    });
+
+    it('should hash extremely long passwords', () => {
+      const longPassword = 'a'.repeat(10000);
+      const hash = hashPassword(longPassword);
+      expect(hash).toBeDefined();
+      const parts = hash.split(':');
+      expect(parts.length).toBe(2);
+    });
+
     it('should generate different hashes for the same password due to random salt', () => {
       const password = 'password123';
       const hash1 = hashPassword(password);
@@ -35,6 +62,26 @@ describe('Security Utilities', () => {
 
       const isValid = verifyPassword(password, hash);
       expect(isValid).toBe(true);
+    });
+
+    it('should throw an error or handle null/undefined password input safely', () => {
+      const validHash = hashPassword('validPassword');
+      // Depending on implementation it might throw or return false.
+      // The current implementation calls crypto.pbkdf2Sync which will throw on null password.
+      expect(() => verifyPassword(null as any, validHash)).toThrow();
+      expect(() => verifyPassword(undefined as any, validHash)).toThrow();
+    });
+
+    it('should handle null/undefined storedHash gracefully', () => {
+      const password = 'password123';
+      expect(() => verifyPassword(password, null as any)).toThrow();
+      expect(() => verifyPassword(password, undefined as any)).toThrow();
+    });
+
+    it('should successfully verify extremely long passwords', () => {
+      const longPassword = 'b'.repeat(10000);
+      const hash = hashPassword(longPassword);
+      expect(verifyPassword(longPassword, hash)).toBe(true);
     });
 
     it('should return false for an incorrect password', () => {
