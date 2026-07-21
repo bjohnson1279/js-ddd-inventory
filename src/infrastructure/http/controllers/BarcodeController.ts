@@ -1,3 +1,4 @@
+import { Logger } from "../../logging/logger";
 import { Request, Response } from "express";
 import { prisma } from "../../database/prisma";
 import { IBarcodeRepository } from "../../../domain/repositories/IBarcodeRepository";
@@ -44,10 +45,10 @@ export class BarcodeController {
         });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "BarcodeController" }, error.message);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "BarcodeController" }, error);
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -73,7 +74,7 @@ export class BarcodeController {
 
       res.status(200).json({ barcodeValue: barcode.value });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "BarcodeController" }, error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -137,10 +138,10 @@ export class BarcodeController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("not registered"))
       ) {
-        console.error(error instanceof DomainException ? error.message : error);
+        Logger.error({ context: "BarcodeController" }, error instanceof DomainException ? error.message : error);
         res.status(404).json({ error: "Not registered" });
       } else {
-        console.error(error);
+        Logger.error({ context: "BarcodeController" }, error);
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -151,7 +152,7 @@ export class BarcodeController {
       const records = await prisma.barcodeAssignmentModel.findMany();
       res.status(200).json(records);
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "BarcodeController" }, error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
