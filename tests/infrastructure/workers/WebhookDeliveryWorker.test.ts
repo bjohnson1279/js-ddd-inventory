@@ -48,7 +48,7 @@ describe("WebhookDeliveryWorker (Express)", () => {
     };
 
     (prisma.webhookDeliveryModel.findMany as jest.Mock).mockResolvedValue([mockDelivery]);
-    (prisma.webhookSubscriptionModel.findUnique as jest.Mock).mockResolvedValue(mockSubscription);
+    (prisma.webhookSubscriptionModel.findMany as jest.Mock).mockResolvedValue([mockSubscription]);
     fetchSpy.mockResolvedValue({
       ok: true,
       status: 200
@@ -103,7 +103,7 @@ describe("WebhookDeliveryWorker (Express)", () => {
     };
 
     (prisma.webhookDeliveryModel.findMany as jest.Mock).mockResolvedValue([mockDelivery]);
-    (prisma.webhookSubscriptionModel.findUnique as jest.Mock).mockResolvedValue(mockSubscription);
+    (prisma.webhookSubscriptionModel.findMany as jest.Mock).mockResolvedValue([mockSubscription]);
     fetchSpy.mockResolvedValue({
       ok: false,
       status: 404
