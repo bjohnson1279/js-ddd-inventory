@@ -157,3 +157,8 @@
 **Vulnerability:** A temporary password was being returned in plain text via the API response during user invitation.
 **Learning:** Security-sensitive generated values (like passwords or reset tokens) must never be returned directly in API responses, as this exposes them to network logging, browser history, or shoulder surfing.
 **Prevention:** Always use out-of-band communication channels (like email or SMS) to deliver temporary credentials or tokens.
+
+## 2026-07-22 - Fix hardcoded cryptographic key for compliance ledger
+**Vulnerability:** The `ComplianceLedgerService.ts` used a hardcoded fallback string (`"system-secret-compliance-ledger-key-2026"`) for `COMPLIANCE_PRIVATE_KEY` if the environment variable was missing.
+**Learning:** Hardcoding cryptographic keys for highly sensitive security functions (like a compliance ledger signature) completely breaks the non-repudiation property if the environment variable is accidentally omitted, as attackers can sign valid blocks with the known default key.
+**Prevention:** Always strictly enforce the presence of critical cryptographic keys on startup or upon usage. Throw a hard error if the key is missing rather than relying on insecure default fallbacks.
