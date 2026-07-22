@@ -26,14 +26,14 @@ export class InternalBarcodeGenerator {
 
   private buildValue(variantId: string, tenantId: string, salt: number): string {
     const tenantHash = crypto
-      .createHash("sha256")
+      .createHash("md5")
       .update(tenantId)
       .digest("hex")
       .substring(0, 4)
       .toUpperCase();
 
     const variantHash = crypto
-      .createHash("sha256")
+      .createHash("md5")
       .update(variantId + salt)
       .digest("hex")
       .substring(0, 8)

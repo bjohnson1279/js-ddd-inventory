@@ -1,4 +1,3 @@
-import { Logger } from "../../logging/logger";
 import { Request, Response } from "express";
 import { AuditProcessorService } from "../../../domain/services/AuditProcessorService";
 import { PrismaAuditDiscrepancyRepository } from "../../database/PrismaAuditDiscrepancyRepository";
@@ -16,7 +15,7 @@ export class AuditController {
 
       return res.status(200).json(summary);
     } catch (error: any) {
-      Logger.error({ context: "AuditController" }, error);
+      console.error(error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -35,7 +34,7 @@ export class AuditController {
 
       return res.status(200).json({ discrepancies });
     } catch (error: any) {
-      Logger.error({ context: "AuditController" }, error);
+      console.error(error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -59,7 +58,7 @@ export class AuditController {
 
       return res.status(200).json({ success: true });
     } catch (error: any) {
-      Logger.error({ context: "AuditController" }, error);
+      console.error(error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }

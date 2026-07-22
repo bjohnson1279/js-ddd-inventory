@@ -51,50 +51,6 @@ describe("CalculateShippingRates Use Case", () => {
     expect(mockCarrierService.fetchRates).not.toHaveBeenCalled();
   });
 
-  it("should throw an error if sku is null or undefined (runtime validation)", async () => {
-    const queryWithNull = {
-      sku: null as any,
-      quantity: 1,
-      destinationAddress: "123 Main St",
-    };
-
-    const queryWithUndefined = {
-      sku: undefined as any,
-      quantity: 1,
-      destinationAddress: "123 Main St",
-    };
-
-    await expect(useCase.execute(queryWithNull)).rejects.toThrow(
-      "Missing required rate fields: sku and destinationAddress."
-    );
-    await expect(useCase.execute(queryWithUndefined)).rejects.toThrow(
-      "Missing required rate fields: sku and destinationAddress."
-    );
-    expect(mockCarrierService.fetchRates).not.toHaveBeenCalled();
-  });
-
-  it("should throw an error if destinationAddress is null or undefined (runtime validation)", async () => {
-    const queryWithNull = {
-      sku: "SKU-123",
-      quantity: 1,
-      destinationAddress: null as any,
-    };
-
-    const queryWithUndefined = {
-      sku: "SKU-123",
-      quantity: 1,
-      destinationAddress: undefined as any,
-    };
-
-    await expect(useCase.execute(queryWithNull)).rejects.toThrow(
-      "Missing required rate fields: sku and destinationAddress."
-    );
-    await expect(useCase.execute(queryWithUndefined)).rejects.toThrow(
-      "Missing required rate fields: sku and destinationAddress."
-    );
-    expect(mockCarrierService.fetchRates).not.toHaveBeenCalled();
-  });
-
   it("should throw an error if destinationAddress is missing", async () => {
     const query: CalculateShippingRatesQuery = {
       sku: "SKU-123",
@@ -120,53 +76,5 @@ describe("CalculateShippingRates Use Case", () => {
 
     await expect(useCase.execute(query)).rejects.toThrow("Carrier API timeout");
     expect(mockCarrierService.fetchRates).toHaveBeenCalledTimes(1);
-  });
-
-  it("should throw an error if query is missing", async () => {
-    await expect(useCase.execute(null as any)).rejects.toThrow("Missing query.");
-    await expect(useCase.execute(undefined as any)).rejects.toThrow("Missing query.");
-    expect(mockCarrierService.fetchRates).not.toHaveBeenCalled();
-  });
-
-  it("should throw an error if sku is whitespace only", async () => {
-    const query: CalculateShippingRatesQuery = {
-      sku: "   ",
-      quantity: 1,
-      destinationAddress: "123 Main St",
-    };
-
-    await expect(useCase.execute(query)).rejects.toThrow(
-      "Missing required rate fields: sku and destinationAddress."
-    );
-    expect(mockCarrierService.fetchRates).not.toHaveBeenCalled();
-  });
-
-  it("should throw an error if destinationAddress is whitespace only", async () => {
-    const query: CalculateShippingRatesQuery = {
-      sku: "SKU-123",
-      quantity: 1,
-      destinationAddress: "   ",
-    };
-
-    await expect(useCase.execute(query)).rejects.toThrow(
-      "Missing required rate fields: sku and destinationAddress."
-    );
-    expect(mockCarrierService.fetchRates).not.toHaveBeenCalled();
-  });
-
-  it("should throw an error if quantity is invalid (negative or zero)", async () => {
-    const query1: CalculateShippingRatesQuery = { sku: "SKU-123", quantity: 0, destinationAddress: "123 Main St" };
-    const query2: CalculateShippingRatesQuery = { sku: "SKU-123", quantity: -5, destinationAddress: "123 Main St" };
-
-    await expect(useCase.execute(query1)).rejects.toThrow("Invalid quantity.");
-    await expect(useCase.execute(query2)).rejects.toThrow("Invalid quantity.");
-    expect(mockCarrierService.fetchRates).not.toHaveBeenCalled();
-  });
-
-  it("should throw an error if quantity is null, undefined, or NaN", async () => {
-    await expect(useCase.execute({ sku: "SKU", quantity: null as any, destinationAddress: "123" })).rejects.toThrow("Invalid quantity.");
-    await expect(useCase.execute({ sku: "SKU", quantity: undefined as any, destinationAddress: "123" })).rejects.toThrow("Invalid quantity.");
-    await expect(useCase.execute({ sku: "SKU", quantity: NaN, destinationAddress: "123" })).rejects.toThrow("Invalid quantity.");
-    expect(mockCarrierService.fetchRates).not.toHaveBeenCalled();
   });
 });

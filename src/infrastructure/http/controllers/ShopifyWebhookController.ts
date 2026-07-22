@@ -1,4 +1,3 @@
-import { Logger } from "../../logging/logger";
 import { Request, Response } from "express";
 import { DispatchStock } from "../../../application/useCases/DispatchStock";
 import { ShopifyWebhookSecurity } from "../../shopify/ShopifyWebhookSecurity";
@@ -77,10 +76,10 @@ export class ShopifyWebhookController {
       res.status(200).send("Webhook processed");
     } catch (error: any) {
       if (error instanceof DomainException) {
-        Logger.error({ context: "ShopifyWebhookController" }, error.message);
+        console.error(error.message);
         res.status(400).send("A domain error occurred.");
       } else {
-        Logger.error({ context: "ShopifyWebhookController", message: "Error processing Shopify webhook:" }, error);
+        console.error("Error processing Shopify webhook:", error);
         res.status(500).send("Internal server error");
       }
     }

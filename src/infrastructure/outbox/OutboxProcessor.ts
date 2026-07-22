@@ -1,4 +1,3 @@
-import { Logger } from "../logging/logger";
 import { IOutboxRepository } from "../../domain/repositories/IOutboxRepository";
 import { DomainEventDispatcher } from "../../domain/events/DomainEventDispatcher";
 import { IMessageBroker } from "../../application/ports/IMessageBroker";
@@ -99,7 +98,7 @@ export class OutboxProcessor {
         } catch (error: any) {
           const parsed = JSON.parse(record.payload);
           const traceId = parsed.traceId || "unknown";
-          Logger.error({ context: "OutboxProcessor", traceId, message: `Error processing outbox event ${record.id}` }, error);
+          console.error(`[Trace: ${traceId}] Error processing outbox event ${record.id}:`, error);
           failedUpdates.push({ id: record.id, error: error.message || String(error) });
         }
       }
@@ -110,7 +109,7 @@ export class OutboxProcessor {
         ...failedUpdates.map(f => this.outboxRepository.markFailed(f.id, f.error))
       ]);
     } catch (error) {
-      Logger.error({ context: "OutboxProcessor", message: "Failed to fetch pending outbox events" }, error);
+      console.error("Failed to fetch pending outbox events:", error);
     } finally {
       this.isProcessing = false;
     }

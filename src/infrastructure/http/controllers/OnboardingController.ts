@@ -1,4 +1,3 @@
-import { Logger } from "../../logging/logger";
 import { Request, Response } from "express";
 import { StockOnboarding } from "../../../domain/onboarding/aggregates/StockOnboarding";
 import { OpeningBalanceService } from "../../../domain/onboarding/services/OpeningBalanceService";
@@ -35,10 +34,10 @@ export class OnboardingController {
       res.status(200).json({ message: "Initial inventory setup successful" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        Logger.error({ context: "OnboardingController" }, error.message);
+        console.error(error.message);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        Logger.error({ context: "OnboardingController", message: "Onboarding submission failed:" }, error);
+        console.error("Onboarding submission failed:", error);
         res.status(500).json({ error: "Internal server error" });
       }
     }

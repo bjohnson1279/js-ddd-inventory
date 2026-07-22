@@ -1,4 +1,3 @@
-import { Logger } from "../../infrastructure/logging/logger";
 import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreatedEvent";
 import { XeroClient } from "../../infrastructure/xero/XeroClient";
 import { prisma } from "../../infrastructure/database/prisma";
@@ -35,6 +34,6 @@ export const syncJournalToXero = async (event: JournalEntryCreatedEvent): Promis
 
     console.log(`[Xero Sync] Successfully mapped local journal ${event.aggregateId} -> Xero ${xeroId}`);
   } catch (err: any) {
-    Logger.error({ context: "SyncJournalToXero", journalId: event.aggregateId, message: "Failed for journal" }, err);
+    console.error(`[Xero Sync] Failed for journal ${event.aggregateId}:`, err);
   }
 };

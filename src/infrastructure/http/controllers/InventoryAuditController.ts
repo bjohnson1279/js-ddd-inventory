@@ -1,4 +1,3 @@
-import { Logger } from "../../logging/logger";
 import { DomainException } from "../../../domain/exceptions/DomainException";
 
 import { Request, Response } from "express";
@@ -39,7 +38,7 @@ export class InventoryAuditController {
         }))
       });
     } catch (error: any) {
-      Logger.error({ context: "InventoryAuditController" }, error);
+      console.error(error);
       res.status(400).json({ error: "Bad request" });
     }
   }
@@ -51,7 +50,8 @@ export class InventoryAuditController {
       await useCase.execute(req.params.id);
       res.status(200).json({ message: "Inventory audit started successfully" });
     } catch (error: any) {
-      Logger.error({ context: "InventoryAuditController" }, error instanceof DomainException ? error.message : error);
+      console.error(error);
+      console.error(error instanceof DomainException ? error.message : error);
       res.status(400).json({ error: "Bad request" });
     }
   }
@@ -67,7 +67,8 @@ export class InventoryAuditController {
       });
       res.status(200).json({ message: "Count recorded successfully" });
     } catch (error: any) {
-      Logger.error({ context: "InventoryAuditController" }, error instanceof DomainException ? error.message : error);
+      console.error(error);
+      console.error(error instanceof DomainException ? error.message : error);
       res.status(400).json({ error: "Bad request" });
     }
   }
@@ -79,7 +80,8 @@ export class InventoryAuditController {
       await useCase.execute(req.params.id);
       res.status(200).json({ message: "Inventory audit completed successfully" });
     } catch (error: any) {
-      Logger.error({ context: "InventoryAuditController" }, error instanceof DomainException ? error.message : error);
+      console.error(error);
+      console.error(error instanceof DomainException ? error.message : error);
       res.status(400).json({ error: "Bad request" });
     }
   }
@@ -103,7 +105,8 @@ export class InventoryAuditController {
       await useCase.execute(req.params.id);
       res.status(200).json({ message: "Inventory audit reconciled successfully" });
     } catch (error: any) {
-      Logger.error({ context: "InventoryAuditController" }, error instanceof DomainException ? error.message : error);
+      console.error(error);
+      console.error(error instanceof DomainException ? error.message : error);
       res.status(400).json({ error: "Bad request" });
     }
   }
@@ -133,7 +136,7 @@ export class InventoryAuditController {
         }))
       });
     } catch (error: any) {
-      Logger.error({ context: "InventoryAuditController" }, error);
+      console.error(error);
       res.status(500).json({ error: "Internal server error" });
     }
   }

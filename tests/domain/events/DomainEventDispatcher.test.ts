@@ -1,4 +1,3 @@
-import { Logger } from "../../../src/infrastructure/logging/logger";
 import { DomainEventDispatcher } from "../../../src/domain/events/DomainEventDispatcher";
 import { IDomainEvent } from "../../../src/domain/events/IDomainEvent";
 
@@ -29,7 +28,7 @@ describe("DomainEventDispatcher", () => {
   });
 
   it("should properly catch exceptions from handlers, log them, and re-throw the first error", async () => {
-    const consoleErrorSpy = jest.spyOn(Logger, "error").mockImplementation(() => {});
+    const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 
     const failingHandler = jest.fn().mockImplementation(() => {
       throw new Error("Handler failed");
@@ -43,7 +42,7 @@ describe("DomainEventDispatcher", () => {
 
     expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ message: "Error handling domain event" }),
+      `Error handling domain event DummyEvent in handler mockConstructor:`,
       expect.any(Error)
     );
   });
