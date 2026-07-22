@@ -7,7 +7,9 @@ export interface ISerializedItemRepository {
   findBySerialOrFail(serial: SerialNumber, tenantId: string): Promise<SerializedItem>;
   findById(id: string): Promise<SerializedItem | null>;
   findByVariant(variantId: string, status?: SerializedItemStatus): Promise<SerializedItem[]>;
+  findBySerials?(serials: SerialNumber[], tenantId: string): Promise<SerializedItem[]>;
   isRegistered(serial: SerialNumber, tenantId: string): Promise<boolean>;
   countByStatus(variantId: string, status: SerializedItemStatus): Promise<number>;
   save(item: SerializedItem): Promise<void>;
+  saveMany?(items: SerializedItem[]): Promise<void>;
 }
