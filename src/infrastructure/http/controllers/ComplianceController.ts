@@ -6,7 +6,7 @@ import { Logger } from "../../../infrastructure/logging/logger";
 export class ComplianceController {
   public static async list(req: Request, res: Response) {
     try {
-      const tenantId = (req.query.tenantId as string) || undefined;
+      const tenantId = typeof req.query.tenantId === "string" ? req.query.tenantId : undefined;
       const ledger = await prisma.complianceLedgerModel.findMany({
         where: tenantId ? { tenantId } : undefined,
         orderBy: { sequenceNumber: "desc" }
@@ -21,7 +21,7 @@ export class ComplianceController {
 
   public static async verify(req: Request, res: Response) {
     try {
-      const tenantId = (req.query.tenantId as string) || undefined;
+      const tenantId = typeof req.query.tenantId === "string" ? req.query.tenantId : undefined;
       const result = await ComplianceLedgerService.validateLedger(tenantId);
       
       res.status(200).json(result);
