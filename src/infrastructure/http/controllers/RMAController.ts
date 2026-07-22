@@ -11,6 +11,7 @@ import { IQuarantineRepository } from "../../../domain/repositories/IQuarantineR
 import { ITenantConfigRepository } from "../../../domain/repositories/ITenantConfigRepository";
 import { IJournalRepository } from "../../../domain/repositories/IJournalRepository";
 import { ISerializedItemRepository } from "../../../domain/repositories/ISerializedItemRepository";
+import { Logger } from "../../../infrastructure/logging/logger";
 
 export class RMAController {
   static async create(req: Request, res: Response) {
@@ -37,7 +38,7 @@ export class RMAController {
         })),
       });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "RMAController", message: "An error occurred", error: error });
       res.status(400).json({ error: "Bad request" });
     }
   }
@@ -50,8 +51,8 @@ export class RMAController {
       await useCase.execute(req.params.id);
       res.status(200).json({ message: "RMA authorized successfully" });
     } catch (error: any) {
-      console.error(error);
-      console.error(error instanceof DomainException ? error.message : error);
+      Logger.error({ context: "RMAController", message: "An error occurred", error: error });
+      Logger.error({ context: "RMAController", message: error instanceof DomainException ? error.message : error });
       res.status(400).json({ error: "Bad request" });
     }
   }
@@ -83,8 +84,8 @@ export class RMAController {
 
       res.status(200).json({ message: "RMA items received and processed successfully" });
     } catch (error: any) {
-      console.error(error);
-      console.error(error instanceof DomainException ? error.message : error);
+      Logger.error({ context: "RMAController", message: "An error occurred", error: error });
+      Logger.error({ context: "RMAController", message: error instanceof DomainException ? error.message : error });
       res.status(400).json({ error: "Bad request" });
     }
   }
@@ -115,7 +116,7 @@ export class RMAController {
         })),
       });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "RMAController", message: "An error occurred", error: error });
       res.status(500).json({ error: "Internal server error" });
     }
   }

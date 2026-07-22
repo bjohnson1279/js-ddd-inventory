@@ -3,6 +3,7 @@ import { DomainEventDispatcher } from "../../domain/events/DomainEventDispatcher
 import { IMessageBroker } from "../../application/ports/IMessageBroker";
 import { runWithTrace, generateTraceId } from "../telemetry/traceContext";
 import { prisma } from "../database/prisma";
+import { Logger } from "../../infrastructure/logging/logger";
 
 export class OutboxProcessor {
   private isProcessing = false;
@@ -98,7 +99,7 @@ export class OutboxProcessor {
         } catch (error: any) {
           const parsed = JSON.parse(record.payload);
           const traceId = parsed.traceId || "unknown";
-          console.error(`[Trace: ${traceId}] Error processing outbox event ${record.id}:`, error);
+          Logger.error({ context: "OutboxProcessor", message: `[Trace: ${traceId}] Error processing outbox event ${record.id}:`, error: error });
           failedUpdates.push({ id: record.id, error: error.message || String(error) });
         }
       }
@@ -109,7 +110,7 @@ export class OutboxProcessor {
         ...failedUpdates.map(f => this.outboxRepository.markFailed(f.id, f.error))
       ]);
     } catch (error) {
-      console.error("Failed to fetch pending outbox events:", error);
+      Logger.error({ context: "OutboxProcessor", message: "Failed to fetch pending outbox events:", error: error });
     } finally {
       this.isProcessing = false;
     }

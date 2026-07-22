@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { prisma } from "../../infrastructure/database/prisma";
+import { Logger } from "../../infrastructure/logging/logger";
 
 export interface LedgerLogPayload {
   sku?: string;
@@ -50,7 +51,7 @@ export class ComplianceLedgerService {
       }
     });
 
-    console.log(`[ComplianceLedger] Recorded entry #${sequenceNumber} for event: ${eventType} (Hash: ${hash.substring(0, 10)}...)`);
+    Logger.info({ context: "ComplianceLedgerService", message: `[ComplianceLedger] Recorded entry #${sequenceNumber} for event: ${eventType} (Hash: ${hash.substring(0, 10)}...)` });
     return entry;
   }
 

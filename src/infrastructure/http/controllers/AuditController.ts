@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { AuditProcessorService } from "../../../domain/services/AuditProcessorService";
 import { PrismaAuditDiscrepancyRepository } from "../../database/PrismaAuditDiscrepancyRepository";
+import { Logger } from "../../../infrastructure/logging/logger";
 
 export class AuditController {
   static async runAudit(req: Request, res: Response) {
@@ -15,7 +16,7 @@ export class AuditController {
 
       return res.status(200).json(summary);
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "AuditController", message: "An error occurred", error: error });
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -34,7 +35,7 @@ export class AuditController {
 
       return res.status(200).json({ discrepancies });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "AuditController", message: "An error occurred", error: error });
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -58,7 +59,7 @@ export class AuditController {
 
       return res.status(200).json({ success: true });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "AuditController", message: "An error occurred", error: error });
       return res.status(500).json({ error: "Internal server error" });
     }
   }

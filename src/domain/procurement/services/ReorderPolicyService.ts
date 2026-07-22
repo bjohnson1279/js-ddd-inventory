@@ -5,6 +5,7 @@ import { DomainEventDispatcher } from "../../events/DomainEventDispatcher";
 import { ReorderPointReachedEvent } from "../../events/ReorderPointReachedEvent";
 import { PurchaseOrderStatus } from "../enums/PurchaseOrderStatus";
 import { SKU } from "../../valueObjects/SKU";
+import { Logger } from "../../../infrastructure/logging/logger";
 
 export class ReorderPolicyService {
   constructor(
@@ -37,7 +38,7 @@ export class ReorderPolicyService {
           await this.reorderPolicyRepository.save(policy);
           rop = newRop;
         } catch (error) {
-          console.error(`Error forecasting ROP for SKU ${policy.sku.getValue()}:`, error);
+          Logger.error({ context: "ReorderPolicyService", message: `Error forecasting ROP for SKU ${policy.sku.getValue()}:`, error: error });
         }
       }
 

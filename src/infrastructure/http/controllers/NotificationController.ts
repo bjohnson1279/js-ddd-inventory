@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../../database/prisma";
 import { DomainException } from "../../../domain/exceptions/DomainException";
+import { Logger } from "../../../infrastructure/logging/logger";
 
 
 // Store active SSE clients: tenantId -> Response[]
@@ -17,10 +18,10 @@ export class NotificationController {
       res.status(200).json(notifications);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "NotificationController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "NotificationController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -47,10 +48,10 @@ export class NotificationController {
       res.status(200).json(updated);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "NotificationController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "NotificationController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -68,10 +69,10 @@ export class NotificationController {
       res.status(200).json({ message: "All notifications marked as read" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "NotificationController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "NotificationController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -125,10 +126,10 @@ export class NotificationController {
       res.status(201).json(notification);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "NotificationController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "NotificationController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
