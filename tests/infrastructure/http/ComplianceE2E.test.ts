@@ -1,6 +1,7 @@
 process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
+process.env.COMPLIANCE_PRIVATE_KEY = "dummy_compliance_key";
 
 import request from "supertest";
 import { app, setupApp } from "../../../src/index";
