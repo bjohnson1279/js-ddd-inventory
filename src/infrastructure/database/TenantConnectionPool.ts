@@ -8,12 +8,12 @@ interface PoolEntry {
   pool: Pool;
   lastAccessedAt: number;
   tenantId: string;
-  schemaName: string;
+  dbName: string;
 }
 
 /**
  * TenantConnectionPool for JS/Express backend.
- * LRU-cached pool of PrismaClient instances, one per tenant schema.
+ * LRU-cached pool of PrismaClient instances, one per tenant database.
  */
 export class TenantConnectionPool {
   private cache = new Map<string, PoolEntry>();
@@ -100,9 +100,8 @@ export class TenantConnectionPool {
   }
 
   private async createClient(entry: TenantRegistryEntry): Promise<PoolEntry> {
-    const user = process.env.DB_USER || 'postgres';
-    const password = process.env.DB_PASSWORD || 'password';
-    const connectionString = `postgresql://${user}:${password}@${entry.dbHost}:${entry.dbPort}/${entry.dbName}?schema=${entry.schemaName}&connection_limit=10`;
+    // Connect to tenant's dedicated database on the default public schema
+    const connectionString = `postgresql://${entry.dbUser}:${entry.dbPassword}@${entry.dbHost}:${entry.dbPort}/${entry.dbName}?schema=public&connection_limit=10`;
 
     const pool = new Pool({ connectionString });
     const adapter = new PrismaPg(pool);
@@ -113,7 +112,7 @@ export class TenantConnectionPool {
       pool,
       lastAccessedAt: Date.now(),
       tenantId: entry.tenantId,
-      schemaName: entry.schemaName,
+      dbName: entry.dbName,
     };
   }
 

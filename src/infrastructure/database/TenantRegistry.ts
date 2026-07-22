@@ -1,32 +1,39 @@
-import { PrismaClient } from '@prisma/client';
-
 /**
- * TenantRegistryEntry represents a tenant's database schema metadata
- * in the control-plane registry.
+ * TenantRegistryEntry represents a tenant's isolated database metadata.
  */
 export interface TenantRegistryEntry {
   tenantId: string;
-  schemaName: string;
   dbHost: string;
   dbPort: number;
   dbName: string;
+  dbUser: string;
+  dbPassword: string;
   status: 'PROVISIONING' | 'ACTIVE' | 'MIGRATING' | 'DEPROVISIONED';
   provisionedAt: Date;
   migratedVersion: string;
 }
 
 /**
- * TenantRegistry manages the mapping between tenant IDs and their
- * isolated database schemas in the JS/Express backend.
+ * TenantRegistry manages tenant-to-database mappings in the JS/Express backend.
+ * Each tenant gets its own PostgreSQL database.
  */
 export class TenantRegistry {
   constructor(private readonly controlPrisma: any) {}
 
-  async registerTenant(tenantId: string, dbHost?: string, dbPort?: number, dbName?: string): Promise<TenantRegistryEntry> {
-    const schemaName = `tenant_${tenantId.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+  async registerTenant(
+    tenantId: string,
+    dbHost?: string,
+    dbPort?: number,
+    dbName?: string,
+    dbUser?: string,
+    dbPassword?: string
+  ): Promise<TenantRegistryEntry> {
+    const safeName = tenantId.replace(/[^a-zA-Z0-9_]/g, '_');
     const host = dbHost || process.env.DB_HOST || '127.0.0.1';
     const port = dbPort || parseInt(process.env.DB_PORT || '5432', 10);
-    const name = dbName || process.env.DB_NAME || 'inventory';
+    const name = dbName || `inventory_tenant_${safeName}`;
+    const user = dbUser || process.env.DB_USER || 'postgres';
+    const password = dbPassword || process.env.DB_PASSWORD || 'password';
 
     const existing = await this.lookupTenant(tenantId);
     if (existing && existing.status !== 'DEPROVISIONED') {
@@ -35,23 +42,25 @@ export class TenantRegistry {
 
     const entry: TenantRegistryEntry = {
       tenantId,
-      schemaName,
       dbHost: host,
       dbPort: port,
       dbName: name,
+      dbUser: user,
+      dbPassword: password,
       status: 'PROVISIONING',
       provisionedAt: new Date(),
       migratedVersion: '0',
     };
 
     await this.controlPrisma.$executeRawUnsafe(`
-      INSERT INTO tenant_registry (tenant_id, schema_name, db_host, db_port, db_name, status, provisioned_at, migrated_version)
-      VALUES ('${tenantId}', '${entry.schemaName}', '${entry.dbHost}', ${entry.dbPort}, '${entry.dbName}', '${entry.status}', NOW(), '${entry.migratedVersion}')
+      INSERT INTO tenant_registry (tenant_id, db_host, db_port, db_name, db_user, db_password, status, provisioned_at, migrated_version)
+      VALUES ('${tenantId}', '${entry.dbHost}', ${entry.dbPort}, '${entry.dbName}', '${entry.dbUser}', '${entry.dbPassword}', '${entry.status}', NOW(), '${entry.migratedVersion}')
       ON CONFLICT (tenant_id) DO UPDATE SET
-        schema_name = EXCLUDED.schema_name,
         db_host = EXCLUDED.db_host,
         db_port = EXCLUDED.db_port,
         db_name = EXCLUDED.db_name,
+        db_user = EXCLUDED.db_user,
+        db_password = EXCLUDED.db_password,
         status = EXCLUDED.status,
         provisioned_at = NOW(),
         migrated_version = EXCLUDED.migrated_version;
@@ -62,7 +71,7 @@ export class TenantRegistry {
 
   async lookupTenant(tenantId: string): Promise<TenantRegistryEntry | null> {
     const results: any[] = await this.controlPrisma.$queryRawUnsafe(`
-      SELECT tenant_id, schema_name, db_host, db_port, db_name, status, provisioned_at, migrated_version
+      SELECT tenant_id, db_host, db_port, db_name, db_user, db_password, status, provisioned_at, migrated_version
       FROM tenant_registry
       WHERE tenant_id = '${tenantId}';
     `);
@@ -72,10 +81,11 @@ export class TenantRegistry {
     const row = results[0];
     return {
       tenantId: row.tenant_id,
-      schemaName: row.schema_name,
       dbHost: row.db_host,
       dbPort: row.db_port,
       dbName: row.db_name,
+      dbUser: row.db_user,
+      dbPassword: row.db_password,
       status: row.status,
       provisionedAt: new Date(row.provisioned_at),
       migratedVersion: row.migrated_version,
@@ -85,17 +95,18 @@ export class TenantRegistry {
   async listTenants(status?: string): Promise<TenantRegistryEntry[]> {
     const whereClause = status ? `WHERE status = '${status}'` : '';
     const results: any[] = await this.controlPrisma.$queryRawUnsafe(`
-      SELECT tenant_id, schema_name, db_host, db_port, db_name, status, provisioned_at, migrated_version
+      SELECT tenant_id, db_host, db_port, db_name, db_user, db_password, status, provisioned_at, migrated_version
       FROM tenant_registry ${whereClause}
       ORDER BY provisioned_at DESC;
     `);
 
     return results.map((row: any) => ({
       tenantId: row.tenant_id,
-      schemaName: row.schema_name,
       dbHost: row.db_host,
       dbPort: row.db_port,
       dbName: row.db_name,
+      dbUser: row.db_user,
+      dbPassword: row.db_password,
       status: row.status,
       provisionedAt: new Date(row.provisioned_at),
       migratedVersion: row.migrated_version,
