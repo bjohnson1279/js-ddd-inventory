@@ -1,8 +1,8 @@
-import { Logger } from "../../logging/logger";
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { prisma } from "../../database/prisma";
+import { IEmailService } from "../../../application/ports/IEmailService";
 import { hashPassword, verifyPassword } from "../../utils/security";
 
 const JWT_SECRET = process.env.JWT_SECRET || "";
@@ -82,7 +82,7 @@ export class AuthController {
 
       return res.status(200).json({ success: true, message: "Organization and admin user created successfully." });
     } catch (error: any) {
-      Logger.error({ context: "AuthController" }, error);
+      console.error(error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -129,7 +129,7 @@ export class AuthController {
 
       return res.status(200).json({ token });
     } catch (error: any) {
-      Logger.error({ context: "AuthController" }, error);
+      console.error(error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -160,7 +160,7 @@ export class AuthController {
 
       return res.status(200).json({ users });
     } catch (error: any) {
-      Logger.error({ context: "AuthController" }, error);
+      console.error(error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -215,13 +215,21 @@ export class AuthController {
         }
       });
 
+      const emailService = req.app.get("emailService") as IEmailService;
+      if (emailService) {
+        await emailService.sendEmail(
+          normalizedEmail,
+          "You have been invited!",
+          `Your temporary password is: ${tempPassword}. Please log in and change your password.`
+        );
+      }
+
       return res.status(201).json({
         message: "User invited successfully.",
-        userId,
-        temporaryPassword: tempPassword
+        userId
       });
     } catch (error: any) {
-      Logger.error({ context: "AuthController" }, error);
+      console.error(error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -267,7 +275,7 @@ export class AuthController {
 
       return res.status(200).json({ success: true });
     } catch (error: any) {
-      Logger.error({ context: "AuthController" }, error);
+      console.error(error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }

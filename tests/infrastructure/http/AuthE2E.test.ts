@@ -163,7 +163,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
 
       expect(inviteRes.status).toBe(201);
       expect(inviteRes.body.userId).toBeDefined();
-      expect(inviteRes.body.temporaryPassword).toBeDefined();
+      expect(inviteRes.body.temporaryPassword).toBeUndefined();
       const newUserId = inviteRes.body.userId;
 
       // List users
@@ -197,15 +197,26 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
     });
 
     it("should deny non-admin users from accessing user management endpoints", async () => {
-      // 1. Invite a viewer
-      const inviteRes = await request(app)
-        .post("/api/users")
-        .set("Authorization", `Bearer ${adminToken}`)
-        .send({
+      // 1. We bypass the invite workflow to directly create a viewer user and role in the database
+      // since the temporary password is no longer returned in the invite response.
+      const viewerId = "viewer-user-id";
+      const { hashPassword } = require("../../../src/infrastructure/utils/security");
+      await prisma.userModel.create({
+        data: {
+          id: viewerId,
+          tenantId: "tenant-acme",
           email: "viewer@acme.com",
-          role: "viewer"
-        });
-      const viewerTempPass = inviteRes.body.temporaryPassword;
+          passwordHash: hashPassword("viewerPass123"),
+          name: "Viewer User",
+          active: true
+        }
+      });
+      await prisma.userRoleModel.create({
+        data: {
+          userId: viewerId,
+          roleId: "viewer"
+        }
+      });
 
       // 2. Log in as viewer
       const viewerLoginRes = await request(app)
@@ -213,7 +224,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
         .send({
           tenantId: "tenant-acme",
           email: "viewer@acme.com",
-          password: viewerTempPass
+          password: "viewerPass123"
         });
       const viewerToken = viewerLoginRes.body.token;
 

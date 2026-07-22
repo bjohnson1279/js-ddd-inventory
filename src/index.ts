@@ -12,6 +12,7 @@ import { prisma } from "./infrastructure/database/prisma";
 import { enableRowLevelSecurity } from "./infrastructure/database/rls";
 import { PostgresInventoryRepository } from "./infrastructure/database/PostgresInventoryRepository";
 import { IInventoryRepository } from "./domain/repositories/IInventoryRepository";
+import { IEmailService } from "./application/ports/IEmailService";
 import inventoryRoutes from "./infrastructure/http/routes/inventory.routes";
 import shopifyRoutes from "./infrastructure/http/routes/shopify.routes";
 import onboardingRoutes from "./infrastructure/http/routes/onboarding.routes";
@@ -43,6 +44,7 @@ import { OutboxProcessor } from "./infrastructure/outbox/OutboxProcessor";
 import { WebhookDeliveryWorker } from "./infrastructure/workers/WebhookDeliveryWorker";
 import { IMessageBroker } from "./application/ports/IMessageBroker";
 import { InMemoryMessageBroker } from "./infrastructure/messaging/InMemoryMessageBroker";
+import { StubEmailService } from "./infrastructure/messaging/StubEmailService";
 import { RabbitMQMessageBroker } from "./infrastructure/messaging/RabbitMQMessageBroker";
 import { KafkaMessageBroker } from "./infrastructure/messaging/KafkaMessageBroker";
 
@@ -159,7 +161,8 @@ export const setupApp = (
   shipmentRepository?: IShipmentRepository,
   carrierService?: ICarrierService,
   warehouseLocationRepository?: IWarehouseLocationRepository,
-  productRepository?: IProductRepository
+  productRepository?: IProductRepository,
+  emailService?: IEmailService
 ) => {
   app.set("inventoryRepository", inventoryRepository);
   app.set("barcodeRepository", barcodeRepository || new InMemoryBarcodeRepository());
@@ -182,6 +185,7 @@ export const setupApp = (
   app.set("carrierService", carrierService || new MockCarrierService());
   app.set("warehouseLocationRepository", warehouseLocationRepository || new InMemoryWarehouseLocationRepository());
   app.set("productRepository", productRepository || new InMemoryProductRepository());
+  app.set("emailService", emailService || new StubEmailService());
   app.set("wmsCapacityService", new WMSCapacityService(
     app.get("inventoryRepository"),
     app.get("productRepository"),
@@ -307,6 +311,7 @@ const start = async () => {
   const carrierService = new MockCarrierService();
   const warehouseLocationRepo = new PrismaWarehouseLocationRepository();
   const productRepo = new PrismaProductRepository();
+  const emailService = new StubEmailService();
 
   const kafkaUrl = process.env.KAFKA_URL;
   const rabbitMqUrl = process.env.RABBITMQ_URL;
@@ -337,7 +342,8 @@ const start = async () => {
     shipmentRepo,
     carrierService,
     warehouseLocationRepo,
-    productRepo
+    productRepo,
+    emailService
   );
 
   if (process.env.DISABLE_WORKERS !== "true") {

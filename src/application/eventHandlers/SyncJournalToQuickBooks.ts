@@ -1,4 +1,3 @@
-import { Logger } from "../../infrastructure/logging/logger";
 import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreatedEvent";
 import { QuickBooksClient } from "../../infrastructure/quickbooks/QuickBooksClient";
 import { prisma } from "../../infrastructure/database/prisma";
@@ -36,7 +35,7 @@ export const syncJournalToQuickBooks = async (event: JournalEntryCreatedEvent): 
 
     console.log(`[QuickBooks Sync] Successfully mapped local journal ${event.aggregateId} -> QuickBooks ${qbId}`);
   } catch (err: any) {
-    Logger.error({ context: "SyncJournalToQuickBooks", journalId: event.aggregateId, message: "Failed for journal" }, err);
+    console.error(`[QuickBooks Sync] Failed for journal ${event.aggregateId}:`, err);
   }
 };
 

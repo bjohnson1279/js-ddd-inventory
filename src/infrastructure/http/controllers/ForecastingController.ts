@@ -1,4 +1,3 @@
-import { Logger } from "../../logging/logger";
 import { Request, Response } from "express";
 import { GetDemandPlanningReport } from "../../../application/useCases/GetDemandPlanningReport";
 import { GenerateDemandForecast } from "../../../application/useCases/GenerateDemandForecast";
@@ -35,10 +34,10 @@ export class ForecastingController {
       res.status(200).json(report);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        Logger.error({ context: "ForecastingController" }, error.message);
+        console.error(error.message);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        Logger.error({ context: "ForecastingController", message: "Failed to fetch demand planning report:" }, error);
+        console.error("Failed to fetch demand planning report:", error);
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -80,10 +79,10 @@ export class ForecastingController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        Logger.error({ context: "ForecastingController" }, error.message);
+        console.error(error.message);
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        Logger.error({ context: "ForecastingController", message: "Failed to generate demand forecast:" }, error);
+        console.error("Failed to generate demand forecast:", error);
         res.status(500).json({ error: "Failed to generate demand forecast" });
       }
     }
@@ -112,7 +111,7 @@ export class ForecastingController {
       
       res.status(200).json(results);
     } catch (error: any) {
-      Logger.error({ context: "ForecastingController", message: "Failed to fetch dispatch summary from continuous aggregate:" }, error);
+      console.error("Failed to fetch dispatch summary from continuous aggregate:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   }

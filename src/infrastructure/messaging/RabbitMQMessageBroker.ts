@@ -1,4 +1,3 @@
-import { Logger } from "../logging/logger";
 import amqp from "amqplib";
 import { IMessageBroker } from "../../application/ports/IMessageBroker";
 import { IDomainEvent } from "../../domain/events/IDomainEvent";
@@ -19,7 +18,7 @@ export class RabbitMQMessageBroker implements IMessageBroker {
       this.channel = await this.connection.createChannel();
       console.log(`[RabbitMQMessageBroker] Connected to RabbitMQ at ${this.url}`);
     } catch (err: any) {
-      Logger.error({ context: "RabbitMQMessageBroker", message: "Connection failed" }, err);
+      console.error("[RabbitMQMessageBroker] Connection failed:", err.message || err);
       throw err;
     }
   }

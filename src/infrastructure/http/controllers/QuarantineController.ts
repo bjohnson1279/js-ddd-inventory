@@ -1,4 +1,3 @@
-import { Logger } from "../../logging/logger";
 import { DomainException } from "../../../domain/exceptions/DomainException";
 
 import { Request, Response } from "express";
@@ -33,7 +32,7 @@ export class QuarantineController {
 
       res.status(200).json({ message: "Quarantine item resolved successfully" });
     } catch (error: any) {
-      Logger.error({ context: "QuarantineController" }, error);
+      console.error(error);
       res.status(400).json({ error: "Bad request" });
     }
   }
@@ -58,7 +57,7 @@ export class QuarantineController {
         resolvedAt: item.resolvedAt,
       });
     } catch (error: any) {
-      Logger.error({ context: "QuarantineController" }, error);
+      console.error(error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -82,7 +81,7 @@ export class QuarantineController {
         }))
       );
     } catch (error: any) {
-      Logger.error({ context: "QuarantineController" }, error);
+      console.error(error);
       res.status(500).json({ error: "Internal server error" });
     }
   }

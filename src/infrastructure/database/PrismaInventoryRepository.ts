@@ -239,9 +239,9 @@ export class PrismaInventoryRepository implements IInventoryRepository {
       });
       const existingIds = new Set(existingItems.map(e => e.id));
 
-      // Run bulk writes sequentially to avoid DB concurrency/locking issues
+      // Run bulk writes in parallel via Promise.all
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        for (const item of items) {
+        await Promise.all(items.map(async (item) => {
           const existing = existingIds.has(item.id);
 
           if (!existing) {
@@ -280,7 +280,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
             await this.outboxRepository!.save(event, tx);
           }
           item.clearDomainEvents();
-        }
+        }));
       });
     } else {
       const existingItems = await this.prisma.inventoryModel.findMany({
@@ -288,9 +288,9 @@ export class PrismaInventoryRepository implements IInventoryRepository {
       });
       const existingIds = new Set(existingItems.map(e => e.id));
 
-      // Run bulk writes sequentially to avoid DB concurrency/locking issues
+      // Run bulk writes in parallel via Promise.all
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        for (const item of items) {
+        await Promise.all(items.map(async (item) => {
           const existing = existingIds.has(item.id);
 
           if (!existing) {
@@ -323,7 +323,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
               throw new ConcurrencyException(item.sku.getValue(), item.locationId);
             }
           }
-        }
+        }));
       });
 
       const allEvents = items.flatMap(item => {

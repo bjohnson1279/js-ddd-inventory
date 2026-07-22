@@ -1,4 +1,3 @@
-import { Logger } from "../../logging/logger";
 import { Request, Response } from "express";
 import { prisma } from "../../database/prisma";
 import { ComplianceLedgerService } from "../../../domain/services/ComplianceLedgerService";
@@ -14,7 +13,7 @@ export class ComplianceController {
 
       res.status(200).json(ledger);
     } catch (error: any) {
-      Logger.error({ context: "ComplianceController", message: "[ComplianceController] Error listing ledger:" }, error);
+      console.error("[ComplianceController] Error listing ledger:", error);
       res.status(500).json({ error: "Failed to load compliance ledger." });
     }
   }
@@ -26,7 +25,7 @@ export class ComplianceController {
       
       res.status(200).json(result);
     } catch (error: any) {
-      Logger.error({ context: "ComplianceController", message: "[ComplianceController] Error verifying ledger:" }, error);
+      console.error("[ComplianceController] Error verifying ledger:", error);
       res.status(500).json({ error: "Failed to run cryptographic validation on compliance ledger." });
     }
   }

@@ -1,4 +1,3 @@
-import { Logger } from "../../infrastructure/logging/logger";
 import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreatedEvent";
 import { NetSuiteClient } from "../../infrastructure/netsuite/NetSuiteClient";
 import { prisma } from "../../infrastructure/database/prisma";
@@ -35,6 +34,6 @@ export const syncJournalToNetSuite = async (event: JournalEntryCreatedEvent): Pr
 
     console.log(`[NetSuite Sync] Successfully mapped local journal ${event.aggregateId} -> NetSuite ${nsId}`);
   } catch (err: any) {
-    Logger.error({ context: "SyncJournalToNetSuite", journalId: event.aggregateId, message: "Failed for journal" }, err);
+    console.error(`[NetSuite Sync] Failed for journal ${event.aggregateId}:`, err);
   }
 };

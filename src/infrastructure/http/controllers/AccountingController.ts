@@ -1,4 +1,3 @@
-import { Logger } from "../../logging/logger";
 import { Request, Response } from "express";
 import { IJournalRepository } from "../../../domain/repositories/IJournalRepository";
 import { ICostLayerRepository } from "../../../domain/repositories/ICostLayerRepository";
@@ -47,7 +46,7 @@ export class AccountingController {
         })),
       );
     } catch (error: any) {
-      Logger.error({ context: "AccountingController" }, error);
+      console.error(error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -115,10 +114,10 @@ export class AccountingController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        Logger.error({ context: "AccountingController" }, error.message);
+        console.error(error.message);
         res.status(400).json({ error: "Invalid accounting operation" });
       } else {
-        Logger.error({ context: "AccountingController" }, error);
+        console.error(error);
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -194,10 +193,10 @@ export class AccountingController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("Insufficient"))
       ) {
-        Logger.error({ context: "AccountingController" }, error instanceof DomainException ? error.message : error);
+        console.error(error instanceof DomainException ? error.message : error);
         res.status(400).json({ error: "Insufficient stock" });
       } else {
-        Logger.error({ context: "AccountingController" }, error);
+        console.error(error);
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -284,10 +283,10 @@ export class AccountingController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("Insufficient"))
       ) {
-        Logger.error({ context: "AccountingController" }, error instanceof DomainException ? error.message : error);
+        console.error(error instanceof DomainException ? error.message : error);
         res.status(400).json({ error: "Insufficient stock" });
       } else {
-        Logger.error({ context: "AccountingController" }, error);
+        console.error(error);
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -317,7 +316,7 @@ export class AccountingController {
         fiscalYearStart: config.fiscalYearStart,
       });
     } catch (error: any) {
-      Logger.error({ context: "AccountingController" }, error);
+      console.error(error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -356,10 +355,10 @@ export class AccountingController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        Logger.error({ context: "AccountingController" }, error.message);
+        console.error(error.message);
         res.status(400).json({ error: "Invalid accounting operation" });
       } else {
-        Logger.error({ context: "AccountingController" }, error);
+        console.error(error);
         res.status(500).json({ error: "Internal server error" });
       }
     }

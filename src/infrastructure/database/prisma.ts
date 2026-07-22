@@ -1,4 +1,3 @@
-import { Logger } from "../logging/logger";
 import { PrismaClient } from "@prisma/client";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -6,15 +5,8 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const user = process.env.DB_USER || 'postgres';
-const password = process.env.DB_PASSWORD;
-const auth = password ? `${user}:${password}` : user;
-const host = process.env.DB_HOST || '127.0.0.1';
-const port = process.env.DB_PORT || '5432';
-const dbName = process.env.DB_NAME || 'inventory';
-
 const connectionString = process.env.DATABASE_URL || 
-  `postgresql://${auth}@${host}:${port}/${dbName}?schema=public`;
+  `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'password'}@${process.env.DB_HOST || '127.0.0.1'}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'inventory'}?schema=public`;
 
 import { tenantLocalStorage } from "./tenantContext";
 
@@ -32,7 +24,7 @@ export const prisma = basePrisma.$extends({
           try {
             await basePrisma.$executeRaw`SELECT set_config('app.current_tenant_id', ${tenantId}, false)`;
           } catch (err: any) {
-            Logger.error({ context: "PrismaExtension", message: "Failed to set app.current_tenant_id" }, err);
+            console.error("[PrismaExtension] Failed to set app.current_tenant_id:", err.message);
           }
         }
         return query(args);
