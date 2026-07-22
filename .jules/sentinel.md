@@ -149,6 +149,10 @@
 **Vulnerability:** The application had an `isSafeUrl` function defined to prevent Server-Side Request Forgery (SSRF) when firing webhooks, but it wasn't being invoked before the actual `fetch()` call. This allowed potential SSRF against internal network IPs or cloud metadata endpoints.
 **Learning:** Having security functions defined is not enough; they must be actively invoked at the Time-of-Use. This omission could lead to severe SSRF vulnerabilities where the application can be used as a proxy.
 **Prevention:** Always ensure that network calls to user-controlled URLs are preceded by a strict validation mechanism that resolves hostnames (e.g. `dns.lookup`) and blocks local/private IP ranges.
+## 2024-05-18 - Fix Insecure Test Mode Bypass in Auth Middleware
+**Vulnerability:** The authentication middleware contained a bypass condition `if (process.env.NODE_ENV === "test") { req.user = ... }`.
+**Learning:** Hardcoding test-environment bypasses directly into critical security paths (like auth middleware) is risky. If the environment variable leaks or is misconfigured in production, it completely disables authentication.
+**Prevention:** Rely on properly signed mock JWTs generated within the test suite itself rather than baking bypass logic into the core application code. Ensure E2E tests exercise the actual authorization flow.
 ## 2023-10-27 - Information Disclosure via API response
 **Vulnerability:** A temporary password was being returned in plain text via the API response during user invitation.
 **Learning:** Security-sensitive generated values (like passwords or reset tokens) must never be returned directly in API responses, as this exposes them to network logging, browser history, or shoulder surfing.

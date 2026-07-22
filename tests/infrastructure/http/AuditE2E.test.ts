@@ -6,10 +6,10 @@ process.env.SHOPIFY_ACCESS_TOKEN = "mock-token";
 process.env.QUICKBOOKS_ACCESS_TOKEN = "mock-qbo-token";
 
 import request from "supertest";
+import jwt from "jsonwebtoken";
 import { app, setupApp } from "../../../src/index";
 import { prisma } from "../../../src/infrastructure/database/prisma";
 import { InMemoryInventoryRepository } from "../../../src/infrastructure/database/InMemoryInventoryRepository";
-import jwt from "jsonwebtoken";
 
 jest.mock("../../../src/infrastructure/database/prisma", () => {
   return {
@@ -48,6 +48,12 @@ jest.mock("../../../src/infrastructure/database/prisma", () => {
   };
 });
 
+
+const getAdminToken = () => {
+  const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
+};
+
 describe("Audit REST API Endpoints", () => {
   let token: string;
 
@@ -80,6 +86,7 @@ describe("Audit REST API Endpoints", () => {
 
     const res = await request(app)
       .get("/api/audit/discrepancies")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .set("Authorization", `Bearer ${token}`)
       .expect(200);
 
@@ -113,6 +120,7 @@ describe("Audit REST API Endpoints", () => {
 
     const res = await request(app)
       .post("/api/audit/run")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .set("Authorization", `Bearer ${token}`)
       .expect(200);
 
@@ -134,6 +142,7 @@ describe("Audit REST API Endpoints", () => {
 
     const res = await request(app)
       .post("/api/audit/discrepancies/disc-1/resolve")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .set("Authorization", `Bearer ${token}`)
       .send({ notes: "Manually synchronized" })
       .expect(200);

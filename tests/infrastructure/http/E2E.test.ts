@@ -3,6 +3,7 @@ process.env.JWT_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 
 import request from "supertest";
+import jwt from "jsonwebtoken";
 import { app, setupApp } from "../../../src/index";
 import { InMemoryInventoryRepository } from "../../../src/infrastructure/database/InMemoryInventoryRepository";
 import { SKU } from "../../../src/domain/valueObjects/SKU";
@@ -10,8 +11,13 @@ import { Quantity } from "../../../src/domain/valueObjects/Quantity";
 import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
 import { prisma } from "../../../src/infrastructure/database/prisma";
 import * as crypto from "node:crypto";
-import jwt from "jsonwebtoken";
 import { InventoryCostLayer } from "../../../src/domain/accounting/entities/InventoryCostLayer";
+
+
+const getAdminToken = () => {
+  const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
+};
 
 describe("E2E Integration Test Suite", () => {
   let repository: InMemoryInventoryRepository;
@@ -35,6 +41,7 @@ describe("E2E Integration Test Suite", () => {
     it("should receive stock via POST /api/inventory/receive", async () => {
       const response = await request(app)
         .post("/api/inventory/receive")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .send({ sku: "IPHONE-15-PRO-BLK", amount: 50 });
 
       expect(response.status).toBe(200);
@@ -50,6 +57,7 @@ describe("E2E Integration Test Suite", () => {
 
       const response = await request(app)
         .post("/api/inventory/dispatch")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .send({ sku: "IPHONE-15-PRO-BLK", amount: 3 });
 
       expect(response.status).toBe(200);
@@ -63,7 +71,7 @@ describe("E2E Integration Test Suite", () => {
       const item = InventoryItem.create("1", SKU.create("IPHONE-15-PRO-BLK"), Quantity.create(45));
       await repository.save(item);
 
-      const response = await request(app).get("/api/inventory/IPHONE-15-PRO-BLK");
+      const response = await request(app).get("/api/inventory/IPHONE-15-PRO-BLK").set("Authorization", `Bearer ${getAdminToken()}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({
@@ -81,6 +89,7 @@ describe("E2E Integration Test Suite", () => {
 
       const response = await request(app)
         .post("/api/inventory/count")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .send({
           counts: [
             { sku: "IPHONE-15-PRO-BLK", count: 42 },
@@ -104,6 +113,7 @@ describe("E2E Integration Test Suite", () => {
     it("should submit stock onboarding via POST /api/onboarding/submit", async () => {
       const response = await request(app)
         .post("/api/onboarding/submit")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .send({
           locationId: "Main-Store",
           asOfDate: "2026-05-30",
@@ -215,6 +225,7 @@ describe("E2E Integration Test Suite", () => {
       // 1. Assign barcode
       const assignRes = await request(app)
         .post("/api/barcodes/assign")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .send({
           variantId: "VAR-B1",
           symbology: "upc_a",
@@ -229,6 +240,7 @@ describe("E2E Integration Test Suite", () => {
       // 2. Scan barcode
       const scanRes = await request(app)
         .post("/api/barcodes/scan")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .send({
           rawScan: "012345678905",
           context: "pos"
@@ -241,6 +253,7 @@ describe("E2E Integration Test Suite", () => {
     it("should generate Code 128 barcode", async () => {
       const genRes = await request(app)
         .post("/api/barcodes/generate")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .send({ variantId: "VAR-B2" });
 
       expect(genRes.status).toBe(200);
@@ -254,6 +267,7 @@ describe("E2E Integration Test Suite", () => {
       // 1. Register serial number
       const regRes = await request(app)
         .post("/api/serials/register")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .send({
           serialNumber: serial,
           variantId: "VAR-S1",
@@ -268,6 +282,7 @@ describe("E2E Integration Test Suite", () => {
       // 2. Receive serial item (increments general stock)
       const recRes = await request(app)
         .post("/api/serials/receive")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .send({
           serialNumber: serial,
           tenantId: "DEFAULT",
@@ -282,6 +297,7 @@ describe("E2E Integration Test Suite", () => {
       // 3. Sell serial item (decrements general stock)
       const sellRes = await request(app)
         .post("/api/serials/sell")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .send({
           serialNumber: serial,
           tenantId: "DEFAULT",
@@ -292,7 +308,7 @@ describe("E2E Integration Test Suite", () => {
       expect(sellRes.status).toBe(200);
 
       // 4. Retrieve transition timeline history
-      const histRes = await request(app).get(`/api/serials/${serial}/history`);
+      const histRes = await request(app).get(`/api/serials/${serial}/history`).set("Authorization", `Bearer ${getAdminToken()}`);
       expect(histRes.status).toBe(200);
       expect(histRes.body.serialNumber).toBe(serial);
       expect(histRes.body.history.length).toBe(2);
@@ -310,6 +326,7 @@ describe("E2E Integration Test Suite", () => {
       // 1. Create kit
       const kitRes = await request(app)
         .post("/api/kits/create")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .send({
           sku: "KIT-A",
           name: "Bundle Package A",
@@ -324,6 +341,7 @@ describe("E2E Integration Test Suite", () => {
       // 2. Dispatch kit sale
       const saleRes = await request(app)
         .post("/api/kits/dispatch")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .send({
           kitSku: "KIT-A",
           quantity: 2,
@@ -368,6 +386,7 @@ describe("E2E Integration Test Suite", () => {
       // 2. Create Kit formula
       const createRes = await request(app)
         .post("/api/kits/create")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .send({
           sku: kitSku,
           name: "Test Kit Bundle",
@@ -470,6 +489,7 @@ describe("E2E Integration Test Suite", () => {
       // 1. Log stock receipt
       const recRes = await request(app)
         .post("/api/accounting/stock-received")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .send({
           variantId: "VAR-AC1",
           totalCostCents: 10000,
@@ -482,17 +502,17 @@ describe("E2E Integration Test Suite", () => {
       expect(recRes.body.journalEntryId).toBeDefined();
 
       // 2. Read ledger accounts
-      const ledRes = await request(app).get("/api/accounting/ledger");
+      const ledRes = await request(app).get("/api/accounting/ledger").set("Authorization", `Bearer ${getAdminToken()}`);
       expect(ledRes.status).toBe(200);
       expect(ledRes.body.length).toBeGreaterThan(0);
       expect(ledRes.body.some((e: any) => e.description.includes("PO-777"))).toBe(true);
 
       // 3. Verify tenant filtering on ledger
-      const filteredLedRes = await request(app).get("/api/accounting/ledger?tenantId=TEN-A");
+      const filteredLedRes = await request(app).get("/api/accounting/ledger?tenantId=TEN-A").set("Authorization", `Bearer ${getAdminToken()}`);
       expect(filteredLedRes.status).toBe(200);
       expect(filteredLedRes.body.some((e: any) => e.description.includes("PO-777"))).toBe(true);
 
-      const otherTenantLedRes = await request(app).get("/api/accounting/ledger?tenantId=OTHER-TENANT");
+      const otherTenantLedRes = await request(app).get("/api/accounting/ledger?tenantId=OTHER-TENANT").set("Authorization", `Bearer ${getAdminToken()}`);
       expect(otherTenantLedRes.status).toBe(200);
       expect(otherTenantLedRes.body.some((e: any) => e.description.includes("PO-777"))).toBe(false);
     });
@@ -500,6 +520,7 @@ describe("E2E Integration Test Suite", () => {
     it("should get and set tenant configurations dynamically", async () => {
       const saveRes = await request(app)
         .post("/api/accounting/tenant-config")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .send({
           tenantId: "TENANT-XYZ",
           accountingMethod: "cash",
@@ -512,7 +533,7 @@ describe("E2E Integration Test Suite", () => {
       expect(saveRes.body.tenantId).toBe("TENANT-XYZ");
       expect(saveRes.body.accountingMethod).toBe("cash");
 
-      const getRes = await request(app).get("/api/accounting/tenant-config/TENANT-XYZ");
+      const getRes = await request(app).get("/api/accounting/tenant-config/TENANT-XYZ").set("Authorization", `Bearer ${getAdminToken()}`);
       expect(getRes.status).toBe(200);
       expect(getRes.body.accountingMethod).toBe("cash");
       expect(getRes.body.costingMethod).toBe("weighted_average_cost");

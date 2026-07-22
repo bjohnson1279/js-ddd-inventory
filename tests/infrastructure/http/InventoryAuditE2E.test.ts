@@ -3,6 +3,7 @@ process.env.JWT_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 
 import request from "supertest";
+import jwt from "jsonwebtoken";
 import { app, setupApp } from "../../../src/index";
 import { InMemoryInventoryRepository } from "../../../src/infrastructure/database/InMemoryInventoryRepository";
 import { InMemoryCostLayerRepository } from "../../../src/infrastructure/database/InMemoryCostLayerRepository";
@@ -17,6 +18,12 @@ import { Quantity } from "../../../src/domain/valueObjects/Quantity";
 import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
 import { InventoryCostLayer } from "../../../src/domain/accounting/entities/InventoryCostLayer";
 import { AuditStatus } from "../../../src/domain/procurement/enums/AuditStatus";
+
+
+const getAdminToken = () => {
+  const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
+};
 
 describe("Inventory Audit HTTP API Endpoints", () => {
   let inventoryRepo: InMemoryInventoryRepository;
@@ -68,6 +75,7 @@ describe("Inventory Audit HTTP API Endpoints", () => {
     // 2. Create physical audit
     const createRes = await request(app)
       .post("/api/audits")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
         auditNumber: "AUD-E2E-1",
         tenantId,
@@ -85,7 +93,7 @@ describe("Inventory Audit HTTP API Endpoints", () => {
 
     // 3. Start audit
     const startRes = await request(app)
-      .post(`/api/audits/${auditId}/start`);
+      .post(`/api/audits/${auditId}/start`).set("Authorization", `Bearer ${getAdminToken()}`);
     expect(startRes.status).toBe(200);
 
     let updatedAudit = await auditRepo.findById(auditId);
@@ -93,7 +101,7 @@ describe("Inventory Audit HTTP API Endpoints", () => {
 
     // 4. Record count
     const countRes = await request(app)
-      .post(`/api/audits/${auditId}/count`)
+      .post(`/api/audits/${auditId}/count`).set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
         variantId: "SKU-AUDIT",
         countedQuantity: 8, // discrepancy -2
@@ -102,7 +110,7 @@ describe("Inventory Audit HTTP API Endpoints", () => {
 
     // 5. Complete audit
     const completeRes = await request(app)
-      .post(`/api/audits/${auditId}/complete`);
+      .post(`/api/audits/${auditId}/complete`).set("Authorization", `Bearer ${getAdminToken()}`);
     expect(completeRes.status).toBe(200);
 
     updatedAudit = await auditRepo.findById(auditId);
@@ -110,7 +118,7 @@ describe("Inventory Audit HTTP API Endpoints", () => {
 
     // 6. Reconcile audit
     const reconcileRes = await request(app)
-      .post(`/api/audits/${auditId}/reconcile`);
+      .post(`/api/audits/${auditId}/reconcile`).set("Authorization", `Bearer ${getAdminToken()}`);
     expect(reconcileRes.status).toBe(200);
 
     // Verify final audit status

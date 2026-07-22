@@ -3,6 +3,7 @@ process.env.JWT_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 
 import request from "supertest";
+import jwt from "jsonwebtoken";
 import { app, setupApp } from "../../../src/index";
 import { InMemoryInventoryRepository } from "../../../src/infrastructure/database/InMemoryInventoryRepository";
 import { InMemoryTenantConfigRepository } from "../../../src/infrastructure/database/InMemoryTenantConfigRepository";
@@ -18,6 +19,12 @@ import { TenantAccountingConfig } from "../../../src/domain/accounting/valueObje
 import { AccountingMethod } from "../../../src/domain/accounting/enums/AccountingMethod";
 import { CostingMethod } from "../../../src/domain/accounting/enums/CostingMethod";
 import { ShipmentStatus } from "../../../src/domain/shipping/enums/ShipmentStatus";
+
+
+const getAdminToken = () => {
+  const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
+};
 
 describe("Shipping Carrier HTTP API Endpoints", () => {
   let inventoryRepo: InMemoryInventoryRepository;
@@ -71,7 +78,7 @@ describe("Shipping Carrier HTTP API Endpoints", () => {
 
     // 2. Fetch rates
     const ratesRes = await request(app)
-      .get(`/api/shipping/rates?sku=${sku}&quantity=3&address=1600+Amphitheatre+Pkwy,+Mountain+View,+CA`);
+      .get(`/api/shipping/rates?sku=${sku}&quantity=3&address=1600+Amphitheatre+Pkwy,+Mountain+View,+CA`).set("Authorization", `Bearer ${getAdminToken()}`);
 
     expect(ratesRes.status).toBe(200);
     expect(ratesRes.body.length).toBe(4); // UPS, FedEx, DHL, USPS
@@ -81,6 +88,7 @@ describe("Shipping Carrier HTTP API Endpoints", () => {
     // 3. Purchase shipping label
     const labelRes = await request(app)
       .post("/api/shipping/labels")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
         sku,
         quantity: 3,
@@ -128,7 +136,7 @@ describe("Shipping Carrier HTTP API Endpoints", () => {
 
     // 8. Track/update shipment status to In Transit
     const trackRes = await request(app)
-      .post(`/api/shipping/shipments/${shipmentId}/track`)
+      .post(`/api/shipping/shipments/${shipmentId}/track`).set("Authorization", `Bearer ${getAdminToken()}`)
       .send({ status: ShipmentStatus.IN_TRANSIT });
 
     expect(trackRes.status).toBe(200);
@@ -155,6 +163,7 @@ describe("Shipping Carrier HTTP API Endpoints", () => {
 
     const res = await request(app)
       .post("/api/shipping/route")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
         sku,
         quantity: 5,

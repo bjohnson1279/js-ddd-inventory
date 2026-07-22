@@ -3,6 +3,7 @@ process.env.JWT_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 
 import request from "supertest";
+import jwt from "jsonwebtoken";
 import { app, setupApp } from "../../../src/index";
 import { InMemoryInventoryRepository } from "../../../src/infrastructure/database/InMemoryInventoryRepository";
 import { InMemoryPurchaseOrderRepository } from "../../../src/infrastructure/database/InMemoryPurchaseOrderRepository";
@@ -11,6 +12,12 @@ import { ReorderPolicyService } from "../../../src/domain/procurement/services/R
 import { SKU } from "../../../src/domain/valueObjects/SKU";
 import { Quantity } from "../../../src/domain/valueObjects/Quantity";
 import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
+
+
+const getAdminToken = () => {
+  const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
+};
 
 describe("Reorder Policy HTTP API Endpoints", () => {
   let inventoryRepo: InMemoryInventoryRepository;
@@ -43,6 +50,7 @@ describe("Reorder Policy HTTP API Endpoints", () => {
     // 1. Create a Reorder Policy via HTTP POST
     const createRes = await request(app)
       .post("/api/reorder-policies")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
         sku: "IPHONE-15",
         locationId: "warehouse-south",
@@ -57,7 +65,8 @@ describe("Reorder Policy HTTP API Endpoints", () => {
 
     // 2. Fetch the created policy via HTTP GET
     const getRes = await request(app)
-      .get("/api/reorder-policies/IPHONE-15/warehouse-south");
+      .get("/api/reorder-policies/IPHONE-15/warehouse-south")
+        .set("Authorization", `Bearer ${getAdminToken()}`);
 
     expect(getRes.status).toBe(200);
     expect(getRes.body.reorderQuantity).toBe(25);
@@ -69,6 +78,7 @@ describe("Reorder Policy HTTP API Endpoints", () => {
     // 4. Dispatch 6 items, dropping stock level to 4 (below reorder point of 5)
     const dispatchRes = await request(app)
       .post("/api/inventory/dispatch")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
         sku: "IPHONE-15",
         amount: 6,

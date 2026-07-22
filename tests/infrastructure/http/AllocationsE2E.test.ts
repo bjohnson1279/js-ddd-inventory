@@ -12,6 +12,12 @@ import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
 
+
+const getAdminToken = () => {
+  const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
+};
+
 describe("Allocations & In-Transit Stock E2E Tests", () => {
   let repository: InMemoryInventoryRepository;
   let adminToken: string;
@@ -29,6 +35,7 @@ describe("Allocations & In-Transit Stock E2E Tests", () => {
     it("should allow admin / warehouse_operator to allocate stock", async () => {
       const response = await request(app)
         .post("/api/inventory/allocate")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ sku: "TEST-SKU", amount: 0 });
 
@@ -38,6 +45,7 @@ describe("Allocations & In-Transit Stock E2E Tests", () => {
     it("should deny viewer from allocating stock", async () => {
       const response = await request(app)
         .post("/api/inventory/allocate")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${viewerToken}`)
         .send({ sku: "TEST-SKU", amount: 5 });
 
@@ -54,6 +62,7 @@ describe("Allocations & In-Transit Stock E2E Tests", () => {
       // 2. Allocate 8 units
       const allocRes = await request(app)
         .post("/api/inventory/allocate")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ sku: "TEST-SKU", amount: 8 });
       expect(allocRes.status).toBe(200);
@@ -61,6 +70,7 @@ describe("Allocations & In-Transit Stock E2E Tests", () => {
       // 3. Verify counts via getLevel
       const getRes1 = await request(app)
         .get("/api/inventory/TEST-SKU")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`);
       expect(getRes1.status).toBe(200);
       expect(getRes1.body.quantity).toBe(20);
@@ -70,12 +80,14 @@ describe("Allocations & In-Transit Stock E2E Tests", () => {
       // 4. Release 3 units of the allocation
       const releaseRes = await request(app)
         .post("/api/inventory/release-allocation")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ sku: "TEST-SKU", amount: 3 });
       expect(releaseRes.status).toBe(200);
 
       const getRes2 = await request(app)
         .get("/api/inventory/TEST-SKU")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`);
       expect(getRes2.body.allocated).toBe(5);
       expect(getRes2.body.available).toBe(15);
@@ -83,12 +95,14 @@ describe("Allocations & In-Transit Stock E2E Tests", () => {
       // 5. Fulfill 5 units of allocation (decreases both quantity and allocation)
       const fulfillRes = await request(app)
         .post("/api/inventory/fulfill-allocation")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ sku: "TEST-SKU", amount: 5 });
       expect(fulfillRes.status).toBe(200);
 
       const getRes3 = await request(app)
         .get("/api/inventory/TEST-SKU")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`);
       expect(getRes3.body.quantity).toBe(15);
       expect(getRes3.body.allocated).toBe(0);
@@ -101,6 +115,7 @@ describe("Allocations & In-Transit Stock E2E Tests", () => {
 
       const response = await request(app)
         .post("/api/inventory/allocate")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ sku: "TEST-SKU", amount: 11 });
 
@@ -117,12 +132,14 @@ describe("Allocations & In-Transit Stock E2E Tests", () => {
       // 1. Create in-transit stock of 10
       const createRes = await request(app)
         .post("/api/inventory/create-in-transit")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ sku: "TEST-SKU", amount: 10 });
       expect(createRes.status).toBe(200);
 
       const getRes1 = await request(app)
         .get("/api/inventory/TEST-SKU")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`);
       expect(getRes1.body.inTransit).toBe(10);
       expect(getRes1.body.available).toBe(20);
@@ -130,12 +147,14 @@ describe("Allocations & In-Transit Stock E2E Tests", () => {
       // 2. Receive 6 units from in-transit (increases quantity, decreases inTransit)
       const receiveRes = await request(app)
         .post("/api/inventory/receive-in-transit")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ sku: "TEST-SKU", amount: 6 });
       expect(receiveRes.status).toBe(200);
 
       const getRes2 = await request(app)
         .get("/api/inventory/TEST-SKU")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`);
       expect(getRes2.body.quantity).toBe(16);
       expect(getRes2.body.inTransit).toBe(4);

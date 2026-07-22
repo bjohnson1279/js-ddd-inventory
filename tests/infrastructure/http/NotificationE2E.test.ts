@@ -3,15 +3,21 @@ process.env.JWT_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 
 import request from "supertest";
+import jwt from "jsonwebtoken";
 import { app, setupApp } from "../../../src/index";
 import { InMemoryInventoryRepository } from "../../../src/infrastructure/database/InMemoryInventoryRepository";
 import { prisma } from "../../../src/infrastructure/database/prisma";
-import jwt from "jsonwebtoken";
 import http from "http";
 import WebSocket from "ws";
 import { WebSocketManager } from "../../../src/infrastructure/websocket/WebSocketManager";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
+
+
+const getAdminToken = () => {
+  const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
+};
 
 describe("Notification & WebSocket E2E Suite", () => {
   beforeEach(async () => {
@@ -26,6 +32,7 @@ describe("Notification & WebSocket E2E Suite", () => {
       // 1. Create a notification
       const createRes = await request(app)
         .post("/api/notifications")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .send({
           title: "Low Stock Alert",
           message: "SKU-ABC is running low.",
@@ -38,32 +45,32 @@ describe("Notification & WebSocket E2E Suite", () => {
       const notificationId = createRes.body.id;
 
       // 2. List notifications
-      const listRes = await request(app).get("/api/notifications");
+      const listRes = await request(app).get("/api/notifications").set("Authorization", `Bearer ${getAdminToken()}`);
       expect(listRes.status).toBe(200);
       expect(listRes.body.length).toBe(1);
       expect(listRes.body[0].id).toBe(notificationId);
 
       // 3. Mark notification as read
-      const readRes = await request(app).post(`/api/notifications/${notificationId}/read`);
+      const readRes = await request(app).post(`/api/notifications/${notificationId}/read`).set("Authorization", `Bearer ${getAdminToken()}`);
       expect(readRes.status).toBe(200);
       expect(readRes.body.isRead).toBe(true);
 
       // 4. Verify list returns read status
-      const listRes2 = await request(app).get("/api/notifications");
+      const listRes2 = await request(app).get("/api/notifications").set("Authorization", `Bearer ${getAdminToken()}`);
       expect(listRes2.body[0].isRead).toBe(true);
     });
 
     it("should mark all notifications as read", async () => {
-      await request(app).post("/api/notifications").send({ title: "N1", message: "M1" });
-      await request(app).post("/api/notifications").send({ title: "N2", message: "M2" });
+      await request(app).post("/api/notifications").set("Authorization", `Bearer ${getAdminToken()}`).send({ title: "N1", message: "M1" });
+      await request(app).post("/api/notifications").set("Authorization", `Bearer ${getAdminToken()}`).send({ title: "N2", message: "M2" });
 
-      const listRes = await request(app).get("/api/notifications");
+      const listRes = await request(app).get("/api/notifications").set("Authorization", `Bearer ${getAdminToken()}`);
       expect(listRes.body.filter((n: any) => !n.isRead).length).toBe(2);
 
-      const readAllRes = await request(app).post("/api/notifications/read-all");
+      const readAllRes = await request(app).post("/api/notifications/read-all").set("Authorization", `Bearer ${getAdminToken()}`);
       expect(readAllRes.status).toBe(200);
 
-      const listRes2 = await request(app).get("/api/notifications");
+      const listRes2 = await request(app).get("/api/notifications").set("Authorization", `Bearer ${getAdminToken()}`);
       expect(listRes2.body.filter((n: any) => !n.isRead).length).toBe(0);
     });
   });
@@ -72,6 +79,7 @@ describe("Notification & WebSocket E2E Suite", () => {
     it("should connect to SSE subscription", async () => {
       const res = await request(app)
         .get("/api/notifications/subscribe")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Accept", "text/event-stream")
         .buffer(true)
         .parse((res, cb) => {
@@ -136,6 +144,7 @@ describe("Notification & WebSocket E2E Suite", () => {
         // Assign barcode
         await request(app)
           .post("/api/barcodes/assign")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
           .send({
             variantId: "VAR-TEST",
             symbology: "upc_a",
@@ -147,6 +156,7 @@ describe("Notification & WebSocket E2E Suite", () => {
         // Scan barcode for tenant-1 (default in tests)
         await request(app)
           .post("/api/barcodes/scan")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
           .send({
             rawScan: "012345678905",
             context: "pos"
