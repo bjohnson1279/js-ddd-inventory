@@ -12,6 +12,7 @@ import { prisma } from "./infrastructure/database/prisma";
 import { enableRowLevelSecurity } from "./infrastructure/database/rls";
 import { PostgresInventoryRepository } from "./infrastructure/database/PostgresInventoryRepository";
 import { IInventoryRepository } from "./domain/repositories/IInventoryRepository";
+import { IEmailService } from "./application/ports/IEmailService";
 import inventoryRoutes from "./infrastructure/http/routes/inventory.routes";
 import shopifyRoutes from "./infrastructure/http/routes/shopify.routes";
 import onboardingRoutes from "./infrastructure/http/routes/onboarding.routes";
@@ -43,6 +44,7 @@ import { OutboxProcessor } from "./infrastructure/outbox/OutboxProcessor";
 import { WebhookDeliveryWorker } from "./infrastructure/workers/WebhookDeliveryWorker";
 import { IMessageBroker } from "./application/ports/IMessageBroker";
 import { InMemoryMessageBroker } from "./infrastructure/messaging/InMemoryMessageBroker";
+import { StubEmailService } from "./infrastructure/messaging/StubEmailService";
 import { RabbitMQMessageBroker } from "./infrastructure/messaging/RabbitMQMessageBroker";
 import { KafkaMessageBroker } from "./infrastructure/messaging/KafkaMessageBroker";
 
@@ -159,7 +161,8 @@ export const setupApp = (
   shipmentRepository?: IShipmentRepository,
   carrierService?: ICarrierService,
   warehouseLocationRepository?: IWarehouseLocationRepository,
-  productRepository?: IProductRepository
+  productRepository?: IProductRepository,
+  emailService?: IEmailService
 ) => {
   app.set("inventoryRepository", inventoryRepository);
   app.set("barcodeRepository", barcodeRepository || new InMemoryBarcodeRepository());
@@ -182,6 +185,7 @@ export const setupApp = (
   app.set("carrierService", carrierService || new MockCarrierService());
   app.set("warehouseLocationRepository", warehouseLocationRepository || new InMemoryWarehouseLocationRepository());
   app.set("productRepository", productRepository || new InMemoryProductRepository());
+  app.set("emailService", emailService || new StubEmailService());
   app.set("wmsCapacityService", new WMSCapacityService(
     app.get("inventoryRepository"),
     app.get("productRepository"),
@@ -232,7 +236,7 @@ const start = async () => {
     `;
     if ((isHypertable as any[]).length === 0) {
       await prisma.$executeRaw`SELECT create_hypertable('dispatch_records', 'dispatched_at', if_not_exists => TRUE);`;
-      console.log("dispatch_records table converted to TimescaleDB hypertable.");
+      Logger.info({ context: "index", message: "dispatch_records table converted to TimescaleDB hypertable." });
     }
 
     const isView = await prisma.$queryRaw`
@@ -261,19 +265,19 @@ const start = async () => {
             if_not_exists => TRUE);
         `;
       } catch (policyErr: any) {
-        console.log("TimescaleDB aggregate policy setup warning:", policyErr.message);
+        Logger.info({ context: "index", message: `TimescaleDB aggregate policy setup warning: ${policyErr.message}` });
       }
-      console.log("daily_dispatch_summary continuous aggregate created.");
+      Logger.info({ context: "index", message: "daily_dispatch_summary continuous aggregate created." });
     }
 
     // Set up PostgreSQL Row-Level Security (RLS) policies
     await enableRowLevelSecurity(prisma);
   } catch (e) {
-    console.log("Database/TimescaleDB setup skipped/warning:", (e as Error).message);
+    Logger.info({ context: "index", message: `Database/TimescaleDB setup skipped/warning: ${(e as Error).message}` });
   }
 
   if (process.env.DB_HOST) {
-    console.log("Initializing PostgreSQL Repository...");
+    Logger.info({ context: "index", message: "Initializing PostgreSQL Repository..." });
     const pgRepo = new PostgresInventoryRepository({
       host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT || "5432"),
@@ -284,7 +288,7 @@ const start = async () => {
     await pgRepo.initialize();
     repository = pgRepo;
   } else {
-    console.log("Initializing Prisma Repository...");
+    Logger.info({ context: "index", message: "Initializing Prisma Repository..." });
     repository = new PrismaInventoryRepository(new PrismaOutboxRepository());
   }
 
@@ -307,6 +311,7 @@ const start = async () => {
   const carrierService = new MockCarrierService();
   const warehouseLocationRepo = new PrismaWarehouseLocationRepository();
   const productRepo = new PrismaProductRepository();
+  const emailService = new StubEmailService();
 
   const kafkaUrl = process.env.KAFKA_URL;
   const rabbitMqUrl = process.env.RABBITMQ_URL;
@@ -337,7 +342,8 @@ const start = async () => {
     shipmentRepo,
     carrierService,
     warehouseLocationRepo,
-    productRepo
+    productRepo,
+    emailService
   );
 
   if (process.env.DISABLE_WORKERS !== "true") {
@@ -347,7 +353,7 @@ const start = async () => {
   }
 
   const server = app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    Logger.info({ context: "index", message: `Server is running on port ${port}` });
   });
   WebSocketManager.init(server);
 };

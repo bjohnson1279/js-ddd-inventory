@@ -2,6 +2,7 @@ import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreate
 import { NetSuiteClient } from "../../infrastructure/netsuite/NetSuiteClient";
 import { prisma } from "../../infrastructure/database/prisma";
 import crypto from "crypto";
+import { Logger } from "../../infrastructure/logging/logger";
 
 export const syncJournalToNetSuite = async (event: JournalEntryCreatedEvent): Promise<void> => {
   const accountId = process.env.NETSUITE_ACCOUNT_ID || "mock";
@@ -13,7 +14,7 @@ export const syncJournalToNetSuite = async (event: JournalEntryCreatedEvent): Pr
     });
 
     if (existing) {
-      console.log(`[NetSuite Sync] Local journal ${event.aggregateId} already synced to NetSuite.`);
+      Logger.info({ context: "SyncJournalToNetSuite", message: `[NetSuite Sync] Local journal ${event.aggregateId} already synced to NetSuite.` });
       return;
     }
 
@@ -32,8 +33,8 @@ export const syncJournalToNetSuite = async (event: JournalEntryCreatedEvent): Pr
       }
     });
 
-    console.log(`[NetSuite Sync] Successfully mapped local journal ${event.aggregateId} -> NetSuite ${nsId}`);
+    Logger.info({ context: "SyncJournalToNetSuite", message: `[NetSuite Sync] Successfully mapped local journal ${event.aggregateId} -> NetSuite ${nsId}` });
   } catch (err: any) {
-    console.error(`[NetSuite Sync] Failed for journal ${event.aggregateId}:`, err);
+    Logger.error({ context: "SyncJournalToNetSuite", message: `[NetSuite Sync] Failed for journal ${event.aggregateId}:`, error: err });
   }
 };

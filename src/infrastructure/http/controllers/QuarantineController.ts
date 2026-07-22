@@ -7,6 +7,7 @@ import { IInventoryRepository } from "../../../domain/repositories/IInventoryRep
 import { ICostLayerRepository } from "../../../domain/repositories/ICostLayerRepository";
 import { ITenantConfigRepository } from "../../../domain/repositories/ITenantConfigRepository";
 import { IJournalRepository } from "../../../domain/repositories/IJournalRepository";
+import { Logger } from "../../../infrastructure/logging/logger";
 
 export class QuarantineController {
   static async resolve(req: Request, res: Response) {
@@ -32,7 +33,7 @@ export class QuarantineController {
 
       res.status(200).json({ message: "Quarantine item resolved successfully" });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "QuarantineController", message: "An error occurred", error: error });
       res.status(400).json({ error: "Bad request" });
     }
   }
@@ -57,7 +58,7 @@ export class QuarantineController {
         resolvedAt: item.resolvedAt,
       });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "QuarantineController", message: "An error occurred", error: error });
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -81,7 +82,7 @@ export class QuarantineController {
         }))
       );
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "QuarantineController", message: "An error occurred", error: error });
       res.status(500).json({ error: "Internal server error" });
     }
   }

@@ -11,6 +11,7 @@ import { IInventoryRepository } from "../../../domain/repositories/IInventoryRep
 import { ICostLayerRepository } from "../../../domain/repositories/ICostLayerRepository";
 import { ITenantConfigRepository } from "../../../domain/repositories/ITenantConfigRepository";
 import { IJournalRepository } from "../../../domain/repositories/IJournalRepository";
+import { Logger } from "../../../infrastructure/logging/logger";
 
 export class InventoryAuditController {
   static async create(req: Request, res: Response) {
@@ -38,7 +39,7 @@ export class InventoryAuditController {
         }))
       });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "InventoryAuditController", message: "An error occurred", error: error });
       res.status(400).json({ error: "Bad request" });
     }
   }
@@ -50,8 +51,8 @@ export class InventoryAuditController {
       await useCase.execute(req.params.id);
       res.status(200).json({ message: "Inventory audit started successfully" });
     } catch (error: any) {
-      console.error(error);
-      console.error(error instanceof DomainException ? error.message : error);
+      Logger.error({ context: "InventoryAuditController", message: "An error occurred", error: error });
+      Logger.error({ context: "InventoryAuditController", message: error instanceof DomainException ? error.message : error });
       res.status(400).json({ error: "Bad request" });
     }
   }
@@ -67,8 +68,8 @@ export class InventoryAuditController {
       });
       res.status(200).json({ message: "Count recorded successfully" });
     } catch (error: any) {
-      console.error(error);
-      console.error(error instanceof DomainException ? error.message : error);
+      Logger.error({ context: "InventoryAuditController", message: "An error occurred", error: error });
+      Logger.error({ context: "InventoryAuditController", message: error instanceof DomainException ? error.message : error });
       res.status(400).json({ error: "Bad request" });
     }
   }
@@ -80,8 +81,8 @@ export class InventoryAuditController {
       await useCase.execute(req.params.id);
       res.status(200).json({ message: "Inventory audit completed successfully" });
     } catch (error: any) {
-      console.error(error);
-      console.error(error instanceof DomainException ? error.message : error);
+      Logger.error({ context: "InventoryAuditController", message: "An error occurred", error: error });
+      Logger.error({ context: "InventoryAuditController", message: error instanceof DomainException ? error.message : error });
       res.status(400).json({ error: "Bad request" });
     }
   }
@@ -105,8 +106,8 @@ export class InventoryAuditController {
       await useCase.execute(req.params.id);
       res.status(200).json({ message: "Inventory audit reconciled successfully" });
     } catch (error: any) {
-      console.error(error);
-      console.error(error instanceof DomainException ? error.message : error);
+      Logger.error({ context: "InventoryAuditController", message: "An error occurred", error: error });
+      Logger.error({ context: "InventoryAuditController", message: error instanceof DomainException ? error.message : error });
       res.status(400).json({ error: "Bad request" });
     }
   }
@@ -136,7 +137,7 @@ export class InventoryAuditController {
         }))
       });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "InventoryAuditController", message: "An error occurred", error: error });
       res.status(500).json({ error: "Internal server error" });
     }
   }

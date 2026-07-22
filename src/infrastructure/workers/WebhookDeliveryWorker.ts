@@ -2,6 +2,7 @@ import { prisma } from "../database/prisma";
 import crypto from "crypto";
 import dns from "dns/promises";
 import { WebSocketManager } from "../websocket/WebSocketManager";
+import { Logger } from "../../infrastructure/logging/logger";
 
 
 async function isSafeUrl(urlStr: string): Promise<boolean> {
@@ -38,7 +39,7 @@ export class WebhookDeliveryWorker {
   public static start(intervalMs = 2000) {
     if (this.timer) return;
     this.timer = setInterval(() => this.processPendingDeliveries(), intervalMs);
-    console.log(`[WebhookDeliveryWorker] Started background worker (polling every ${intervalMs}ms)`);
+    Logger.info({ context: "WebhookDeliveryWorker", message: `[WebhookDeliveryWorker] Started background worker (polling every ${intervalMs}ms)` });
   }
 
   public static stop() {
@@ -46,7 +47,7 @@ export class WebhookDeliveryWorker {
       clearInterval(this.timer);
       this.timer = null;
     }
-    console.log("[WebhookDeliveryWorker] Stopped background worker");
+    Logger.info({ context: "WebhookDeliveryWorker", message: "Stopped background worker" });
   }
 
   public static async processPendingDeliveries() {
@@ -116,14 +117,14 @@ export class WebhookDeliveryWorker {
               processedAt: new Date()
             }
           });
-          console.log(`[WebhookDeliveryWorker] Successfully delivered webhook ${delivery.id} to ${subscription.targetUrl}`);
+          Logger.info({ context: "WebhookDeliveryWorker", message: `[WebhookDeliveryWorker] Successfully delivered webhook ${delivery.id} to ${subscription.targetUrl}` });
         } catch (err: any) {
           const nextAttempts = delivery.attempts + 1;
           const backoffMs = Math.min(Math.pow(2, nextAttempts) * 1000, 24 * 60 * 60 * 1000);
           const nextAttemptAt = new Date(Date.now() + backoffMs);
           const nextStatus = nextAttempts >= 5 ? "Failed" : "Pending";
 
-          console.error(`[WebhookDeliveryWorker] Failed to deliver webhook ${delivery.id}:`, err.message);
+          Logger.error({ context: "WebhookDeliveryWorker", message: `[WebhookDeliveryWorker] Failed to deliver webhook ${delivery.id}:`, error: err.message });
 
           await prisma.webhookDeliveryModel.update({
             where: { id: delivery.id },
@@ -149,7 +150,7 @@ export class WebhookDeliveryWorker {
         }
       }
     } catch (error) {
-      console.error("[WebhookDeliveryWorker] Error in background worker loop:", error);
+      Logger.error({ context: "WebhookDeliveryWorker", message: "Error in background worker loop:", error: error });
     } finally {
       this.isRunning = false;
     }

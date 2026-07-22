@@ -2,6 +2,7 @@ import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreate
 import { QuickBooksClient } from "../../infrastructure/quickbooks/QuickBooksClient";
 import { prisma } from "../../infrastructure/database/prisma";
 import crypto from "crypto";
+import { Logger } from "../../infrastructure/logging/logger";
 
 export const syncJournalToQuickBooks = async (event: JournalEntryCreatedEvent): Promise<void> => {
   const realmId = process.env.QUICKBOOKS_REALM_ID || "mock";
@@ -14,7 +15,7 @@ export const syncJournalToQuickBooks = async (event: JournalEntryCreatedEvent): 
     });
 
     if (existing) {
-      console.log(`[QuickBooks Sync] Local journal ${event.aggregateId} already synced to QuickBooks.`);
+      Logger.info({ context: "SyncJournalToQuickBooks", message: `[QuickBooks Sync] Local journal ${event.aggregateId} already synced to QuickBooks.` });
       return;
     }
 
@@ -33,9 +34,9 @@ export const syncJournalToQuickBooks = async (event: JournalEntryCreatedEvent): 
       }
     });
 
-    console.log(`[QuickBooks Sync] Successfully mapped local journal ${event.aggregateId} -> QuickBooks ${qbId}`);
+    Logger.info({ context: "SyncJournalToQuickBooks", message: `[QuickBooks Sync] Successfully mapped local journal ${event.aggregateId} -> QuickBooks ${qbId}` });
   } catch (err: any) {
-    console.error(`[QuickBooks Sync] Failed for journal ${event.aggregateId}:`, err);
+    Logger.error({ context: "SyncJournalToQuickBooks", message: `[QuickBooks Sync] Failed for journal ${event.aggregateId}:`, error: err });
   }
 };
 

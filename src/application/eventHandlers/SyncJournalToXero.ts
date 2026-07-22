@@ -2,6 +2,7 @@ import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreate
 import { XeroClient } from "../../infrastructure/xero/XeroClient";
 import { prisma } from "../../infrastructure/database/prisma";
 import crypto from "crypto";
+import { Logger } from "../../infrastructure/logging/logger";
 
 export const syncJournalToXero = async (event: JournalEntryCreatedEvent): Promise<void> => {
   const tenantId = process.env.XERO_TENANT_ID || "mock";
@@ -13,7 +14,7 @@ export const syncJournalToXero = async (event: JournalEntryCreatedEvent): Promis
     });
 
     if (existing) {
-      console.log(`[Xero Sync] Local journal ${event.aggregateId} already synced to Xero.`);
+      Logger.info({ context: "SyncJournalToXero", message: `[Xero Sync] Local journal ${event.aggregateId} already synced to Xero.` });
       return;
     }
 
@@ -32,8 +33,8 @@ export const syncJournalToXero = async (event: JournalEntryCreatedEvent): Promis
       }
     });
 
-    console.log(`[Xero Sync] Successfully mapped local journal ${event.aggregateId} -> Xero ${xeroId}`);
+    Logger.info({ context: "SyncJournalToXero", message: `[Xero Sync] Successfully mapped local journal ${event.aggregateId} -> Xero ${xeroId}` });
   } catch (err: any) {
-    console.error(`[Xero Sync] Failed for journal ${event.aggregateId}:`, err);
+    Logger.error({ context: "SyncJournalToXero", message: `[Xero Sync] Failed for journal ${event.aggregateId}:`, error: err });
   }
 };

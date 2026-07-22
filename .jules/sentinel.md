@@ -153,3 +153,7 @@
 **Vulnerability:** The authentication middleware contained a bypass condition `if (process.env.NODE_ENV === "test") { req.user = ... }`.
 **Learning:** Hardcoding test-environment bypasses directly into critical security paths (like auth middleware) is risky. If the environment variable leaks or is misconfigured in production, it completely disables authentication.
 **Prevention:** Rely on properly signed mock JWTs generated within the test suite itself rather than baking bypass logic into the core application code. Ensure E2E tests exercise the actual authorization flow.
+## 2023-10-27 - Information Disclosure via API response
+**Vulnerability:** A temporary password was being returned in plain text via the API response during user invitation.
+**Learning:** Security-sensitive generated values (like passwords or reset tokens) must never be returned directly in API responses, as this exposes them to network logging, browser history, or shoulder surfing.
+**Prevention:** Always use out-of-band communication channels (like email or SMS) to deliver temporary credentials or tokens.

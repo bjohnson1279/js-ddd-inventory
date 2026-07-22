@@ -8,6 +8,7 @@ import { DemandVelocityCalculator, ReorderPointForecaster } from "../../../domai
 import { IProductRepository } from "../../../domain/repositories/IProductRepository";
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
 import { IDispatchRecordRepository } from "../../../domain/repositories/IDispatchRecordRepository";
+import { Logger } from "../../../infrastructure/logging/logger";
 
 export class ReorderPolicyController {
   static async createOrUpdate(req: Request, res: Response) {
@@ -38,10 +39,10 @@ export class ReorderPolicyController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "ReorderPolicyController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "ReorderPolicyController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -67,7 +68,7 @@ export class ReorderPolicyController {
         dynamicRopEnabled: policy.dynamicRopEnabled
       });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "ReorderPolicyController", message: "An error occurred", error: error });
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -88,7 +89,7 @@ export class ReorderPolicyController {
 
       res.status(200).json({ results });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "ReorderPolicyController", message: "An error occurred", error: error });
       res.status(500).json({ error: "Internal server error" });
     }
   }

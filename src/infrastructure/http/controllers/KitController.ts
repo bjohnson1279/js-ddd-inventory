@@ -9,6 +9,7 @@ import { DomainException } from "../../../domain/exceptions/DomainException";
 import { AssembleKit } from "../../../application/useCases/AssembleKit";
 import { DisassembleKit } from "../../../application/useCases/DisassembleKit";
 import { AutoRetryDecorator } from "../../../application/decorators/AutoRetryDecorator";
+import { Logger } from "../../../infrastructure/logging/logger";
 
 export class KitController {
   static async create(req: Request, res: Response) {
@@ -52,7 +53,7 @@ export class KitController {
         .status(201)
         .json({ message: "Kit formula created successfully.", kitId: id, sku });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "KitController", message: "An error occurred", error: error });
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -110,10 +111,10 @@ export class KitController {
         error instanceof DomainException ||
         (typeof error?.message === "string" && error.message.includes("Insufficient"))
       ) {
-        console.error(error instanceof DomainException ? error.message : error);
+        Logger.error({ context: "KitController", message: error instanceof DomainException ? error.message : error });
       res.status(400).json({ error: "Insufficient stock" });
       } else {
-        console.error(error);
+        Logger.error({ context: "KitController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -126,7 +127,7 @@ export class KitController {
       });
       res.status(200).json(records);
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "KitController", message: "An error occurred", error: error });
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -164,7 +165,7 @@ export class KitController {
 
       res.status(200).json({ message: `Successfully assembled ${quantity} units of Kit ${kitSku}.` });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "KitController", message: "An error occurred", error: error });
       res.status(400).json({ error: "Failed to assemble kit" });
     }
   }
@@ -202,8 +203,8 @@ export class KitController {
 
       res.status(200).json({ message: `Successfully disassembled ${quantity} units of Kit ${kitSku}.` });
     } catch (error: any) {
-      console.error(error);
-      console.error(error instanceof DomainException ? error.message : error);
+      Logger.error({ context: "KitController", message: "An error occurred", error: error });
+      Logger.error({ context: "KitController", message: error instanceof DomainException ? error.message : error });
       res.status(400).json({ error: "Failed to disassemble kit" });
     }
   }

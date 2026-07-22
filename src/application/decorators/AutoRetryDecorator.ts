@@ -1,4 +1,5 @@
 import { ConcurrencyException } from '../../domain/exceptions/ConcurrencyException';
+import { Logger } from "../../infrastructure/logging/logger";
 
 export class AutoRetryDecorator {
   static wrap<T extends { execute: (...args: any[]) => Promise<any> }>(
@@ -23,9 +24,7 @@ export class AutoRetryDecorator {
                 if (isConcurrency && attempts < maxRetries) {
                   attempts++;
                   const delay = baseDelayMs * Math.pow(2, attempts - 1);
-                  console.warn(
-                    `[AutoRetry] Concurrency exception detected in ${target.constructor.name}. Retrying (attempt ${attempts}/${maxRetries}) in ${delay}ms...`
-                  );
+                  Logger.warn({ context: "AutoRetryDecorator", message: `[AutoRetry] Concurrency exception detected in ${target.constructor.name}. Retrying (attempt ${attempts}/${maxRetries}) in ${delay}ms...` });
                   await new Promise((resolve) => setTimeout(resolve, delay));
                   continue;
                 }

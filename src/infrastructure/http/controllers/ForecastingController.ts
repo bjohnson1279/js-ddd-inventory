@@ -7,6 +7,7 @@ import { IReorderPolicyRepository } from "../../../domain/repositories/IReorderP
 import { IDemandForecastRepository } from "../../../domain/repositories/IDemandForecastRepository";
 import { IDispatchRecordRepository } from "../../../domain/repositories/IDispatchRecordRepository";
 import { DomainException } from "../../../domain/exceptions/DomainException";
+import { Logger } from "../../../infrastructure/logging/logger";
 
 
 export class ForecastingController {
@@ -34,10 +35,10 @@ export class ForecastingController {
       res.status(200).json(report);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "ForecastingController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error("Failed to fetch demand planning report:", error);
+        Logger.error({ context: "ForecastingController", message: "Failed to fetch demand planning report:", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -79,10 +80,10 @@ export class ForecastingController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "ForecastingController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error("Failed to generate demand forecast:", error);
+        Logger.error({ context: "ForecastingController", message: "Failed to generate demand forecast:", error: error });
         res.status(500).json({ error: "Failed to generate demand forecast" });
       }
     }
@@ -111,7 +112,7 @@ export class ForecastingController {
       
       res.status(200).json(results);
     } catch (error: any) {
-      console.error("Failed to fetch dispatch summary from continuous aggregate:", error);
+      Logger.error({ context: "ForecastingController", message: "Failed to fetch dispatch summary from continuous aggregate:", error: error });
       res.status(500).json({ error: "Internal server error" });
     }
   }
