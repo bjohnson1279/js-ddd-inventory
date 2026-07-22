@@ -3,12 +3,19 @@ process.env.JWT_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 
 import request from "supertest";
+import jwt from "jsonwebtoken";
 import { app, setupApp } from "../../../src/index";
 import { InMemoryInventoryRepository } from "../../../src/infrastructure/database/InMemoryInventoryRepository";
 import { InMemoryPurchaseOrderRepository } from "../../../src/infrastructure/database/InMemoryPurchaseOrderRepository";
 import { InMemoryCostLayerRepository } from "../../../src/infrastructure/database/InMemoryCostLayerRepository";
 import { SKU } from "../../../src/domain/valueObjects/SKU";
 import { PurchaseOrderStatus } from "../../../src/domain/procurement/enums/PurchaseOrderStatus";
+
+
+const getAdminToken = () => {
+  const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
+};
 
 describe("Purchase Order HTTP API Endpoints", () => {
   let inventoryRepo: InMemoryInventoryRepository;
@@ -37,6 +44,7 @@ describe("Purchase Order HTTP API Endpoints", () => {
     // 1. Create Purchase Order
     const createRes = await request(app)
       .post("/api/purchase-orders")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
         purchaseOrderNumber: "PO-2026",
         vendorId: "vendor-123",
@@ -57,7 +65,7 @@ describe("Purchase Order HTTP API Endpoints", () => {
 
     // 2. Approve Purchase Order
     const approveRes = await request(app)
-      .post(`/api/purchase-orders/${poId}/approve`);
+      .post(`/api/purchase-orders/${poId}/approve`).set("Authorization", `Bearer ${getAdminToken()}`);
     
     expect(approveRes.status).toBe(200);
 
@@ -66,7 +74,7 @@ describe("Purchase Order HTTP API Endpoints", () => {
 
     // 3. Send Purchase Order
     const sendRes = await request(app)
-      .post(`/api/purchase-orders/${poId}/send`);
+      .post(`/api/purchase-orders/${poId}/send`).set("Authorization", `Bearer ${getAdminToken()}`);
     
     expect(sendRes.status).toBe(200);
 
@@ -75,7 +83,7 @@ describe("Purchase Order HTTP API Endpoints", () => {
 
     // 4. Receive items
     const receiveRes = await request(app)
-      .post(`/api/purchase-orders/${poId}/receive`)
+      .post(`/api/purchase-orders/${poId}/receive`).set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
         items: [
           { variantId: "SKU-IPHONE", quantityReceived: 4 },

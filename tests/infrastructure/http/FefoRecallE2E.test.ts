@@ -4,6 +4,7 @@ process.env.JWT_SECRET = "dummy_jwt_secret";
 jest.setTimeout(30000);
 
 import request from "supertest";
+import jwt from "jsonwebtoken";
 import { app, setupApp } from "../../../src/index";
 import { PrismaInventoryRepository } from "../../../src/infrastructure/database/PrismaInventoryRepository";
 import { PrismaBarcodeRepository } from "../../../src/infrastructure/database/PrismaBarcodeRepository";
@@ -14,6 +15,12 @@ import { prisma } from "../../../src/infrastructure/database/prisma";
 import { SKU } from "../../../src/domain/valueObjects/SKU";
 import { Product } from "../../../src/domain/product/aggregates/Product";
 import { VariantAttribute } from "../../../src/domain/product/valueObjects/VariantAttribute";
+
+
+const getAdminToken = () => {
+  const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
+};
 
 describe("FEFO and Recall E2E Integration Tests", () => {
   let inventoryRepository: PrismaInventoryRepository;
@@ -87,6 +94,7 @@ describe("FEFO and Recall E2E Integration Tests", () => {
     // Receive Lot A: 10 units
     await request(app)
       .post("/api/inventory/receive")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
         sku: skuStr,
         amount: 10,
@@ -99,6 +107,7 @@ describe("FEFO and Recall E2E Integration Tests", () => {
     // Receive Lot B: 15 units
     await request(app)
       .post("/api/inventory/receive")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
         sku: skuStr,
         amount: 15,
@@ -111,6 +120,7 @@ describe("FEFO and Recall E2E Integration Tests", () => {
     // Receive Lot C: 20 units
     await request(app)
       .post("/api/inventory/receive")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
         sku: skuStr,
         amount: 20,
@@ -126,6 +136,7 @@ describe("FEFO and Recall E2E Integration Tests", () => {
     // Remaining 5 units from Lot A (expires next)
     const pickResponse = await request(app)
       .get("/api/inventory/fefo-pick")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .query({ sku: skuStr, quantity: 20 });
 
     if (pickResponse.status === 500) {
@@ -137,6 +148,7 @@ describe("FEFO and Recall E2E Integration Tests", () => {
         await new Promise(r => setTimeout(r, 1000));
         resp = await request(app)
             .get("/api/inventory/fefo-pick")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
             .query({ sku: skuStr, quantity: 20 });
     }
     expect(resp.status).toBe(200);
@@ -145,6 +157,7 @@ describe("FEFO and Recall E2E Integration Tests", () => {
     // 4. Dispatch stock of 20 units without specifying lot (uses FEFO auto-selection)
     const dispatchResponse = await request(app)
       .post("/api/inventory/dispatch")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
         sku: skuStr,
         amount: 20,
@@ -156,7 +169,8 @@ describe("FEFO and Recall E2E Integration Tests", () => {
     // 5. Trace product recall for Lot B
     // We expect 1 contaminated dispatch of 15 units of Lot B
     const recallResponse = await request(app)
-      .get("/api/inventory/reports/recall/LOT-B");
+      .get("/api/inventory/reports/recall/LOT-B")
+        .set("Authorization", `Bearer ${getAdminToken()}`);
 
     expect(recallResponse.status).toBe(200);
     if (recallResponse.body.length === 1) {

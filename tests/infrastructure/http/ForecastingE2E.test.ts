@@ -3,6 +3,7 @@ process.env.JWT_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 
 import request from "supertest";
+import jwt from "jsonwebtoken";
 import { app, setupApp } from "../../../src/index";
 import { InMemoryInventoryRepository } from "../../../src/infrastructure/database/InMemoryInventoryRepository";
 import { InMemoryReorderPolicyRepository } from "../../../src/infrastructure/database/InMemoryReorderPolicyRepository";
@@ -12,6 +13,12 @@ import { DispatchRecord } from "../../../src/domain/repositories/IDispatchRecord
 import { SKU } from "../../../src/domain/valueObjects/SKU";
 import { Quantity } from "../../../src/domain/valueObjects/Quantity";
 import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
+
+
+const getAdminToken = () => {
+  const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
+};
 
 describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
   let inventoryRepo: InMemoryInventoryRepository;
@@ -64,7 +71,7 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
 
     // 3. Request demand planning report
     const reportRes = await request(app)
-      .get(`/api/forecasting/report?locationId=${locationId}`);
+      .get(`/api/forecasting/report?locationId=${locationId}`).set("Authorization", `Bearer ${getAdminToken()}`);
 
     expect(reportRes.status).toBe(200);
     expect(reportRes.body.length).toBe(1);
@@ -83,6 +90,7 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     // 4. Generate manual demand forecast via POST
     const forecastRes = await request(app)
       .post("/api/forecasting/forecast")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
         sku,
         locationId,
@@ -104,7 +112,7 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
 
     // 5. Request the report again. It should now reflect the active forecast
     const reportRes2 = await request(app)
-      .get(`/api/forecasting/report?locationId=${locationId}`);
+      .get(`/api/forecasting/report?locationId=${locationId}`).set("Authorization", `Bearer ${getAdminToken()}`);
 
     expect(reportRes2.status).toBe(200);
     const reportItem2 = reportRes2.body[0];

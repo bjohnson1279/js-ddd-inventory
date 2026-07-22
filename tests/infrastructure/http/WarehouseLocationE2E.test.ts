@@ -17,6 +17,12 @@ import { Quantity } from "../../../src/domain/valueObjects/Quantity";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
 
+
+const getAdminToken = () => {
+  const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
+};
+
 describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
   let inventoryRepo: InMemoryInventoryRepository;
   let productRepo: InMemoryProductRepository;
@@ -61,6 +67,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     it("should deny viewer from saving a location", async () => {
       const res = await request(app)
         .post("/api/warehouse-locations")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${viewerToken}`)
         .send({
           path: "WH1-ZONEA-A01-R01-S01-B01",
@@ -82,6 +89,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     it("should allow admin to save and list locations", async () => {
       const saveRes = await request(app)
         .post("/api/warehouse-locations")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
           path: "WH1-ZONEA-A01-R01-S01-B01",
@@ -93,6 +101,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
 
       const listRes = await request(app)
         .get("/api/warehouse-locations")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${viewerToken}`); // listing is read-only, allowed for viewer
 
       expect(listRes.status).toBe(200);
@@ -105,6 +114,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     it("should create, list, and delete a warehouse location successfully", async () => {
       const createRes = await request(app)
         .post("/api/warehouse-locations")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
           warehouseId: "WH1",
@@ -122,6 +132,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
 
       const listRes = await request(app)
         .get("/api/warehouse-locations")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`);
       expect(listRes.body.length).toBe(1);
 
@@ -133,6 +144,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
 
       const listRes2 = await request(app)
         .get("/api/warehouse-locations")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`);
       expect(listRes2.body.length).toBe(0);
     });
@@ -151,6 +163,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     it("should allow receipt of stock that fits capacity limits", async () => {
       const res = await request(app)
         .post("/api/inventory/receive")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
           sku: "TSHIRT-SM-RED",
@@ -167,6 +180,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     it("should reject receipt of stock that exceeds weight limit", async () => {
       const res = await request(app)
         .post("/api/inventory/receive")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
           sku: "TSHIRT-SM-RED",
@@ -181,6 +195,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     it("should reject receipt of stock that exceeds volume limit", async () => {
       const res = await request(app)
         .post("/api/inventory/receive")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
           sku: "TSHIRT-SM-RED",
@@ -220,6 +235,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     it("should recommend fast-moving zone and front aisle for fast SKU", async () => {
       const res = await request(app)
         .post("/api/warehouse-locations/putaway-suggestions")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ sku: "FAST-SKU", quantity: 10 });
 
@@ -231,6 +247,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     it("should recommend hazmat zone for hazmat SKU", async () => {
       const res = await request(app)
         .post("/api/warehouse-locations/putaway-suggestions")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ sku: "HA-SKU", quantity: 5 }).send({ sku: "HAZ-SKU", quantity: 5 });
 
@@ -242,6 +259,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     it("should recommend cold zone for cold SKU", async () => {
       const res = await request(app)
         .post("/api/warehouse-locations/putaway-suggestions")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ sku: "COLD-SKU", quantity: 8 });
 
@@ -269,6 +287,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
 
       const res = await request(app)
         .post("/api/warehouse-locations/optimize-pick-route")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ items });
 

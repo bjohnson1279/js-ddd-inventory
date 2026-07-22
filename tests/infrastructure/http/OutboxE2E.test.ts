@@ -2,9 +2,16 @@ process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = "dummy_test_secret";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 import request from "supertest";
+import jwt from "jsonwebtoken";
 import { app, setupApp } from "../../../src/index";
 import { InMemoryOutboxRepository } from "../../../src/infrastructure/database/InMemoryOutboxRepository";
 import { InMemoryInventoryRepository } from "../../../src/infrastructure/database/InMemoryInventoryRepository";
+
+
+const getAdminToken = () => {
+  const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
+};
 
 describe("Dead Letter Queue (DLQ) HTTP API Endpoints", () => {
   let outboxRepo: InMemoryOutboxRepository;
@@ -56,6 +63,7 @@ describe("Dead Letter Queue (DLQ) HTTP API Endpoints", () => {
     // 4. Query GET /api/outbox/dead-letter
     const dlqResponse = await request(app)
       .get("/api/outbox/dead-letter")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .expect(200);
 
     expect(dlqResponse.body.length).toBe(1);
@@ -70,12 +78,13 @@ describe("Dead Letter Queue (DLQ) HTTP API Endpoints", () => {
 
     // 6. Retry event1 via POST /api/outbox/:id/retry
     await request(app)
-      .post(`/api/outbox/${eventId1}/retry`)
+      .post(`/api/outbox/${eventId1}/retry`).set("Authorization", `Bearer ${getAdminToken()}`)
       .expect(200);
 
     // 7. Verify event1 is no longer in the DLQ list and is active pending again
     const dlqResponseAfter = await request(app)
       .get("/api/outbox/dead-letter")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .expect(200);
     expect(dlqResponseAfter.body.length).toBe(0);
 
@@ -110,6 +119,7 @@ describe("Dead Letter Queue (DLQ) HTTP API Endpoints", () => {
     // 2. Query stats endpoint
     const statsResponse = await request(app)
       .get("/api/outbox/stats")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
       .expect(200);
 
     expect(statsResponse.body.totalPending).toBe(1); // Only Event2 is pending (Event1 is DLQ, Event3 is processed)

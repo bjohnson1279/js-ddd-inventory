@@ -19,12 +19,7 @@ export interface AuthenticatedRequest extends Request {
 export function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    if (process.env.NODE_ENV === "test") {
-      req.user = { id: "admin-user", role: "admin", email: "admin@test.com" };
-      const tenantId = "tenant-1";
-      req.tenantId = tenantId;
-      return tenantLocalStorage.run(tenantId, () => next());
-    }
+
     return res.status(401).json({ error: "Unauthorized: Access token is missing or invalid." });
   }
 
