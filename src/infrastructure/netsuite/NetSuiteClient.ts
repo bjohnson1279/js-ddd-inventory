@@ -1,4 +1,5 @@
 import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreatedEvent";
+import { Logger } from "../../infrastructure/logging/logger";
 
 export class NetSuiteClient {
   private readonly baseUrl: string;
@@ -41,7 +42,7 @@ export class NetSuiteClient {
 
     const url = `${this.baseUrl}/journalEntry`;
 
-    console.info(JSON.stringify({
+    Logger.info({
       context: "NetSuiteClient",
       action: "publishJournalEntry",
       request: {
@@ -54,7 +55,7 @@ export class NetSuiteClient {
         }
       },
       payload: nsPayload
-    }));
+    });
 
     const response = await fetch(url, {
       method: "POST",

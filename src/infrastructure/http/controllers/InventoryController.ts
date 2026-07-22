@@ -13,6 +13,7 @@ import { IInventoryRepository } from "../../../domain/repositories/IInventoryRep
 import { DomainException } from "../../../domain/exceptions/DomainException";
 import { SKU } from "../../../domain/valueObjects/SKU";
 import { AutoRetryDecorator } from "../../../application/decorators/AutoRetryDecorator";
+import { Logger } from "../../../infrastructure/logging/logger";
 
 export class InventoryController {
   static async receive(req: Request, res: Response) {
@@ -45,10 +46,10 @@ export class InventoryController {
       res.status(200).json({ message: "Stock received successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -83,10 +84,10 @@ export class InventoryController {
       res.status(200).json({ message: "Stock dispatched successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -118,10 +119,10 @@ export class InventoryController {
       res.status(200).json(responseBody);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -153,10 +154,10 @@ export class InventoryController {
       res.status(200).json({ message: "Store count performed successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -177,7 +178,7 @@ export class InventoryController {
         })),
       );
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "InventoryController", message: "An error occurred", error: error });
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -191,10 +192,10 @@ export class InventoryController {
       res.status(200).json({ message: "Stock allocated successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -209,10 +210,10 @@ export class InventoryController {
       res.status(200).json({ message: "Allocation released successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -227,10 +228,10 @@ export class InventoryController {
       res.status(200).json({ message: "Allocation fulfilled successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -245,10 +246,10 @@ export class InventoryController {
       res.status(200).json({ message: "In-transit stock created successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -263,10 +264,10 @@ export class InventoryController {
       res.status(200).json({ message: "In-transit stock received successfully" });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -304,10 +305,10 @@ export class InventoryController {
         ));
 
       if (isDomainOrExpectedError) {
-        console.error(error.message);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name || "Error" });
       } else {
-        console.error(error);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }
@@ -328,10 +329,10 @@ export class InventoryController {
       res.status(200).json(dispatches);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error(error);
+        Logger.error({ context: "InventoryController", message: "An error occurred", error: error });
         res.status(500).json({ error: "Internal server error" });
       }
     }

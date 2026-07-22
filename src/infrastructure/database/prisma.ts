@@ -9,6 +9,7 @@ const connectionString = process.env.DATABASE_URL ||
   `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'password'}@${process.env.DB_HOST || '127.0.0.1'}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'inventory'}?schema=public`;
 
 import { tenantLocalStorage } from "./tenantContext";
+import { Logger } from "../../infrastructure/logging/logger";
 
 export const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
@@ -24,7 +25,7 @@ export const prisma = basePrisma.$extends({
           try {
             await basePrisma.$executeRaw`SELECT set_config('app.current_tenant_id', ${tenantId}, false)`;
           } catch (err: any) {
-            console.error("[PrismaExtension] Failed to set app.current_tenant_id:", err.message);
+            Logger.error({ context: "PrismaExtension", message: "Failed to set app.current_tenant_id:", error: err.message });
           }
         }
         return query(args);

@@ -2,6 +2,7 @@ import { IExternalInventoryPublisher } from "../../application/ports/IExternalIn
 import { SKU } from "../../domain/valueObjects/SKU";
 import { Quantity } from "../../domain/valueObjects/Quantity";
 import { ShopifyClient } from "./ShopifyClient";
+import { Logger } from "../../infrastructure/logging/logger";
 
 export class ShopifyInventoryPublisher implements IExternalInventoryPublisher {
   constructor(
@@ -36,7 +37,7 @@ export class ShopifyInventoryPublisher implements IExternalInventoryPublisher {
     const inventoryItemId = findData.inventoryItems.edges[0]?.node.id;
 
     if (!inventoryItemId) {
-      console.warn(`Could not find Shopify inventory item for SKU: ${sku.getValue()}`);
+      Logger.warn({ context: "ShopifyInventoryPublisher", message: `Could not find Shopify inventory item for SKU: ${sku.getValue()}` });
       return;
     }
 

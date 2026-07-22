@@ -1,4 +1,5 @@
 import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreatedEvent";
+import { Logger } from "../../infrastructure/logging/logger";
 
 export class QuickBooksClient {
   private readonly baseUrl: string;
@@ -47,7 +48,7 @@ export class QuickBooksClient {
 
     const url = `${this.baseUrl}/${this.realmId}/journalentry`;
 
-    console.info(JSON.stringify({
+    Logger.info({
       context: "QuickBooksClient",
       action: "publishJournalEntry",
       request: {
@@ -60,7 +61,7 @@ export class QuickBooksClient {
         }
       },
       payload: qboPayload
-    }));
+    });
 
     const response = await fetch(url, {
       method: "POST",

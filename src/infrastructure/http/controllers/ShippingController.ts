@@ -12,6 +12,7 @@ import { IJournalRepository } from "../../../domain/repositories/IJournalReposit
 import { IOutboxRepository } from "../../../domain/repositories/IOutboxRepository";
 import { ShipmentStatus } from "../../../domain/shipping/enums/ShipmentStatus";
 import { DomainException } from "../../../domain/exceptions/DomainException";
+import { Logger } from "../../../infrastructure/logging/logger";
 
 
 export class ShippingController {
@@ -44,10 +45,10 @@ export class ShippingController {
       res.status(200).json(rates);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "ShippingController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error("Failed to estimate shipping rates:", error);
+        Logger.error({ context: "ShippingController", message: "Failed to estimate shipping rates:", error: error });
         res.status(500).json({ error: "Failed to fetch rates." });
       }
     }
@@ -90,10 +91,10 @@ export class ShippingController {
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "ShippingController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error("Failed to purchase shipping label:", error);
+        Logger.error({ context: "ShippingController", message: "Failed to purchase shipping label:", error: error });
         res.status(500).json({ error: "Label purchase failed." });
       }
     }
@@ -121,10 +122,10 @@ export class ShippingController {
       );
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "ShippingController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error("Failed to list shipments:", error);
+        Logger.error({ context: "ShippingController", message: "Failed to list shipments:", error: error });
         res.status(500).json({ error: "Failed to list shipments." });
       }
     }
@@ -147,10 +148,10 @@ export class ShippingController {
       res.status(200).json({ message: "Shipment status updated successfully.", status });
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "ShippingController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        console.error("Failed to update tracking status:", error);
+        Logger.error({ context: "ShippingController", message: "Failed to update tracking status:", error: error });
         res.status(500).json({ error: "Failed to update tracking." });
       }
     }
@@ -179,10 +180,10 @@ export class ShippingController {
       res.status(200).json(plan);
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "ShippingController", message: "An error occurred", error: error.message });
         res.status(400).json({ error: "A domain error occurred while routing the order.", type: error.name });
       } else {
-        console.error("Failed to route order:", error);
+        Logger.error({ context: "ShippingController", message: "Failed to route order:", error: error });
         res.status(500).json({ error: "Failed to route order: " + error.message });
       }
     }

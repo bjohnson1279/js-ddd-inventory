@@ -4,6 +4,7 @@ import { ShopifyWebhookSecurity } from "../../shopify/ShopifyWebhookSecurity";
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
 import { IProcessedWebhookRepository } from "../../../domain/repositories/IProcessedWebhookRepository";
 import { DomainException } from "../../../domain/exceptions/DomainException";
+import { Logger } from "../../../infrastructure/logging/logger";
 
 
 export class ShopifyWebhookController {
@@ -76,10 +77,10 @@ export class ShopifyWebhookController {
       res.status(200).send("Webhook processed");
     } catch (error: any) {
       if (error instanceof DomainException) {
-        console.error(error.message);
+        Logger.error({ context: "ShopifyWebhookController", message: "An error occurred", error: error.message });
         res.status(400).send("A domain error occurred.");
       } else {
-        console.error("Error processing Shopify webhook:", error);
+        Logger.error({ context: "ShopifyWebhookController", message: "Error processing Shopify webhook:", error: error });
         res.status(500).send("Internal server error");
       }
     }

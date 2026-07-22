@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { prisma } from "../../database/prisma";
 import { hashPassword, verifyPassword } from "../../utils/security";
+import { Logger } from "../../../infrastructure/logging/logger";
 
 const JWT_SECRET = process.env.JWT_SECRET || "";
 if (!JWT_SECRET) {
@@ -81,7 +82,7 @@ export class AuthController {
 
       return res.status(200).json({ success: true, message: "Organization and admin user created successfully." });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "AuthController", message: "An error occurred", error: error });
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -128,7 +129,7 @@ export class AuthController {
 
       return res.status(200).json({ token });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "AuthController", message: "An error occurred", error: error });
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -159,7 +160,7 @@ export class AuthController {
 
       return res.status(200).json({ users });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "AuthController", message: "An error occurred", error: error });
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -220,7 +221,7 @@ export class AuthController {
         temporaryPassword: tempPassword
       });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "AuthController", message: "An error occurred", error: error });
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -266,7 +267,7 @@ export class AuthController {
 
       return res.status(200).json({ success: true });
     } catch (error: any) {
-      console.error(error);
+      Logger.error({ context: "AuthController", message: "An error occurred", error: error });
       return res.status(500).json({ error: "Internal server error" });
     }
   }

@@ -1,4 +1,5 @@
 import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreatedEvent";
+import { Logger } from "../../infrastructure/logging/logger";
 
 export class XeroClient {
   private readonly baseUrl: string;
@@ -35,7 +36,7 @@ export class XeroClient {
 
     const url = `${this.baseUrl}/ManualJournals`;
 
-    console.info(JSON.stringify({
+    Logger.info({
       context: "XeroClient",
       action: "publishJournalEntry",
       request: {
@@ -49,7 +50,7 @@ export class XeroClient {
         }
       },
       payload: xeroPayload
-    }));
+    });
 
     const response = await fetch(url, {
       method: "POST",
