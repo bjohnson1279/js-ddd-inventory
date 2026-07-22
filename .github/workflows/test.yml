@@ -44,4 +44,8 @@ jobs:
       run: npx prisma db push --accept-data-loss
 
     - name: Run tests
+      env:
+        COMPLIANCE_PRIVATE_KEY: test_key
+        SHOPIFY_API_SECRET: fake_secret
+        JWT_SECRET: test
       run: npm test
