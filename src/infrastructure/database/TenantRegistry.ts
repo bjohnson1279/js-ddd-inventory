@@ -52,9 +52,9 @@ export class TenantRegistry {
       migratedVersion: '0',
     };
 
-    await this.controlPrisma.$executeRaw`
+    await this.controlPrisma.$executeRawUnsafe(`
       INSERT INTO tenant_registry (tenant_id, db_host, db_port, db_name, db_user, db_password, status, provisioned_at, migrated_version)
-      VALUES (${tenantId}, ${entry.dbHost}, ${entry.dbPort}, ${entry.dbName}, ${entry.dbUser}, ${entry.dbPassword}, ${entry.status}, NOW(), ${entry.migratedVersion})
+      VALUES ('${tenantId}', '${entry.dbHost}', ${entry.dbPort}, '${entry.dbName}', '${entry.dbUser}', '${entry.dbPassword}', '${entry.status}', NOW(), '${entry.migratedVersion}')
       ON CONFLICT (tenant_id) DO UPDATE SET
         db_host = EXCLUDED.db_host,
         db_port = EXCLUDED.db_port,
@@ -64,17 +64,17 @@ export class TenantRegistry {
         status = EXCLUDED.status,
         provisioned_at = NOW(),
         migrated_version = EXCLUDED.migrated_version;
-    `;
+    `);
 
     return entry;
   }
 
   async lookupTenant(tenantId: string): Promise<TenantRegistryEntry | null> {
-    const results: any[] = await this.controlPrisma.$queryRaw`
+    const results: any[] = await this.controlPrisma.$queryRawUnsafe(`
       SELECT tenant_id, db_host, db_port, db_name, db_user, db_password, status, provisioned_at, migrated_version
       FROM tenant_registry
-      WHERE tenant_id = ${tenantId};
-    `;
+      WHERE tenant_id = '${tenantId}';
+    `);
 
     if (results.length === 0) return null;
 
@@ -93,18 +93,12 @@ export class TenantRegistry {
   }
 
   async listTenants(status?: string): Promise<TenantRegistryEntry[]> {
-    const results: any[] = status
-      ? await this.controlPrisma.$queryRaw`
-          SELECT tenant_id, db_host, db_port, db_name, db_user, db_password, status, provisioned_at, migrated_version
-          FROM tenant_registry
-          WHERE status = ${status}
-          ORDER BY provisioned_at DESC;
-        `
-      : await this.controlPrisma.$queryRaw`
-          SELECT tenant_id, db_host, db_port, db_name, db_user, db_password, status, provisioned_at, migrated_version
-          FROM tenant_registry
-          ORDER BY provisioned_at DESC;
-        `;
+    const whereClause = status ? `WHERE status = '${status}'` : '';
+    const results: any[] = await this.controlPrisma.$queryRawUnsafe(`
+      SELECT tenant_id, db_host, db_port, db_name, db_user, db_password, status, provisioned_at, migrated_version
+      FROM tenant_registry ${whereClause}
+      ORDER BY provisioned_at DESC;
+    `);
 
     return results.map((row: any) => ({
       tenantId: row.tenant_id,
@@ -120,15 +114,15 @@ export class TenantRegistry {
   }
 
   async updateStatus(tenantId: string, status: TenantRegistryEntry['status']): Promise<void> {
-    await this.controlPrisma.$executeRaw`
-      UPDATE tenant_registry SET status = ${status} WHERE tenant_id = ${tenantId};
-    `;
+    await this.controlPrisma.$executeRawUnsafe(`
+      UPDATE tenant_registry SET status = '${status}' WHERE tenant_id = '${tenantId}';
+    `);
   }
 
   async updateMigratedVersion(tenantId: string, version: string): Promise<void> {
-    await this.controlPrisma.$executeRaw`
-      UPDATE tenant_registry SET migrated_version = ${version} WHERE tenant_id = ${tenantId};
-    `;
+    await this.controlPrisma.$executeRawUnsafe(`
+      UPDATE tenant_registry SET migrated_version = '${version}' WHERE tenant_id = '${tenantId}';
+    `);
   }
 
   async deprovisionTenant(tenantId: string): Promise<void> {

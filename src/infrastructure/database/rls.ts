@@ -20,13 +20,7 @@ export const rlsTables = [
 
 export async function enableRowLevelSecurity(prisma: PrismaClient): Promise<void> {
   Logger.info({ context: "RLS", message: "Setting up PostgreSQL Row-Level Security (RLS) policies..." });
-  const identifierRegex = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
-
   for (const { table, column } of rlsTables) {
-    if (!identifierRegex.test(table) || !identifierRegex.test(column)) {
-      throw new Error(`Invalid identifier detected for RLS setup: table "${table}", column "${column}"`);
-    }
-
     try {
       // 1. Enable RLS
       await prisma.$executeRawUnsafe(`ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY;`);
