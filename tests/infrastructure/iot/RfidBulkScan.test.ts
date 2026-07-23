@@ -199,10 +199,9 @@ describe("RFID Bulk Ingestion and Processing Worker", () => {
 
       expect(finalOldStock?.quantity.getValue()).toBe(8);
       expect(finalNewStock?.quantity.getValue()).toBe(2);
-
       const outboxEvents = await outboxRepo.fetchPending(10, 5);
       expect(outboxEvents).toHaveLength(1);
-      expect(outboxEvents[0].eventType).toBe("RfidScanProcessedEvent");
+      expect(outboxEvents[0].eventName).toBe("RfidScanProcessedEvent");
 
       const payload = JSON.parse(outboxEvents[0].payload);
       expect(payload.matchedCount).toBe(2);
