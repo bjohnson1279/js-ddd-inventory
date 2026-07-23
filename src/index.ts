@@ -94,6 +94,7 @@ import notificationRoutes from "./infrastructure/http/routes/notification.routes
 import auditRoutes from "./infrastructure/http/routes/audit.routes";
 import webhookSubscriptionRoutes from "./infrastructure/http/routes/webhookSubscription.routes";
 import complianceRoutes from "./infrastructure/http/routes/compliance.routes";
+import rfidRoutes from "./infrastructure/http/routes/rfid.routes";
 import { WebSocketManager } from "./infrastructure/websocket/WebSocketManager";
 import { authMiddleware } from "./infrastructure/http/middleware/auth";
 import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
@@ -138,6 +139,19 @@ DomainEventDispatcher.register("StockDepletedEvent", alertPurchasingOnStockDeple
 DomainEventDispatcher.register("JournalEntryCreatedEvent", syncJournalToQuickBooks);
 DomainEventDispatcher.register("JournalEntryCreatedEvent", syncJournalToNetSuite);
 DomainEventDispatcher.register("JournalEntryCreatedEvent", syncJournalToXero);
+DomainEventDispatcher.register("RfidScanProcessedEvent", (event: any) => {
+  WebSocketManager.broadcastToTenant(event.tenantId, {
+    type: "rfid_scan_processed",
+    id: event.id,
+    tenantId: event.tenantId,
+    locationId: event.locationId,
+    totalCount: event.totalCount,
+    matchedCount: event.matchedCount,
+    unmatchedCount: event.unmatchedCount,
+    unmatchedEpcs: event.unmatchedEpcs,
+    time: event.occurredOn || new Date().toISOString()
+  });
+});
 
 // Define setup function so E2E tests can configure app with custom repository
 export const setupApp = (
@@ -216,11 +230,11 @@ export const setupApp = (
   app.use("/api/outbox", outboxRoutes);
   app.use("/api/forecasting", forecastingRoutes);
   app.use("/api/shipping", shippingRoutes);
-  app.use("/api/warehouse-locations", warehouseLocationRoutes);
   app.use("/api/notifications", notificationRoutes);
-  app.use("/api/audit", auditRoutes);
-  app.use("/api/webhook-subscriptions", webhookSubscriptionRoutes);
   app.use("/api/compliance", complianceRoutes);
+  app.use("/api/tenant-audit", auditRoutes);
+  app.use("/api/webhooks/subscriptions", webhookSubscriptionRoutes);
+  app.use("/api/rfid", rfidRoutes);
 };
 
 const start = async () => {
