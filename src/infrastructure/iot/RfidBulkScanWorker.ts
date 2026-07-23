@@ -11,9 +11,8 @@ import { SerialNumber } from "../../domain/serial/valueObjects/SerialNumber";
 import { SKU } from "../../domain/valueObjects/SKU";
 import { Quantity } from "../../domain/valueObjects/Quantity";
 import { InventoryItem } from "../../domain/aggregates/InventoryItem";
-
 export class RfidBulkScanWorker {
-  private amqpConnection: amqp.Connection | null = null;
+  private amqpConnection: amqp.ChannelModel | null = null;
   private amqpChannel: amqp.Channel | null = null;
 
   constructor(
