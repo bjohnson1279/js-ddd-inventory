@@ -76,11 +76,13 @@ services:
       - SHOPIFY_ACCESS_TOKEN=${SHOPIFY_ACCESS_TOKEN}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672
       - KAFKA_URL=kafka:9092
+      - PYTHON_SIDECAR_URL=http://python-sidecar:5000/optimize
       - DISABLE_WORKERS=true
     depends_on:
       - db
       - rabbitmq
       - kafka
+      - python-sidecar
 
   worker:
     build: .
@@ -99,10 +101,19 @@ services:
       - SHOPIFY_ACCESS_TOKEN=${SHOPIFY_ACCESS_TOKEN}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672
       - KAFKA_URL=kafka:9092
+      - PYTHON_SIDECAR_URL=http://python-sidecar:5000/optimize
     depends_on:
       - db
       - rabbitmq
       - kafka
+      - python-sidecar
+
+  python-sidecar:
+    build:
+      context: ../python-sidecar
+      dockerfile: Dockerfile
+    ports:
+      - "5005:5000"
 
 volumes:
   postgres_data_pg15:
