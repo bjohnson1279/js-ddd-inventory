@@ -37,3 +37,7 @@
 ## 2024-07-22 - [Optimize N+1 query and Race Condition in ReceivePurchaseOrder]
 **Learning:** In `ReceivePurchaseOrder.ts`, the original implementation used `Promise.all` to map over PO items. This not only executed N individual database queries via the `ReceiveStock` usecase (N+1 queries) but also caused a race condition where multiple PO items referencing the same SKU would overwrite each other's stock increments in the database simultaneously.
 **Action:** Replaced the `Promise.all` loop with a sequential `for...of` loop to prevent concurrent write race conditions. Injected a pre-fetch call `inventoryRepository.findBySkus` before the loop to cache the entities in memory and eliminate the N+1 read overhead.
+
+## 2024-07-23 - [Optimize N+1 query and Race Condition in Prisma Transactions]
+**Learning:** In \`PrismaInventoryRepository.ts\`, the original implementation used \`Promise.all\` to map over inventory items and execute \`updateMany\` within a single \`prisma.$transaction\`. Prisma interactive transactions bind to a single connection. Using \`Promise.all\` floods that single connection with concurrent requests, which often causes deadlocks and connection exhaustion, especially when multiple identical SKUs are received concurrently, due to locking conflicts on the row.
+**Action:** Replaced the \`Promise.all\` inside the \`$transaction\` with a sequential \`for...of\` loop. While individual queries inside a transaction run sequentially, the connection usage is stable and avoids deadlocks, increasing overall throughput and reliability under load.
