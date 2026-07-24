@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 export interface TenantConnectionInfo {
   tenantId: string;
@@ -30,15 +32,11 @@ export class TenantConnectionRouter {
     }
 
     const info = this.connectionRegistry.get(tenantId);
-    const dbUrl = info ? info.connectionString : process.env.DATABASE_URL;
+    const dbUrl = info ? info.connectionString : process.env.DATABASE_URL || 'postgresql://localhost:5432/postgres';
 
-    const prisma = new PrismaClient({
-      datasources: {
-        db: {
-          url: dbUrl,
-        },
-      },
-    });
+    const pool = new Pool({ connectionString: dbUrl });
+    const adapter = new PrismaPg(pool);
+    const prisma = new PrismaClient({ adapter } as any);
 
     this.prismaInstances.set(tenantId, prisma);
     return prisma;
