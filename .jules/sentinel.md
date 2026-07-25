@@ -162,3 +162,8 @@
 **Vulnerability:** The `ComplianceLedgerService.ts` used a hardcoded fallback string (`"system-secret-compliance-ledger-key-2026"`) for `COMPLIANCE_PRIVATE_KEY` if the environment variable was missing.
 **Learning:** Hardcoding cryptographic keys for highly sensitive security functions (like a compliance ledger signature) completely breaks the non-repudiation property if the environment variable is accidentally omitted, as attackers can sign valid blocks with the known default key.
 **Prevention:** Always strictly enforce the presence of critical cryptographic keys on startup or upon usage. Throw a hard error if the key is missing rather than relying on insecure default fallbacks.
+
+## 2024-07-25 - Fix SQL Injection in Tenant Provisioning and Registry Queries
+**Vulnerability:** The application was passing dynamic strings (like `tenantId` and `dbName`) directly into Prisma's `$executeRawUnsafe` and `$queryRawUnsafe` methods in `TenantRegistry.ts` and `TenantProvisioner.ts`, creating a severe vector for SQL injection.
+**Learning:** Developers often confuse Prisma's raw query options. They reach for `$executeRawUnsafe` because they are writing raw SQL strings with template literals, without realizing that `$executeRaw` (used with the `Prisma.sql` tag) safely parameterizes values under the hood.
+**Prevention:** Always use Prisma's parameterized template tag functions (`$executeRaw` or `$queryRaw` imported from `@prisma/client` and tagged with `Prisma.sql\``) when executing raw DML statements involving any dynamic data. For DDL operations (like `ALTER TABLE`) which cannot be parameterized, validate inputs using a strict regular expression before interpolation.
