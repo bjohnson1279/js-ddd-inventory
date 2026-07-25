@@ -232,7 +232,9 @@ export const setupApp = (
   app.use("/api/shipping", shippingRoutes);
   app.use("/api/notifications", notificationRoutes);
   app.use("/api/compliance", complianceRoutes);
+  app.use("/api/audit", auditRoutes);
   app.use("/api/tenant-audit", auditRoutes);
+  app.use("/api/warehouse-locations", warehouseLocationRoutes);
   app.use("/api/webhooks/subscriptions", webhookSubscriptionRoutes);
   app.use("/api/rfid", rfidRoutes);
 };

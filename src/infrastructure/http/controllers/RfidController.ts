@@ -6,6 +6,7 @@ export class RfidController {
   static async list(req: Request, res: Response) {
     try {
       const tags = await prisma.rfidTagModel.findMany({
+      const tags = await (prisma as any).rfidTagModel.findMany({
         orderBy: { createdAt: "desc" }
       });
       res.status(200).json({ tags });
@@ -25,6 +26,7 @@ export class RfidController {
       }
 
       const tag = await prisma.rfidTagModel.create({
+      const tag = await (prisma as any).rfidTagModel.create({
         data: {
           epc,
           sku,
