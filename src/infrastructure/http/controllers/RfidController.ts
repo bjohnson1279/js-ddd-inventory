@@ -5,8 +5,8 @@ import * as mqtt from "mqtt";
 export class RfidController {
   static async list(req: Request, res: Response) {
     try {
-      const db = prisma as any;
-      const tags = await db.rfidTagModel.findMany({
+      const tags = await prisma.rfidTagModel.findMany({
+      const tags = await (prisma as any).rfidTagModel.findMany({
         orderBy: { createdAt: "desc" }
       });
       res.status(200).json({ tags });
@@ -25,8 +25,8 @@ export class RfidController {
         return res.status(400).json({ error: "RFID EPC must be a 24-character hexadecimal string." });
       }
 
-      const db = prisma as any;
-      const tag = await db.rfidTagModel.create({
+      const tag = await prisma.rfidTagModel.create({
+      const tag = await (prisma as any).rfidTagModel.create({
         data: {
           epc,
           sku,
