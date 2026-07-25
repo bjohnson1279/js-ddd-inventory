@@ -1,10 +1,3 @@
-const { prisma } = require('./src/infrastructure/database/prisma');
-async function main() {
-  try {
-    const cnt = await prisma.outboxEventModel.count();
-    console.log("Connected to local DB, count:", cnt);
-  } finally {
-    await prisma.$disconnect();
-  }
-}
-main().catch(console.error);
+const { Prisma } = require('@prisma/client');
+const sql = Prisma.sql`SELECT * FROM users WHERE id = ${1}`;
+console.log(sql);
