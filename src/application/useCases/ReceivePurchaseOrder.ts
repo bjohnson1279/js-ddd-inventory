@@ -1,3 +1,6 @@
+import { SKU } from "../../domain/valueObjects/SKU";
+import { Quantity } from "../../domain/valueObjects/Quantity";
+import { InventoryItem } from "../../domain/aggregates/InventoryItem";
 import { IPurchaseOrderRepository } from "../../domain/repositories/IPurchaseOrderRepository";
 import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
 import { ICostLayerRepository } from "../../domain/repositories/ICostLayerRepository";
@@ -34,7 +37,27 @@ export class ReceivePurchaseOrder {
     // Optimization: Index purchase order items by variantId to prevent O(N*M) nested lookups
     const poItemsMap = new Map(po.items.map((i) => [i.variantId, i]));
 
-    await Promise.all(dto.items.map(async (item) => {
+    // Pre-fetch all required inventory items in batches to avoid N+1 DB lookups
+    const skusToFetch = dto.items.map(item => SKU.create(item.variantId));
+    const inventoryItemsMap = new Map<string, InventoryItem>();
+
+    if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {
+      const fetched = await this.inventoryRepository.findBySkus(skusToFetch, po.locationId);
+      for (const item of fetched) {
+        inventoryItemsMap.set(item.sku.getValue(), item);
+      }
+    } else if (skusToFetch.length > 0) {
+      // Fallback if findBySkus is not implemented
+      const fetchPromises = skusToFetch.map(async (sku) => {
+        const item = await this.inventoryRepository.findBySku(sku, po.locationId);
+        if (item) inventoryItemsMap.set(item.sku.getValue(), item);
+      });
+      await Promise.all(fetchPromises);
+    }
+
+    const modifiedInventoryItems = new Map<string, InventoryItem>();
+
+    for (const item of dto.items) {
       const poItem = poItemsMap.get(item.variantId);
       if (!poItem) {
         throw new Error(`Item ${item.variantId} not found in purchase order ${po.purchaseOrderNumber}.`);
@@ -43,8 +66,17 @@ export class ReceivePurchaseOrder {
       // 1. Update PO received quantity & state
       po.receiveItems(item.variantId, item.quantityReceived);
 
-      // 2. Receive physical stock
-      await receiveStock.execute(item.variantId, item.quantityReceived, po.locationId);
+      // 2. Receive physical stock (inline to prevent sequential DB saves inside receiveStock)
+      const sku = SKU.create(item.variantId);
+      let invItem = modifiedInventoryItems.get(item.variantId) || inventoryItemsMap.get(item.variantId);
+
+      if (!invItem) {
+        // If item does not exist, create it
+        invItem = InventoryItem.create(crypto.randomUUID(), sku, po.locationId, Quantity.create(0));
+      }
+
+      invItem.receiveStock(Quantity.create(item.quantityReceived));
+      modifiedInventoryItems.set(item.variantId, invItem);
 
       // 3. Prepare Cost Layer
       const layerId = crypto.randomUUID();
@@ -59,7 +91,16 @@ export class ReceivePurchaseOrder {
         po.locationId
       );
       costLayers.push(costLayer);
-    }));
+    }
+
+    // Save batch inventory items
+    if (modifiedInventoryItems.size > 0) {
+      if (this.inventoryRepository.saveMany) {
+        await this.inventoryRepository.saveMany(Array.from(modifiedInventoryItems.values()));
+      } else {
+        await Promise.all(Array.from(modifiedInventoryItems.values()).map(item => this.inventoryRepository.save(item)));
+      }
+    }
 
     if (this.costLayerRepository.saveMany && costLayers.length > 0) {
       await this.costLayerRepository.saveMany(costLayers);
