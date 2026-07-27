@@ -24,6 +24,7 @@ describe('TenantRegistry', () => {
       expect(entry.migratedVersion).toBe('0');
       expect(mockPrisma.$executeRaw).toHaveBeenCalledTimes(1);
       const sql = mockPrisma.$executeRaw.mock.calls[0][0][0];
+      const sql = mockPrisma.$executeRaw.mock.calls[0][0].strings.join("?");
       expect(sql).toContain("INSERT INTO tenant_registry");
     });
 
@@ -133,6 +134,17 @@ describe('TenantRegistry', () => {
       expect(tenants).toHaveLength(2);
       const sql = mockPrisma.$queryRaw.mock.calls[0][0][0];
       expect(sql).not.toContain("WHERE status");
+      const sql = mockPrisma.$queryRaw.mock.calls[0][0].strings.join("?");
+    });
+
+    it('should filter by status when provided', async () => {
+      mockPrisma.$queryRaw.mockResolvedValue([
+        { tenant_id: 't1', db_host: 'h', db_port: 5432, db_name: 'd1', db_user: 'u', db_password: 'p', status: 'ACTIVE', provisioned_at: new Date(), migrated_version: '1' },
+      ]);
+
+      const tenants = await registry.listTenants('ACTIVE');
+      expect(tenants).toHaveLength(1);
+      expect(sql).toContain("WHERE status =");
     });
   });
 
@@ -143,6 +155,7 @@ describe('TenantRegistry', () => {
       const sql = mockPrisma.$executeRaw.mock.calls[0][0][0];
       expect(sql).toContain("UPDATE tenant_registry SET status =");
       expect(mockPrisma.$executeRaw.mock.calls[0][1]).toBe("ACTIVE");
+      const sql = mockPrisma.$executeRaw.mock.calls[0][0].strings.join("?");
     });
   });
 
@@ -153,6 +166,8 @@ describe('TenantRegistry', () => {
       const sql = mockPrisma.$executeRaw.mock.calls[0][0][0];
       expect(sql).toContain("UPDATE tenant_registry SET status =");
       expect(mockPrisma.$executeRaw.mock.calls[0][1]).toBe("DEPROVISIONED");
+      const sql = mockPrisma.$executeRaw.mock.calls[0][0].strings.join("?");
+      expect(sql).toContain("status =");
     });
   });
 });

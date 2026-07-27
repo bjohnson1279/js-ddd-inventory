@@ -87,7 +87,6 @@ describe("Audit REST API Endpoints", () => {
 
     const res = await request(app)
       .get("/api/audit/discrepancies")
-        .set("Authorization", `Bearer ${getAdminToken()}`)
       .set("Authorization", `Bearer ${token}`)
       .expect(200);
 
@@ -121,7 +120,6 @@ describe("Audit REST API Endpoints", () => {
 
     const res = await request(app)
       .post("/api/audit/run")
-        .set("Authorization", `Bearer ${getAdminToken()}`)
       .set("Authorization", `Bearer ${token}`)
       .expect(200);
 
@@ -143,7 +141,6 @@ describe("Audit REST API Endpoints", () => {
 
     const res = await request(app)
       .post("/api/audit/discrepancies/disc-1/resolve")
-        .set("Authorization", `Bearer ${getAdminToken()}`)
       .set("Authorization", `Bearer ${token}`)
       .send({ notes: "Manually synchronized" })
       .expect(200);
