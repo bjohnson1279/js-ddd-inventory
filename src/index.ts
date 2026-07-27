@@ -235,6 +235,7 @@ export const setupApp = (
   app.use("/api/tenant-audit", auditRoutes);
   app.use("/api/webhooks/subscriptions", webhookSubscriptionRoutes);
   app.use("/api/rfid", rfidRoutes);
+  app.use("/api/locations", warehouseLocationRoutes);
 };
 
 const start = async () => {

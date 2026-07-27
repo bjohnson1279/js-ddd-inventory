@@ -66,7 +66,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
   describe("Role Enforcement / RBAC", () => {
     it("should deny viewer from saving a location", async () => {
       const res = await request(app)
-        .post("/api/warehouse-locations")
+        .post("/api/locations")
         .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${viewerToken}`)
         .send({
@@ -80,7 +80,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
 
     it("should deny viewer from deleting a location", async () => {
       const res = await request(app)
-        .delete("/api/warehouse-locations/WH1-ZONEA-A01-R01-S01-B01")
+        .delete("/api/locations/WH1-ZONEA-A01-R01-S01-B01")
         .set("Authorization", `Bearer ${viewerToken}`);
 
       expect(res.status).toBe(403);
@@ -88,7 +88,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
 
     it("should allow admin to save and list locations", async () => {
       const saveRes = await request(app)
-        .post("/api/warehouse-locations")
+        .post("/api/locations")
         .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
@@ -100,7 +100,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
       expect(saveRes.status).toBe(200);
 
       const listRes = await request(app)
-        .get("/api/warehouse-locations")
+        .get("/api/locations")
         .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${viewerToken}`); // listing is read-only, allowed for viewer
 
@@ -113,7 +113,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
   describe("CRUD Actions", () => {
     it("should create, list, and delete a warehouse location successfully", async () => {
       const createRes = await request(app)
-        .post("/api/warehouse-locations")
+        .post("/api/locations")
         .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
@@ -131,19 +131,19 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
       expect(createRes.body.location.id).toBe("WH1-ZONEB-A02-R03-S04-B05");
 
       const listRes = await request(app)
-        .get("/api/warehouse-locations")
+        .get("/api/locations")
         .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`);
       expect(listRes.body.length).toBe(1);
 
       const deleteRes = await request(app)
-        .delete("/api/warehouse-locations/WH1-ZONEB-A02-R03-S04-B05")
+        .delete("/api/locations/WH1-ZONEB-A02-R03-S04-B05")
         .set("Authorization", `Bearer ${adminToken}`);
 
       expect(deleteRes.status).toBe(200);
 
       const listRes2 = await request(app)
-        .get("/api/warehouse-locations")
+        .get("/api/locations")
         .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`);
       expect(listRes2.body.length).toBe(0);
@@ -234,7 +234,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
 
     it("should recommend fast-moving zone and front aisle for fast SKU", async () => {
       const res = await request(app)
-        .post("/api/warehouse-locations/putaway-suggestions")
+        .post("/api/locations/putaway-suggestions-suggestions")
         .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ sku: "FAST-SKU", quantity: 10 });
@@ -246,7 +246,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
 
     it("should recommend hazmat zone for hazmat SKU", async () => {
       const res = await request(app)
-        .post("/api/warehouse-locations/putaway-suggestions")
+        .post("/api/locations/putaway-suggestions-suggestions")
         .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ sku: "HA-SKU", quantity: 5 }).send({ sku: "HAZ-SKU", quantity: 5 });
@@ -258,7 +258,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
 
     it("should recommend cold zone for cold SKU", async () => {
       const res = await request(app)
-        .post("/api/warehouse-locations/putaway-suggestions")
+        .post("/api/locations/putaway-suggestions-suggestions")
         .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ sku: "COLD-SKU", quantity: 8 });
@@ -286,7 +286,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
       ];
 
       const res = await request(app)
-        .post("/api/warehouse-locations/optimize-pick-route")
+        .post("/api/locations/optimize-pick-route")
         .set("Authorization", `Bearer ${getAdminToken()}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ items });

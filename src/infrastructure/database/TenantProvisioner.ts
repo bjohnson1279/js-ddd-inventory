@@ -47,12 +47,12 @@ export class TenantProvisioner {
 
     // Terminate active connections
     try {
-      await this.controlPrisma.$executeRawUnsafe(`
+      await this.controlPrisma.$executeRaw`
         SELECT pg_terminate_backend(pg_stat_activity.pid)
         FROM pg_stat_activity
-        WHERE pg_stat_activity.datname = '${entry.dbName}'
+        WHERE pg_stat_activity.datname = ${entry.dbName}
           AND pid <> pg_backend_pid();
-      `);
+      `;
     } catch {}
 
     await this.dropDatabase(entry.dbName);

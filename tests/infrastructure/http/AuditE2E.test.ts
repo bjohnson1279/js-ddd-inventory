@@ -86,9 +86,8 @@ describe("Audit REST API Endpoints", () => {
     (prisma.auditDiscrepancyModel.findMany as jest.Mock).mockResolvedValueOnce([mockDiscrepancy]);
 
     const res = await request(app)
-      .get("/api/audit/discrepancies")
+      .get("/api/tenant-audit/discrepancies")
         .set("Authorization", `Bearer ${getAdminToken()}`)
-      .set("Authorization", `Bearer ${token}`)
       .expect(200);
 
     expect(res.body.discrepancies).toHaveLength(1);
@@ -120,9 +119,8 @@ describe("Audit REST API Endpoints", () => {
     (prisma.quickbooksJournalMappingModel.findUnique as jest.Mock).mockResolvedValueOnce(null);
 
     const res = await request(app)
-      .post("/api/audit/run")
+      .post("/api/tenant-audit/run")
         .set("Authorization", `Bearer ${getAdminToken()}`)
-      .set("Authorization", `Bearer ${token}`)
       .expect(200);
 
     expect(res.body.shopifyDiscrepancies).toBe(1);
@@ -142,9 +140,8 @@ describe("Audit REST API Endpoints", () => {
     });
 
     const res = await request(app)
-      .post("/api/audit/discrepancies/disc-1/resolve")
+      .post("/api/tenant-audit/discrepancies/disc-1/resolve")
         .set("Authorization", `Bearer ${getAdminToken()}`)
-      .set("Authorization", `Bearer ${token}`)
       .send({ notes: "Manually synchronized" })
       .expect(200);
 
