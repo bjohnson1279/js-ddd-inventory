@@ -91,6 +91,20 @@ export class SerializedItem {
     this.transitionTo(SerializedItemStatus.WrittenOff, reason, actor, referenceId);
   }
 
+  public scanCheckIn(newLocation: string, actor: string): void {
+    if (this._locationId !== newLocation) {
+      if (this._status === SerializedItemStatus.Pending || this._status === SerializedItemStatus.Transferred) {
+        this.transitionTo(
+          SerializedItemStatus.InStock,
+          `Checked in via RFID scan at ${newLocation}`,
+          actor,
+          null
+        );
+      }
+      this._locationId = newLocation;
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Queries
   // -------------------------------------------------------------------------

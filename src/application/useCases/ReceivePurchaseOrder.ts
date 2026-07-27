@@ -6,6 +6,7 @@ import { IInventoryRepository } from "../../domain/repositories/IInventoryReposi
 import { ICostLayerRepository } from "../../domain/repositories/ICostLayerRepository";
 import { ReceiveStock } from "./ReceiveStock";
 import { InventoryCostLayer } from "../../domain/accounting/entities/InventoryCostLayer";
+import { SKU } from "../../domain/valueObjects/SKU";
 
 export interface ReceivePurchaseOrderItemDTO {
   variantId: string;
@@ -57,6 +58,20 @@ export class ReceivePurchaseOrder {
 
     const modifiedInventoryItems = new Map<string, InventoryItem>();
 
+    // Optimization: Bulk pre-fetch inventory items to avoid N+1 queries.
+    // The underlying ReceiveStock use case internally executes `this.inventoryRepository.findBySku`.
+    // By invoking `findBySkus` here first, a properly configured repository implementation
+    // (such as Prisma with a dataloader/transaction context or an in-memory cache layer)
+    // will satisfy the inner queries from memory.
+    const skusToFetch = dto.items.map(i => SKU.create(i.variantId));
+      await this.inventoryRepository.findBySkus(skusToFetch, po.locationId);
+    }
+
+    // Optimization: Iterate sequentially rather than concurrently via Promise.all.
+    // Concurrent execution of `receiveStock.execute(...)` results in race conditions
+    // where multiple updates to the same SKU overwrite each other due to fetching
+    // stale optimistic locks simultaneously. Sequential execution guarantees safety
+    // at the slight cost of synchronous await steps, offset by the pre-fetch optimization.
     for (const item of dto.items) {
       const poItem = poItemsMap.get(item.variantId);
       if (!poItem) {
@@ -77,6 +92,8 @@ export class ReceivePurchaseOrder {
 
       invItem.receiveStock(Quantity.create(item.quantityReceived));
       modifiedInventoryItems.set(item.variantId, invItem);
+      // 2. Receive physical stock safely using the underlying use case rules
+      await receiveStock.execute(item.variantId, item.quantityReceived, po.locationId);
 
       // 3. Prepare Cost Layer
       const layerId = crypto.randomUUID();

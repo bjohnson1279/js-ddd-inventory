@@ -92,6 +92,23 @@ export class PrismaSerializedItemRepository implements ISerializedItemRepository
     return records.map((r) => this.mapToDomain(r));
   }
 
+
+  async findBySerials(serials: SerialNumber[], tenantId: string): Promise<SerializedItem[]> {
+    const serialValues = serials.map(s => s.value);
+    const records = await this.prisma.serializedItemModel.findMany({
+      where: {
+        serialNumber: { in: serialValues },
+        tenantId: tenantId,
+      },
+      include: {
+        transitions: {
+          orderBy: { transitionedAt: "asc" },
+        },
+      },
+    });
+    return records.map(r => this.mapToDomain(r));
+  }
+
   async isRegistered(serial: SerialNumber, tenantId: string): Promise<boolean> {
     const record = await this.prisma.serializedItemModel.findUnique({
       where: {
@@ -111,6 +128,55 @@ export class PrismaSerializedItemRepository implements ISerializedItemRepository
         status,
       },
     });
+  }
+
+
+  async saveMany(items: SerializedItem[]): Promise<void> {
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      for (const item of items) {
+        await tx.serializedItemModel.upsert({
+          where: { id: item.id },
+          update: {
+            serialNumber: item.serialNumber.value,
+            sku: item.variantId,
+            status: item.status,
+            locationId: item.locationId,
+            tenantId: item.tenantId,
+          },
+          create: {
+            id: item.id,
+            serialNumber: item.serialNumber.value,
+            sku: item.variantId,
+            status: item.status,
+            locationId: item.locationId,
+            tenantId: item.tenantId,
+          },
+        });
+
+        await tx.statusTransitionModel.deleteMany({
+          where: { serializedItemId: item.id },
+        });
+
+        if (item.history.length > 0) {
+          await tx.statusTransitionModel.createMany({
+            data: item.history.map((t, idx) => ({
+              id: `${item.id}-t-${idx}-${t.occurredAt.getTime()}`,
+              serializedItemId: item.id,
+              fromStatus: t.from,
+              toStatus: t.to,
+              reason: t.reason,
+              transitionedAt: t.occurredAt,
+              actorId: t.actor,
+              referenceId: t.referenceId,
+            })),
+          });
+        }
+      }
+    });
+
+    for (const item of items) {
+      await DomainEventDispatcher.dispatch(item.releaseEvents());
+    }
   }
 
   async save(item: SerializedItem): Promise<void> {

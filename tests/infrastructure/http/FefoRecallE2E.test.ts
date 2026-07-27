@@ -1,3 +1,4 @@
+process.env.COMPLIANCE_PRIVATE_KEY = "test_key";
 process.env.NODE_ENV = "test";
 process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 process.env.JWT_SECRET = "dummy_jwt_secret";

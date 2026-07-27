@@ -184,7 +184,7 @@ export class ShippingController {
         res.status(400).json({ error: "A domain error occurred while routing the order.", type: error.name });
       } else {
         Logger.error({ context: "ShippingController", message: "Failed to route order:", error: error });
-        res.status(500).json({ error: "Failed to route order: " + error.message });
+        res.status(500).json({ error: "Failed to route order." });
       }
     }
   }

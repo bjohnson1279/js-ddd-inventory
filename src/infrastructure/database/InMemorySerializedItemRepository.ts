@@ -40,6 +40,18 @@ export class InMemorySerializedItemRepository implements ISerializedItemReposito
     return list;
   }
 
+
+  async findBySerials(serials: SerialNumber[], tenantId: string): Promise<SerializedItem[]> {
+    const list: SerializedItem[] = [];
+    const serialSet = new Set(serials.map(s => s.value));
+    for (const item of this.items.values()) {
+      if (serialSet.has(item.serialNumber.value) && item.tenantId === tenantId) {
+        list.push(item);
+      }
+    }
+    return list;
+  }
+
   async isRegistered(serial: SerialNumber, tenantId: string): Promise<boolean> {
     const item = await this.findBySerial(serial, tenantId);
     return item !== null;
@@ -53,6 +65,13 @@ export class InMemorySerializedItemRepository implements ISerializedItemReposito
       }
     }
     return count;
+  }
+
+
+  async saveMany(items: SerializedItem[]): Promise<void> {
+    for (const item of items) {
+      this.items.set(item.id, item);
+    }
   }
 
   async save(item: SerializedItem): Promise<void> {

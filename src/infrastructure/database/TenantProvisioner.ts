@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { Prisma } from '@prisma/client';
 import { TenantRegistry } from './TenantRegistry';
 
 /**
@@ -47,10 +48,10 @@ export class TenantProvisioner {
 
     // Terminate active connections
     try {
-      await this.controlPrisma.$executeRawUnsafe(`
+      await this.controlPrisma.$executeRaw(Prisma.sql`
         SELECT pg_terminate_backend(pg_stat_activity.pid)
         FROM pg_stat_activity
-        WHERE pg_stat_activity.datname = '${entry.dbName}'
+        WHERE pg_stat_activity.datname = ${entry.dbName}
           AND pid <> pg_backend_pid();
       `);
     } catch {}
@@ -203,6 +204,18 @@ export class TenantProvisioner {
           "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
           "processedAt" TIMESTAMPTZ,
           "nextAttemptAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `);
+
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS rfid_tags (
+          epc TEXT PRIMARY KEY,
+          sku TEXT NOT NULL,
+          serial_number TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'ACTIVE',
+          last_seen_at TIMESTAMPTZ,
+          last_location TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
       `);
 
