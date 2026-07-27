@@ -32,7 +32,8 @@ describe('TenantRegistry', () => {
       expect(entry.dbPort).toBeGreaterThan(0);
       expect(entry.dbName).toBe('inventory_tenant_tenant_1');
       expect(entry.dbUser).toBeTruthy();
-      expect(entry.dbPassword).toBeTruthy();
+      // dbPassword should be undefined if not provided in env
+      expect(entry.dbPassword).toBeUndefined();
     });
 
     it('should use custom connection details when provided', async () => {

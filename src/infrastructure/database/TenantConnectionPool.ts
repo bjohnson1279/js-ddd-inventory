@@ -101,7 +101,8 @@ export class TenantConnectionPool {
 
   private async createClient(entry: TenantRegistryEntry): Promise<PoolEntry> {
     // Connect to tenant's dedicated database on the default public schema
-    const connectionString = `postgresql://${entry.dbUser}:${entry.dbPassword}@${entry.dbHost}:${entry.dbPort}/${entry.dbName}?schema=public&connection_limit=10`;
+    const authSegment = entry.dbPassword ? `${entry.dbUser}:${entry.dbPassword}@` : `${entry.dbUser}@`;
+    const connectionString = `postgresql://${authSegment}${entry.dbHost}:${entry.dbPort}/${entry.dbName}?schema=public&connection_limit=10`;
 
     const pool = new Pool({ connectionString });
     const adapter = new PrismaPg(pool);

@@ -86,19 +86,21 @@ export class TenantProvisioner {
   }
 
   private getControlPool(): Pool {
+    const authSegment = process.env.DB_PASSWORD ? `${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD}@` : `${process.env.DB_USER || 'postgres'}@`;
     const connectionString = process.env.DATABASE_URL ||
-      `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'password'}@${process.env.DB_HOST || '127.0.0.1'}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'inventory'}`;
+      `postgresql://${authSegment}${process.env.DB_HOST || '127.0.0.1'}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'inventory'}`;
     return new Pool({ connectionString, max: 2 });
   }
 
-  private getTenantPool(entry: { dbHost: string; dbPort: number; dbName: string; dbUser: string; dbPassword: string }): Pool {
+  private getTenantPool(entry: { dbHost: string; dbPort: number; dbName: string; dbUser: string; dbPassword?: string }): Pool {
+    const authSegment = entry.dbPassword ? `${entry.dbUser}:${entry.dbPassword}@` : `${entry.dbUser}@`;
     return new Pool({
-      connectionString: `postgresql://${entry.dbUser}:${entry.dbPassword}@${entry.dbHost}:${entry.dbPort}/${entry.dbName}`,
+      connectionString: `postgresql://${authSegment}${entry.dbHost}:${entry.dbPort}/${entry.dbName}`,
       max: 2,
     });
   }
 
-  private async runMigrationsOnTenantDb(entry: { dbHost: string; dbPort: number; dbName: string; dbUser: string; dbPassword: string }): Promise<void> {
+  private async runMigrationsOnTenantDb(entry: { dbHost: string; dbPort: number; dbName: string; dbUser: string; dbPassword?: string }): Promise<void> {
     const tenantPool = this.getTenantPool(entry);
     const client = await tenantPool.connect();
 
@@ -226,7 +228,7 @@ export class TenantProvisioner {
   }
 
   private async seedDefaultsOnTenantDb(
-    entry: { dbHost: string; dbPort: number; dbName: string; dbUser: string; dbPassword: string },
+    entry: { dbHost: string; dbPort: number; dbName: string; dbUser: string; dbPassword?: string },
     tenantId: string
   ): Promise<void> {
     const tenantPool = this.getTenantPool(entry);
