@@ -9,6 +9,10 @@ export class LifoCostingStrategy implements ICostingStrategy {
     quantity: number,
     variantId: string
   ): CostBreakdown {
+    if (isNaN(quantity) || quantity < 0) {
+      return new CostBreakdown(quantity, 0);
+    }
+
     const sorted = [...layers].sort(
       (a, b) => b.receivedAt.getTime() - a.receivedAt.getTime()
     );
@@ -35,6 +39,10 @@ export class LifoCostingStrategy implements ICostingStrategy {
     quantity: number,
     variantId: string
   ): CostBreakdown {
+    if (isNaN(quantity) || quantity < 0) {
+      return new CostBreakdown(quantity, 0);
+    }
+
     const sorted = [...layers].sort(
       (a, b) => b.receivedAt.getTime() - a.receivedAt.getTime()
     );
