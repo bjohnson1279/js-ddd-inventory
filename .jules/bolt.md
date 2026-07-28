@@ -1,3 +1,3 @@
-## 2024-05-24 - Async Concurrency vs Network Waterfall
-**Learning:** Blindly replacing a `Promise.all` loop containing complex operations with a sequential `for...of` loop to enable batch saving at the end can inadvertently serialize asynchronous queries (like database lookups or network fetches) occurring within that loop. This serial execution creates a "network waterfall," severely degrading performance when processing many items, negating the benefits of the batched saves.
-**Action:** When extracting data mutations to be saved in a batch at the end of a loop, retain the concurrent `Promise.all` mapping over the input array to preserve the parallel execution of read queries inside the loop, while still gathering the resulting entity instances in memory to be saved using `saveMany` afterward.
+## 2024-05-18 - Hallucinatory Methods in Code Review Feedback
+**Learning:** Code review automated feedback correctly pointed out potential for crashing the application with missing methods, however it hallucinates `consumeFifoLayersBatch` missing from `CostLayerService.ts` when it IS in fact present (lines 108-112).
+**Action:** When automated code review flags a method as hallucinatory, use `grep` or `cat` to verify its existence in the codebase before reverting correct optimization changes.

@@ -251,21 +251,31 @@ export class ReceiveRMA {
     }
 
     // Process immediate scrap write-offs (cost consumption & journal) AFTER cost layers have been persisted
-    for (const item of dto.items) {
-      if (item.disposition === RMADisposition.Scrap) {
-        const rmaItem = rmaItemsMap.get(item.variantId);
-        await this.costLayerService.consumeFifoLayers(item.variantId, item.quantityReceived);
+    const scrapItems = dto.items.filter(item => item.disposition === RMADisposition.Scrap);
 
-        if (config.accountingMethod === AccountingMethod.Accrual) {
+    if (scrapItems.length > 0) {
+      // Optimization: Batch consume FIFO layers to avoid N+1 DB lookups
+      const componentsToConsume = scrapItems.map(item => ({
+        variantId: item.variantId,
+        quantity: item.quantityReceived
+      }));
+      await this.costLayerService.consumeFifoLayersBatch(componentsToConsume);
+
+      if (config.accountingMethod === AccountingMethod.Accrual) {
+        // Optimization: Execute journal entries concurrently to prevent N+1 I/O latency
+        const date = new Date();
+        const writeOffPromises = scrapItems.map(item => {
+          const rmaItem = rmaItemsMap.get(item.variantId);
           const totalCostCents = (rmaItem?.unitCostCents || 0) * item.quantityReceived;
-          await this.journalService.onInventoryWriteOff(
+          return this.journalService.onInventoryWriteOff(
             rma.id,
             totalCostCents,
-            new Date(),
+            date,
             config,
             rma.tenantId
           );
-        }
+        });
+        await Promise.all(writeOffPromises);
       }
     }
 
