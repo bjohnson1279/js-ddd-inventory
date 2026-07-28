@@ -88,8 +88,37 @@ export class ReceiveRMA {
       }
     }
 
+    // Optimization: Pre-fetch all serialized items to avoid N+1 DB lookups inside the loop
+    const allSerialObjects: SerialNumber[] = [];
+    let expectedTotalSerials = 0;
+    for (const item of dto.items) {
+      if (item.serialNumbers) {
+        allSerialObjects.push(...item.serialNumbers.map(sn => new SerialNumber(sn)));
+        expectedTotalSerials += item.serialNumbers.length;
+      }
+    }
+
+    const serializedItemsMap = new Map<string, any>(); // Map<string, SerializedItem>
+    if (allSerialObjects.length > 0 && this.serializedItemRepository) {
+      let fetchedSerials = [];
+      if (this.serializedItemRepository.findBySerials) {
+        fetchedSerials = await this.serializedItemRepository.findBySerials(allSerialObjects, rma.tenantId);
+        if (fetchedSerials.length !== expectedTotalSerials) {
+          throw new Error(`Not all serial numbers found for RMA ${rma.rmaNumber}`);
+        }
+      } else {
+        fetchedSerials = await Promise.all(allSerialObjects.map(obj =>
+          this.serializedItemRepository!.findBySerialOrFail(obj, rma.tenantId)
+        ));
+      }
+      for (const serialItem of fetchedSerials) {
+        serializedItemsMap.set(serialItem.serialNumber.value, serialItem);
+      }
+    }
+
     const modifiedInventoryItems = new Map<string, InventoryItem>();
     const newCostLayers: InventoryCostLayer[] = [];
+    const modifiedSerialItems: any[] = [];
 
     // Optimization: Replaced Promise.all map loop with sequential for-of loop to avoid DB concurrency exceptions on identical SKUs
     for (const item of dto.items) {
@@ -171,20 +200,14 @@ export class ReceiveRMA {
 
       // 7. Handle Serialized items transitions
       if (item.serialNumbers && this.serializedItemRepository) {
-        let serialItems = [];
-        const serialObjects = item.serialNumbers.map(sn => new SerialNumber(sn));
-
-        if (this.serializedItemRepository.findBySerials) {
-          serialItems = await this.serializedItemRepository.findBySerials(serialObjects, rma.tenantId);
-          if (serialItems.length !== item.serialNumbers.length) {
-            throw new Error(`Not all serial numbers found for RMA ${rma.rmaNumber}`);
+        const serialItems = item.serialNumbers.map(sn => {
+          const serialObj = new SerialNumber(sn);
+          const found = serializedItemsMap.get(serialObj.value);
+          if (!found) {
+             throw new Error(`Not all serial numbers found for RMA ${rma.rmaNumber}`);
           }
-        } else {
-          // Fallback
-          serialItems = await Promise.all(serialObjects.map(obj =>
-            this.serializedItemRepository!.findBySerialOrFail(obj, rma.tenantId)
-          ));
-        }
+          return found;
+        });
 
         for (const serialItem of serialItems) {
           serialItem.acceptReturn(`RMA-${rma.id}`, "system");
@@ -196,15 +219,16 @@ export class ReceiveRMA {
           } else if (item.disposition === RMADisposition.Scrap) {
             serialItem.writeOff(`RMA return: Scrapped`, "system", `RMA-${rma.id}`);
           }
+          modifiedSerialItems.push(serialItem);
         }
+      }
+    }
 
-        if (this.serializedItemRepository.saveMany) {
-          await this.serializedItemRepository.saveMany(serialItems);
-        } else {
-          for (const serialItem of serialItems) {
-            await this.serializedItemRepository.save(serialItem);
-          }
-        }
+    if (modifiedSerialItems.length > 0 && this.serializedItemRepository) {
+      if (this.serializedItemRepository.saveMany) {
+        await this.serializedItemRepository.saveMany(modifiedSerialItems);
+      } else {
+        await Promise.all(modifiedSerialItems.map(item => this.serializedItemRepository!.save(item)));
       }
     }
 
