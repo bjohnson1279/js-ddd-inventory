@@ -61,6 +61,9 @@ export class TenantProvisioner {
   }
 
   private async createDatabase(dbName: string): Promise<void> {
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(dbName)) {
+      throw new Error(`Invalid database name: ${dbName}`);
+    }
     const controlPool = this.getControlPool();
     const client = await controlPool.connect();
     try {
@@ -75,6 +78,9 @@ export class TenantProvisioner {
   }
 
   private async dropDatabase(dbName: string): Promise<void> {
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(dbName)) {
+      throw new Error(`Invalid database name: ${dbName}`);
+    }
     const controlPool = this.getControlPool();
     const client = await controlPool.connect();
     try {
