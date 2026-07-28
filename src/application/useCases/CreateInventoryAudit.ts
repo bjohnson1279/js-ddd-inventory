@@ -26,25 +26,25 @@ export class CreateInventoryAudit {
 
     const auditItems: InventoryAuditItem[] = [];
     let variants = dto.variantIds;
+    let inventoryItems: InventoryItem[] = [];
 
     if (!variants || variants.length === 0) {
       // If no variants specified, snapshot all variants currently in inventory at this location
-      const items = await this.inventoryRepository.findAllByLocation(dto.locationId);
-      variants = items.map((item) => item.sku.getValue());
-    }
-
-    const skus = variants.map(v => SKU.create(v));
-    let inventoryItems: InventoryItem[] = [];
-
-    if (this.inventoryRepository.findBySkus) {
-      inventoryItems = await this.inventoryRepository.findBySkus(skus, dto.locationId);
+      inventoryItems = await this.inventoryRepository.findAllByLocation(dto.locationId);
+      variants = inventoryItems.map((item) => item.sku.getValue());
     } else {
-      const fetchPromises = skus.map(async (sku) => {
-        const item = await this.inventoryRepository.findBySku(sku, dto.locationId);
-        return item;
-      });
-      const results = await Promise.all(fetchPromises);
-      inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
+      const skus = variants.map(v => SKU.create(v));
+
+      if (this.inventoryRepository.findBySkus) {
+        inventoryItems = await this.inventoryRepository.findBySkus(skus, dto.locationId);
+      } else {
+        const fetchPromises = skus.map(async (sku) => {
+          const item = await this.inventoryRepository.findBySku(sku, dto.locationId);
+          return item;
+        });
+        const results = await Promise.all(fetchPromises);
+        inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
+      }
     }
 
     const itemsBySku = new Map(inventoryItems.map(item => [item.sku.getValue(), item]));
