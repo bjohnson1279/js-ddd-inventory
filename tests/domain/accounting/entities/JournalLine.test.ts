@@ -66,4 +66,33 @@ describe("JournalLine Entity", () => {
     expect(journalLine.type).toBe(type);
     expect(journalLine.memo).toBe(memo);
   });
+
+  it("should handle null/undefined properties bypassed via any", () => {
+    const id = null as any;
+    const account = undefined as any;
+    const amountCents = null as any;
+    const type = undefined as any;
+    const memo = null as any;
+
+    const journalLine = new JournalLine(id, account, amountCents, type, memo);
+
+    expect(journalLine.id).toBeNull();
+    expect(journalLine.account).toBeUndefined();
+    expect(journalLine.amountCents).toBeNull();
+    expect(journalLine.type).toBeUndefined();
+    expect(journalLine.memo).toBeNull();
+  });
+
+  it("should handle extreme input lengths for memo", () => {
+    const id = "jl-ext";
+    const account = AccountCode.cash();
+    const amountCents = 150;
+    const type = DebitCredit.Debit;
+    const memo = "A".repeat(10000); // 10,000 characters long
+
+    const journalLine = new JournalLine(id, account, amountCents, type, memo);
+
+    expect(journalLine.memo).toBe(memo);
+    expect(journalLine.memo.length).toBe(10000);
+  });
 });

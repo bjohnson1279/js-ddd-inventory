@@ -34,5 +34,23 @@ describe("CostingStrategyRegistry", () => {
         CostingStrategyRegistry.get("invalid_method" as CostingMethod)
       ).toThrow("Unsupported costing method: invalid_method");
     });
+
+    it("should throw an error for null costing method", () => {
+      expect(() =>
+        CostingStrategyRegistry.get(null as unknown as CostingMethod)
+      ).toThrow("Unsupported costing method: null");
+    });
+
+    it("should throw an error for undefined costing method", () => {
+      expect(() =>
+        CostingStrategyRegistry.get(undefined as unknown as CostingMethod)
+      ).toThrow("Unsupported costing method: undefined");
+    });
+
+    it("should throw an error for empty string costing method", () => {
+      expect(() =>
+        CostingStrategyRegistry.get("" as unknown as CostingMethod)
+      ).toThrow("Unsupported costing method: ");
+    });
   });
 });

@@ -1,5 +1,5 @@
 import { GeoLocation } from "../../valueObjects/GeoLocation";
-import { CandidateLocation, FulfillmentPlan, FulfillmentAllocation, IRoutingStrategy } from "../strategies/RoutingStrategy";
+import { FulfillmentPlan, FulfillmentAllocation, IRoutingStrategy } from "../strategies/RoutingStrategy";
 
 export class OrderRoutingEngine {
   /**

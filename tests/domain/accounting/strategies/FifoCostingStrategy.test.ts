@@ -37,7 +37,7 @@ describe("FifoCostingStrategy", () => {
       expect(layers[0].remainingQuantity).toBe(10); // Not consumed
     });
 
-    it("should calculate cost spanning multiple layers in FIFO order", () => {
+    it("should calculate cost spanning multiple layers in FIFO order, sorting them properly", () => {
       const layers = [
         createLayer(10, 2000, new Date("2023-01-02")), // Newer
         createLayer(5, 1000, new Date("2023-01-01")),  // Older
@@ -50,6 +50,20 @@ describe("FifoCostingStrategy", () => {
       // Total = 15000
       expect(result.units).toBe(10);
       expect(result.totalCostCents).toBe(15000);
+    });
+
+    it("should stop processing layers early when requested quantity is fully met", () => {
+      const layers = [
+        createLayer(5, 1000, new Date("2023-01-01")), // Exactly fulfills request
+        createLayer(10, 2000, new Date("2023-01-02")), // Should not be processed
+      ];
+
+      const result = strategy.calculateCost(layers, 5, "test-variant");
+
+      expect(result.units).toBe(5);
+      expect(result.totalCostCents).toBe(5000);
+      expect(layers[0].remainingQuantity).toBe(5); // Not consumed in calculateCost
+      expect(layers[1].remainingQuantity).toBe(10); // Not processed
     });
 
     it("should throw InsufficientInventoryException if requested quantity exceeds available", () => {
@@ -75,7 +89,7 @@ describe("FifoCostingStrategy", () => {
       expect(layers[0].remainingQuantity).toBe(5); // Consumed
     });
 
-    it("should consume inventory spanning multiple layers in FIFO order", () => {
+    it("should consume inventory spanning multiple layers in FIFO order, sorting them properly", () => {
       const layers = [
         createLayer(10, 2000, new Date("2023-01-02")), // Newer
         createLayer(5, 1000, new Date("2023-01-01")),  // Older
@@ -90,6 +104,20 @@ describe("FifoCostingStrategy", () => {
       expect(layers[1].remainingQuantity).toBe(0);
       // Newer layer should have 5 remaining
       expect(layers[0].remainingQuantity).toBe(5);
+    });
+
+    it("should stop consuming layers early when requested quantity is fully met", () => {
+      const layers = [
+        createLayer(5, 1000, new Date("2023-01-01")), // Exactly fulfills request
+        createLayer(10, 2000, new Date("2023-01-02")), // Should not be consumed
+      ];
+
+      const result = strategy.consumeLayers(layers, 5, "test-variant");
+
+      expect(result.units).toBe(5);
+      expect(result.totalCostCents).toBe(5000);
+      expect(layers[0].remainingQuantity).toBe(0); // Fully consumed
+      expect(layers[1].remainingQuantity).toBe(10); // Not processed/consumed
     });
 
     it("should throw InsufficientInventoryException if requested quantity exceeds available", () => {

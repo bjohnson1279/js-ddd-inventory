@@ -9,7 +9,7 @@ export interface TenantRegistryEntry {
   dbPort: number;
   dbName: string;
   dbUser: string;
-  dbPassword: string;
+  dbPassword?: string;
   status: 'PROVISIONING' | 'ACTIVE' | 'MIGRATING' | 'DEPROVISIONED';
   provisionedAt: Date;
   migratedVersion: string;
@@ -35,7 +35,7 @@ export class TenantRegistry {
     const port = dbPort || parseInt(process.env.DB_PORT || '5432', 10);
     const name = dbName || `inventory_tenant_${safeName}`;
     const user = dbUser || process.env.DB_USER || 'postgres';
-    const password = dbPassword || process.env.DB_PASSWORD || 'password';
+    const password = dbPassword || process.env.DB_PASSWORD || undefined;
 
     const existing = await this.lookupTenant(tenantId);
     if (existing && existing.status !== 'DEPROVISIONED') {

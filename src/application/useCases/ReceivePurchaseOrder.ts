@@ -77,13 +77,17 @@ export class ReceivePurchaseOrder {
       costLayers.push(costLayer);
     }
 
+    const savePromises: Promise<any>[] = [];
+
     if (this.costLayerRepository.saveMany && costLayers.length > 0) {
-      await this.costLayerRepository.saveMany(costLayers);
+      savePromises.push(this.costLayerRepository.saveMany(costLayers));
     } else {
-      await Promise.all(costLayers.map(layer => this.costLayerRepository.save(layer)));
+      savePromises.push(...costLayers.map(layer => this.costLayerRepository.save(layer)));
     }
 
-    // 4. Save updated PO
-    await this.poRepository.save(po);
+    // 4. Save updated PO concurrently with cost layers
+    savePromises.push(this.poRepository.save(po));
+
+    await Promise.all(savePromises);
   }
 }

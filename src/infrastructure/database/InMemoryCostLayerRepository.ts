@@ -4,6 +4,17 @@ import { InventoryCostLayer } from "../../domain/accounting/entities/InventoryCo
 export class InMemoryCostLayerRepository implements ICostLayerRepository {
   private readonly layers: Map<string, InventoryCostLayer> = new Map();
 
+  public async getActiveLayersByVariantIds(
+    variantIds: string[],
+    orderBy?: string
+  ): Promise<Map<string, InventoryCostLayer[]>> {
+    const map = new Map<string, InventoryCostLayer[]>();
+    for (const vId of variantIds) {
+      map.set(vId, await this.getActiveLayers(vId, orderBy));
+    }
+    return map;
+  }
+
   public async getActiveLayers(
     variantId: string,
     orderBy?: string

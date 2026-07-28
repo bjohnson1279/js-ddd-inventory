@@ -39,8 +39,90 @@ export class PutawaySuggester {
       return [];
     }
 
-    // Batch lookup all inventory items
-    const allItems = await this.inventoryRepo.findAll();
+    const attrs = variant.attributes.all();
+    const tempZoneAttr = attrs.find(a => a.name === "temperatureZone")?.value;
+    const hazardAttr = attrs.find(a => a.name === "hazardClass")?.value;
+    const velocityAttr = attrs.find(a => a.name === "velocity")?.value;
+
+    // Filter and score candidates based on matching attributes first
+    // This avoids fetching inventory for locations we would never use
+    const locationCapacities = [];
+    const locationItemsCount = new Map<string, number>();
+
+    for (const loc of locations) {
+      let score = 0;
+      let matchesZoneType = true;
+
+      // 1. Temperature Zone: must match if variant specifies it
+      if (tempZoneAttr) {
+        if (loc.zone.toLowerCase() === tempZoneAttr.toLowerCase()) {
+          score += 100;
+        } else {
+          matchesZoneType = false;
+        }
+      }
+
+      // 2. Hazard Class: if hazard class is present (e.g. flammable), prioritize HAZMAT zone.
+      // If hazard class is NOT present, do NOT put it in HAZMAT zone.
+      if (hazardAttr) {
+        if (loc.zone.toLowerCase() === "hazmat") {
+          score += 200;
+        } else {
+          matchesZoneType = false;
+        }
+      } else {
+        if (loc.zone.toLowerCase() === "hazmat") {
+          matchesZoneType = false; // standard item should not be in HAZMAT
+        }
+      }
+
+      // If we don't match the zone type or capacity is exactly 0 before even calculating inventory, skip
+      if (!matchesZoneType || loc.maxWeightGrams <= 0 || loc.maxVolumeCubicMeters <= 0) {
+        continue;
+      }
+
+      // 3. Velocity: fast-moving items go to FAST zone or front aisles (e.g., A01, A02)
+      if (velocityAttr && velocityAttr.toLowerCase() === "fast-moving") {
+        if (loc.zone.toLowerCase() === "fast") {
+          score += 50;
+        }
+        if (loc.aisle === "A01" || loc.aisle === "A02" || loc.aisle === "A03") {
+          score += 30;
+        }
+      }
+
+      locationCapacities.push({
+        location: loc,
+        remainingWeight: loc.maxWeightGrams,
+        remainingVolume: loc.maxVolumeCubicMeters,
+        score,
+        matchesZoneType
+      });
+      locationItemsCount.set(loc.id.value, locationCapacities.length - 1);
+    }
+
+    if (locationCapacities.length === 0) {
+      return [];
+    }
+
+    // Batch lookup inventory items only for eligible locations
+    let allItems: any[] = [];
+
+    if (this.inventoryRepo.findAllByLocationIds) {
+      const locationIds = Array.from(locationItemsCount.keys());
+      // Chunk to avoid query param limits (e.g., PostgreSQL 65535 limit)
+      const chunkSize = 500;
+      for (let i = 0; i < locationIds.length; i += chunkSize) {
+        const chunk = locationIds.slice(i, i + chunkSize);
+        const itemsChunk = await this.inventoryRepo.findAllByLocationIds(chunk);
+        allItems = allItems.concat(itemsChunk);
+      }
+    } else {
+      const fullItems = await this.inventoryRepo.findAll();
+      // Only keep items that belong to our filtered locations
+      allItems = fullItems.filter(item => locationItemsCount.has(item.locationId));
+    }
+
     const itemSkusMap = new Map<string, SKU>();
     for (const item of allItems) {
       itemSkusMap.set(item.sku.getValue(), item.sku);
@@ -56,19 +138,6 @@ export class PutawaySuggester {
       }
     }
 
-    // Map location items for fast O(1) lookups
-    // For each location, calculate occupied weight & volume directly
-    const locationCapacities = [];
-    const locationItemsCount = new Map<string, number>(); // track counts if needed
-    for (const loc of locations) {
-      locationCapacities.push({
-        location: loc,
-        remainingWeight: loc.maxWeightGrams,
-        remainingVolume: loc.maxVolumeCubicMeters
-      });
-      locationItemsCount.set(loc.id.value, locationCapacities.length - 1);
-    }
-
     for (const item of allItems) {
       const idx = locationItemsCount.get(item.locationId);
       if (idx !== undefined) {
@@ -80,58 +149,8 @@ export class PutawaySuggester {
       }
     }
 
-    // Filter and score candidates based on matching attributes
-    const attrs = variant.attributes.all();
-    const tempZoneAttr = attrs.find(a => a.name === "temperatureZone")?.value;
-    const hazardAttr = attrs.find(a => a.name === "hazardClass")?.value;
-    const velocityAttr = attrs.find(a => a.name === "velocity")?.value;
-
-    const scoredCandidates = locationCapacities.map(c => {
-      let score = 0;
-      let matchesZoneType = true;
-
-      // 1. Temperature Zone: must match if variant specifies it
-      if (tempZoneAttr) {
-        if (c.location.zone.toLowerCase() === tempZoneAttr.toLowerCase()) {
-          score += 100;
-        } else {
-          matchesZoneType = false;
-        }
-      }
-
-      // 2. Hazard Class: if hazard class is present (e.g. flammable), prioritize HAZMAT zone.
-      // If hazard class is NOT present, do NOT put it in HAZMAT zone.
-      if (hazardAttr) {
-        if (c.location.zone.toLowerCase() === "hazmat") {
-          score += 200;
-        } else {
-          matchesZoneType = false;
-        }
-      } else {
-        if (c.location.zone.toLowerCase() === "hazmat") {
-          matchesZoneType = false; // standard item should not be in HAZMAT
-        }
-      }
-
-      // 3. Velocity: fast-moving items go to FAST zone or front aisles (e.g., A01, A02)
-      if (velocityAttr && velocityAttr.toLowerCase() === "fast-moving") {
-        if (c.location.zone.toLowerCase() === "fast") {
-          score += 50;
-        }
-        if (c.location.aisle === "A01" || c.location.aisle === "A02" || c.location.aisle === "A03") {
-          score += 30;
-        }
-      }
-
-      return {
-        ...c,
-        score,
-        matchesZoneType
-      };
-    });
-
     // Filter to candidates that have positive remaining capacity and match zone type requirements
-    const eligible = scoredCandidates.filter(c =>
+    const eligible = locationCapacities.filter(c =>
       c.matchesZoneType &&
       c.remainingWeight > 0 &&
       c.remainingVolume > 0

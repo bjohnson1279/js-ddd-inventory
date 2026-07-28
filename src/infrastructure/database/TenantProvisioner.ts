@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import { Prisma } from '@prisma/client';
 import { TenantRegistry } from './TenantRegistry';
+import format from 'pg-format';
 
 /**
  * TenantProvisioner for JS/Express backend.
@@ -61,12 +62,15 @@ export class TenantProvisioner {
   }
 
   private async createDatabase(dbName: string): Promise<void> {
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(dbName)) {
+      throw new Error(`Invalid database name: ${dbName}`);
+    }
     const controlPool = this.getControlPool();
     const client = await controlPool.connect();
     try {
       const result = await client.query(`SELECT 1 FROM pg_database WHERE datname = $1`, [dbName]);
       if (result.rows.length === 0) {
-        await client.query(`CREATE DATABASE "${dbName}"`);
+        await client.query(format('CREATE DATABASE %I', dbName));
       }
     } finally {
       client.release();
@@ -75,10 +79,13 @@ export class TenantProvisioner {
   }
 
   private async dropDatabase(dbName: string): Promise<void> {
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(dbName)) {
+      throw new Error(`Invalid database name: ${dbName}`);
+    }
     const controlPool = this.getControlPool();
     const client = await controlPool.connect();
     try {
-      await client.query(`DROP DATABASE IF EXISTS "${dbName}"`);
+      await client.query(format('DROP DATABASE IF EXISTS %I', dbName));
     } finally {
       client.release();
       await controlPool.end();
@@ -86,19 +93,21 @@ export class TenantProvisioner {
   }
 
   private getControlPool(): Pool {
+    const authSegment = process.env.DB_PASSWORD ? `${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD}@` : `${process.env.DB_USER || 'postgres'}@`;
     const connectionString = process.env.DATABASE_URL ||
-      `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'password'}@${process.env.DB_HOST || '127.0.0.1'}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'inventory'}`;
+      `postgresql://${authSegment}${process.env.DB_HOST || '127.0.0.1'}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'inventory'}`;
     return new Pool({ connectionString, max: 2 });
   }
 
-  private getTenantPool(entry: { dbHost: string; dbPort: number; dbName: string; dbUser: string; dbPassword: string }): Pool {
+  private getTenantPool(entry: { dbHost: string; dbPort: number; dbName: string; dbUser: string; dbPassword?: string }): Pool {
+    const authSegment = entry.dbPassword ? `${entry.dbUser}:${entry.dbPassword}@` : `${entry.dbUser}@`;
     return new Pool({
-      connectionString: `postgresql://${entry.dbUser}:${entry.dbPassword}@${entry.dbHost}:${entry.dbPort}/${entry.dbName}`,
+      connectionString: `postgresql://${authSegment}${entry.dbHost}:${entry.dbPort}/${entry.dbName}`,
       max: 2,
     });
   }
 
-  private async runMigrationsOnTenantDb(entry: { dbHost: string; dbPort: number; dbName: string; dbUser: string; dbPassword: string }): Promise<void> {
+  private async runMigrationsOnTenantDb(entry: { dbHost: string; dbPort: number; dbName: string; dbUser: string; dbPassword?: string }): Promise<void> {
     const tenantPool = this.getTenantPool(entry);
     const client = await tenantPool.connect();
 
@@ -226,7 +235,7 @@ export class TenantProvisioner {
   }
 
   private async seedDefaultsOnTenantDb(
-    entry: { dbHost: string; dbPort: number; dbName: string; dbUser: string; dbPassword: string },
+    entry: { dbHost: string; dbPort: number; dbName: string; dbUser: string; dbPassword?: string },
     tenantId: string
   ): Promise<void> {
     const tenantPool = this.getTenantPool(entry);

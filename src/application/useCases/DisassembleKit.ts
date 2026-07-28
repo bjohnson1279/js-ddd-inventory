@@ -71,25 +71,37 @@ export class DisassembleKit {
     let totalEstimatedComponentsCost = 0;
     const componentAvgCosts: { variantId: string; quantity: number; avgUnitCost: number }[] = [];
 
-    const componentEstimates = await Promise.all(kitRecord.components.map(async (component) => {
+    let activeLayersMap: Map<string, InventoryCostLayer[]>;
+    if (this.costLayerRepository.getActiveLayersByVariantIds) {
+      const variantIds = kitRecord.components.map(c => c.variantId);
+      activeLayersMap = await this.costLayerRepository.getActiveLayersByVariantIds(variantIds, "asc");
+    } else {
+      activeLayersMap = new Map();
+      await Promise.all(kitRecord.components.map(async (component) => {
+        try {
+          const layers = await this.costLayerRepository.getActiveLayers(component.variantId, "asc");
+          activeLayersMap.set(component.variantId, layers);
+        } catch (err) {
+          activeLayersMap.set(component.variantId, []);
+        }
+      }));
+    }
+
+    const componentEstimates = kitRecord.components.map((component) => {
       const needed = component.quantity * quantity;
       let avgUnitCost = 0;
 
-      try {
-        const activeLayers = await this.costLayerRepository.getActiveLayers(component.variantId, "asc");
-        let totalUnits = 0;
-        let totalValue = 0;
-        for (const layer of activeLayers) {
-          totalUnits += layer.remainingQuantity;
-          totalValue += layer.remainingQuantity * layer.unitCostCents;
-        }
-        if (totalUnits > 0) {
-          avgUnitCost = Math.round(totalValue / totalUnits);
-        } else {
-          avgUnitCost = activeLayers.length > 0 ? activeLayers[0].unitCostCents : 1000; // default 10.00
-        }
-      } catch (err) {
-        avgUnitCost = 1000; // default 10.00
+      const activeLayers = activeLayersMap.get(component.variantId) || [];
+      let totalUnits = 0;
+      let totalValue = 0;
+      for (const layer of activeLayers) {
+        totalUnits += layer.remainingQuantity;
+        totalValue += layer.remainingQuantity * layer.unitCostCents;
+      }
+      if (totalUnits > 0) {
+        avgUnitCost = Math.round(totalValue / totalUnits);
+      } else {
+        avgUnitCost = activeLayers.length > 0 ? activeLayers[0].unitCostCents : 1000; // default 10.00
       }
 
       return {
@@ -97,7 +109,7 @@ export class DisassembleKit {
         quantity: needed,
         avgUnitCost
       };
-    }));
+    });
 
     for (const item of componentEstimates) {
       componentAvgCosts.push(item);

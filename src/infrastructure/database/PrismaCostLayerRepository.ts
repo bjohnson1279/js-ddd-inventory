@@ -25,6 +25,44 @@ export class PrismaCostLayerRepository implements ICostLayerRepository {
     return layer;
   }
 
+  async getActiveLayersByVariantIds(
+    variantIds: string[],
+    orderBy?: string
+  ): Promise<Map<string, InventoryCostLayer[]>> {
+    const isExpiration = orderBy?.toLowerCase().includes("expiration");
+    const orderDirection = orderBy?.toLowerCase().includes("desc") ? "desc" : "asc";
+
+    const records = await this.prisma.inventoryCostLayerModel.findMany({
+      where: {
+        variantId: { in: variantIds },
+        remainingQuantity: { gt: 0 },
+      },
+      orderBy: isExpiration
+        ? [
+            { expirationDate: orderDirection },
+            { receivedAt: "asc" }
+          ]
+        : orderBy
+        ? {
+            receivedAt: orderDirection as any,
+          }
+        : undefined,
+    });
+
+    const map = new Map<string, InventoryCostLayer[]>();
+    for (const vId of variantIds) {
+      map.set(vId, []);
+    }
+    for (const record of records) {
+      const layer = this.mapToDomain(record);
+      const list = map.get(layer.variantId);
+      if (list) {
+        list.push(layer);
+      }
+    }
+    return map;
+  }
+
   async getActiveLayers(
     variantId: string,
     orderBy?: string
