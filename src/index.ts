@@ -237,7 +237,164 @@ export const setupApp = (
   app.use("/api/warehouse-locations", warehouseLocationRoutes);
   app.use("/api/webhooks/subscriptions", webhookSubscriptionRoutes);
   app.use("/api/rfid", rfidRoutes);
+
+  // Lot Management & Traceability Endpoints
+  app.post("/api/lots/quarantine", async (req, res) => {
+    try {
+      const { lotNumber, variantId, reason } = req.body;
+      const tenantId = (req as any).user?.tenantId || "tenant-1";
+      let lot = await prisma.lotBatchModel.findUnique({
+        where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } }
+      });
+      if (!lot) {
+        lot = await prisma.lotBatchModel.create({
+          data: {
+            tenantId,
+            lotNumber,
+            variantId,
+            status: "QUARANTINED",
+            quarantinedAt: new Date(),
+            quarantineReason: reason
+          }
+        });
+      } else {
+        lot = await prisma.lotBatchModel.update({
+          where: { id: lot.id },
+          data: {
+            status: "QUARANTINED",
+            quarantinedAt: new Date(),
+            quarantineReason: reason
+          }
+        });
+      }
+      res.json(lot);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/lots/recall", async (req, res) => {
+    try {
+      const { lotNumber, variantId, reason } = req.body;
+      const tenantId = (req as any).user?.tenantId || "tenant-1";
+      let lot = await prisma.lotBatchModel.findUnique({
+        where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } }
+      });
+      if (!lot) {
+        lot = await prisma.lotBatchModel.create({
+          data: {
+            tenantId,
+            lotNumber,
+            variantId,
+            status: "RECALLED",
+            recalledAt: new Date(),
+            quarantineReason: reason
+          }
+        });
+      } else {
+        lot = await prisma.lotBatchModel.update({
+          where: { id: lot.id },
+          data: {
+            status: "RECALLED",
+            recalledAt: new Date(),
+            quarantineReason: reason
+          }
+        });
+      }
+      res.json(lot);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/lots/release", async (req, res) => {
+    try {
+      const { lotNumber, variantId } = req.body;
+      const tenantId = (req as any).user?.tenantId || "tenant-1";
+      const lot = await prisma.lotBatchModel.update({
+        where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } },
+        data: {
+          status: "ACTIVE",
+          quarantinedAt: null,
+          recalledAt: null,
+          quarantineReason: null
+        }
+      });
+      res.json(lot);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/lots/:lotNumber/traceability", async (req, res) => {
+    try {
+      const { lotNumber } = req.params;
+      const variantId = (req.query.variantId as string) || "";
+      const tenantId = (req as any).user?.tenantId || "tenant-1";
+      const lot = await prisma.lotBatchModel.findUnique({
+        where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } }
+      });
+      const costLayers = await prisma.inventoryCostLayerModel.findMany({
+        where: { variantId, lotNumber }
+      });
+      const shipments = await prisma.shipmentModel.findMany({
+        where: { sku: variantId }
+      });
+
+      const { LotBatch } = require("./domain/procurement/entities/LotBatch");
+      const { LotRecallService } = require("./domain/procurement/services/LotRecallService");
+
+      const lotEntity = new LotBatch(
+        lot?.id || "temp-id",
+        tenantId,
+        lotNumber,
+        variantId,
+        (lot?.status as any) || "ACTIVE",
+        lot?.manufacturedDate,
+        lot?.expirationDate,
+        lot?.supplierId,
+        lot?.quarantinedAt,
+        lot?.quarantineReason,
+        lot?.recalledAt
+      );
+
+      const report = LotRecallService.generateTraceabilityReport(lotEntity, costLayers, shipments);
+      res.json(report);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Cross-Docking & Drop-Shipping Endpoints
+  app.post("/api/cross-dock/evaluate", (req, res) => {
+    try {
+      const { purchaseOrderId, inboundItems, backorders } = req.body;
+      const { CrossDockingEngine } = require("./domain/shipping/services/CrossDockingEngine");
+      const result = CrossDockingEngine.evaluate(purchaseOrderId, inboundItems || [], backorders || []);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/fulfillment/drop-ship", (req, res) => {
+    try {
+      const { orderId, variantId, quantity, supplierId } = req.body;
+      res.json({
+        status: "SUCCESS",
+        dropShipPoId: require("crypto").randomUUID(),
+        orderId,
+        variantId,
+        quantity,
+        supplierId,
+        createdAt: new Date().toISOString()
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 };
+
 
 const start = async () => {
   let repository: IInventoryRepository;

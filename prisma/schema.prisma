@@ -452,3 +452,22 @@ model RfidTagModel {
   @@map("rfid_tags")
 }
 
+model LotBatchModel {
+  id               String    @id @default(uuid())
+  tenantId         String    @map("tenant_id")
+  lotNumber        String    @map("lot_number")
+  variantId        String    @map("variant_id")
+  status           String    @default("ACTIVE")
+  manufacturedDate DateTime? @map("manufactured_date")
+  expirationDate   DateTime? @map("expiration_date")
+  supplierId       String?   @map("supplier_id")
+  quarantinedAt    DateTime? @map("quarantined_at")
+  quarantineReason String?   @map("quarantine_reason")
+  recalledAt       DateTime? @map("recalled_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  @@unique([tenantId, lotNumber, variantId])
+  @@map("lot_batches")
+}
+
+
