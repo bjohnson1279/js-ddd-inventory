@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import { Prisma } from '@prisma/client';
 import { TenantRegistry } from './TenantRegistry';
+import format from 'pg-format';
 
 /**
  * TenantProvisioner for JS/Express backend.
@@ -66,7 +67,7 @@ export class TenantProvisioner {
     try {
       const result = await client.query(`SELECT 1 FROM pg_database WHERE datname = $1`, [dbName]);
       if (result.rows.length === 0) {
-        await client.query(`CREATE DATABASE "${dbName}"`);
+        await client.query(format('CREATE DATABASE %I', dbName));
       }
     } finally {
       client.release();
@@ -78,7 +79,7 @@ export class TenantProvisioner {
     const controlPool = this.getControlPool();
     const client = await controlPool.connect();
     try {
-      await client.query(`DROP DATABASE IF EXISTS "${dbName}"`);
+      await client.query(format('DROP DATABASE IF EXISTS %I', dbName));
     } finally {
       client.release();
       await controlPool.end();
