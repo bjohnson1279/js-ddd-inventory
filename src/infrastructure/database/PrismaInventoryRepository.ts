@@ -119,6 +119,23 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     );
   }
 
+  async findAllByLocationIds(locationIds: string[]): Promise<InventoryItem[]> {
+    const records = await this.prisma.inventoryModel.findMany({
+      where: { locationId: { in: locationIds } }
+    });
+    return records.map((record: { id: string; sku: string; locationId: string; quantity: number; allocated: number; inTransit: number; version: number }) =>
+      InventoryItem.create(
+        record.id,
+        SKU.create(record.sku),
+        record.locationId,
+        Quantity.create(record.quantity),
+        Quantity.create(record.allocated),
+        Quantity.create(record.inTransit),
+        record.version
+      )
+    );
+  }
+
   async save(item: InventoryItem): Promise<void> {
     const events = item.getDomainEvents();
 
