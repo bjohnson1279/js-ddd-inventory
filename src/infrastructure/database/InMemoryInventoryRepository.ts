@@ -73,6 +73,13 @@ export class InMemoryInventoryRepository implements IInventoryRepository {
       .map(item => this.cloneItem(item));
   }
 
+  async findAllByLocationIds(locationIds: string[]): Promise<InventoryItem[]> {
+    const ids = new Set(locationIds);
+    return Array.from(this.items.values())
+      .filter(item => ids.has(item.locationId))
+      .map(item => this.cloneItem(item));
+  }
+
   async save(item: InventoryItem): Promise<void> {
     const key = `${item.sku.getValue()}:${item.locationId}`;
     const existing = this.items.get(key);
