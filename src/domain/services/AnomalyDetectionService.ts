@@ -1,4 +1,3 @@
-import axios from "axios";
 import { prisma } from "../../infrastructure/database/prisma";
 import { Logger } from "../../infrastructure/logging/logger";
 
@@ -72,8 +71,15 @@ export class AnomalyDetectionService {
         scan_events
       };
 
-      const response = await axios.post(`${this.sidecarUrl}/anomaly-detect`, payload);
-      return response.data;
+      const response = await fetch(`${this.sidecarUrl}/anomaly-detect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
     } catch (error: any) {
       Logger.error({ context: "AnomalyDetectionService", message: error.message });
       throw new Error("Failed to detect anomalies");
