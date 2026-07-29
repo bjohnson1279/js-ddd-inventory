@@ -2,11 +2,10 @@
 FROM node:20 AS builder
 WORKDIR /app
 
-# Install dependencies (including dev deps for build)
 COPY package*.json ./
+COPY prisma ./prisma
 RUN npm ci
 
-# Copy source and build
 COPY . .
 RUN npm run build
 
@@ -17,11 +16,10 @@ ENV NODE_ENV=production
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
-# Install only production deps
 COPY package*.json ./
+COPY prisma ./prisma
 RUN npm ci --only=production
 
-# Copy built output
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 5000
