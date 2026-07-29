@@ -1,3 +1,3 @@
-## 2024-05-18 - Hallucinatory Methods in Code Review Feedback
-**Learning:** Code review automated feedback correctly pointed out potential for crashing the application with missing methods, however it hallucinates `consumeFifoLayersBatch` missing from `CostLayerService.ts` when it IS in fact present (lines 108-112).
-**Action:** When automated code review flags a method as hallucinatory, use `grep` or `cat` to verify its existence in the codebase before reverting correct optimization changes.
+## 2024-06-25 - N+1 Query in Promise.all Loop for ReconcileInventoryAudit
+**Learning:** ReconcileInventoryAudit was processing shrinkages inside a `Promise.all` loop and invoking `consumeFifoLayers`, resulting in an N+1 query issue for fetching and saving cost layers.
+**Action:** When a method inside a `Promise.all` executes sequential queries, extract the components before the loop, use batching (like `consumeFifoLayersBatch`), and map the results for O(1) in-memory lookup during the loop to prevent N+1 queries.
