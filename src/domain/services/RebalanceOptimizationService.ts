@@ -1,4 +1,3 @@
-import axios from "axios";
 import { prisma } from "../../infrastructure/database/prisma";
 import { Logger } from "../../infrastructure/logging/logger";
 
@@ -65,8 +64,15 @@ export class RebalanceOptimizationService {
         }
       };
 
-      const response = await axios.post(`${this.sidecarUrl}/rebalance-optimize`, payload);
-      return response.data;
+      const response = await fetch(`${this.sidecarUrl}/rebalance-optimize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
     } catch (error: any) {
       Logger.error({ context: "RebalanceOptimizationService", message: error.message });
       throw new Error("Failed to optimize rebalancing");
