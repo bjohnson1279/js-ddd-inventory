@@ -95,6 +95,8 @@ import auditRoutes from "./infrastructure/http/routes/audit.routes";
 import webhookSubscriptionRoutes from "./infrastructure/http/routes/webhookSubscription.routes";
 import complianceRoutes from "./infrastructure/http/routes/compliance.routes";
 import rfidRoutes from "./infrastructure/http/routes/rfid.routes";
+import anomalyDetectionRoutes from "./infrastructure/http/routes/anomalyDetection.routes";
+import rebalanceRoutes from "./infrastructure/http/routes/rebalance.routes";
 import { WebSocketManager } from "./infrastructure/websocket/WebSocketManager";
 import { authMiddleware } from "./infrastructure/http/middleware/auth";
 import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
@@ -237,6 +239,8 @@ export const setupApp = (
   app.use("/api/warehouse-locations", warehouseLocationRoutes);
   app.use("/api/webhooks/subscriptions", webhookSubscriptionRoutes);
   app.use("/api/rfid", rfidRoutes);
+  app.use("/api/anomaly-detection", anomalyDetectionRoutes);
+  app.use("/api/rebalance", rebalanceRoutes);
 
   // Lot Management & Traceability Endpoints
   app.post("/api/lots/quarantine", async (req, res) => {
