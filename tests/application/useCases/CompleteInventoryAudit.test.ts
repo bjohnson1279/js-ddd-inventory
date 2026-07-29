@@ -84,6 +84,16 @@ describe("CompleteInventoryAudit Use Case", () => {
     expect(auditRepository.findById).not.toHaveBeenCalled();
   });
 
+  it("should throw an error if a null or undefined auditId is provided", async () => {
+    await expect(completeInventoryAudit.execute(null as any)).rejects.toThrow(
+      "Invalid audit ID provided."
+    );
+    await expect(completeInventoryAudit.execute(undefined as any)).rejects.toThrow(
+      "Invalid audit ID provided."
+    );
+    expect(auditRepository.findById).not.toHaveBeenCalled();
+  });
+
   it("should propagate errors thrown by auditRepository.findById", async () => {
     const auditId = "audit-123";
     const dbError = new Error("Database connection failed");
