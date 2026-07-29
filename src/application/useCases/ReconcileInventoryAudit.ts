@@ -57,6 +57,27 @@ export class ReconcileInventoryAudit {
     const modifiedInventoryItems = new Map<string, InventoryItem>();
     const newCostLayers: InventoryCostLayer[] = [];
 
+    // Pre-calculate shrinkage components for batch consumption to avoid N+1 queries
+    const shrinkages: { variantId: string; quantity: number }[] = [];
+    if (config.accountingMethod === AccountingMethod.Accrual && config.costingMethod === CostingMethod.FIFO) {
+      for (const item of audit.items) {
+        if (item.discrepancy !== null && item.discrepancy < 0) {
+          shrinkages.push({
+            variantId: item.variantId,
+            quantity: Math.abs(item.discrepancy)
+          });
+        }
+      }
+    }
+
+    const fifoBreakdownsMap = new Map<string, number>();
+    if (shrinkages.length > 0) {
+      const breakdowns = await this.costLayerService.consumeFifoLayersBatch(shrinkages);
+      for (let i = 0; i < shrinkages.length; i++) {
+        fifoBreakdownsMap.set(shrinkages[i].variantId, breakdowns[i].totalCostCents);
+      }
+    }
+
     await Promise.all(audit.items.map(async (item) => {
       const discrepancy = item.discrepancy;
       if (discrepancy === null || discrepancy === 0) {
@@ -81,8 +102,7 @@ export class ReconcileInventoryAudit {
         if (config.accountingMethod === AccountingMethod.Accrual) {
           let totalCostCents = 0;
           if (config.costingMethod === CostingMethod.FIFO) {
-            const breakdown = await this.costLayerService.consumeFifoLayers(item.variantId, Math.abs(discrepancy));
-            totalCostCents = breakdown.totalCostCents;
+            totalCostCents = fifoBreakdownsMap.get(item.variantId) || 0;
           } else if (config.costingMethod === CostingMethod.WeightedAverageCost) {
             const breakdown = await this.costLayerService.calculateWeightedAverageCost(item.variantId, Math.abs(discrepancy));
             totalCostCents = breakdown.totalCostCents;
