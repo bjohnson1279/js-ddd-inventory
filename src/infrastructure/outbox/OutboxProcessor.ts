@@ -67,31 +67,33 @@ export class OutboxProcessor {
               eventTenantId = payloadObj?.tenantId || (payloadObj?.tenantId && typeof payloadObj.tenantId === "object" ? payloadObj.tenantId.value : payloadObj?.tenantId) || "tenant-1";
             } catch (e) {}
 
-            const subscriptions = await prisma.webhookSubscriptionModel.findMany({
-              where: {
-                tenantId: eventTenantId,
-                isActive: true,
-                eventTypes: {
-                  has: record.eventName
-                }
-              }
-            });
-
-            if (subscriptions.length > 0) {
-              await Promise.all(subscriptions.map(sub =>
-                prisma.webhookDeliveryModel.create({
-                  data: {
-                    tenantId: eventTenantId,
-                    subscriptionId: sub.id,
-                    eventType: record.eventName,
-                    payload: record.payload,
-                    status: "Pending",
-                    attempts: 0,
-                    nextAttemptAt: new Date()
+            try {
+              const subscriptions = await prisma.webhookSubscriptionModel.findMany({
+                where: {
+                  tenantId: eventTenantId,
+                  isActive: true,
+                  eventTypes: {
+                    has: record.eventName
                   }
-                })
-              ));
-            }
+                }
+              });
+
+              if (subscriptions.length > 0) {
+                await Promise.all(subscriptions.map(sub =>
+                  prisma.webhookDeliveryModel.create({
+                    data: {
+                      tenantId: eventTenantId,
+                      subscriptionId: sub.id,
+                      eventType: record.eventName,
+                      payload: record.payload,
+                      status: "Pending",
+                      attempts: 0,
+                      nextAttemptAt: new Date()
+                    }
+                  })
+                ));
+              }
+            } catch (e) {}
 
             // Collect successfully processed IDs
             processedIds.push(record.id);

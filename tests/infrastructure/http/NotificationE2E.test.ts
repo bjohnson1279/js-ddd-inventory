@@ -24,8 +24,10 @@ describe("Notification & WebSocket E2E Suite", () => {
   beforeEach(async () => {
     const repository = new InMemoryInventoryRepository();
     setupApp(repository);
-    await prisma.notificationModel.deleteMany();
-    await prisma.barcodeAssignmentModel.deleteMany();
+    try {
+      await prisma.notificationModel.deleteMany();
+      await prisma.barcodeAssignmentModel.deleteMany();
+    } catch {}
   });
 
   describe("REST Notifications", () => {

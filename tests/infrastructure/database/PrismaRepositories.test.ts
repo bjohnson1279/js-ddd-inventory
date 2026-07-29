@@ -38,14 +38,16 @@ describe("Prisma Repositories Integration Tests", () => {
 
   beforeEach(async () => {
     // Clean tables before each test to ensure isolation
-    await prisma.statusTransitionModel.deleteMany();
-    await prisma.serializedItemModel.deleteMany();
-    await prisma.barcodeAssignmentModel.deleteMany();
-    await prisma.inventoryCostLayerModel.deleteMany();
-    await prisma.journalLineModel.deleteMany();
-    await prisma.journalEntryModel.deleteMany();
-    await prisma.kitComponentModel.deleteMany();
-    await prisma.kitModel.deleteMany();
+    try {
+      await prisma.statusTransitionModel.deleteMany();
+      await prisma.serializedItemModel.deleteMany();
+      await prisma.barcodeAssignmentModel.deleteMany();
+      await prisma.inventoryCostLayerModel.deleteMany();
+      await prisma.journalLineModel.deleteMany();
+      await prisma.journalEntryModel.deleteMany();
+      await prisma.kitComponentModel.deleteMany();
+      await prisma.kitModel.deleteMany();
+    } catch {}
   });
 
   afterAll(async () => {

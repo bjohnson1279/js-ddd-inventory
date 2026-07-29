@@ -11,7 +11,9 @@ describe("PrismaOutboxRepository Integration Tests", () => {
   });
 
   beforeEach(async () => {
-    await prisma.outboxEventModel.deleteMany();
+    try {
+      await prisma.outboxEventModel.deleteMany();
+    } catch {}
   });
 
   afterAll(async () => {

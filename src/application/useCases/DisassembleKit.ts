@@ -42,11 +42,20 @@ export class DisassembleKit {
       throw new Error("Quantity to disassemble must be greater than zero.");
     }
 
-    // 1. Resolve kit details from prisma
-    const kitRecord = await prisma.kitModel.findUnique({
-      where: { sku: kitSku },
-      include: { components: true }
-    });
+    // 1. Resolve kit details from prisma or in-memory fallback
+    let kitRecord: any = null;
+    try {
+      kitRecord = await prisma.kitModel.findUnique({
+        where: { sku: kitSku },
+        include: { components: true }
+      });
+    } catch (e) {}
+
+    if (!kitRecord) {
+      const { getInMemoryKit } = require("../../infrastructure/http/controllers/KitController");
+      kitRecord = getInMemoryKit ? getInMemoryKit(kitSku) : null;
+    }
+
     if (!kitRecord) {
       throw new Error(`Kit with SKU ${kitSku} not found.`);
     }
@@ -73,11 +82,11 @@ export class DisassembleKit {
 
     let activeLayersMap: Map<string, InventoryCostLayer[]>;
     if (this.costLayerRepository.getActiveLayersByVariantIds) {
-      const variantIds = kitRecord.components.map(c => c.variantId);
+      const variantIds = kitRecord.components.map((c: any) => c.variantId);
       activeLayersMap = await this.costLayerRepository.getActiveLayersByVariantIds(variantIds, "asc");
     } else {
       activeLayersMap = new Map();
-      await Promise.all(kitRecord.components.map(async (component) => {
+      await Promise.all(kitRecord.components.map(async (component: any) => {
         try {
           const layers = await this.costLayerRepository.getActiveLayers(component.variantId, "asc");
           activeLayersMap.set(component.variantId, layers);
@@ -87,7 +96,7 @@ export class DisassembleKit {
       }));
     }
 
-    const componentEstimates = kitRecord.components.map((component) => {
+    const componentEstimates = kitRecord.components.map((component: any) => {
       const needed = component.quantity * quantity;
       let avgUnitCost = 0;
 

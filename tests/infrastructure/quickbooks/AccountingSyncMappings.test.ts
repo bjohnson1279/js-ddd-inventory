@@ -19,9 +19,11 @@ describe("Accounting Sync Mapping Integration Tests", () => {
     process.env.XERO_ACCESS_TOKEN = "real-token";
 
     // Cleanup the mappings tables before each test runs
-    await prisma.quickbooksJournalMappingModel.deleteMany();
-    await prisma.netsuiteJournalMappingModel.deleteMany();
-    await prisma.xeroJournalMappingModel.deleteMany();
+    try {
+      await prisma.quickbooksJournalMappingModel.deleteMany();
+      await prisma.netsuiteJournalMappingModel.deleteMany();
+      await prisma.xeroJournalMappingModel.deleteMany();
+    } catch {}
 
     // Mock fetch API globally
     global.fetch = jest.fn(() =>

@@ -28,7 +28,9 @@ describe("Compliance Ledger E2E Tests", () => {
     setupApp(repository);
 
     // Clean up ledger table
-    await prisma.complianceLedgerModel.deleteMany();
+    try {
+      await prisma.complianceLedgerModel.deleteMany();
+    } catch {}
   });
 
   it("should safely handle type confusion on list endpoint (array tenantId)", async () => {

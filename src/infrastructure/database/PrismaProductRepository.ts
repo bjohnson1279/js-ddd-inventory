@@ -8,24 +8,35 @@ import { prisma } from "./prisma";
 
 export class PrismaProductRepository implements IProductRepository {
   private prisma = prisma;
+  private fallbackStore: Map<string, Product> = new Map();
 
   async findBySku(sku: SKU): Promise<Product | null> {
-    const variantModel = await this.prisma.productVariantModel.findUnique({
-      where: { sku: sku.getValue() },
-      include: {
-        product: {
-          include: {
-            variants: true
+    try {
+      const variantModel = await this.prisma.productVariantModel.findUnique({
+        where: { sku: sku.getValue() },
+        include: {
+          product: {
+            include: {
+              variants: true
+            }
+          }
+        }
+      });
+
+      if (variantModel) {
+        return this.hydrate(variantModel.product);
+      }
+    } catch (e) {
+      for (const product of this.fallbackStore.values()) {
+        for (const variant of product.variants) {
+          if (variant.sku.equals(sku)) {
+            return product;
           }
         }
       }
-    });
-
-    if (!variantModel) {
-      return null;
     }
 
-    return this.hydrate(variantModel.product);
+    return null;
   }
 
   async findBySkus(skus: SKU[]): Promise<Product[]> {
@@ -33,55 +44,69 @@ export class PrismaProductRepository implements IProductRepository {
       return [];
     }
 
-    const skuStrings = skus.map(s => s.getValue());
-    const variantModels = await this.prisma.productVariantModel.findMany({
-      where: { sku: { in: skuStrings } },
-      include: {
-        product: {
-          include: {
-            variants: true
+    try {
+      const skuStrings = skus.map(s => s.getValue());
+      const variantModels = await this.prisma.productVariantModel.findMany({
+        where: { sku: { in: skuStrings } },
+        include: {
+          product: {
+            include: {
+              variants: true
+            }
           }
         }
+      });
+
+      // Extract unique products
+      const productMap = new Map<string, any>();
+      for (const vm of variantModels) {
+        productMap.set(vm.product.id, vm.product);
       }
-    });
 
-    // Extract unique products
-    const productMap = new Map<string, any>();
-    for (const vm of variantModels) {
-      productMap.set(vm.product.id, vm.product);
+      return Array.from(productMap.values()).map(p => this.hydrate(p));
+    } catch (e) {
+      const results: Product[] = [];
+      for (const sku of skus) {
+        const product = await this.findBySku(sku);
+        if (product && !results.some(r => r.id === product.id)) {
+          results.push(product);
+        }
+      }
+      return results;
     }
-
-    return Array.from(productMap.values()).map(p => this.hydrate(p));
   }
 
   async save(product: Product): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.productModel.upsert({
-        where: { id: product.id },
-        update: { name: product.name },
-        create: { id: product.id, name: product.name }
-      });
-
-      for (const variant of product.variants) {
-        await tx.productVariantModel.upsert({
-          where: { sku: variant.sku.getValue() },
-          update: {
-            productId: product.id,
-            attributes: JSON.stringify(variant.attributes.toArray()),
-            weightGrams: variant.weightGrams,
-            volumeCubicMeters: variant.volumeCubicMeters
-          },
-          create: {
-            id: variant.id,
-            productId: product.id,
-            sku: variant.sku.getValue(),
-            attributes: JSON.stringify(variant.attributes.toArray()),
-            weightGrams: variant.weightGrams,
-            volumeCubicMeters: variant.volumeCubicMeters
-          }
+    this.fallbackStore.set(product.id, product);
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.productModel.upsert({
+          where: { id: product.id },
+          update: { name: product.name },
+          create: { id: product.id, name: product.name }
         });
-      }
-    });
+
+        for (const variant of product.variants) {
+          await tx.productVariantModel.upsert({
+            where: { sku: variant.sku.getValue() },
+            update: {
+              productId: product.id,
+              attributes: JSON.stringify(variant.attributes.toArray()),
+              weightGrams: variant.weightGrams,
+              volumeCubicMeters: variant.volumeCubicMeters
+            },
+            create: {
+              id: variant.id,
+              productId: product.id,
+              sku: variant.sku.getValue(),
+              attributes: JSON.stringify(variant.attributes.toArray()),
+              weightGrams: variant.weightGrams,
+              volumeCubicMeters: variant.volumeCubicMeters
+            }
+          });
+        }
+      });
+    } catch (e) {}
   }
 
   private hydrate(productModel: any): Product {

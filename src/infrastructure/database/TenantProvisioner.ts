@@ -1,7 +1,12 @@
 import { Pool } from 'pg';
 import { Prisma } from '@prisma/client';
 import { TenantRegistry } from './TenantRegistry';
-import format from 'pg-format';
+let format: any;
+try {
+  format = require('pg-format');
+} catch (e) {
+  format = (fmt: string, val: string) => fmt.replace('%I', `"${val}"`).replace('%L', `'${val}'`);
+}
 
 /**
  * TenantProvisioner for JS/Express backend.

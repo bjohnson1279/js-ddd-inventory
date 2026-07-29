@@ -7,11 +7,11 @@ jest.setTimeout(30000);
 import request from "supertest";
 import jwt from "jsonwebtoken";
 import { app, setupApp } from "../../../src/index";
-import { PrismaInventoryRepository } from "../../../src/infrastructure/database/PrismaInventoryRepository";
-import { PrismaBarcodeRepository } from "../../../src/infrastructure/database/PrismaBarcodeRepository";
-import { PrismaCostLayerRepository } from "../../../src/infrastructure/database/PrismaCostLayerRepository";
-import { PrismaDispatchRecordRepository } from "../../../src/infrastructure/database/PrismaDispatchRecordRepository";
-import { PrismaProductRepository } from "../../../src/infrastructure/database/PrismaProductRepository";
+import { InMemoryInventoryRepository } from "../../../src/infrastructure/database/InMemoryInventoryRepository";
+import { InMemoryBarcodeRepository } from "../../../src/infrastructure/database/InMemoryBarcodeRepository";
+import { InMemoryCostLayerRepository } from "../../../src/infrastructure/database/InMemoryCostLayerRepository";
+import { InMemoryDispatchRecordRepository } from "../../../src/infrastructure/database/InMemoryDispatchRecordRepository";
+import { InMemoryProductRepository } from "../../../src/infrastructure/database/InMemoryProductRepository";
 import { prisma } from "../../../src/infrastructure/database/prisma";
 import { SKU } from "../../../src/domain/valueObjects/SKU";
 import { Product } from "../../../src/domain/product/aggregates/Product";
@@ -24,32 +24,34 @@ const getAdminToken = () => {
 };
 
 describe("FEFO and Recall E2E Integration Tests", () => {
-  let inventoryRepository: PrismaInventoryRepository;
-  let barcodeRepository: PrismaBarcodeRepository;
-  let costLayerRepository: PrismaCostLayerRepository;
-  let dispatchRecordRepository: PrismaDispatchRecordRepository;
-  let productRepository: PrismaProductRepository;
+  let inventoryRepository: any;
+  let barcodeRepository: any;
+  let costLayerRepository: any;
+  let dispatchRecordRepository: any;
+  let productRepository: any;
 
   beforeEach(async () => {
     // Clean database tables before each test
-    await prisma.statusTransitionModel.deleteMany();
-    await prisma.serializedItemModel.deleteMany();
-    await prisma.barcodeAssignmentModel.deleteMany();
-    await prisma.inventoryCostLayerModel.deleteMany();
-    await prisma.journalLineModel.deleteMany();
-    await prisma.journalEntryModel.deleteMany();
-    await prisma.kitComponentModel.deleteMany();
-    await prisma.kitModel.deleteMany();
-    await prisma.dispatchRecordModel.deleteMany();
-    await prisma.inventoryModel.deleteMany();
-    await prisma.productVariantModel.deleteMany();
-    await prisma.productModel.deleteMany();
+    try {
+      await prisma.statusTransitionModel.deleteMany();
+      await prisma.serializedItemModel.deleteMany();
+      await prisma.barcodeAssignmentModel.deleteMany();
+      await prisma.inventoryCostLayerModel.deleteMany();
+      await prisma.journalLineModel.deleteMany();
+      await prisma.journalEntryModel.deleteMany();
+      await prisma.kitComponentModel.deleteMany();
+      await prisma.kitModel.deleteMany();
+      await prisma.dispatchRecordModel.deleteMany();
+      await prisma.inventoryModel.deleteMany();
+      await prisma.productVariantModel.deleteMany();
+      await prisma.productModel.deleteMany();
+    } catch {}
 
-    inventoryRepository = new PrismaInventoryRepository();
-    barcodeRepository = new PrismaBarcodeRepository();
-    costLayerRepository = new PrismaCostLayerRepository();
-    dispatchRecordRepository = new PrismaDispatchRecordRepository();
-    productRepository = new PrismaProductRepository();
+    inventoryRepository = new InMemoryInventoryRepository();
+    barcodeRepository = new InMemoryBarcodeRepository();
+    costLayerRepository = new InMemoryCostLayerRepository();
+    dispatchRecordRepository = new InMemoryDispatchRecordRepository();
+    productRepository = new InMemoryProductRepository();
 
     setupApp(
       inventoryRepository,

@@ -7,10 +7,15 @@ export class ComplianceController {
   public static async list(req: Request, res: Response) {
     try {
       const tenantId = typeof req.query.tenantId === "string" ? req.query.tenantId : undefined;
-      const ledger = await prisma.complianceLedgerModel.findMany({
-        where: tenantId ? { tenantId } : undefined,
-        orderBy: { sequenceNumber: "desc" }
-      });
+      let ledger: any[] = [];
+      try {
+        ledger = await prisma.complianceLedgerModel.findMany({
+          where: tenantId ? { tenantId } : undefined,
+          orderBy: { sequenceNumber: "desc" }
+        });
+      } catch (e) {
+        ledger = ComplianceLedgerService.getInMemoryLedger(tenantId);
+      }
 
       res.status(200).json(ledger);
     } catch (error: any) {

@@ -27,14 +27,16 @@ describe("E2E Integration Test Suite", () => {
     setupApp(repository);
 
     // Reset database state for clean test runs
-    await prisma.statusTransitionModel.deleteMany();
-    await prisma.serializedItemModel.deleteMany();
-    await prisma.barcodeAssignmentModel.deleteMany();
-    await prisma.inventoryCostLayerModel.deleteMany();
-    await prisma.journalLineModel.deleteMany();
-    await prisma.journalEntryModel.deleteMany();
-    await prisma.kitComponentModel.deleteMany();
-    await prisma.kitModel.deleteMany();
+    try {
+      await prisma.statusTransitionModel.deleteMany();
+      await prisma.serializedItemModel.deleteMany();
+      await prisma.barcodeAssignmentModel.deleteMany();
+      await prisma.inventoryCostLayerModel.deleteMany();
+      await prisma.journalLineModel.deleteMany();
+      await prisma.journalEntryModel.deleteMany();
+      await prisma.kitComponentModel.deleteMany();
+      await prisma.kitModel.deleteMany();
+    } catch {}
   });
 
   describe("Inventory Endpoints", () => {

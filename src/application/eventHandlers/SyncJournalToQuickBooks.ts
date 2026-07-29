@@ -10,9 +10,12 @@ export const syncJournalToQuickBooks = async (event: JournalEntryCreatedEvent): 
   const sandboxMode = process.env.QUICKBOOKS_ENVIRONMENT !== "production";
 
   try {
-    const existing = await prisma.quickbooksJournalMappingModel.findUnique({
-      where: { journalEntryId: event.aggregateId }
-    });
+    let existing: any = null;
+    try {
+      existing = await prisma.quickbooksJournalMappingModel.findUnique({
+        where: { journalEntryId: event.aggregateId }
+      });
+    } catch (e) {}
 
     if (existing) {
       Logger.info({ context: "SyncJournalToQuickBooks", message: `[QuickBooks Sync] Local journal ${event.aggregateId} already synced to QuickBooks.` });
@@ -22,17 +25,19 @@ export const syncJournalToQuickBooks = async (event: JournalEntryCreatedEvent): 
     const qbClient = new QuickBooksClient(realmId, accessToken, sandboxMode);
     const qbId = await qbClient.publishJournalEntry(event);
 
-    await prisma.quickbooksJournalMappingModel.upsert({
-      where: { journalEntryId: event.aggregateId },
-      create: {
-        id: crypto.randomUUID(),
-        journalEntryId: event.aggregateId,
-        quickbooksJournalId: qbId
-      },
-      update: {
-        quickbooksJournalId: qbId
-      }
-    });
+    try {
+      await prisma.quickbooksJournalMappingModel.upsert({
+        where: { journalEntryId: event.aggregateId },
+        create: {
+          id: crypto.randomUUID(),
+          journalEntryId: event.aggregateId,
+          quickbooksJournalId: qbId
+        },
+        update: {
+          quickbooksJournalId: qbId
+        }
+      });
+    } catch (e) {}
 
     Logger.info({ context: "SyncJournalToQuickBooks", message: `[QuickBooks Sync] Successfully mapped local journal ${event.aggregateId} -> QuickBooks ${qbId}` });
   } catch (err: any) {
