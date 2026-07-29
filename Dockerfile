@@ -24,4 +24,4 @@ COPY --from=builder /app/dist ./dist
 RUN npx prisma generate
 
 EXPOSE 5000
-CMD ["sh", "-c", "npx prisma db push --url \"$DATABASE_URL\" --accept-data-loss && node dist/index.js"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/index.js"]
