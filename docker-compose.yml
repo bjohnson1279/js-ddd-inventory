@@ -110,7 +110,7 @@ services:
 
   python-sidecar:
     build:
-      context: ../python-sidecar
+      context: ../inventory-python-sidecar
       dockerfile: Dockerfile
     ports:
       - "5005:5000"
