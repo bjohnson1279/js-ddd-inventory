@@ -7,20 +7,21 @@ COPY prisma ./prisma
 RUN npm ci
 
 COPY . .
+RUN npx prisma generate
 RUN npm run build
 
 # Stage 2: production image
 FROM node:20-slim
 WORKDIR /app
-ENV NODE_ENV=production
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 COPY prisma ./prisma
-RUN npm ci --only=production
+RUN npm ci
 
 COPY --from=builder /app/dist ./dist
+RUN npx prisma generate
 
 EXPOSE 5000
-CMD ["node", "dist/index.js"]
+CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/index.js"]
