@@ -58,6 +58,10 @@ export class OutboxProcessor {
             await DomainEventDispatcher.dispatch([eventInstance]);
 
             // Publish to external message broker if configured
+            if (this.messageBroker) {
+              await this.messageBroker.publish(record.eventName, eventInstance);
+            }
+
             let eventTenantId = "tenant-1";
             try {
               const payloadObj = JSON.parse(record.payload);
