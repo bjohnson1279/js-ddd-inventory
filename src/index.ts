@@ -3,6 +3,8 @@ import cors from "cors";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 import { Logger } from "./infrastructure/logging/logger";
+import { RedisCacheService } from "./infrastructure/cache/RedisCacheService";
+
 import { PrismaInventoryRepository } from "./infrastructure/database/PrismaInventoryRepository";
 import { PrismaBarcodeRepository } from "./infrastructure/database/PrismaBarcodeRepository";
 import { PrismaSerializedItemRepository } from "./infrastructure/database/PrismaSerializedItemRepository";
@@ -241,6 +243,27 @@ export const setupApp = (
   app.use("/api/rfid", rfidRoutes);
   app.use("/api/anomaly-detection", anomalyDetectionRoutes);
   app.use("/api/rebalance", rebalanceRoutes);
+
+  // Tier-2 Distributed Cache Management Endpoints
+  app.get("/api/admin/cache/stats", (req, res) => {
+    try {
+      const stats = RedisCacheService.getInstance().getStats();
+      res.status(200).json(stats);
+    } catch (e: any) {
+      res.status(500).json({ error: "Failed to fetch cache stats." });
+    }
+  });
+
+  app.post("/api/admin/cache/clear", (req, res) => {
+    try {
+      const tenantId = (req.query.tenantId as string) || undefined;
+      const count = RedisCacheService.getInstance().flush(tenantId);
+      res.status(200).json({ success: true, clearedKeysCount: count });
+    } catch (e: any) {
+      res.status(500).json({ error: "Failed to clear cache." });
+    }
+  });
+
 
   // Lot Management & Traceability Endpoints
   app.post("/api/lots/quarantine", async (req, res) => {

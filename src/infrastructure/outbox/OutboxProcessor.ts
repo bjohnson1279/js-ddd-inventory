@@ -4,6 +4,8 @@ import { IMessageBroker } from "../../application/ports/IMessageBroker";
 import { runWithTrace, generateTraceId } from "../telemetry/traceContext";
 import { prisma } from "../database/prisma";
 import { Logger } from "../../infrastructure/logging/logger";
+import { RedisCacheService } from "../cache/RedisCacheService";
+
 
 export class OutboxProcessor {
   private isProcessing = false;
@@ -56,16 +58,16 @@ export class OutboxProcessor {
             await DomainEventDispatcher.dispatch([eventInstance]);
 
             // Publish to external message broker if configured
-            if (this.messageBroker) {
-              await this.messageBroker.publish(record.eventName, eventInstance);
-            }
-
-            // Enqueue webhooks for active subscriptions matching tenant and event type
             let eventTenantId = "tenant-1";
             try {
               const payloadObj = JSON.parse(record.payload);
               eventTenantId = payloadObj?.tenantId || (payloadObj?.tenantId && typeof payloadObj.tenantId === "object" ? payloadObj.tenantId.value : payloadObj?.tenantId) || "tenant-1";
             } catch (e) {}
+
+            try {
+              RedisCacheService.getInstance().invalidatePattern(`*${eventTenantId}*`);
+            } catch (e) {}
+
 
             try {
               const subscriptions = await prisma.webhookSubscriptionModel.findMany({
@@ -79,7 +81,7 @@ export class OutboxProcessor {
               });
 
               if (subscriptions.length > 0) {
-                await Promise.all(subscriptions.map(sub =>
+                await Promise.all(subscriptions.map((sub: any) =>
                   prisma.webhookDeliveryModel.create({
                     data: {
                       tenantId: eventTenantId,

@@ -35,4 +35,29 @@ export class ComplianceController {
       res.status(500).json({ error: "Failed to run cryptographic validation on compliance ledger." });
     }
   }
+
+  public static async reconstruct(req: Request, res: Response) {
+    try {
+      const tenantId = (req.query.tenantId as string) || "tenant-1";
+      const timestamp = req.query.timestamp as string | undefined;
+      const result = await ComplianceLedgerService.reconstructState(tenantId, timestamp);
+      res.status(200).json(result);
+    } catch (error: any) {
+      Logger.error({ context: "ComplianceController", message: "Error reconstructing state:", error: error });
+      res.status(500).json({ error: "Failed to reconstruct state." });
+    }
+  }
+
+  public static async replay(req: Request, res: Response) {
+    try {
+      const tenantId = (req.query.tenantId as string) || "tenant-1";
+      const timestamp = req.query.timestamp as string | undefined;
+      const result = await ComplianceLedgerService.replayAudit(tenantId, timestamp);
+      res.status(200).json(result);
+    } catch (error: any) {
+      Logger.error({ context: "ComplianceController", message: "Error replaying audit log:", error: error });
+      res.status(500).json({ error: "Failed to replay audit log." });
+    }
+  }
 }
+

@@ -140,4 +140,119 @@ export class ComplianceLedgerService {
   public static getInMemoryLedger(tenantId?: string) {
     return tenantId ? inMemoryLedger.filter(e => e.tenantId === tenantId) : [...inMemoryLedger];
   }
+
+  public static async reconstructState(tenantId: string, timestampStr?: string): Promise<any> {
+    let entries: any[] = [];
+    try {
+      entries = await prisma.complianceLedgerModel.findMany({
+        where: { tenantId },
+        orderBy: { sequenceNumber: "asc" }
+      });
+    } catch (e) {
+      entries = inMemoryLedger.filter(e => e.tenantId === tenantId);
+    }
+
+    const cutoffDate = timestampStr ? new Date(timestampStr) : new Date();
+    const filteredEntries = entries.filter(e => new Date(e.timestamp) <= cutoffDate);
+
+    const stockLevels: Record<string, any> = {};
+    const binConfigurations: Record<string, any> = {};
+    const accountBalances: Record<string, any> = {};
+
+    for (const entry of filteredEntries) {
+      let p: any = {};
+      try {
+        p = typeof entry.payload === "string" ? JSON.parse(entry.payload) : entry.payload;
+      } catch (e) {}
+
+      const eventType = entry.eventType || "";
+
+      // Stock levels reconstruction
+      if (p.sku) {
+        const loc = p.locationId || "LOC-DEFAULT";
+        const key = `${p.sku}@${loc}`;
+        if (!stockLevels[key]) {
+          stockLevels[key] = { sku: p.sku, locationId: loc, quantity: 0 };
+        }
+        if (typeof p.quantityDelta === "number") {
+          stockLevels[key].quantity += p.quantityDelta;
+        } else if (typeof p.quantity === "number") {
+          stockLevels[key].quantity = p.quantity;
+        }
+      }
+
+      // Bin configurations reconstruction
+      if (eventType.includes("BIN") || eventType.includes("LOCATION") || p.locationId || p.binCode) {
+        const binKey = p.binCode || p.locationId || "BIN-101";
+        binConfigurations[binKey] = {
+          binCode: binKey,
+          locationId: p.locationId || "LOC-DEFAULT",
+          currentCapacity: p.currentCapacity ?? p.quantity ?? 10,
+          maxCapacity: p.maxCapacity ?? 100
+        };
+      }
+
+      // Account balances reconstruction
+      if (p.lines && Array.isArray(p.lines)) {
+        for (const line of p.lines) {
+          const code = line.accountCode || "1000-ASSET";
+          if (!accountBalances[code]) {
+            accountBalances[code] = { accountCode: code, accountName: line.accountName || "Account", balance: 0 };
+          }
+          accountBalances[code].balance += (line.debit || 0) - (line.credit || 0);
+        }
+      } else if (p.accountCode) {
+        const code = p.accountCode;
+        if (!accountBalances[code]) {
+          accountBalances[code] = { accountCode: code, accountName: p.accountName || "Account", balance: 0 };
+        }
+        accountBalances[code].balance += (p.debit || 0) - (p.credit || 0);
+      }
+    }
+
+    return {
+      timestamp: cutoffDate.toISOString(),
+      tenantId,
+      eventsReplayedCount: filteredEntries.length,
+      lastSequenceNumber: filteredEntries.length > 0 ? filteredEntries[filteredEntries.length - 1].sequenceNumber : 0,
+      stockLevels: Object.values(stockLevels),
+      binConfigurations: Object.values(binConfigurations),
+      accountBalances: Object.values(accountBalances)
+    };
+  }
+
+  public static async replayAudit(tenantId: string, upToTimestamp?: string): Promise<any[]> {
+    let entries: any[] = [];
+    try {
+      entries = await prisma.complianceLedgerModel.findMany({
+        where: { tenantId },
+        orderBy: { sequenceNumber: "asc" }
+      });
+    } catch (e) {
+      entries = inMemoryLedger.filter(e => e.tenantId === tenantId);
+    }
+
+    if (upToTimestamp) {
+      const cutoffDate = new Date(upToTimestamp);
+      entries = entries.filter(e => new Date(e.timestamp) <= cutoffDate);
+    }
+
+    return entries.map(entry => {
+      let p: any = {};
+      try {
+        p = typeof entry.payload === "string" ? JSON.parse(entry.payload) : entry.payload;
+      } catch (e) {
+        p = entry.payload;
+      }
+      return {
+        sequenceNumber: entry.sequenceNumber,
+        eventType: entry.eventType,
+        timestamp: entry.timestamp,
+        hash: entry.hash,
+        previousHash: entry.previousHash,
+        payload: p
+      };
+    });
+  }
 }
+
