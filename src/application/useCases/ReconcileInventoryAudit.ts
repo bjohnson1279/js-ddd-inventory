@@ -59,7 +59,9 @@ export class ReconcileInventoryAudit {
 
     // Pre-calculate shrinkage components for batch consumption to avoid N+1 queries
     const shrinkages: { variantId: string; quantity: number }[] = [];
-    if (config.accountingMethod === AccountingMethod.Accrual && config.costingMethod === CostingMethod.FIFO) {
+    const gains: string[] = [];
+
+    if (config.accountingMethod === AccountingMethod.Accrual) {
       for (const item of audit.items) {
         if (item.discrepancy !== null && item.discrepancy < 0) {
           shrinkages.push({
@@ -70,12 +72,44 @@ export class ReconcileInventoryAudit {
       }
     }
 
-    const fifoBreakdownsMap = new Map<string, number>();
-    if (shrinkages.length > 0) {
-      const breakdowns = await this.costLayerService.consumeFifoLayersBatch(shrinkages);
-      for (let i = 0; i < shrinkages.length; i++) {
-        fifoBreakdownsMap.set(shrinkages[i].variantId, breakdowns[i].totalCostCents);
+    for (const item of audit.items) {
+      if (item.discrepancy !== null && item.discrepancy > 0) {
+        gains.push(item.variantId);
       }
+    }
+
+    const breakdownsMap = new Map<string, number>();
+    if (shrinkages.length > 0) {
+      if (config.costingMethod === CostingMethod.FIFO) {
+        const breakdowns = await this.costLayerService.consumeFifoLayersBatch(shrinkages);
+        for (let i = 0; i < shrinkages.length; i++) {
+          breakdownsMap.set(shrinkages[i].variantId, breakdowns[i].totalCostCents);
+        }
+      } else if (config.costingMethod === CostingMethod.WeightedAverageCost) {
+        const breakdowns = await this.costLayerService.calculateWeightedAverageCostBatch(shrinkages);
+        for (let i = 0; i < shrinkages.length; i++) {
+          breakdownsMap.set(shrinkages[i].variantId, breakdowns[i].totalCostCents);
+        }
+      }
+    }
+
+    // Pre-fetch active layers for gains
+    let gainsActiveLayersByVariant: Map<string, InventoryCostLayer[]>;
+    if (gains.length > 0) {
+      const uniqueGains = Array.from(new Set(gains));
+      if (this.costLayerRepository.getActiveLayersByVariantIds) {
+        gainsActiveLayersByVariant = await this.costLayerRepository.getActiveLayersByVariantIds(uniqueGains, "desc");
+      } else {
+        gainsActiveLayersByVariant = new Map<string, InventoryCostLayer[]>();
+        await Promise.all(
+          uniqueGains.map(async (vId) => {
+            const layers = await this.costLayerRepository.getActiveLayers(vId, "desc");
+            gainsActiveLayersByVariant.set(vId, layers);
+          })
+        );
+      }
+    } else {
+      gainsActiveLayersByVariant = new Map<string, InventoryCostLayer[]>();
     }
 
     await Promise.all(audit.items.map(async (item) => {
@@ -100,13 +134,7 @@ export class ReconcileInventoryAudit {
 
         // 2. Consume cost layers and post journal entries if Accrual
         if (config.accountingMethod === AccountingMethod.Accrual) {
-          let totalCostCents = 0;
-          if (config.costingMethod === CostingMethod.FIFO) {
-            totalCostCents = fifoBreakdownsMap.get(item.variantId) || 0;
-          } else if (config.costingMethod === CostingMethod.WeightedAverageCost) {
-            const breakdown = await this.costLayerService.calculateWeightedAverageCost(item.variantId, Math.abs(discrepancy));
-            totalCostCents = breakdown.totalCostCents;
-          }
+          const totalCostCents = breakdownsMap.get(item.variantId) || 0;
 
           await this.journalService.onInventoryAuditReconciliation(
             audit.id,
@@ -133,7 +161,7 @@ export class ReconcileInventoryAudit {
         modifiedInventoryItems.set(skuValue, inventoryItem);
 
         // 2. Find last receipt unit cost, fallback to 0
-        const activeLayers = await this.costLayerRepository.getActiveLayers(item.variantId, "desc");
+        const activeLayers = gainsActiveLayersByVariant.get(item.variantId) || [];
         const unitCostCents = activeLayers.length > 0 ? activeLayers[0].unitCostCents : 0;
         const totalCostCents = unitCostCents * discrepancy;
 

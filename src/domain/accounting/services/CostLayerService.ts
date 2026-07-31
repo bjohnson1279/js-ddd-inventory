@@ -60,6 +60,43 @@ export class CostLayerService {
   }
 
   // Batch operations
+  public async calculateCostBatch(
+    components: { variantId: string; quantity: number }[],
+    method: CostingMethod = CostingMethod.FIFO
+  ): Promise<CostBreakdown[]> {
+    const variantIds = Array.from(new Set(components.map((c) => c.variantId)));
+
+    let activeLayersByVariant: Map<string, InventoryCostLayer[]>;
+    if (this.layers.getActiveLayersByVariantIds) {
+      activeLayersByVariant = await this.layers.getActiveLayersByVariantIds(variantIds);
+    } else {
+      activeLayersByVariant = new Map<string, InventoryCostLayer[]>();
+      await Promise.all(
+        variantIds.map(async (vId) => {
+          const layers = await this.layers.getActiveLayers(vId);
+          activeLayersByVariant.set(vId, layers);
+        })
+      );
+    }
+
+    const breakdowns: CostBreakdown[] = [];
+    const strategy = CostingStrategyRegistry.get(method);
+
+    for (const comp of components) {
+      const activeLayers = activeLayersByVariant.get(comp.variantId) || [];
+      const breakdown = strategy.calculateCost(activeLayers, comp.quantity, comp.variantId);
+      breakdowns.push(breakdown);
+    }
+
+    return breakdowns;
+  }
+
+  public async calculateWeightedAverageCostBatch(
+    components: { variantId: string; quantity: number }[]
+  ): Promise<CostBreakdown[]> {
+    return this.calculateCostBatch(components, CostingMethod.WeightedAverageCost);
+  }
+
   public async consumeLayersBatch(
     components: { variantId: string; quantity: number }[],
     method: CostingMethod = CostingMethod.FIFO
@@ -68,13 +105,18 @@ export class CostLayerService {
     const variantIds = Array.from(new Set(components.map((c) => c.variantId)));
 
     // 2. Prefetch all active layers in batch to reduce queries
-    const activeLayersByVariant = new Map<string, InventoryCostLayer[]>();
-    await Promise.all(
-      variantIds.map(async (vId) => {
-        const layers = await this.layers.getActiveLayers(vId);
-        activeLayersByVariant.set(vId, layers);
-      })
-    );
+    let activeLayersByVariant: Map<string, InventoryCostLayer[]>;
+    if (this.layers.getActiveLayersByVariantIds) {
+      activeLayersByVariant = await this.layers.getActiveLayersByVariantIds(variantIds);
+    } else {
+      activeLayersByVariant = new Map<string, InventoryCostLayer[]>();
+      await Promise.all(
+        variantIds.map(async (vId) => {
+          const layers = await this.layers.getActiveLayers(vId);
+          activeLayersByVariant.set(vId, layers);
+        })
+      );
+    }
 
     // 3. Sequentially consume layers in-memory
     const breakdowns: CostBreakdown[] = [];
