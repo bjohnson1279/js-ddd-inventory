@@ -100,7 +100,7 @@ import rfidRoutes from "./infrastructure/http/routes/rfid.routes";
 import anomalyDetectionRoutes from "./infrastructure/http/routes/anomalyDetection.routes";
 import rebalanceRoutes from "./infrastructure/http/routes/rebalance.routes";
 import { WebSocketManager } from "./infrastructure/websocket/WebSocketManager";
-import { authMiddleware } from "./infrastructure/http/middleware/auth";
+import { authMiddleware, requireRole } from "./infrastructure/http/middleware/auth";
 import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
 import { IProductRepository } from "./domain/repositories/IProductRepository";
 import { InMemoryWarehouseLocationRepository } from "./infrastructure/database/InMemoryWarehouseLocationRepository";
@@ -245,7 +245,7 @@ export const setupApp = (
   app.use("/api/rebalance", rebalanceRoutes);
 
   // Tier-2 Distributed Cache Management Endpoints
-  app.get("/api/admin/cache/stats", (req, res) => {
+  app.get("/api/admin/cache/stats", requireRole(["admin"]), (req, res) => {
     try {
       const stats = RedisCacheService.getInstance().getStats();
       res.status(200).json(stats);
@@ -254,7 +254,7 @@ export const setupApp = (
     }
   });
 
-  app.post("/api/admin/cache/clear", (req, res) => {
+  app.post("/api/admin/cache/clear", requireRole(["admin"]), (req, res) => {
     try {
       const tenantId = (req.query.tenantId as string) || undefined;
       const count = RedisCacheService.getInstance().flush(tenantId);
@@ -266,7 +266,7 @@ export const setupApp = (
 
 
   // Lot Management & Traceability Endpoints
-  app.post("/api/lots/quarantine", async (req, res) => {
+  app.post("/api/lots/quarantine", requireRole(["admin", "warehouse_operator"]), async (req, res) => {
     try {
       const { lotNumber, variantId, reason } = req.body;
       const tenantId = (req as any).user?.tenantId || "tenant-1";
@@ -300,7 +300,7 @@ export const setupApp = (
     }
   });
 
-  app.post("/api/lots/recall", async (req, res) => {
+  app.post("/api/lots/recall", requireRole(["admin"]), async (req, res) => {
     try {
       const { lotNumber, variantId, reason } = req.body;
       const tenantId = (req as any).user?.tenantId || "tenant-1";
@@ -334,7 +334,7 @@ export const setupApp = (
     }
   });
 
-  app.post("/api/lots/release", async (req, res) => {
+  app.post("/api/lots/release", requireRole(["admin", "warehouse_operator"]), async (req, res) => {
     try {
       const { lotNumber, variantId } = req.body;
       const tenantId = (req as any).user?.tenantId || "tenant-1";
@@ -353,7 +353,7 @@ export const setupApp = (
     }
   });
 
-  app.get("/api/lots/:lotNumber/traceability", async (req, res) => {
+  app.get("/api/lots/:lotNumber/traceability", requireRole(["admin", "warehouse_operator", "viewer", "accountant"]), async (req, res) => {
     try {
       const { lotNumber } = req.params;
       const variantId = (req.query.variantId as string) || "";
@@ -393,7 +393,7 @@ export const setupApp = (
   });
 
   // Cross-Docking & Drop-Shipping Endpoints
-  app.post("/api/cross-dock/evaluate", (req, res) => {
+  app.post("/api/cross-dock/evaluate", requireRole(["admin", "warehouse_operator"]), (req, res) => {
     try {
       const { purchaseOrderId, inboundItems, backorders } = req.body;
       const { CrossDockingEngine } = require("./domain/shipping/services/CrossDockingEngine");
@@ -404,7 +404,7 @@ export const setupApp = (
     }
   });
 
-  app.post("/api/fulfillment/drop-ship", (req, res) => {
+  app.post("/api/fulfillment/drop-ship", requireRole(["admin", "warehouse_operator"]), (req, res) => {
     try {
       const { orderId, variantId, quantity, supplierId } = req.body;
       res.json({
