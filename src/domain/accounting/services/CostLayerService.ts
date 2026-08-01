@@ -68,13 +68,19 @@ export class CostLayerService {
     const variantIds = Array.from(new Set(components.map((c) => c.variantId)));
 
     // 2. Prefetch all active layers in batch to reduce queries
-    const activeLayersByVariant = new Map<string, InventoryCostLayer[]>();
-    await Promise.all(
-      variantIds.map(async (vId) => {
-        const layers = await this.layers.getActiveLayers(vId);
-        activeLayersByVariant.set(vId, layers);
-      })
-    );
+    let activeLayersByVariant: Map<string, InventoryCostLayer[]>;
+
+    if (this.layers.getActiveLayersByVariantIds) {
+      activeLayersByVariant = await this.layers.getActiveLayersByVariantIds(variantIds);
+    } else {
+      activeLayersByVariant = new Map<string, InventoryCostLayer[]>();
+      await Promise.all(
+        variantIds.map(async (vId) => {
+          const layers = await this.layers.getActiveLayers(vId);
+          activeLayersByVariant.set(vId, layers);
+        })
+      );
+    }
 
     // 3. Sequentially consume layers in-memory
     const breakdowns: CostBreakdown[] = [];
