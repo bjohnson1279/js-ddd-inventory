@@ -38,8 +38,8 @@ export class ComplianceController {
 
   public static async reconstruct(req: Request, res: Response) {
     try {
-      const tenantId = (req.query.tenantId as string) || "tenant-1";
-      const timestamp = req.query.timestamp as string | undefined;
+      const tenantId = typeof req.query.tenantId === "string" ? req.query.tenantId : "tenant-1";
+      const timestamp = typeof req.query.timestamp === "string" ? req.query.timestamp : undefined;
       const result = await ComplianceLedgerService.reconstructState(tenantId, timestamp);
       res.status(200).json(result);
     } catch (error: any) {
@@ -50,8 +50,8 @@ export class ComplianceController {
 
   public static async replay(req: Request, res: Response) {
     try {
-      const tenantId = (req.query.tenantId as string) || "tenant-1";
-      const timestamp = req.query.timestamp as string | undefined;
+      const tenantId = typeof req.query.tenantId === "string" ? req.query.tenantId : "tenant-1";
+      const timestamp = typeof req.query.timestamp === "string" ? req.query.timestamp : undefined;
       const result = await ComplianceLedgerService.replayAudit(tenantId, timestamp);
       res.status(200).json(result);
     } catch (error: any) {
