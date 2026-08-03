@@ -54,7 +54,16 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     );
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it("should record dispatches, compute sales velocity/days of cover, and return demand planning report", async () => {
+    // Fix system time so all historical dispatch records (-2, -5, -10 days) fall within the same calendar month
+    // This prevents seasonal multiplier calculation issues when tests are run near the beginning of a month.
+    jest.useFakeTimers({ advanceTimers: true });
+    jest.setSystemTime(new Date("2026-07-15T12:00:00Z"));
+
     // 1. Set up an inventory item with stock level 50
     const sku = "IPHONE-15";
     const locationId = "warehouse-south";
@@ -122,8 +131,8 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     expect(forecast.forecastedQuantity).toBeGreaterThan(0);
     expect(forecast.confidenceLevel).toBeGreaterThan(0);
     // Projected forecast quantity: Math.ceil(ADS (1.0) * forecastDays (15) * trendMultiplier (1.2)) = Math.ceil(18) = 18.
-    expect(forecast.forecastedQuantity).toBe(12);
-    expect(forecast.confidenceLevel).toBe(0.9);
+    expect(forecast.forecastedQuantity).toBe(18);
+    expect(forecast.confidenceLevel).toBe(0.85);
 
     // 5. Request the report again. It should now reflect the active forecast
     const reportRes2 = await request(app)
@@ -140,7 +149,7 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     // f.periodEnd >= now && f.periodStart <= endWindow (where endWindow is now + 30 days)
     // The created forecast starts now (periodStart = now) and ends at now + 15 days (periodEnd = now + 15).
     // Both conditions match, so it will return f.forecastedQuantity = 18.
-    expect(reportItem2.forecastedDemand30d).toBe(12);
-    expect(reportItem2.confidenceLevel).toBe(0.9);
+    expect(reportItem2.forecastedDemand30d).toBe(18);
+    expect(reportItem2.confidenceLevel).toBe(0.85);
   });
 });
