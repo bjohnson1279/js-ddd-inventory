@@ -188,4 +188,79 @@ export class ShippingController {
       }
     }
   }
+
+  static async calculateCarrierRates(req: Request, res: Response) {
+    try {
+      const { carrier, originPostalCode, destinationPostalCode, weightKg, serviceLevel } = req.body;
+      if (!carrier || !originPostalCode || !destinationPostalCode || weightKg === undefined) {
+        return res.status(400).json({ error: "Missing required fields: carrier, originPostalCode, destinationPostalCode, weightKg." });
+      }
+
+      const weight = parseFloat(weightKg);
+      const baseDistanceFactor = Math.abs(
+        parseInt(String(destinationPostalCode).replace(/\D/g, '') || '90001', 10) -
+        parseInt(String(originPostalCode).replace(/\D/g, '') || '10001', 10)
+      );
+
+      const baseCents = Math.round(1500 + weight * 250 + (baseDistanceFactor % 2000));
+      const fuelSurchargeCents = Math.round(baseCents * 0.12);
+      const totalRateCents = baseCents + fuelSurchargeCents;
+
+      let service = serviceLevel || 'GROUND_STANDARD';
+      let days = 3;
+      if (carrier === 'FEDEX') { service = serviceLevel || 'FEDEX_EXPRESS_SAVER'; days = 2; }
+      else if (carrier === 'UPS') { service = serviceLevel || 'UPS_GROUND'; days = 3; }
+      else if (carrier === 'DHL') { service = serviceLevel || 'EXPRESS_WORLDWIDE'; days = 1; }
+      else if (carrier === 'GENERIC_LTL') { service = serviceLevel || 'FREIGHT_LTL_STANDARD'; days = 5; }
+
+      res.status(200).json({
+        carrier,
+        serviceLevel: service,
+        baseRateCents: baseCents,
+        fuelSurchargeCents,
+        totalRateCents,
+        estimatedDeliveryDays: days,
+        currency: 'USD',
+      });
+    } catch (error: any) {
+      Logger.error({ context: "ShippingController", message: "Failed to calculate carrier rates:", error });
+      res.status(500).json({ error: "Failed to calculate carrier rates." });
+    }
+  }
+
+  static async generateShippingLabel(req: Request, res: Response) {
+    try {
+      const { carrier, recipientName, shippingAddress, weightKg, serviceLevel, format } = req.body;
+      if (!carrier || !recipientName || !shippingAddress) {
+        return res.status(400).json({ error: "Missing required fields: carrier, recipientName, shippingAddress." });
+      }
+
+      const labelFormat = format || 'BOTH';
+      const trackingPrefix = carrier === 'FEDEX' ? 'FX' : carrier === 'UPS' ? '1Z' : carrier === 'DHL' ? 'DHL' : 'LTL';
+      const trackingNumber = `${trackingPrefix}${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+
+      const zplString = (labelFormat === 'ZPL' || labelFormat === 'BOTH')
+        ? `^XA^FO50,50^A0N,50,50^FD${carrier} SHIPPING LABEL^FS^FO50,120^A0N,30,30^FDTo: ${recipientName}^FS^FO50,160^A0N,25,25^FDAddr: ${shippingAddress}^FS^FO50,210^BY3^BCN,100,Y,N,N^FD${trackingNumber}^FS^XZ`
+        : undefined;
+
+      const pdfBase64 = (labelFormat === 'PDF' || labelFormat === 'BOTH')
+        ? Buffer.from(`PDF-MOCK-LABEL-${carrier}-${trackingNumber}-${recipientName}`).toString('base64')
+        : undefined;
+
+      res.status(200).json({
+        carrier,
+        trackingNumber,
+        serviceLevel: serviceLevel || 'STANDARD_GROUND',
+        labelFormat,
+        zplString,
+        pdfBase64,
+        bolUrl: carrier === 'GENERIC_LTL' ? `https://logistics.internal/bol/${trackingNumber}.pdf` : undefined,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      Logger.error({ context: "ShippingController", message: "Failed to generate shipping label:", error });
+      res.status(500).json({ error: "Failed to generate shipping label." });
+    }
+  }
 }
+

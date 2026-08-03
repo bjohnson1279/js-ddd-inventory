@@ -9,5 +9,6 @@ router.post("/stock-sold", AccountingController.recordStockSold);
 router.get("/valuation/:variantId", AccountingController.calculateValuation);
 router.get("/tenant-config/:tenantId", AccountingController.getTenantConfig);
 router.post("/tenant-config", AccountingController.saveTenantConfig);
+router.post("/sync-journal", AccountingController.syncJournal);
 
 export default router;
