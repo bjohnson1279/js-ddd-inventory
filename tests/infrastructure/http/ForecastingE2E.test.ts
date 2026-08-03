@@ -27,24 +27,6 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
   let dispatchRecordRepo: InMemoryDispatchRecordRepository;
   let demandForecastRepo: InMemoryDemandForecastRepository;
 
-  beforeAll(() => {
-    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
-    jest.setSystemTime(new Date("2023-05-15T12:00:00Z"));
-  });
-
-  afterAll(() => {
-    jest.useRealTimers();
-  });
-
-  beforeAll(() => {
-    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
-    jest.setSystemTime(new Date("2023-01-15T12:00:00Z"));
-  });
-
-  afterAll(() => {
-    jest.useRealTimers();
-  });
-
   beforeEach(() => {
     inventoryRepo = new InMemoryInventoryRepository();
     policyRepo = new InMemoryReorderPolicyRepository();
@@ -72,16 +54,7 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     );
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
   it("should record dispatches, compute sales velocity/days of cover, and return demand planning report", async () => {
-    // Fix system time so all historical dispatch records (-2, -5, -10 days) fall within the same calendar month
-    // This prevents seasonal multiplier calculation issues when tests are run near the beginning of a month.
-    jest.useFakeTimers({ advanceTimers: true });
-    jest.setSystemTime(new Date("2026-07-15T12:00:00Z"));
-
     // 1. Set up an inventory item with stock level 50
     const sku = "IPHONE-15";
     const locationId = "warehouse-south";
@@ -92,22 +65,12 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     // We want a non-zero 30-day sales velocity. Let's record:
     // 3 dispatches of size 10, total 30 units dispatched in the last 30 days.
     // 30 units / 30 days = 1.0 Average Daily Sales (ADS).
-    // Note: To prevent test flakiness at the beginning of the month (which affects the seasonal multiplier),
-    // we set all dispatch dates to the same month as `now` (but safely within the last 30 days).
     const now = new Date();
     // Using a fixed time within the current month for all dispatches to keep the seasonal multiplier at 1.0
     // To ensure the dispatches fall into the current month, we will use (now - 1 minute), (now - 2 minutes), etc.
     await dispatchRecordRepo.save(new DispatchRecord("1", sku, locationId, 10, new Date(now.getTime() - 1 * 60 * 1000)));
     await dispatchRecordRepo.save(new DispatchRecord("2", sku, locationId, 10, new Date(now.getTime() - 2 * 60 * 1000)));
     await dispatchRecordRepo.save(new DispatchRecord("3", sku, locationId, 10, new Date(now.getTime() - 3 * 60 * 1000)));
-
-    const d1 = new Date(now.getTime() - 1 * 60 * 60 * 1000); // 1 hour ago
-    const d2 = new Date(now.getTime() - 2 * 60 * 60 * 1000); // 2 hours ago
-    const d3 = new Date(now.getTime() - 3 * 60 * 60 * 1000); // 3 hours ago
-
-    await dispatchRecordRepo.save(new DispatchRecord("1", sku, locationId, 10, d1));
-    await dispatchRecordRepo.save(new DispatchRecord("2", sku, locationId, 10, d2));
-    await dispatchRecordRepo.save(new DispatchRecord("3", sku, locationId, 10, d3));
 
     // 3. Request demand planning report
     const reportRes = await request(app)
@@ -146,20 +109,6 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     expect(forecast.sku).toBe(sku);
     expect(forecast.locationId).toBe(locationId);
     
-    // Projected forecast quantity: Math.ceil(ADS (1.0) * forecastDays (15) * trendMultiplier (1.2) * seasonalMultiplier (1.0 or based on target month sales / overall monthly avg))
-    // With 30 units in the current month, overallMonthlyAverage = 30 / 1 (active month) = 30.
-    // Target month sales = 30. seasonalMultiplier = 30 / 30 = 1.0
-    // Math.ceil(1.0 * 15 * 1.2 * 1.0) = 18.
-    // BUT wait, in the test, we created dispatches a few days ago. The month might be different if the test runs at the start of a month.
-    // Wait, if the tests are run on a fresh repo, the seasonal multiplier logic added recently might affect this.
-    // Let's just use `expect(forecast.forecastedQuantity).toBe(18);` but since it returned 12... Wait.
-    // 12 = Math.ceil(1.0 * 15 * 1.2 * 0.666) ? Let's check the code:
-    // 30 units in 30 days -> ADS = 1.0.
-    // Wait, why did it return 12?
-    // Let's not assume the forecastedQuantity is exactly 18 if we just introduced a seasonal multiplier that depends on current date!
-    // To make this test deterministic, let's just check it's a number greater than 0.
-    expect(forecast.forecastedQuantity).toBeGreaterThan(0);
-    expect(forecast.confidenceLevel).toBeGreaterThan(0);
     // Projected forecast quantity: Math.ceil(ADS (1.0) * forecastDays (15) * trendMultiplier (1.2)) = Math.ceil(18) = 18.
     expect(forecast.forecastedQuantity).toBe(18);
     expect(forecast.confidenceLevel).toBe(0.85);
@@ -170,9 +119,6 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
 
     expect(reportRes2.status).toBe(200);
     const reportItem2 = reportRes2.body[0];
-    // forecastedDemand30d should now match the newly generated forecast
-    expect(reportItem2.forecastedDemand30d).toBeGreaterThan(0);
-    expect(reportItem2.confidenceLevel).toBeGreaterThan(0);
     // forecastedDemand30d should now match the newly generated forecast (which is valid for the window since we did 15 days)
     // Wait, the forecast we created runs from now to now + 15 days.
     // In GetDemandPlanningReport, it checks if there is a forecast that:
