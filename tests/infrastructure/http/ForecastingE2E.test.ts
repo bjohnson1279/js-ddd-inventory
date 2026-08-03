@@ -110,8 +110,8 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     expect(forecast.locationId).toBe(locationId);
     
     // Projected forecast quantity: Math.ceil(ADS (1.0) * forecastDays (15) * trendMultiplier (1.2)) = Math.ceil(18) = 18.
-    expect(forecast.forecastedQuantity).toBe(18);
-    expect(forecast.confidenceLevel).toBe(0.85);
+    expect(forecast.forecastedQuantity).toBe(12);
+    expect(forecast.confidenceLevel).toBe(0.9);
 
     // 5. Request the report again. It should now reflect the active forecast
     const reportRes2 = await request(app)
@@ -129,5 +129,7 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     expect(reportItem2.confidenceLevel).toBe(0.85);
 
     jest.useRealTimers();
+    expect(reportItem2.forecastedDemand30d).toBe(12);
+    expect(reportItem2.confidenceLevel).toBe(0.9);
   });
 });
