@@ -54,7 +54,16 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     );
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it("should record dispatches, compute sales velocity/days of cover, and return demand planning report", async () => {
+    // Fix system time so all historical dispatch records (-2, -5, -10 days) fall within the same calendar month
+    // This prevents seasonal multiplier calculation issues when tests are run near the beginning of a month.
+    jest.useFakeTimers({ advanceTimers: true });
+    jest.setSystemTime(new Date("2026-07-15T12:00:00Z"));
+
     // 1. Set up an inventory item with stock level 50
     const sku = "IPHONE-15";
     const locationId = "warehouse-south";
