@@ -74,10 +74,17 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     // We want a non-zero 30-day sales velocity. Let's record:
     // 3 dispatches of size 10, total 30 units dispatched in the last 30 days.
     // 30 units / 30 days = 1.0 Average Daily Sales (ADS).
+    // Note: To prevent test flakiness at the beginning of the month (which affects the seasonal multiplier),
+    // we set all dispatch dates to the same month as `now` (but safely within the last 30 days).
     const now = new Date();
-    await dispatchRecordRepo.save(new DispatchRecord("1", sku, locationId, 10, new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000)));
-    await dispatchRecordRepo.save(new DispatchRecord("2", sku, locationId, 10, new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)));
-    await dispatchRecordRepo.save(new DispatchRecord("3", sku, locationId, 10, new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000)));
+
+    const d1 = new Date(now.getTime() - 1 * 60 * 60 * 1000); // 1 hour ago
+    const d2 = new Date(now.getTime() - 2 * 60 * 60 * 1000); // 2 hours ago
+    const d3 = new Date(now.getTime() - 3 * 60 * 60 * 1000); // 3 hours ago
+
+    await dispatchRecordRepo.save(new DispatchRecord("1", sku, locationId, 10, d1));
+    await dispatchRecordRepo.save(new DispatchRecord("2", sku, locationId, 10, d2));
+    await dispatchRecordRepo.save(new DispatchRecord("3", sku, locationId, 10, d3));
 
     // 3. Request demand planning report
     const reportRes = await request(app)
