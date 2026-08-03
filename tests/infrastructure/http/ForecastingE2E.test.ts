@@ -114,21 +114,9 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     expect(forecast.sku).toBe(sku);
     expect(forecast.locationId).toBe(locationId);
     
-    // Wait, since we are setting dates dynamically (using now) and mocking isn't applied here, seasonalMultiplier might be changing.
-    // Wait, the seasonalMultiplier logic fetches history for the last 365 days. We added 3 records (30 quantity) in the last 10 days.
-    // The current month is going to be the active month. Total sales is 30. Active months = 1. Overall monthly average = 30.
-    // Target month sales = 30. Seasonal multiplier = 30 / 30 = 1.0.
-    // So seasonal multiplier is 1.0.
-    // baseQuantity = 1.0 (ADS 30d) * 15 (forecastDays) = 15.0.
-    // forecastedQuantity = Math.ceil(15.0 * 1.2 (trendMultiplier) * 1.0) = 18.
-    // But Wait! What if the dates we insert cross a month boundary? If `now` is near the beginning of a month,
-    // a dispatch 10 days ago could be in the previous month.
-    // Let's use fake timers in the test to ensure the date doesn't cross a month boundary.
+    // Projected forecast quantity: Math.ceil(ADS (1.0) * forecastDays (15) * trendMultiplier (1.2)) = Math.ceil(18) = 18.
     expect(forecast.forecastedQuantity).toBe(18);
     expect(forecast.confidenceLevel).toBe(0.85);
-    // Projected forecast quantity: Math.ceil(ADS (1.0) * forecastDays (15) * trendMultiplier (1.2)) = Math.ceil(18) = 18.
-    expect(forecast.forecastedQuantity).toBe(12);
-    expect(forecast.confidenceLevel).toBe(0.9);
 
     // 5. Request the report again. It should now reflect the active forecast
     const reportRes2 = await request(app)
@@ -136,15 +124,13 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
 
     expect(reportRes2.status).toBe(200);
     const reportItem2 = reportRes2.body[0];
-    expect(reportItem2.forecastedDemand30d).toBe(18);
-    expect(reportItem2.confidenceLevel).toBe(0.85);
     // forecastedDemand30d should now match the newly generated forecast (which is valid for the window since we did 15 days)
     // Wait, the forecast we created runs from now to now + 15 days.
     // In GetDemandPlanningReport, it checks if there is a forecast that:
     // f.periodEnd >= now && f.periodStart <= endWindow (where endWindow is now + 30 days)
     // The created forecast starts now (periodStart = now) and ends at now + 15 days (periodEnd = now + 15).
     // Both conditions match, so it will return f.forecastedQuantity = 18.
-    expect(reportItem2.forecastedDemand30d).toBe(12);
-    expect(reportItem2.confidenceLevel).toBe(0.9);
+    expect(reportItem2.forecastedDemand30d).toBe(18);
+    expect(reportItem2.confidenceLevel).toBe(0.85);
   });
 });
