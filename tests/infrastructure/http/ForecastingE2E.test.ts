@@ -66,9 +66,11 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     // 3 dispatches of size 10, total 30 units dispatched in the last 30 days.
     // 30 units / 30 days = 1.0 Average Daily Sales (ADS).
     const now = new Date();
-    await dispatchRecordRepo.save(new DispatchRecord("1", sku, locationId, 10, new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000)));
-    await dispatchRecordRepo.save(new DispatchRecord("2", sku, locationId, 10, new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)));
-    await dispatchRecordRepo.save(new DispatchRecord("3", sku, locationId, 10, new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000)));
+    // Using a fixed time within the current month for all dispatches to keep the seasonal multiplier at 1.0
+    // To ensure the dispatches fall into the current month, we will use (now - 1 minute), (now - 2 minutes), etc.
+    await dispatchRecordRepo.save(new DispatchRecord("1", sku, locationId, 10, new Date(now.getTime() - 1 * 60 * 1000)));
+    await dispatchRecordRepo.save(new DispatchRecord("2", sku, locationId, 10, new Date(now.getTime() - 2 * 60 * 1000)));
+    await dispatchRecordRepo.save(new DispatchRecord("3", sku, locationId, 10, new Date(now.getTime() - 3 * 60 * 1000)));
 
     // 3. Request demand planning report
     const reportRes = await request(app)
