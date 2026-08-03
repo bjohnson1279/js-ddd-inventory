@@ -1,0 +1,16 @@
+<<<<<<< SEARCH
+  beforeEach(() => {
+    inventoryRepo = new InMemoryInventoryRepository();
+=======
+  beforeAll(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-08-15T12:00:00Z"));
+  });
+
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
+  beforeEach(() => {
+    inventoryRepo = new InMemoryInventoryRepository();
+>>>>>>> REPLACE
