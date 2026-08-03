@@ -50,7 +50,7 @@ export class GenerateDemandForecast {
       if (overallMonthlyAverage > 0) {
         // Target month is the forecast period start month
         const targetMonth = new Date().getMonth();
-        const targetMonthSales = monthlySales[targetMonth] || 0;
+        const targetMonthSales = monthlySales[targetMonth];
         
         // If target month has historical data, compute index, otherwise default to 1.0
         if (targetMonthSales > 0) {
@@ -67,7 +67,7 @@ export class GenerateDemandForecast {
     const periodEnd = new Date(periodStart.getTime() + forecastDays * 24 * 60 * 60 * 1000);
 
     // Confidence index increases if historical sales patterns match current velocity
-    const confidenceLevel = velocity.averageDailySales30d > 0 ? (seasonalMultiplier !== 1.0 ? 0.85 : 0.85) : 0.50;
+    const confidenceLevel = velocity.averageDailySales30d > 0 ? (seasonalMultiplier !== 1.0 ? 0.90 : 0.85) : 0.50;
 
     const forecast = new DemandForecast(
       "",
