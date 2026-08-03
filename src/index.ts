@@ -256,7 +256,7 @@ export const setupApp = (
 
   app.post("/api/admin/cache/clear", requireRole(["admin"]), (req, res) => {
     try {
-      const tenantId = (req.query.tenantId as string) || undefined;
+      const tenantId = typeof req.query.tenantId === "string" ? req.query.tenantId : undefined;
       const count = RedisCacheService.getInstance().flush(tenantId);
       res.status(200).json({ success: true, clearedKeysCount: count });
     } catch (e: any) {
@@ -356,7 +356,7 @@ export const setupApp = (
   app.get("/api/lots/:lotNumber/traceability", requireRole(["admin", "warehouse_operator", "viewer", "accountant"]), async (req, res) => {
     try {
       const { lotNumber } = req.params;
-      const variantId = (req.query.variantId as string) || "";
+      const variantId = typeof req.query.variantId === "string" ? req.query.variantId : "";
       const tenantId = (req as any).user?.tenantId || "tenant-1";
       const lot = await prisma.lotBatchModel.findUnique({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } }
