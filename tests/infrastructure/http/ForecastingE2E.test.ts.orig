@@ -55,8 +55,6 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
   });
 
   it("should record dispatches, compute sales velocity/days of cover, and return demand planning report", async () => {
-    jest.useFakeTimers().setSystemTime(new Date("2023-06-15T12:00:00Z"));
-
     // 1. Set up an inventory item with stock level 50
     const sku = "IPHONE-15";
     const locationId = "warehouse-south";
@@ -78,12 +76,12 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
 
     expect(reportRes.status).toBe(200);
     expect(reportRes.body.length).toBe(1);
-    
+
     const reportItem = reportRes.body[0];
     expect(reportItem.sku).toBe(sku);
     expect(reportItem.locationId).toBe(locationId);
     expect(reportItem.currentStock).toBe(50);
-    
+
     // 30 units in 30 days -> ADS 30d should be exactly 1.0 (30 / 30)
     expect(reportItem.averageDailySales30d).toBe(1.0);
     // Days of cover = currentStock (50) / ADS 30d (1.0) = 50 days
@@ -104,11 +102,11 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     expect(forecastRes.status).toBe(200);
     expect(forecastRes.body.message).toMatch(/success/i);
     expect(forecastRes.body.forecast).toBeDefined();
-    
+
     const forecast = forecastRes.body.forecast;
     expect(forecast.sku).toBe(sku);
     expect(forecast.locationId).toBe(locationId);
-    
+
     // Projected forecast quantity: Math.ceil(ADS (1.0) * forecastDays (15) * trendMultiplier (1.2)) = Math.ceil(18) = 18.
     expect(forecast.forecastedQuantity).toBe(18);
     expect(forecast.confidenceLevel).toBe(0.85);
@@ -127,7 +125,5 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     // Both conditions match, so it will return f.forecastedQuantity = 18.
     expect(reportItem2.forecastedDemand30d).toBe(18);
     expect(reportItem2.confidenceLevel).toBe(0.85);
-
-    jest.useRealTimers();
   });
 });
