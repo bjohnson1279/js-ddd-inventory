@@ -27,6 +27,24 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
   let dispatchRecordRepo: InMemoryDispatchRecordRepository;
   let demandForecastRepo: InMemoryDemandForecastRepository;
 
+  beforeAll(() => {
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+    jest.setSystemTime(new Date("2023-05-15T12:00:00Z"));
+  });
+
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
+  beforeAll(() => {
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+    jest.setSystemTime(new Date("2023-01-15T12:00:00Z"));
+  });
+
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
   beforeEach(() => {
     inventoryRepo = new InMemoryInventoryRepository();
     policyRepo = new InMemoryReorderPolicyRepository();
