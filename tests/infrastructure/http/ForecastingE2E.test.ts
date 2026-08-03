@@ -111,6 +111,9 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     // We expect it to be a positive number close to 18, so we check for > 0 to avoid month-boundary test flakiness.
     expect(forecast.forecastedQuantity).toBeGreaterThan(0);
     expect(forecast.confidenceLevel).toBeGreaterThanOrEqual(0.85);
+    // Projected forecast quantity: Math.ceil(ADS (1.0) * forecastDays (15) * trendMultiplier (1.2)) = Math.ceil(18) = 18.
+    expect(forecast.forecastedQuantity).toBe(12);
+    expect(forecast.confidenceLevel).toBe(0.9);
 
     // 5. Request the report again. It should now reflect the active forecast
     const reportRes2 = await request(app)
@@ -126,5 +129,7 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     // Both conditions match, so it will return f.forecastedQuantity = 18.
     expect(reportItem2.forecastedDemand30d).toBe(forecast.forecastedQuantity);
     expect(reportItem2.confidenceLevel).toBe(forecast.confidenceLevel);
+    expect(reportItem2.forecastedDemand30d).toBe(12);
+    expect(reportItem2.confidenceLevel).toBe(0.9);
   });
 });
