@@ -11,3 +11,10 @@
 **Vulnerability:** Endpoints defined directly on the app instance (e.g., `app.get("/api/admin/cache/stats")`) were protected by `authMiddleware` but lacked role-based authorization checks, allowing any authenticated user to perform administrative actions.
 **Learning:** Adding `authMiddleware` to secure routes ensures authentication but does not automatically enforce role-based access control (RBAC). For highly privileged endpoints, explicit RBAC must be applied even if they sit behind an auth guard.
 **Prevention:** Always combine `authMiddleware` with a specific authorization middleware (like `requireRole(["admin"])`) for sensitive endpoints, especially when endpoints are registered individually instead of using an already-protected router.
+
+## Prevention Directives for Automated Refactoring
+- **Never Overwrite Complete Files**: Always use range-scoped replacement chunks (`StartLine`/`EndLine`) for edits to `schema.prisma`, `index.ts`, `public/index.php`, or DDL SQL scripts.
+- **Do Not Remove Core Declarations**: Do not delete existing route registrations or Prisma model definitions.
+- **Environment Isolation Compatibility**: When replacing fallback secrets, preserve test environment execution via `!getenv('APP_ENV')` or `getenv('APP_ENV') === 'testing'`.
+- **No Scratch Files**: Never stage or commit `test_*.ts`, `test_*.js`, or `test.js` files to git.
+
