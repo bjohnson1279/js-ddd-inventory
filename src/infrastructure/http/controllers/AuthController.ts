@@ -6,7 +6,7 @@ import { IEmailService } from "../../../application/ports/IEmailService";
 import { hashPassword, verifyPassword } from "../../utils/security";
 import { Logger } from "../../../infrastructure/logging/logger";
 
-const JWT_SECRET = process.env.JWT_SECRET || "";
+const JWT_SECRET = process.env.JWT_SECRET as string;
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET environment variable is required for security.");
 }
