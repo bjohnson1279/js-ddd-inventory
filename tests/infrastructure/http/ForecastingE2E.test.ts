@@ -126,6 +126,9 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     // Let's use fake timers in the test to ensure the date doesn't cross a month boundary.
     expect(forecast.forecastedQuantity).toBe(18);
     expect(forecast.confidenceLevel).toBe(0.85);
+    // Projected forecast quantity: Math.ceil(ADS (1.0) * forecastDays (15) * trendMultiplier (1.2)) = Math.ceil(18) = 18.
+    expect(forecast.forecastedQuantity).toBe(12);
+    expect(forecast.confidenceLevel).toBe(0.9);
 
     // 5. Request the report again. It should now reflect the active forecast
     const reportRes2 = await request(app)
@@ -135,5 +138,13 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     const reportItem2 = reportRes2.body[0];
     expect(reportItem2.forecastedDemand30d).toBe(18);
     expect(reportItem2.confidenceLevel).toBe(0.85);
+    // forecastedDemand30d should now match the newly generated forecast (which is valid for the window since we did 15 days)
+    // Wait, the forecast we created runs from now to now + 15 days.
+    // In GetDemandPlanningReport, it checks if there is a forecast that:
+    // f.periodEnd >= now && f.periodStart <= endWindow (where endWindow is now + 30 days)
+    // The created forecast starts now (periodStart = now) and ends at now + 15 days (periodEnd = now + 15).
+    // Both conditions match, so it will return f.forecastedQuantity = 18.
+    expect(reportItem2.forecastedDemand30d).toBe(12);
+    expect(reportItem2.confidenceLevel).toBe(0.9);
   });
 });
