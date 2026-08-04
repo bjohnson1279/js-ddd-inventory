@@ -54,7 +54,7 @@
   },
   "overrides": {
     "@hono/node-server": "^2.0.5",
-    "fast-uri": "^3.1.5",
+    "fast-uri": "^3.1.4",
     "body-parser": "^1.20.6",
     "hono": "^4.12.27",
     "valibot": "^1.4.2"

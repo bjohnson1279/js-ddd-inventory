@@ -84,28 +84,26 @@ export class PrismaRMARepository implements IRMARepository {
       });
 
       // Upsert RMA items
-      await Promise.all(
-        rma.items.map((item) =>
-          tx.rMAItemModel.upsert({
-            where: { id: item.id },
-            update: {
-              receivedQuantity: item.receivedQuantity,
-              status: item.status,
-              disposition: item.disposition
-            },
-            create: {
-              id: item.id,
-              rmaId: rma.id,
-              variantId: item.variantId,
-              quantity: item.quantity,
-              receivedQuantity: item.receivedQuantity,
-              unitCostCents: item.unitCostCents,
-              status: item.status,
-              disposition: item.disposition
-            }
-          })
-        )
-      );
+      for (const item of rma.items) {
+        await tx.rMAItemModel.upsert({
+          where: { id: item.id },
+          update: {
+            receivedQuantity: item.receivedQuantity,
+            status: item.status,
+            disposition: item.disposition
+          },
+          create: {
+            id: item.id,
+            rmaId: rma.id,
+            variantId: item.variantId,
+            quantity: item.quantity,
+            receivedQuantity: item.receivedQuantity,
+            unitCostCents: item.unitCostCents,
+            status: item.status,
+            disposition: item.disposition
+          }
+        });
+      }
     });
   }
 }
