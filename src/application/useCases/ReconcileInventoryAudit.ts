@@ -59,7 +59,7 @@ export class ReconcileInventoryAudit {
 
     // Pre-calculate shrinkage components for batch consumption to avoid N+1 queries
     const shrinkages: { variantId: string; quantity: number }[] = [];
-    if (config.accountingMethod === AccountingMethod.Accrual && (config.costingMethod === CostingMethod.FIFO || config.costingMethod === CostingMethod.WeightedAverageCost)) {
+    if (config.accountingMethod === AccountingMethod.Accrual && config.costingMethod === CostingMethod.FIFO) {
       for (const item of audit.items) {
         if (item.discrepancy !== null && item.discrepancy < 0) {
           shrinkages.push({
@@ -71,18 +71,10 @@ export class ReconcileInventoryAudit {
     }
 
     const fifoBreakdownsMap = new Map<string, number>();
-    const weightedAverageBreakdownsMap = new Map<string, number>();
     if (shrinkages.length > 0) {
-      if (config.costingMethod === CostingMethod.FIFO) {
-        const breakdowns = await this.costLayerService.consumeFifoLayersBatch(shrinkages);
-        for (let i = 0; i < shrinkages.length; i++) {
-          fifoBreakdownsMap.set(shrinkages[i].variantId, breakdowns[i].totalCostCents);
-        }
-      } else if (config.costingMethod === CostingMethod.WeightedAverageCost) {
-        const breakdowns = await this.costLayerService.calculateWeightedAverageCostBatch(shrinkages);
-        for (let i = 0; i < shrinkages.length; i++) {
-          weightedAverageBreakdownsMap.set(shrinkages[i].variantId, breakdowns[i].totalCostCents);
-        }
+      const breakdowns = await this.costLayerService.consumeFifoLayersBatch(shrinkages);
+      for (let i = 0; i < shrinkages.length; i++) {
+        fifoBreakdownsMap.set(shrinkages[i].variantId, breakdowns[i].totalCostCents);
       }
     }
 
@@ -112,7 +104,8 @@ export class ReconcileInventoryAudit {
           if (config.costingMethod === CostingMethod.FIFO) {
             totalCostCents = fifoBreakdownsMap.get(item.variantId) || 0;
           } else if (config.costingMethod === CostingMethod.WeightedAverageCost) {
-            totalCostCents = weightedAverageBreakdownsMap.get(item.variantId) || 0;
+            const breakdown = await this.costLayerService.calculateWeightedAverageCost(item.variantId, Math.abs(discrepancy));
+            totalCostCents = breakdown.totalCostCents;
           }
 
           await this.journalService.onInventoryAuditReconciliation(

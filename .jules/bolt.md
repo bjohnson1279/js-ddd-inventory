@@ -4,6 +4,3 @@
 ## 2023-10-27 - Fix N+1 queries in CostLayerService batched consumption
 **Learning:** Checking for optional bulk methods (like `getActiveLayersByVariantIds`) on repositories before falling back to `Promise.all` can prevent N+1 query patterns when loading multiple entities in a batch operation.
 **Action:** Always verify if a repository interface exposes an optional bulk-fetch method before defaulting to a concurrent loop of single-entity lookups, especially within `*Batch` designated methods.
-## 2024-08-04 - N+1 Query in Promise.all Loop for ReconcileInventoryAudit Weighted Average Costing
-**Learning:** ReconcileInventoryAudit was calculating WeightedAverageCost individually for each shrinkage item inside a `Promise.all` mapping loop, leading to an N+1 query issue for fetching cost layers.
-**Action:** Extend batch methods in `CostLayerService` to support non-consuming calculations (`calculateLayersBatch`), enabling pre-fetching of active layers outside the loop for `WeightedAverageCost` shrinking scenarios.
