@@ -116,4 +116,45 @@ export class CostLayerService {
   ): Promise<CostBreakdown[]> {
     return this.consumeLayersBatch(components, CostingMethod.FIFO);
   }
+
+  public async calculateLayersBatch(
+    components: { variantId: string; quantity: number }[],
+    method: CostingMethod = CostingMethod.FIFO
+  ): Promise<CostBreakdown[]> {
+    // 1. Accumulate all variant IDs to prefetch their active layers
+    const variantIds = Array.from(new Set(components.map((c) => c.variantId)));
+
+    // 2. Prefetch all active layers in batch to reduce queries
+    let activeLayersByVariant: Map<string, InventoryCostLayer[]>;
+
+    if (this.layers.getActiveLayersByVariantIds) {
+      activeLayersByVariant = await this.layers.getActiveLayersByVariantIds(variantIds);
+    } else {
+      activeLayersByVariant = new Map<string, InventoryCostLayer[]>();
+      await Promise.all(
+        variantIds.map(async (vId) => {
+          const layers = await this.layers.getActiveLayers(vId);
+          activeLayersByVariant.set(vId, layers);
+        })
+      );
+    }
+
+    // 3. Sequentially calculate layers in-memory
+    const breakdowns: CostBreakdown[] = [];
+    const strategy = CostingStrategyRegistry.get(method);
+
+    for (const comp of components) {
+      const activeLayers = activeLayersByVariant.get(comp.variantId) || [];
+      const breakdown = strategy.calculateCost(activeLayers, comp.quantity, comp.variantId);
+      breakdowns.push(breakdown);
+    }
+
+    return breakdowns;
+  }
+
+  public async calculateWeightedAverageCostBatch(
+    components: { variantId: string; quantity: number }[]
+  ): Promise<CostBreakdown[]> {
+    return this.calculateLayersBatch(components, CostingMethod.WeightedAverageCost);
+  }
 }
