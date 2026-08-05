@@ -28,7 +28,6 @@ describe("StartInventoryAudit Use Case", () => {
       "tenant-1",
       "loc-1",
       AuditStatus.Draft,
-
       [auditItem]
     );
 
@@ -61,7 +60,7 @@ describe("StartInventoryAudit Use Case", () => {
       "tenant-1",
       "loc-1",
       AuditStatus.InProgress,
-
+      []
     );
 
     auditRepository.findById.mockResolvedValue(audit);
@@ -95,7 +94,7 @@ describe("StartInventoryAudit Use Case", () => {
       "tenant-1",
       "loc-1",
       AuditStatus.Draft,
-
+      []
     );
 
     auditRepository.findById.mockResolvedValue(audit);

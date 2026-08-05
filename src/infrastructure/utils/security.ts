@@ -14,7 +14,10 @@ export function verifyPassword(password: string, storedHash: string): boolean {
 }
 
 function getEncryptionKey(): Buffer {
-  const key = process.env.ENCRYPTION_KEY || 'default_dev_key_change_in_prod';
+  const key = process.env.ENCRYPTION_KEY;
+  if (!key) {
+    throw new Error("ENCRYPTION_KEY environment variable is required for security.");
+  }
   return crypto.createHash('sha256').update(key).digest();
 }
 
