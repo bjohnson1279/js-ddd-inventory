@@ -15,3 +15,6 @@
 ## 2024-03-24 - Prisma Nested Upserts
 **Learning:** In Prisma, using `$transaction` with `Promise.all` mapping over multiple child upsert operations alongside a parent upsert creates significant N+1 write latency (e.g., ~500ms for 100 items).
 **Action:** Replace `$transaction` and `Promise.all` with a single Prisma nested `upsert` on the parent model (e.g., `items: { upsert: [...] }`), which leverages Prisma's internal atomic nested writes to execute in a single round-trip, significantly reducing latency (e.g., ~150ms for 100 items).
+## YYYY-MM-DD - [Optimize Prisma Upsert with Nested Operations]
+**Learning:** When saving an aggregate root along with its related child entities in Prisma, avoid iterating over the child entities and saving them with independent queries inside a `$transaction` using `Promise.all()`. This triggers an N+1 query overhead. Instead, map the array into Prisma's nested operations structure (e.g., `update: { items: { upsert: [...] } }`) on the parent aggregate's query. This collapses the execution into a single, unified database operation for a measurable speedup in I/O latency.
+**Action:** Use nested writes (`create`, `upsert`, `connect`, etc.) provided by Prisma's relation API whenever saving a tree-like domain aggregate to avoid unnecessary network waterfalls and db roundtrips.
