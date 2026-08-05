@@ -119,6 +119,7 @@ export class ReceiveRMA {
     const modifiedInventoryItems = new Map<string, InventoryItem>();
     const newCostLayers: InventoryCostLayer[] = [];
     const modifiedSerialItems: any[] = [];
+    const journalPromises: Promise<any>[] = [];
     const newQuarantineItems: any[] = []; // QuarantineItem[]
 
     // Optimization: Replaced Promise.all map loop with sequential for-of loop to avoid DB concurrency exceptions on identical SKUs
@@ -183,13 +184,15 @@ export class ReceiveRMA {
       // 5. Post return journal entries if Accrual
       if (config.accountingMethod === AccountingMethod.Accrual) {
         const totalCostCents = rmaItem.unitCostCents * item.quantityReceived;
-        await this.journalService.onStockReturned(
-          item.variantId,
-          totalCostCents,
-          rma.id,
-          new Date(),
-          config,
-          rma.tenantId
+        journalPromises.push(
+          this.journalService.onStockReturned(
+            item.variantId,
+            totalCostCents,
+            rma.id,
+            new Date(),
+            config,
+            rma.tenantId
+          )
         );
       }
 
@@ -223,6 +226,10 @@ export class ReceiveRMA {
           modifiedSerialItems.push(serialItem);
         }
       }
+    }
+
+    if (journalPromises.length > 0) {
+      await Promise.all(journalPromises);
     }
 
     if (modifiedSerialItems.length > 0 && this.serializedItemRepository) {

@@ -28,6 +28,7 @@ describe("StartInventoryAudit Use Case", () => {
       "tenant-1",
       "loc-1",
       AuditStatus.Draft,
+      []
       [auditItem]
     );
 
