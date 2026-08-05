@@ -86,25 +86,29 @@ export class PrismaProductRepository implements IProductRepository {
           create: { id: product.id, name: product.name }
         });
 
+        const promises = [];
         for (const variant of product.variants) {
-          await tx.productVariantModel.upsert({
-            where: { sku: variant.sku.getValue() },
-            update: {
-              productId: product.id,
-              attributes: JSON.stringify(variant.attributes.toArray()),
-              weightGrams: variant.weightGrams,
-              volumeCubicMeters: variant.volumeCubicMeters
-            },
-            create: {
-              id: variant.id,
-              productId: product.id,
-              sku: variant.sku.getValue(),
-              attributes: JSON.stringify(variant.attributes.toArray()),
-              weightGrams: variant.weightGrams,
-              volumeCubicMeters: variant.volumeCubicMeters
-            }
-          });
+          promises.push(
+            tx.productVariantModel.upsert({
+              where: { sku: variant.sku.getValue() },
+              update: {
+                productId: product.id,
+                attributes: JSON.stringify(variant.attributes.toArray()),
+                weightGrams: variant.weightGrams,
+                volumeCubicMeters: variant.volumeCubicMeters
+              },
+              create: {
+                id: variant.id,
+                productId: product.id,
+                sku: variant.sku.getValue(),
+                attributes: JSON.stringify(variant.attributes.toArray()),
+                weightGrams: variant.weightGrams,
+                volumeCubicMeters: variant.volumeCubicMeters
+              }
+            })
+          );
         }
+        await Promise.all(promises);
       });
     } catch (e) {}
   }
