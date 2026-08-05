@@ -586,20 +586,20 @@ const start = async () => {
   try {
     await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;`;
     Logger.info({ message: "TimescaleDB extension enabled." });
-    const isHypertable = await prisma.$queryRaw`
+    const isHypertable = await prisma.$queryRaw<unknown[]>`
       SELECT 1 FROM timescaledb_information.hypertables 
       WHERE hypertable_name = 'dispatch_records'
     `;
-    if ((isHypertable as any[]).length === 0) {
+    if (isHypertable.length === 0) {
       await prisma.$executeRaw`SELECT create_hypertable('dispatch_records', 'dispatched_at', if_not_exists => TRUE);`;
       Logger.info({ context: "index", message: "dispatch_records table converted to TimescaleDB hypertable." });
     }
 
-    const isView = await prisma.$queryRaw`
+    const isView = await prisma.$queryRaw<unknown[]>`
       SELECT 1 FROM pg_matviews 
       WHERE matviewname = 'daily_dispatch_summary'
     `;
-    if ((isView as any[]).length === 0) {
+    if (isView.length === 0) {
       await prisma.$executeRaw`
         CREATE MATERIALIZED VIEW daily_dispatch_summary
         WITH (timescaledb.continuous) AS
