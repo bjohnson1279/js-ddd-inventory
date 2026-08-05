@@ -12,3 +12,6 @@
 - **Zero-Diff Task Termination**: If the requested optimization, refactor, or fix is ALREADY natively present in the target branch, DO NOT create an empty pull request or commit an acknowledgment PR. Exit the task cleanly without opening a PR.
 - **Stale Suggestion Guard**: Always verify the current code on `main`/`master` before planning changes. If no actionable diff is required, cancel task execution immediately.
 
+## 2025-02-18 - Optimized PrismaRfidTagRepository.saveAll bulk inserts
+**Learning:** For batched Prisma bulk inserts in PostgreSQL, passing a huge array directly to $executeRaw or upsert can exceed Postgres parameterized limits. Chunking the array and using Prisma.sql to securely parameterize queries avoids limits and improves performance over individual looping saves.
+**Action:** When handling large dataset bulk inserts via `$executeRaw` in Prisma, always apply array chunking logic (e.g. 500 items per batch) to prevent network/query crashes while retaining parameter security.
