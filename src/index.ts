@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import crypto from "crypto";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 import { Logger } from "./infrastructure/logging/logger";
@@ -423,7 +424,7 @@ export const setupApp = (
 
   app.post("/api/shipping/label", (req, res) => {
     const { carrier, recipientName, shippingAddress, weightKg, format } = req.body;
-    const trackingNumber = `${carrier || 'CARRIER'}-${Math.floor(100000000 + Math.random() * 900000000)}`;
+    const trackingNumber = `${carrier || 'CARRIER'}-${crypto.randomInt(100000000, 1000000000)}`;
     res.json({
       carrier: carrier || "FEDEX",
       trackingNumber,
@@ -437,7 +438,7 @@ export const setupApp = (
 
   app.post("/api/shipping/bol", (req, res) => {
     const { carrier, originAddress, destinationAddress, weightKg, totalPackages } = req.body;
-    const bolNumber = `BOL-${Math.floor(100000 + Math.random() * 900000)}`;
+    const bolNumber = `BOL-${crypto.randomInt(100000, 1000000)}`;
     res.json({
       bolNumber,
       carrier: carrier || "FEDEX",
@@ -458,7 +459,7 @@ export const setupApp = (
     res.json({
       success: true,
       provider: provider || "QUICKBOOKS",
-      externalJournalId: `EXT-${provider || 'ERP'}-${Math.floor(10000 + Math.random() * 90000)}`,
+      externalJournalId: `EXT-${provider || 'ERP'}-${crypto.randomInt(10000, 100000)}`,
       postedAmountCents,
       lineCount: lineArr.length,
       message: `Successfully posted ${lineArr.length} lines to ${provider}`,
@@ -510,7 +511,7 @@ export const setupApp = (
     const zplCode = `^XA\n^FO50,50^A0N,36,36^FD${(labelType || 'LABEL').toUpperCase()} TAG^FS\n^FO50,100^BCN,100,Y,N,N^FD${barcodeValue || 'BARCODE'}^FS\n^FO50,220^A0N,24,24^FD${subtitle || ''}^FS\n^XZ`;
     res.json({
       success: true,
-      jobId: `PRINT-JOB-${Math.floor(1000 + Math.random() * 9000)}`,
+      jobId: `PRINT-JOB-${crypto.randomInt(1000, 10000)}`,
       printerName: printerName || 'Zebra-ZT411',
       zplCode,
       sentAt: new Date().toISOString()
@@ -523,7 +524,7 @@ export const setupApp = (
     const pickers = parseInt(activePickersCount) || 5;
     const totalOrdersProcessed = waves * 25;
     res.json({
-      scenarioId: `SIM-${Math.floor(1000 + Math.random() * 9000)}`,
+      scenarioId: `SIM-${crypto.randomInt(1000, 10000)}`,
       durationSeconds: 3600,
       totalOrdersProcessed,
       averageFulfillmentTimeMinutes: Math.round((12.5 / (pickers / 5)) * 10) / 10,
