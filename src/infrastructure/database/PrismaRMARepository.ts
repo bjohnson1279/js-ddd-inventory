@@ -63,6 +63,7 @@ export class PrismaRMARepository implements IRMARepository {
   }
 
   async save(rma: RMA): Promise<void> {
+    // Nested upsert collapses RMA and its items into a single unified query instead of N+1 IO calls
     await this.prisma.rMAModel.upsert({
       where: { id: rma.id },
       update: {
@@ -72,6 +73,7 @@ export class PrismaRMARepository implements IRMARepository {
         tenantId: rma.tenantId,
         items: {
           upsert: rma.items.map(item => ({
+          upsert: rma.items.map((item) => ({
             where: { id: item.id },
             update: {
               receivedQuantity: item.receivedQuantity,
@@ -99,6 +101,7 @@ export class PrismaRMARepository implements IRMARepository {
         tenantId: rma.tenantId,
         items: {
           create: rma.items.map(item => ({
+          create: rma.items.map((item) => ({
             id: item.id,
             variantId: item.variantId,
             quantity: item.quantity,
