@@ -115,6 +115,7 @@ export class ReconcileInventoryAudit {
             totalCostCents = weightedAverageBreakdownsMap.get(item.variantId) || 0;
           }
 
+          // Note: The loop is already utilizing Promise.all to collect and await promises concurrently
           await this.journalService.onInventoryAuditReconciliation(
             audit.id,
             item.variantId,
