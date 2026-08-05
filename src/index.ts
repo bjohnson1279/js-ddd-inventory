@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import crypto from "crypto";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 import { Logger } from "./infrastructure/logging/logger";
@@ -13,6 +14,7 @@ import { PrismaJournalRepository } from "./infrastructure/database/PrismaJournal
 import { prisma } from "./infrastructure/database/prisma";
 import { enableRowLevelSecurity } from "./infrastructure/database/rls";
 import { PostgresInventoryRepository } from "./infrastructure/database/PostgresInventoryRepository";
+import { IncomingMessage, ServerResponse } from "http";
 import { IInventoryRepository } from "./domain/repositories/IInventoryRepository";
 import { IEmailService } from "./application/ports/IEmailService";
 import inventoryRoutes from "./infrastructure/http/routes/inventory.routes";
@@ -100,7 +102,7 @@ import rfidRoutes from "./infrastructure/http/routes/rfid.routes";
 import anomalyDetectionRoutes from "./infrastructure/http/routes/anomalyDetection.routes";
 import rebalanceRoutes from "./infrastructure/http/routes/rebalance.routes";
 import { WebSocketManager } from "./infrastructure/websocket/WebSocketManager";
-import { authMiddleware, requireRole } from "./infrastructure/http/middleware/auth";
+import { authMiddleware, requireRole, AuthenticatedRequest } from "./infrastructure/http/middleware/auth";
 import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
 import { IProductRepository } from "./domain/repositories/IProductRepository";
 import { InMemoryWarehouseLocationRepository } from "./infrastructure/database/InMemoryWarehouseLocationRepository";
@@ -132,8 +134,8 @@ app.use(traceMiddleware);
 app.set("trust proxy", 1);
 app.use(limiter);
 app.use("/api/shopify", express.json({
-  verify: (req: any, res, buf) => {
-    req.rawBody = buf;
+  verify: (req: IncomingMessage, res: ServerResponse, buf: Buffer) => {
+    (req as any).rawBody = buf;
   }
 }));
 app.use(express.json());
@@ -269,7 +271,7 @@ export const setupApp = (
   app.post("/api/lots/quarantine", requireRole(["admin", "warehouse_operator"]), async (req, res) => {
     try {
       const { lotNumber, variantId, reason } = req.body;
-      const tenantId = (req as any).user?.tenantId || "tenant-1";
+      const tenantId = (req as AuthenticatedRequest).user?.tenantId || "tenant-1";
       let lot = await prisma.lotBatchModel.findUnique({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } }
       });
@@ -304,7 +306,7 @@ export const setupApp = (
   app.post("/api/lots/recall", requireRole(["admin"]), async (req, res) => {
     try {
       const { lotNumber, variantId, reason } = req.body;
-      const tenantId = (req as any).user?.tenantId || "tenant-1";
+      const tenantId = (req as AuthenticatedRequest).user?.tenantId || "tenant-1";
       let lot = await prisma.lotBatchModel.findUnique({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } }
       });
@@ -338,7 +340,7 @@ export const setupApp = (
   app.post("/api/lots/release", requireRole(["admin", "warehouse_operator"]), async (req, res) => {
     try {
       const { lotNumber, variantId } = req.body;
-      const tenantId = (req as any).user?.tenantId || "tenant-1";
+      const tenantId = (req as AuthenticatedRequest).user?.tenantId || "tenant-1";
       const lot = await prisma.lotBatchModel.update({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } },
         data: {
@@ -358,7 +360,7 @@ export const setupApp = (
     try {
       const { lotNumber } = req.params;
       const variantId = typeof req.query.variantId === "string" ? req.query.variantId : "";
-      const tenantId = (req as any).user?.tenantId || "tenant-1";
+      const tenantId = (req as AuthenticatedRequest).user?.tenantId || "tenant-1";
       const lot = await prisma.lotBatchModel.findUnique({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } }
       });
@@ -377,7 +379,7 @@ export const setupApp = (
         tenantId,
         lotNumber,
         variantId,
-        (lot?.status as any) || "ACTIVE",
+        (lot?.status as import("./domain/procurement/entities/LotBatch").LotStatus) || "ACTIVE",
         lot?.manufacturedDate,
         lot?.expirationDate,
         lot?.supplierId,
@@ -424,7 +426,7 @@ export const setupApp = (
 
   app.post("/api/shipping/label", (req, res) => {
     const { carrier, recipientName, shippingAddress, weightKg, format } = req.body;
-    const trackingNumber = `${carrier || 'CARRIER'}-${Math.floor(100000000 + Math.random() * 900000000)}`;
+    const trackingNumber = `${carrier || 'CARRIER'}-${crypto.randomInt(100000000, 1000000000)}`;
     res.json({
       carrier: carrier || "FEDEX",
       trackingNumber,
@@ -438,7 +440,7 @@ export const setupApp = (
 
   app.post("/api/shipping/bol", (req, res) => {
     const { carrier, originAddress, destinationAddress, weightKg, totalPackages } = req.body;
-    const bolNumber = `BOL-${Math.floor(100000 + Math.random() * 900000)}`;
+    const bolNumber = `BOL-${crypto.randomInt(100000, 1000000)}`;
     res.json({
       bolNumber,
       carrier: carrier || "FEDEX",
@@ -459,7 +461,7 @@ export const setupApp = (
     res.json({
       success: true,
       provider: provider || "QUICKBOOKS",
-      externalJournalId: `EXT-${provider || 'ERP'}-${Math.floor(10000 + Math.random() * 90000)}`,
+      externalJournalId: `EXT-${provider || 'ERP'}-${crypto.randomInt(10000, 100000)}`,
       postedAmountCents,
       lineCount: lineArr.length,
       message: `Successfully posted ${lineArr.length} lines to ${provider}`,
@@ -511,7 +513,7 @@ export const setupApp = (
     const zplCode = `^XA\n^FO50,50^A0N,36,36^FD${(labelType || 'LABEL').toUpperCase()} TAG^FS\n^FO50,100^BCN,100,Y,N,N^FD${barcodeValue || 'BARCODE'}^FS\n^FO50,220^A0N,24,24^FD${subtitle || ''}^FS\n^XZ`;
     res.json({
       success: true,
-      jobId: `PRINT-JOB-${Math.floor(1000 + Math.random() * 9000)}`,
+      jobId: `PRINT-JOB-${crypto.randomInt(1000, 10000)}`,
       printerName: printerName || 'Zebra-ZT411',
       zplCode,
       sentAt: new Date().toISOString()
@@ -524,7 +526,7 @@ export const setupApp = (
     const pickers = parseInt(activePickersCount) || 5;
     const totalOrdersProcessed = waves * 25;
     res.json({
-      scenarioId: `SIM-${Math.floor(1000 + Math.random() * 9000)}`,
+      scenarioId: `SIM-${crypto.randomInt(1000, 10000)}`,
       durationSeconds: 3600,
       totalOrdersProcessed,
       averageFulfillmentTimeMinutes: Math.round((12.5 / (pickers / 5)) * 10) / 10,
