@@ -251,7 +251,7 @@ export const setupApp = (
     try {
       const stats = RedisCacheService.getInstance().getStats();
       res.status(200).json(stats);
-    } catch (e: any) {
+    } catch (e: unknown) {
       res.status(500).json({ error: "Failed to fetch cache stats." });
     }
   });
@@ -261,7 +261,7 @@ export const setupApp = (
       const tenantId = typeof req.query.tenantId === "string" ? req.query.tenantId : undefined;
       const count = RedisCacheService.getInstance().flush(tenantId);
       res.status(200).json({ success: true, clearedKeysCount: count });
-    } catch (e: any) {
+    } catch (e: unknown) {
       res.status(500).json({ error: "Failed to clear cache." });
     }
   });
@@ -298,6 +298,7 @@ export const setupApp = (
       }
       res.json(lot);
     } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
       res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
     }
   });
@@ -331,8 +332,8 @@ export const setupApp = (
         });
       }
       res.json(lot);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -350,8 +351,8 @@ export const setupApp = (
         }
       });
       res.json(lot);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -389,8 +390,8 @@ export const setupApp = (
 
       const report = LotRecallService.generateTraceabilityReport(lotEntity, costLayers, shipments);
       res.json(report);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -401,8 +402,8 @@ export const setupApp = (
       const { CrossDockingEngine } = require("./domain/shipping/services/CrossDockingEngine");
       const result = CrossDockingEngine.evaluate(purchaseOrderId, inboundItems || [], backorders || []);
       res.json(result);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -574,8 +575,8 @@ export const setupApp = (
         supplierId,
         createdAt: new Date().toISOString()
       });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 };
@@ -622,8 +623,8 @@ const start = async () => {
             schedule_interval => INTERVAL '1 hour',
             if_not_exists => TRUE);
         `;
-      } catch (policyErr: any) {
-        Logger.info({ context: "index", message: `TimescaleDB aggregate policy setup warning: ${policyErr.message}` });
+      } catch (policyErr: unknown) {
+        Logger.info({ context: "index", message: `TimescaleDB aggregate policy setup warning: ${policyErr instanceof Error ? policyErr.message : String(policyErr)}` });
       }
       Logger.info({ context: "index", message: "daily_dispatch_summary continuous aggregate created." });
     }
