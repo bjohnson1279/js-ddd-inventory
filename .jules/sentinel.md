@@ -18,3 +18,7 @@
 - **Environment Isolation Compatibility**: When replacing fallback secrets, preserve test environment execution via `!getenv('APP_ENV')` or `getenv('APP_ENV') === 'testing'`.
 - **No Scratch Files**: Never stage or commit `test_*.ts`, `test_*.js`, or `test.js` files to git.
 
+## 2025-02-28 - Plaintext Webhook Secret Vulnerability
+**Vulnerability:** Webhook subscription HMAC secrets were being stored in plaintext in the database.
+**Learning:** Symmetric encryption at rest (like AES-256-GCM) is required instead of standard one-way hashing because the application needs the plaintext secret in memory to sign outgoing webhook payloads.
+**Prevention:** Always implement an encryption utility at the domain/infrastructure layer for sensitive keys and tokens, and ensure both controllers and worker background tasks transparently encrypt/decrypt these values at the boundary.

@@ -3,6 +3,7 @@ import crypto from "crypto";
 import dns from "dns/promises";
 import { WebSocketManager } from "../websocket/WebSocketManager";
 import { Logger } from "../../infrastructure/logging/logger";
+import { decrypt } from "../utils/encryption";
 
 
 async function isSafeUrl(urlStr: string): Promise<boolean> {
@@ -85,7 +86,8 @@ export class WebhookDeliveryWorker {
           }
 
           // Calculate signature
-          const hmac = crypto.createHmac("sha256", subscription.secret);
+          const decryptedSecret = decrypt(subscription.secret);
+          const hmac = crypto.createHmac("sha256", decryptedSecret);
           const signature = hmac.update(delivery.payload).digest("hex");
 
           // Verify target URL is safe to prevent SSRF
