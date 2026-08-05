@@ -297,6 +297,7 @@ export const setupApp = (
       res.json(lot);
     } catch (err: unknown) {
       res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+      res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
     }
   });
 
