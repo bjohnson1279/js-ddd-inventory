@@ -13,6 +13,7 @@ import { PrismaJournalRepository } from "./infrastructure/database/PrismaJournal
 import { prisma } from "./infrastructure/database/prisma";
 import { enableRowLevelSecurity } from "./infrastructure/database/rls";
 import { PostgresInventoryRepository } from "./infrastructure/database/PostgresInventoryRepository";
+import { IncomingMessage, ServerResponse } from "http";
 import { IInventoryRepository } from "./domain/repositories/IInventoryRepository";
 import { IEmailService } from "./application/ports/IEmailService";
 import inventoryRoutes from "./infrastructure/http/routes/inventory.routes";
@@ -132,8 +133,8 @@ app.use(traceMiddleware);
 app.set("trust proxy", 1);
 app.use(limiter);
 app.use("/api/shopify", express.json({
-  verify: (req: any, res, buf) => {
-    req.rawBody = buf;
+  verify: (req: IncomingMessage, res: ServerResponse, buf: Buffer) => {
+    (req as any).rawBody = buf;
   }
 }));
 app.use(express.json());
