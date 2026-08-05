@@ -52,30 +52,8 @@ async function runBenchmark() {
   const endFallback = Date.now();
   console.log(`Time: ${endFallback - startFallback}ms`);
 
-  // Patch the useCase to simulate our proposed fix
   const auditRepository2 = new InMemoryInventoryAuditRepository();
   const useCaseOptimized = new CreateInventoryAudit(auditRepository2, inventoryRepository);
-
-  useCaseOptimized.execute = async function(dto) {
-    const existing = await this['auditRepository'].findByNumber(dto.auditNumber);
-    if (existing) throw new Error();
-
-    let variants = dto.variantIds;
-    let inventoryItems: InventoryItem[] = [];
-
-    if (!variants || variants.length === 0) {
-      inventoryItems = await this['inventoryRepository'].findAllByLocation(dto.locationId);
-      variants = inventoryItems.map((item: any) => item.sku.getValue());
-    } else {
-      const skus = variants.map((v: string) => SKU.create(v));
-      const fetchPromises = skus.map(async (sku) => {
-        return await this['inventoryRepository'].findBySku(sku, dto.locationId);
-      });
-      const results = await Promise.all(fetchPromises);
-      inventoryItems = results.filter((item: any): item is InventoryItem => item !== null && item !== undefined);
-    }
-    return { id: 'mock' } as any;
-  }
 
   console.log(`\nRunning optimized (reusing items)...`);
   const startOptimized = Date.now();
