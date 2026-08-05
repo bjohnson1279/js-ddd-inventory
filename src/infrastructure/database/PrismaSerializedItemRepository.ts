@@ -132,9 +132,11 @@ export class PrismaSerializedItemRepository implements ISerializedItemRepository
 
 
   async saveMany(items: SerializedItem[]): Promise<void> {
+    if (items.length === 0) return;
+
     await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      for (const item of items) {
-        await tx.serializedItemModel.upsert({
+      await Promise.all(items.map(item =>
+        tx.serializedItemModel.upsert({
           where: { id: item.id },
           update: {
             serialNumber: item.serialNumber.value,
@@ -151,26 +153,32 @@ export class PrismaSerializedItemRepository implements ISerializedItemRepository
             locationId: item.locationId,
             tenantId: item.tenantId,
           },
-        });
+        })
+      ));
 
-        await tx.statusTransitionModel.deleteMany({
-          where: { serializedItemId: item.id },
-        });
+      const itemIds = items.map(item => item.id);
 
-        if (item.history.length > 0) {
-          await tx.statusTransitionModel.createMany({
-            data: item.history.map((t, idx) => ({
-              id: `${item.id}-t-${idx}-${t.occurredAt.getTime()}`,
-              serializedItemId: item.id,
-              fromStatus: t.from,
-              toStatus: t.to,
-              reason: t.reason,
-              transitionedAt: t.occurredAt,
-              actorId: t.actor,
-              referenceId: t.referenceId,
-            })),
-          });
-        }
+      await tx.statusTransitionModel.deleteMany({
+        where: { serializedItemId: { in: itemIds } },
+      });
+
+      const allTransitions = items.flatMap(item =>
+        item.history.map((t, idx) => ({
+          id: `${item.id}-t-${idx}-${t.occurredAt.getTime()}`,
+          serializedItemId: item.id,
+          fromStatus: t.from,
+          toStatus: t.to,
+          reason: t.reason,
+          transitionedAt: t.occurredAt,
+          actorId: t.actor,
+          referenceId: t.referenceId,
+        }))
+      );
+
+      if (allTransitions.length > 0) {
+        await tx.statusTransitionModel.createMany({
+          data: allTransitions,
+        });
       }
     });
 
