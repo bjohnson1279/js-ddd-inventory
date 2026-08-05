@@ -66,8 +66,13 @@ export class PrismaRfidTagRepository implements IRfidTagRepository {
   }
 
   async saveAll(tenantId: string, tags: RfidTag[]): Promise<void> {
-    for (const tag of tags) {
-      await this.save(tenantId, tag);
+    if (tags.length === 0) return;
+
+    const CHUNK_SIZE = 500;
+
+    for (let i = 0; i < tags.length; i += CHUNK_SIZE) {
+      const chunk = tags.slice(i, i + CHUNK_SIZE);
+      await Promise.all(chunk.map((tag) => this.save(tenantId, tag)));
     }
   }
 }
