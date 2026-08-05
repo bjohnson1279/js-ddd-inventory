@@ -12,3 +12,6 @@
 - **Zero-Diff Task Termination**: If the requested optimization, refactor, or fix is ALREADY natively present in the target branch, DO NOT create an empty pull request or commit an acknowledgment PR. Exit the task cleanly without opening a PR.
 - **Stale Suggestion Guard**: Always verify the current code on `main`/`master` before planning changes. If no actionable diff is required, cancel task execution immediately.
 
+## 2024-08-05 - Optimize bulk sequential saves with chunked Promise.all
+**Learning:** Sequential DB saves in a transaction (such as a large `for...of` loop in `saveMany`) can introduce significant performance bottlenecks through network waterfalls, while uncontrolled `Promise.all` mapping can cause transaction concurrency limits and connection pool exhaustion.
+**Action:** Replace large sequential DB loop operations with chunked parallel execution (e.g. `items.slice(i, i + chunkSize)` and `Promise.all()`) to significantly reduce I/O latency while safely preserving database constraints and encapsulated ORM boundaries.
