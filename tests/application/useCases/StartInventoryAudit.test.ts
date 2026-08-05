@@ -2,6 +2,7 @@ import { StartInventoryAudit } from "../../../src/application/useCases/StartInve
 import { IInventoryAuditRepository } from "../../../src/domain/repositories/IInventoryAuditRepository";
 import { InventoryAudit } from "../../../src/domain/procurement/aggregates/InventoryAudit";
 import { AuditStatus } from "../../../src/domain/procurement/enums/AuditStatus";
+import { InventoryAuditItem } from "../../../src/domain/procurement/aggregates/InventoryAuditItem";
 
 describe("StartInventoryAudit Use Case", () => {
   let auditRepository: jest.Mocked<IInventoryAuditRepository>;
@@ -20,6 +21,7 @@ describe("StartInventoryAudit Use Case", () => {
 
   it("should successfully start a draft inventory audit", async () => {
     const auditId = "audit-123";
+    const auditItem = new InventoryAuditItem("item-1", "variant-1", 10, null, false);
     const audit = new InventoryAudit(
       auditId,
       "AUD-123",
@@ -27,6 +29,7 @@ describe("StartInventoryAudit Use Case", () => {
       "loc-1",
       AuditStatus.Draft,
       []
+      [auditItem]
     );
 
     auditRepository.findById.mockResolvedValue(audit);
