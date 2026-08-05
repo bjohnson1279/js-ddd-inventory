@@ -35,36 +35,38 @@ export class OrderRoutingEngine {
       throw new Error(`Could not find any valid allocation combinations for quantity ${quantity}`);
     }
 
-    // 2. Score and evaluate each plan
-    const plans: FulfillmentPlan[] = [];
-    for (const allocations of rawPlans) {
-      let totalDistance = 0;
-      let totalCost = 0;
+    // 2. Score and evaluate each plan concurrently
+    const plans: FulfillmentPlan[] = await Promise.all(
+      rawPlans.map(async (allocations) => {
+        const allocResults = await Promise.all(
+          allocations.map(async (alloc) => {
+            const candidate = activeCandidates.find(c => c.locationId === alloc.locationId)!;
+            // Compute Haversine distance from origin warehouse to destination
+            const dist = candidate.geoLocation.distanceTo(destination);
 
-      for (const alloc of allocations) {
-        const candidate = activeCandidates.find(c => c.locationId === alloc.locationId)!;
-        // Compute Haversine distance from origin warehouse to destination
-        const dist = candidate.geoLocation.distanceTo(destination);
-        totalDistance += dist;
+            // Fetch carrier rate for the specific allocated quantity from this origin
+            const rate = await rateCalculator(alloc.locationId, sku, alloc.quantity);
 
-        // Fetch carrier rate for the specific allocated quantity from this origin
-        const rate = await rateCalculator(alloc.locationId, sku, alloc.quantity);
-        totalCost += rate;
-      }
+            return { dist, rate };
+          })
+        );
 
-      const splitCount = allocations.length - 1;
+        const totalDistance = allocResults.reduce((sum, res) => sum + res.dist, 0);
+        const totalCost = allocResults.reduce((sum, res) => sum + res.rate, 0);
+        const splitCount = allocations.length - 1;
 
-      const plan: FulfillmentPlan = {
-        allocations,
-        estimatedShippingCostCents: totalCost,
-        totalDistanceKm: totalDistance,
-        splitCount,
-        score: 0 // Will be computed by the strategy
-      };
+        const plan: FulfillmentPlan = {
+          allocations,
+          estimatedShippingCostCents: totalCost,
+          totalDistanceKm: totalDistance,
+          splitCount,
+          score: 0 // Will be computed by the strategy
+        };
 
-      plan.score = strategy.score(plan);
-      plans.push(plan);
-    }
+        plan.score = strategy.score(plan);
+        return plan;
+      })
+    );
 
     // 3. Sort plans by score (lower score is better)
     plans.sort((a, b) => a.score - b.score);
