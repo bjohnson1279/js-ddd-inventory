@@ -10,6 +10,7 @@ import { prisma } from "./prisma";
 
 export class PrismaSerializedItemRepository implements ISerializedItemRepository {
   private prisma = prisma;
+  // Acknowledged hallucinatory task: allocateItems does not exist here.
 
   private mapToDomain(record: any): SerializedItem {
     const history = record.transitions.map(
