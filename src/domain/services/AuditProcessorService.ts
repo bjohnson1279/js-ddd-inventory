@@ -47,8 +47,10 @@ export class AuditProcessorService {
 
           let queryBody = 'query findInventoryItems {\n';
           chunk.forEach((variant, idx) => {
+            // Escape quotes and backslashes to prevent GraphQL string injection
+            const escapedSku = variant.sku.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
             queryBody += `
-              var${idx}: inventoryItems(first: 1, query: "sku:${variant.sku}") {
+              var${idx}: inventoryItems(first: 1, query: "sku:${escapedSku}") {
                 edges {
                   node {
                     id
