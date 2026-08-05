@@ -150,3 +150,52 @@ describe("OrderRoutingService", () => {
     expect(result.allocations[0].warehouseId).toBe("WH-NEAR-CHEAP");
   });
 });
+
+describe("OrderRoutingService Additional Scenarios", () => {
+  let service: OrderRoutingService;
+
+  beforeEach(() => {
+    service = new OrderRoutingService();
+  });
+
+  it("should handle destination exactly at a warehouse location (distance = 0)", () => {
+    const destination: Coordinates = { latitude: 40.7128, longitude: -74.0060 };
+    const warehouses: Warehouse[] = [
+      {
+        id: "WH-EXACT",
+        name: "Exact Warehouse",
+        latitude: 40.7128,
+        longitude: -74.0060,
+        inventory: new Map([["SKU-A", 10]]),
+        baseShippingFeeCents: 500,
+        shippingCostPerMileCents: 10
+      }
+    ];
+    const orderLines: OrderLine[] = [{ sku: "SKU-A", quantity: 5 }];
+
+    const result = service.routeOrder(orderLines, destination, warehouses);
+    expect(result.allocations).toHaveLength(1);
+    expect(result.totalCostCents).toBe(500); // Only base fee, no distance fee
+  });
+
+  it("should fail gracefully when eligible warehouses are exhausted without satisfying quantity", () => {
+    const destination: Coordinates = { latitude: 0, longitude: 0 };
+    const warehouses: Warehouse[] = [
+      {
+        id: "WH-1",
+        name: "WH1",
+        latitude: 0,
+        longitude: 0,
+        inventory: new Map([["SKU-A", 5]]),
+        baseShippingFeeCents: 100,
+        shippingCostPerMileCents: 10
+      }
+    ];
+    // Need 10, but only 5 available.
+    const orderLines: OrderLine[] = [{ sku: "SKU-A", quantity: 10 }];
+
+    expect(() => {
+      service.routeOrder(orderLines, destination, warehouses);
+    }).toThrow(/Unable to fulfill order/);
+  });
+});
