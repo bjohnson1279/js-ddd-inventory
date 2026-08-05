@@ -12,7 +12,6 @@ export interface AuthenticatedRequest extends Request {
     id: string;
     role: string;
     email?: string;
-    tenantId?: string;
   };
   tenantId?: string;
 }
@@ -30,8 +29,7 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
     req.user = {
       id: decoded.actorId || decoded.userId,
       role: decoded.role || "viewer",
-      email: decoded.email,
-      tenantId: decoded.tenantId || "tenant-1"
+      email: decoded.email
     };
     const tenantId = decoded.tenantId || "tenant-1";
     req.tenantId = tenantId;

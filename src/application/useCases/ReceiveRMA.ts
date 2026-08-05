@@ -119,7 +119,6 @@ export class ReceiveRMA {
     const modifiedInventoryItems = new Map<string, InventoryItem>();
     const newCostLayers: InventoryCostLayer[] = [];
     const modifiedSerialItems: any[] = [];
-    const newQuarantineItems: any[] = []; // QuarantineItem[]
 
     // Optimization: Replaced Promise.all map loop with sequential for-of loop to avoid DB concurrency exceptions on identical SKUs
     for (const item of dto.items) {
@@ -177,7 +176,7 @@ export class ReceiveRMA {
           rma.locationId,
           rma.tenantId
         );
-        newQuarantineItems.push(quarantineItem);
+        await this.quarantineRepository.save(quarantineItem);
       }
 
       // 5. Post return journal entries if Accrual
@@ -248,15 +247,6 @@ export class ReceiveRMA {
         await this.costLayerRepository.saveMany(newCostLayers);
       } else {
         await Promise.all(newCostLayers.map(layer => this.costLayerRepository.save(layer)));
-      }
-    }
-
-    // Save batch quarantine items
-    if (newQuarantineItems.length > 0) {
-      if (this.quarantineRepository.saveMany) {
-        await this.quarantineRepository.saveMany(newQuarantineItems);
-      } else {
-        await Promise.all(newQuarantineItems.map(item => this.quarantineRepository.save(item)));
       }
     }
 

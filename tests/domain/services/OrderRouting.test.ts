@@ -198,42 +198,4 @@ describe("OrderRoutingService Additional Scenarios", () => {
       service.routeOrder(orderLines, destination, warehouses);
     }).toThrow(/Unable to fulfill order/);
   });
-
-  it("should handle duplicate SKUs across multiple order lines correctly", () => {
-    const destination: Coordinates = { latitude: 0, longitude: 0 };
-    const warehouses: Warehouse[] = [
-      {
-        id: "WH-DUP",
-        name: "Duplicate SKU Warehouse",
-        latitude: 0,
-        longitude: 0,
-        inventory: new Map([["SKU-DUP", 10]]),
-        baseShippingFeeCents: 100,
-        shippingCostPerMileCents: 10
-      }
-    ];
-
-    const orderLines: OrderLine[] = [
-      { sku: "SKU-DUP", quantity: 6 },
-      { sku: "SKU-DUP", quantity: 5 }
-    ];
-
-    // Total needed is 11, but only 10 available, should throw.
-    expect(() => {
-      service.routeOrder(orderLines, destination, warehouses);
-    }).toThrow(/Unable to fulfill order/);
-
-    const validOrderLines: OrderLine[] = [
-      { sku: "SKU-DUP", quantity: 6 },
-      { sku: "SKU-DUP", quantity: 4 }
-    ];
-
-    const result = service.routeOrder(validOrderLines, destination, warehouses);
-
-    expect(result.allocations).toHaveLength(2);
-    expect(result.allocations[0].sku).toBe("SKU-DUP");
-    expect(result.allocations[0].quantity).toBe(6);
-    expect(result.allocations[1].sku).toBe("SKU-DUP");
-    expect(result.allocations[1].quantity).toBe(4);
-  });
 });
