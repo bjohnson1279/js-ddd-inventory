@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { encryptSymmetric, decryptSymmetric } from "../utils/security";
 
 /**
  * TenantRegistryEntry represents a tenant's isolated database metadata.
@@ -54,9 +55,11 @@ export class TenantRegistry {
       migratedVersion: '0',
     };
 
+    const encryptedDbPassword = entry.dbPassword ? encryptSymmetric(entry.dbPassword) : null;
+
     await this.controlPrisma.$executeRaw(Prisma.sql`
       INSERT INTO tenant_registry (tenant_id, db_host, db_port, db_name, db_user, db_password, status, provisioned_at, migrated_version)
-      VALUES (${tenantId}, ${entry.dbHost}, ${entry.dbPort}, ${entry.dbName}, ${entry.dbUser}, ${entry.dbPassword}, ${entry.status}, NOW(), ${entry.migratedVersion})
+      VALUES (${tenantId}, ${entry.dbHost}, ${entry.dbPort}, ${entry.dbName}, ${entry.dbUser}, ${encryptedDbPassword}, ${entry.status}, NOW(), ${entry.migratedVersion})
       ON CONFLICT (tenant_id) DO UPDATE SET
         db_host = EXCLUDED.db_host,
         db_port = EXCLUDED.db_port,
@@ -87,7 +90,7 @@ export class TenantRegistry {
       dbPort: row.db_port,
       dbName: row.db_name,
       dbUser: row.db_user,
-      dbPassword: row.db_password,
+      dbPassword: row.db_password ? decryptSymmetric(row.db_password) : undefined,
       status: row.status,
       provisionedAt: new Date(row.provisioned_at),
       migratedVersion: row.migrated_version,
@@ -117,7 +120,7 @@ export class TenantRegistry {
       dbPort: row.db_port,
       dbName: row.db_name,
       dbUser: row.db_user,
-      dbPassword: row.db_password,
+      dbPassword: row.db_password ? decryptSymmetric(row.db_password) : undefined,
       status: row.status,
       provisionedAt: new Date(row.provisioned_at),
       migratedVersion: row.migrated_version,
