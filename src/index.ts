@@ -271,7 +271,7 @@ export const setupApp = (
   app.post("/api/lots/quarantine", requireRole(["admin", "warehouse_operator"]), async (req, res) => {
     try {
       const { lotNumber, variantId, reason } = req.body;
-      const tenantId = (req as AuthenticatedRequest).tenantId || "tenant-1";
+
       const tenantId = (req as AuthenticatedRequest).user?.tenantId || "tenant-1";
       let lot = await prisma.lotBatchModel.findUnique({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } }
@@ -307,7 +307,7 @@ export const setupApp = (
   app.post("/api/lots/recall", requireRole(["admin"]), async (req, res) => {
     try {
       const { lotNumber, variantId, reason } = req.body;
-      const tenantId = (req as AuthenticatedRequest).tenantId || "tenant-1";
+
       const tenantId = (req as AuthenticatedRequest).user?.tenantId || "tenant-1";
       let lot = await prisma.lotBatchModel.findUnique({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } }
@@ -342,7 +342,7 @@ export const setupApp = (
   app.post("/api/lots/release", requireRole(["admin", "warehouse_operator"]), async (req, res) => {
     try {
       const { lotNumber, variantId } = req.body;
-      const tenantId = (req as AuthenticatedRequest).tenantId || "tenant-1";
+
       const tenantId = (req as AuthenticatedRequest).user?.tenantId || "tenant-1";
       const lot = await prisma.lotBatchModel.update({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } },
@@ -363,7 +363,7 @@ export const setupApp = (
     try {
       const { lotNumber } = req.params;
       const variantId = typeof req.query.variantId === "string" ? req.query.variantId : "";
-      const tenantId = (req as AuthenticatedRequest).tenantId || "tenant-1";
+
       const tenantId = (req as AuthenticatedRequest).user?.tenantId || "tenant-1";
       const lot = await prisma.lotBatchModel.findUnique({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } }
