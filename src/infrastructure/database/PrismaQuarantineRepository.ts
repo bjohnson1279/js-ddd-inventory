@@ -54,31 +54,4 @@ export class PrismaQuarantineRepository implements IQuarantineRepository {
       }
     });
   }
-
-  async saveMany(items: QuarantineItem[]): Promise<void> {
-    if (items.length === 0) return;
-
-    await this.prisma.$transaction(
-      items.map((item) =>
-        this.prisma.quarantineItemModel.upsert({
-          where: { id: item.id },
-          update: {
-            status: item.status,
-            resolvedAt: item.resolvedAt
-          },
-          create: {
-            id: item.id,
-            variantId: item.variantId,
-            quantity: item.quantity,
-            reason: item.reason,
-            locationId: item.locationId,
-            tenantId: item.tenantId,
-            status: item.status,
-            createdAt: item.createdAt,
-            resolvedAt: item.resolvedAt
-          }
-        })
-      )
-    );
-  }
 }

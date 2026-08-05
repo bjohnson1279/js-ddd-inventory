@@ -86,8 +86,6 @@ export class ReconcileInventoryAudit {
       }
     }
 
-    const journalPromises: Promise<any>[] = [];
-
     await Promise.all(audit.items.map(async (item) => {
       const discrepancy = item.discrepancy;
       if (discrepancy === null || discrepancy === 0) {
@@ -117,7 +115,7 @@ export class ReconcileInventoryAudit {
             totalCostCents = weightedAverageBreakdownsMap.get(item.variantId) || 0;
           }
 
-          const p = this.journalService.onInventoryAuditReconciliation(
+          await this.journalService.onInventoryAuditReconciliation(
             audit.id,
             item.variantId,
             discrepancy,
@@ -126,8 +124,6 @@ export class ReconcileInventoryAudit {
             config,
             audit.tenantId
           );
-          p.catch(() => {});
-          journalPromises.push(p);
         }
       } else {
         // Gain (Positive discrepancy)
@@ -164,7 +160,7 @@ export class ReconcileInventoryAudit {
 
         // 4. Post journal entries if Accrual and cost > 0
         if (totalCostCents > 0) {
-          const p = this.journalService.onInventoryAuditReconciliation(
+          await this.journalService.onInventoryAuditReconciliation(
             audit.id,
             item.variantId,
             discrepancy,
@@ -173,13 +169,9 @@ export class ReconcileInventoryAudit {
             config,
             audit.tenantId
           );
-          p.catch(() => {});
-          journalPromises.push(p);
         }
       }
     }));
-
-    await Promise.all(journalPromises);
 
     // Save batched inventory items
     if (modifiedInventoryItems.size > 0) {

@@ -63,16 +63,30 @@ export class PrismaRMARepository implements IRMARepository {
   }
 
   async save(rma: RMA): Promise<void> {
-    // Nested upsert collapses RMA and its items into a single unified query instead of N+1 IO calls
-    await this.prisma.rMAModel.upsert({
-      where: { id: rma.id },
-      update: {
-        status: rma.status,
-        customerId: rma.customerId,
-        locationId: rma.locationId,
-        tenantId: rma.tenantId,
-        items: {
-          upsert: rma.items.map((item) => ({
+    await this.prisma.$transaction(async (tx) => {
+      // Upsert RMA aggregate root
+      await tx.rMAModel.upsert({
+        where: { id: rma.id },
+        update: {
+          status: rma.status,
+          customerId: rma.customerId,
+          locationId: rma.locationId,
+          tenantId: rma.tenantId
+        },
+        create: {
+          id: rma.id,
+          rmaNumber: rma.rmaNumber,
+          status: rma.status,
+          customerId: rma.customerId,
+          locationId: rma.locationId,
+          tenantId: rma.tenantId
+        }
+      });
+
+      // Upsert RMA items
+      await Promise.all(
+        rma.items.map((item) =>
+          tx.rMAItemModel.upsert({
             where: { id: item.id },
             update: {
               receivedQuantity: item.receivedQuantity,
@@ -81,6 +95,7 @@ export class PrismaRMARepository implements IRMARepository {
             },
             create: {
               id: item.id,
+              rmaId: rma.id,
               variantId: item.variantId,
               quantity: item.quantity,
               receivedQuantity: item.receivedQuantity,
@@ -88,28 +103,9 @@ export class PrismaRMARepository implements IRMARepository {
               status: item.status,
               disposition: item.disposition
             }
-          }))
-        }
-      },
-      create: {
-        id: rma.id,
-        rmaNumber: rma.rmaNumber,
-        status: rma.status,
-        customerId: rma.customerId,
-        locationId: rma.locationId,
-        tenantId: rma.tenantId,
-        items: {
-          create: rma.items.map((item) => ({
-            id: item.id,
-            variantId: item.variantId,
-            quantity: item.quantity,
-            receivedQuantity: item.receivedQuantity,
-            unitCostCents: item.unitCostCents,
-            status: item.status,
-            disposition: item.disposition
-          }))
-        }
-      }
+          })
+        )
+      );
     });
   }
 }

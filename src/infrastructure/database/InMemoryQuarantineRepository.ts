@@ -15,10 +15,4 @@ export class InMemoryQuarantineRepository implements IQuarantineRepository {
   async save(item: QuarantineItem): Promise<void> {
     this.items.set(item.id, item);
   }
-
-  async saveMany(items: QuarantineItem[]): Promise<void> {
-    for (const item of items) {
-      this.items.set(item.id, item);
-    }
-  }
 }
