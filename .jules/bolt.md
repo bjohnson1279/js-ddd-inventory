@@ -15,3 +15,6 @@
 ## 2025-02-18 - Optimized PrismaRfidTagRepository.saveAll bulk inserts
 **Learning:** For batched Prisma bulk inserts in PostgreSQL, passing a huge array directly to $executeRaw or upsert can exceed Postgres parameterized limits. Chunking the array and using Prisma.sql to securely parameterize queries avoids limits and improves performance over individual looping saves.
 **Action:** When handling large dataset bulk inserts via `$executeRaw` in Prisma, always apply array chunking logic (e.g. 500 items per batch) to prevent network/query crashes while retaining parameter security.
+## YYYY-MM-DD - [Optimize Prisma Upsert with Nested Operations]
+**Learning:** When saving an aggregate root along with its related child entities in Prisma, avoid iterating over the child entities and saving them with independent queries inside a `$transaction` using `Promise.all()`. This triggers an N+1 query overhead. Instead, map the array into Prisma's nested operations structure (e.g., `update: { items: { upsert: [...] } }`) on the parent aggregate's query. This collapses the execution into a single, unified database operation for a measurable speedup in I/O latency.
+**Action:** Use nested writes (`create`, `upsert`, `connect`, etc.) provided by Prisma's relation API whenever saving a tree-like domain aggregate to avoid unnecessary network waterfalls and db roundtrips.
