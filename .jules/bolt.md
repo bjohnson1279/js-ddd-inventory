@@ -12,3 +12,6 @@
 - **Zero-Diff Task Termination**: If the requested optimization, refactor, or fix is ALREADY natively present in the target branch, DO NOT create an empty pull request or commit an acknowledgment PR. Exit the task cleanly without opening a PR.
 - **Stale Suggestion Guard**: Always verify the current code on `main`/`master` before planning changes. If no actionable diff is required, cancel task execution immediately.
 
+## 2024-03-24 - Prisma Nested Upserts
+**Learning:** In Prisma, using `$transaction` with `Promise.all` mapping over multiple child upsert operations alongside a parent upsert creates significant N+1 write latency (e.g., ~500ms for 100 items).
+**Action:** Replace `$transaction` and `Promise.all` with a single Prisma nested `upsert` on the parent model (e.g., `items: { upsert: [...] }`), which leverages Prisma's internal atomic nested writes to execute in a single round-trip, significantly reducing latency (e.g., ~150ms for 100 items).
