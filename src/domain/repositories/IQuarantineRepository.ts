@@ -4,4 +4,5 @@ export interface IQuarantineRepository {
   findById(id: string): Promise<QuarantineItem | null>;
   findAll(): Promise<QuarantineItem[]>;
   save(item: QuarantineItem): Promise<void>;
+  saveMany?(items: QuarantineItem[]): Promise<void>;
 }
