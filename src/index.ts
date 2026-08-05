@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import express from "express";
 import cors from "cors";
+import crypto from "crypto";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 import { Logger } from "./infrastructure/logging/logger";
@@ -14,6 +15,7 @@ import { PrismaJournalRepository } from "./infrastructure/database/PrismaJournal
 import { prisma } from "./infrastructure/database/prisma";
 import { enableRowLevelSecurity } from "./infrastructure/database/rls";
 import { PostgresInventoryRepository } from "./infrastructure/database/PostgresInventoryRepository";
+import { IncomingMessage, ServerResponse } from "http";
 import { IInventoryRepository } from "./domain/repositories/IInventoryRepository";
 import { IEmailService } from "./application/ports/IEmailService";
 import inventoryRoutes from "./infrastructure/http/routes/inventory.routes";
@@ -101,7 +103,7 @@ import rfidRoutes from "./infrastructure/http/routes/rfid.routes";
 import anomalyDetectionRoutes from "./infrastructure/http/routes/anomalyDetection.routes";
 import rebalanceRoutes from "./infrastructure/http/routes/rebalance.routes";
 import { WebSocketManager } from "./infrastructure/websocket/WebSocketManager";
-import { authMiddleware, requireRole } from "./infrastructure/http/middleware/auth";
+import { authMiddleware, requireRole, AuthenticatedRequest } from "./infrastructure/http/middleware/auth";
 import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
 import { IProductRepository } from "./domain/repositories/IProductRepository";
 import { InMemoryWarehouseLocationRepository } from "./infrastructure/database/InMemoryWarehouseLocationRepository";
@@ -133,8 +135,8 @@ app.use(traceMiddleware);
 app.set("trust proxy", 1);
 app.use(limiter);
 app.use("/api/shopify", express.json({
-  verify: (req: any, res, buf) => {
-    req.rawBody = buf;
+  verify: (req: IncomingMessage, res: ServerResponse, buf: Buffer) => {
+    (req as any).rawBody = buf;
   }
 }));
 app.use(express.json());
@@ -250,7 +252,7 @@ export const setupApp = (
     try {
       const stats = RedisCacheService.getInstance().getStats();
       res.status(200).json(stats);
-    } catch (e: any) {
+    } catch (e: unknown) {
       res.status(500).json({ error: "Failed to fetch cache stats." });
     }
   });
@@ -260,7 +262,7 @@ export const setupApp = (
       const tenantId = typeof req.query.tenantId === "string" ? req.query.tenantId : undefined;
       const count = RedisCacheService.getInstance().flush(tenantId);
       res.status(200).json({ success: true, clearedKeysCount: count });
-    } catch (e: any) {
+    } catch (e: unknown) {
       res.status(500).json({ error: "Failed to clear cache." });
     }
   });
@@ -270,7 +272,7 @@ export const setupApp = (
   app.post("/api/lots/quarantine", requireRole(["admin", "warehouse_operator"]), async (req, res) => {
     try {
       const { lotNumber, variantId, reason } = req.body;
-      const tenantId = (req as any).user?.tenantId || "tenant-1";
+      const tenantId = (req as AuthenticatedRequest).user?.tenantId || "tenant-1";
       let lot = await prisma.lotBatchModel.findUnique({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } }
       });
@@ -296,15 +298,16 @@ export const setupApp = (
         });
       }
       res.json(lot);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+      res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
     }
   });
 
   app.post("/api/lots/recall", requireRole(["admin"]), async (req, res) => {
     try {
       const { lotNumber, variantId, reason } = req.body;
-      const tenantId = (req as any).user?.tenantId || "tenant-1";
+      const tenantId = (req as AuthenticatedRequest).user?.tenantId || "tenant-1";
       let lot = await prisma.lotBatchModel.findUnique({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } }
       });
@@ -330,15 +333,15 @@ export const setupApp = (
         });
       }
       res.json(lot);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
   app.post("/api/lots/release", requireRole(["admin", "warehouse_operator"]), async (req, res) => {
     try {
       const { lotNumber, variantId } = req.body;
-      const tenantId = (req as any).user?.tenantId || "tenant-1";
+      const tenantId = (req as AuthenticatedRequest).user?.tenantId || "tenant-1";
       const lot = await prisma.lotBatchModel.update({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } },
         data: {
@@ -349,8 +352,8 @@ export const setupApp = (
         }
       });
       res.json(lot);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -358,7 +361,7 @@ export const setupApp = (
     try {
       const { lotNumber } = req.params;
       const variantId = typeof req.query.variantId === "string" ? req.query.variantId : "";
-      const tenantId = (req as any).user?.tenantId || "tenant-1";
+      const tenantId = (req as AuthenticatedRequest).user?.tenantId || "tenant-1";
       const lot = await prisma.lotBatchModel.findUnique({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } }
       });
@@ -377,7 +380,7 @@ export const setupApp = (
         tenantId,
         lotNumber,
         variantId,
-        (lot?.status as any) || "ACTIVE",
+        (lot?.status as import("./domain/procurement/entities/LotBatch").LotStatus) || "ACTIVE",
         lot?.manufacturedDate,
         lot?.expirationDate,
         lot?.supplierId,
@@ -388,8 +391,8 @@ export const setupApp = (
 
       const report = LotRecallService.generateTraceabilityReport(lotEntity, costLayers, shipments);
       res.json(report);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -400,8 +403,8 @@ export const setupApp = (
       const { CrossDockingEngine } = require("./domain/shipping/services/CrossDockingEngine");
       const result = CrossDockingEngine.evaluate(purchaseOrderId, inboundItems || [], backorders || []);
       res.json(result);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -573,8 +576,8 @@ export const setupApp = (
         supplierId,
         createdAt: new Date().toISOString()
       });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 };
@@ -621,8 +624,8 @@ const start = async () => {
             schedule_interval => INTERVAL '1 hour',
             if_not_exists => TRUE);
         `;
-      } catch (policyErr: any) {
-        Logger.info({ context: "index", message: `TimescaleDB aggregate policy setup warning: ${policyErr.message}` });
+      } catch (policyErr: unknown) {
+        Logger.info({ context: "index", message: `TimescaleDB aggregate policy setup warning: ${policyErr instanceof Error ? policyErr.message : String(policyErr)}` });
       }
       Logger.info({ context: "index", message: "daily_dispatch_summary continuous aggregate created." });
     }
