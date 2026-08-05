@@ -12,3 +12,9 @@
 - **Zero-Diff Task Termination**: If the requested optimization, refactor, or fix is ALREADY natively present in the target branch, DO NOT create an empty pull request or commit an acknowledgment PR. Exit the task cleanly without opening a PR.
 - **Stale Suggestion Guard**: Always verify the current code on `main`/`master` before planning changes. If no actionable diff is required, cancel task execution immediately.
 
+## 2024-08-05 - Optimize bulk sequential saves with chunked Promise.all
+**Learning:** Sequential DB saves in a transaction (such as a large `for...of` loop in `saveMany`) can introduce significant performance bottlenecks through network waterfalls, while uncontrolled `Promise.all` mapping can cause transaction concurrency limits and connection pool exhaustion.
+**Action:** Replace large sequential DB loop operations with chunked parallel execution (e.g. `items.slice(i, i + chunkSize)` and `Promise.all()`) to significantly reduce I/O latency while safely preserving database constraints and encapsulated ORM boundaries.
+## YYYY-MM-DD - [Optimize Prisma Upsert with Nested Operations]
+**Learning:** When saving an aggregate root along with its related child entities in Prisma, avoid iterating over the child entities and saving them with independent queries inside a `$transaction` using `Promise.all()`. This triggers an N+1 query overhead. Instead, map the array into Prisma's nested operations structure (e.g., `update: { items: { upsert: [...] } }`) on the parent aggregate's query. This collapses the execution into a single, unified database operation for a measurable speedup in I/O latency.
+**Action:** Use nested writes (`create`, `upsert`, `connect`, etc.) provided by Prisma's relation API whenever saving a tree-like domain aggregate to avoid unnecessary network waterfalls and db roundtrips.

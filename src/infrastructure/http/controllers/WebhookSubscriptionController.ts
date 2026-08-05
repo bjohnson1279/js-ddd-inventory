@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { prisma } from "../../database/prisma";
 import crypto from "crypto";
 import { Logger } from "../../../infrastructure/logging/logger";
+import { encrypt } from "../../utils/encryption";
 
 export class WebhookSubscriptionController {
   static async create(req: AuthenticatedRequest, res: Response) {
@@ -17,7 +18,7 @@ export class WebhookSubscriptionController {
           id: crypto.randomUUID(),
           tenantId,
           targetUrl,
-          secret,
+          secret: encrypt(secret),
           eventTypes,
           isActive: true
         }
@@ -57,7 +58,7 @@ export class WebhookSubscriptionController {
         where: { id },
         data: {
           targetUrl: targetUrl !== undefined ? targetUrl : undefined,
-          secret: secret !== undefined ? secret : undefined,
+          secret: secret !== undefined ? encrypt(secret) : undefined,
           eventTypes: eventTypes !== undefined ? eventTypes : undefined,
           isActive: isActive !== undefined ? isActive : undefined
         }
