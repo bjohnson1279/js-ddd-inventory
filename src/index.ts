@@ -378,7 +378,7 @@ export const setupApp = (
         tenantId,
         lotNumber,
         variantId,
-        (lot?.status as any) || "ACTIVE",
+        (lot?.status as import("./domain/procurement/entities/LotBatch").LotStatus) || "ACTIVE",
         lot?.manufacturedDate,
         lot?.expirationDate,
         lot?.supplierId,
