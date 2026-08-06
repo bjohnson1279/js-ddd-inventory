@@ -19,9 +19,19 @@ export class CrossDockingEngine {
   ): CrossDockOpportunity[] {
     const opportunities: CrossDockOpportunity[] = [];
 
+    // Optimization: Build a map of backorders grouped by variantId to prevent O(N*M) nested loop
+    const backordersMap = new Map<string, Array<{ orderId: string; variantId: string; quantity: number; priority?: number }>>();
+    for (const bo of backorders) {
+      let list = backordersMap.get(bo.variantId);
+      if (!list) {
+        list = [];
+        backordersMap.set(bo.variantId, list);
+      }
+      list.push(bo);
+    }
+
     for (const item of inboundItems) {
-      const matching = backorders
-        .filter(b => b.variantId === item.variantId)
+      const matching = (backordersMap.get(item.variantId) || [])
         .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
 
       if (matching.length > 0) {
