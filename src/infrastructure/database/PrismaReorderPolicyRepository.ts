@@ -1,10 +1,10 @@
 import { IReorderPolicyRepository } from "../../domain/repositories/IReorderPolicyRepository";
 import { ReorderPolicy } from "../../domain/procurement/aggregates/ReorderPolicy";
 import { SKU } from "../../domain/valueObjects/SKU";
-import { prisma } from "./prisma";
 
-export class PrismaReorderPolicyRepository implements IReorderPolicyRepository {
-  private prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaReorderPolicyRepository extends PrismaBaseRepository implements IReorderPolicyRepository {
 
   private mapToDomain(record: any): ReorderPolicy {
     return new ReorderPolicy(
