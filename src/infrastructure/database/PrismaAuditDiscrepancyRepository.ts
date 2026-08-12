@@ -1,10 +1,11 @@
 import { IAuditDiscrepancyRepository } from "../../domain/repositories/IAuditDiscrepancyRepository";
 import { AuditDiscrepancy } from "../../domain/audit/AuditDiscrepancy";
-import { prisma } from "./prisma";
 
-export class PrismaAuditDiscrepancyRepository implements IAuditDiscrepancyRepository {
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaAuditDiscrepancyRepository extends PrismaBaseRepository implements IAuditDiscrepancyRepository {
   async save(discrepancy: AuditDiscrepancy): Promise<void> {
-    await prisma.auditDiscrepancyModel.upsert({
+    await this.prisma.auditDiscrepancyModel.upsert({
       where: { id: discrepancy.id },
       create: {
         id: discrepancy.id,
@@ -27,7 +28,7 @@ export class PrismaAuditDiscrepancyRepository implements IAuditDiscrepancyReposi
   }
 
   async findById(id: string): Promise<AuditDiscrepancy | null> {
-    const model = await prisma.auditDiscrepancyModel.findUnique({
+    const model = await this.prisma.auditDiscrepancyModel.findUnique({
       where: { id }
     });
     if (!model) return null;
@@ -46,7 +47,7 @@ export class PrismaAuditDiscrepancyRepository implements IAuditDiscrepancyReposi
   }
 
   async findAll(tenantId: string, status?: string): Promise<AuditDiscrepancy[]> {
-    const models = await prisma.auditDiscrepancyModel.findMany({
+    const models = await this.prisma.auditDiscrepancyModel.findMany({
       where: {
         tenantId,
         ...(status ? { status } : {})
@@ -71,7 +72,7 @@ export class PrismaAuditDiscrepancyRepository implements IAuditDiscrepancyReposi
   }
 
   async findOpen(tenantId: string, type: string, referenceId: string): Promise<AuditDiscrepancy | null> {
-    const model = await prisma.auditDiscrepancyModel.findFirst({
+    const model = await this.prisma.auditDiscrepancyModel.findFirst({
       where: {
         tenantId,
         type,

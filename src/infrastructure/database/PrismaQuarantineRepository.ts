@@ -1,11 +1,15 @@
 import { IQuarantineRepository } from "../../domain/repositories/IQuarantineRepository";
 import { QuarantineItem } from "../../domain/returns/aggregates/QuarantineItem";
 import { QuarantineStatus } from "../../domain/returns/enums/QuarantineStatus";
+<<<<<<< HEAD
 import { prisma } from "./prisma";
 import { QuarantineItemModel } from "@prisma/client";
+=======
+>>>>>>> origin/main
 
-export class PrismaQuarantineRepository implements IQuarantineRepository {
-  private prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaQuarantineRepository extends PrismaBaseRepository implements IQuarantineRepository {
 
   private mapToDomain(record: QuarantineItemModel): QuarantineItem {
     return new QuarantineItem(
