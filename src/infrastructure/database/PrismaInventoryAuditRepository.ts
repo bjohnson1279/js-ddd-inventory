@@ -3,12 +3,15 @@ import { InventoryAudit } from "../../domain/procurement/aggregates/InventoryAud
 import { InventoryAuditItem } from "../../domain/procurement/aggregates/InventoryAuditItem";
 import { AuditStatus } from "../../domain/procurement/enums/AuditStatus";
 import { prisma } from "./prisma";
+import { InventoryAuditModel, InventoryAuditItemModel } from "@prisma/client";
+
+type InventoryAuditRecord = InventoryAuditModel & { items: InventoryAuditItemModel[] };
 
 export class PrismaInventoryAuditRepository implements IInventoryAuditRepository {
   private prisma = prisma;
 
-  private mapToDomain(record: any): InventoryAudit {
-    const items = (record.items || []).map((item: any) => 
+  private mapToDomain(record: InventoryAuditRecord): InventoryAudit {
+    const items = (record.items || []).map((item) =>
       new InventoryAuditItem(
         item.id,
         item.variantId,
