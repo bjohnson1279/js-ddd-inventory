@@ -4,10 +4,10 @@ import { SKU } from "../../domain/valueObjects/SKU";
 import { ProductVariant } from "../../domain/product/entities/ProductVariant";
 import { VariantAttribute } from "../../domain/product/valueObjects/VariantAttribute";
 import { VariantAttributeSet } from "../../domain/product/valueObjects/VariantAttributeSet";
-import { prisma } from "./prisma";
 
-export class PrismaProductRepository implements IProductRepository {
-  private prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaProductRepository extends PrismaBaseRepository implements IProductRepository {
   private fallbackStore: Map<string, Product> = new Map();
 
   async findBySku(sku: SKU): Promise<Product | null> {
@@ -66,10 +66,14 @@ export class PrismaProductRepository implements IProductRepository {
       return Array.from(productMap.values()).map(p => this.hydrate(p));
     } catch (e) {
       const results: Product[] = [];
-      for (const sku of skus) {
-        const product = await this.findBySku(sku);
-        if (product && !results.some(r => r.id === product.id)) {
-          results.push(product);
+      const skuSet = new Set(skus.map(s => s.getValue()));
+
+      for (const product of this.fallbackStore.values()) {
+        for (const variant of product.variants) {
+          if (skuSet.has(variant.sku.getValue())) {
+            results.push(product);
+            break; // found the product, move to the next one
+          }
         }
       }
       return results;

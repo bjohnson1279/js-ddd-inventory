@@ -6,17 +6,19 @@ import { DomainEventDispatcher } from "../../domain/events/DomainEventDispatcher
 import { IOutboxRepository } from "../../domain/repositories/IOutboxRepository";
 import { ConcurrencyException } from "../../domain/exceptions/ConcurrencyException";
 import { Prisma } from "@prisma/client";
-import { prisma } from "./prisma";
 import { WebSocketManager } from "../websocket/WebSocketManager";
 import { tenantLocalStorage } from "./tenantContext";
 import { ComplianceLedgerService } from "../../domain/services/ComplianceLedgerService";
 
-export class PrismaInventoryRepository implements IInventoryRepository {
-  private readonly prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaInventoryRepository extends PrismaBaseRepository implements IInventoryRepository {
 
   constructor(
     private readonly outboxRepository?: IOutboxRepository
-  ) {}
+  ) {
+    super();
+  }
 
   async findBySku(sku: SKU, locationId?: string): Promise<InventoryItem | null> {
     let record;
