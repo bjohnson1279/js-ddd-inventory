@@ -2,10 +2,10 @@ import { IPurchaseOrderRepository } from "../../domain/repositories/IPurchaseOrd
 import { PurchaseOrder } from "../../domain/procurement/aggregates/PurchaseOrder";
 import { PurchaseOrderItem } from "../../domain/procurement/aggregates/PurchaseOrderItem";
 import { PurchaseOrderStatus } from "../../domain/procurement/enums/PurchaseOrderStatus";
-import { prisma } from "./prisma";
 
-export class PrismaPurchaseOrderRepository implements IPurchaseOrderRepository {
-  private prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaPurchaseOrderRepository extends PrismaBaseRepository implements IPurchaseOrderRepository {
 
   private mapToDomain(record: any): PurchaseOrder {
     const items = (record.items || []).map((item: any) => 
