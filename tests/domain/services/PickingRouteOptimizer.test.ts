@@ -210,4 +210,44 @@ describe("PickingRouteOptimizer", () => {
     expect(result[0].items[0].sku).toBe("SKU_BIN_1");
     expect(result[0].items[1].sku).toBe("SKU_BIN_2");
   });
+
+  it("should deduplicate location lookups if multiple items have the same locationId and preserve their relative order", async () => {
+    const loc1 = WarehouseLocation.parsePath("WH1-Z1-1-R1-S1-B1");
+    mockLocationRepo.findById.mockResolvedValue(loc1);
+
+    const input: PickItemInput[] = [
+      { sku: "SKU1", quantity: 1, locationId: loc1.id.value },
+      { sku: "SKU2", quantity: 2, locationId: loc1.id.value },
+    ];
+
+    const result = await optimizer.optimizeRoute(input);
+
+    expect(mockLocationRepo.findById).toHaveBeenCalledTimes(1);
+    expect(result[0].items).toHaveLength(2);
+    expect(result[0].items[0].sku).toBe("SKU1");
+    expect(result[0].items[1].sku).toBe("SKU2");
+  });
+
+  it("should parse alphanumeric aisle values by extracting the numeric part", async () => {
+    const loc1 = WarehouseLocation.parsePath("WH1-Z1-10A-R1-S1-B1");
+    const loc2 = WarehouseLocation.parsePath("WH1-Z1-2B-R1-S1-B1");
+
+    mockLocationRepo.findById.mockImplementation(async (id: LocationId) => {
+      if (id.value === loc1.id.value) return loc1;
+      if (id.value === loc2.id.value) return loc2;
+      return null;
+    });
+
+    const input: PickItemInput[] = [
+      { sku: "SKU_10A", quantity: 1, locationId: loc1.id.value },
+      { sku: "SKU_2B", quantity: 1, locationId: loc2.id.value },
+    ];
+
+    const result = await optimizer.optimizeRoute(input);
+
+    expect(result[0].items).toHaveLength(2);
+    // 2B -> aisle 2, 10A -> aisle 10. Aisle 2 comes before aisle 10.
+    expect(result[0].items[0].sku).toBe("SKU_2B");
+    expect(result[0].items[1].sku).toBe("SKU_10A");
+  });
 });
