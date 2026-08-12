@@ -1,10 +1,10 @@
 import { IOutboxRepository } from "../../domain/repositories/IOutboxRepository";
 import { IDomainEvent } from "../../domain/events/IDomainEvent";
-import { prisma } from "./prisma";
 import { getTraceId } from "../telemetry/traceContext";
 
-export class PrismaOutboxRepository implements IOutboxRepository {
-  private prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaOutboxRepository extends PrismaBaseRepository implements IOutboxRepository {
 
   async save(event: IDomainEvent, tx?: any): Promise<void> {
     const client = tx || this.prisma;
