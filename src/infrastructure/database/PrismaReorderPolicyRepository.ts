@@ -2,11 +2,12 @@ import { IReorderPolicyRepository } from "../../domain/repositories/IReorderPoli
 import { ReorderPolicy } from "../../domain/procurement/aggregates/ReorderPolicy";
 import { SKU } from "../../domain/valueObjects/SKU";
 import { prisma } from "./prisma";
+import { ReorderPolicyModel } from "@prisma/client";
 
 export class PrismaReorderPolicyRepository implements IReorderPolicyRepository {
   private prisma = prisma;
 
-  private mapToDomain(record: any): ReorderPolicy {
+  private mapToDomain(record: ReorderPolicyModel): ReorderPolicy {
     return new ReorderPolicy(
       record.id,
       SKU.create(record.sku),
