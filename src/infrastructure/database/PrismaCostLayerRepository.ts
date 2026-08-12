@@ -1,9 +1,9 @@
 import { ICostLayerRepository } from "../../domain/repositories/ICostLayerRepository";
 import { InventoryCostLayer } from "../../domain/accounting/entities/InventoryCostLayer";
-import { prisma } from "./prisma";
 
-export class PrismaCostLayerRepository implements ICostLayerRepository {
-  private prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaCostLayerRepository extends PrismaBaseRepository implements ICostLayerRepository {
 
   private mapToDomain(record: any): InventoryCostLayer {
     const layer = new InventoryCostLayer(

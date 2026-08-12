@@ -36,6 +36,8 @@ export class OrderRoutingEngine {
     }
 
     // 2. Score and evaluate each plan concurrently
+    const rateCache = new Map<string, Promise<number>>();
+
     const plans: FulfillmentPlan[] = await Promise.all(
       rawPlans.map(async (allocations) => {
         const allocResults = await Promise.all(
@@ -45,7 +47,13 @@ export class OrderRoutingEngine {
             const dist = candidate.geoLocation.distanceTo(destination);
 
             // Fetch carrier rate for the specific allocated quantity from this origin
-            const rate = await rateCalculator(alloc.locationId, sku, alloc.quantity);
+            const cacheKey = `${alloc.locationId}-${sku}-${alloc.quantity}`;
+            let ratePromise = rateCache.get(cacheKey);
+            if (!ratePromise) {
+              ratePromise = rateCalculator(alloc.locationId, sku, alloc.quantity);
+              rateCache.set(cacheKey, ratePromise);
+            }
+            const rate = await ratePromise;
 
             return { dist, rate };
           })
