@@ -126,4 +126,68 @@ describe('SlottingOptimizer', () => {
     );
     expect(console.warn).not.toHaveBeenCalled();
   });
+
+  it("should return empty array if there is location but no item", async () => {
+    mockPrisma.warehouseLocationModel.findMany.mockResolvedValue([
+      { id: "LOC-A", gridX: 1, gridY: 1 }
+    ]);
+    mockPrisma.inventoryModel.findMany.mockResolvedValue([]);
+
+    const optimizer = new SlottingOptimizer(mockPrisma);
+    const suggestions = await optimizer.generateSuggestions();
+    expect(suggestions).toEqual([]);
+  });
+
+  it("should return parsed json when fetch to sidecar is successful", async () => {
+    mockPrisma.warehouseLocationModel.findMany.mockResolvedValue([
+      { id: "LOC-A", gridX: 1, gridY: 1 }
+    ]);
+    mockPrisma.dispatchRecordModel.findMany.mockResolvedValue([]);
+    mockPrisma.inventoryModel.findMany.mockResolvedValue([
+      { sku: "SKU-FAST", locationId: "LOC-A" }
+    ]);
+
+    global.fetch = jest.fn(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve([{ sku: "SKU-FAST", estimatedSavings: 100 }])
+    })) as jest.Mock;
+
+    const optimizer = new SlottingOptimizer(mockPrisma);
+    const suggestions = await optimizer.generateSuggestions();
+
+    expect(suggestions).toHaveLength(1);
+    expect(suggestions[0].sku).toBe("SKU-FAST");
+    expect(suggestions[0].estimatedSavings).toBe(100);
+
+    (global.fetch as jest.Mock).mockRestore();
+  });
+
+  it("should handle error when python sidecar fetch fails", async () => {
+    mockPrisma.warehouseLocationModel.findMany.mockResolvedValue([
+      { id: "LOC-A", gridX: 1, gridY: 1 },
+      { id: "LOC-B", gridX: 5, gridY: 5 },
+    ]);
+
+    mockPrisma.dispatchRecordModel.findMany.mockResolvedValue([
+      { sku: "SKU-FAST", locationId: "LOC-B", quantity: 100 },
+      { sku: "SKU-SLOW", locationId: "LOC-A", quantity: 10 },
+    ]);
+
+    mockPrisma.inventoryModel.findMany.mockResolvedValue([
+      { sku: "SKU-FAST", locationId: "LOC-B" },
+      { sku: "SKU-SLOW", locationId: "LOC-A" },
+    ]);
+
+    global.fetch = jest.fn(() => Promise.reject(new Error("Connection refused")));
+    const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+    const optimizer = new SlottingOptimizer(mockPrisma);
+    const suggestions = await optimizer.generateSuggestions();
+
+    expect(consoleSpy).toHaveBeenCalledWith("[JS SlottingOptimizer] Python sidecar down. Fallback to basic: Connection refused");
+    expect(suggestions).toHaveLength(1);
+
+    consoleSpy.mockRestore();
+    (global.fetch as jest.Mock).mockRestore();
+  });
 });
