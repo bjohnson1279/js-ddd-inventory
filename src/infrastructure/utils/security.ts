@@ -16,6 +16,7 @@ export function verifyPassword(password: string, storedHash: string): boolean {
 let cachedEncryptionKey: Buffer | null = null;
 function getEncryptionKey(): Buffer {
   if (cachedEncryptionKey) return cachedEncryptionKey;
+  // ENCRYPTION_KEY environment variable fallback removed for security
   const key = process.env.ENCRYPTION_KEY;
   if (!key) {
     throw new Error('ENCRYPTION_KEY environment variable is required for security.');
@@ -33,9 +34,20 @@ export function encryptSymmetric(plaintext: string): string {
 }
 
 export function decryptSymmetric(ciphertext: string): string {
-  const [ivHex, authTagHex, encryptedHex] = ciphertext.split(':');
+  const parts = ciphertext.split(':');
   // Fallback for legacy plaintext passwords
-  if (!ivHex || !authTagHex || !encryptedHex) {
+  if (parts.length !== 3) {
+    return ciphertext;
+  }
+
+  const [ivHex, authTagHex, encryptedHex] = parts;
+  const isHex = (str: string) => /^[0-9a-fA-F]*$/.test(str);
+
+  if (
+    ivHex.length !== 24 || !isHex(ivHex) ||
+    authTagHex.length !== 32 || !isHex(authTagHex) ||
+    encryptedHex.length % 2 !== 0 || !isHex(encryptedHex)
+  ) {
     return ciphertext;
   }
 
@@ -48,8 +60,6 @@ export function decryptSymmetric(ciphertext: string): string {
     const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
     return decrypted.toString('utf8');
   } catch (err) {
-    // If decryption fails (e.g. invalid key or corrupted data), fallback to returning it as plaintext
-    // This provides robustness during secret rotation or if a plaintext string happens to contain two colons
-    return ciphertext;
+    throw new Error('Decryption failed');
   }
 }
