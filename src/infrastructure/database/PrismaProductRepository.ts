@@ -4,10 +4,10 @@ import { SKU } from "../../domain/valueObjects/SKU";
 import { ProductVariant } from "../../domain/product/entities/ProductVariant";
 import { VariantAttribute } from "../../domain/product/valueObjects/VariantAttribute";
 import { VariantAttributeSet } from "../../domain/product/valueObjects/VariantAttributeSet";
-import { prisma } from "./prisma";
 
-export class PrismaProductRepository implements IProductRepository {
-  private prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaProductRepository extends PrismaBaseRepository implements IProductRepository {
   private fallbackStore: Map<string, Product> = new Map();
 
   async findBySku(sku: SKU): Promise<Product | null> {
