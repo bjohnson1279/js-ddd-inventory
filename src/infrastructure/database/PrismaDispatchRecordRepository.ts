@@ -1,8 +1,8 @@
 import { IDispatchRecordRepository, DispatchRecord } from "../../domain/repositories/IDispatchRecordRepository";
-import { prisma } from "./prisma";
 
-export class PrismaDispatchRecordRepository implements IDispatchRecordRepository {
-  private prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaDispatchRecordRepository extends PrismaBaseRepository implements IDispatchRecordRepository {
 
   async save(record: DispatchRecord, tx?: any): Promise<void> {
     const client = tx || this.prisma;
