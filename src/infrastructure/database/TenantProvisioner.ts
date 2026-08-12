@@ -34,7 +34,7 @@ export class TenantProvisioner {
       return dbName;
 
     } catch (err: any) {
-      console.error(`[TenantProvisioner] Failed to provision tenant "${tenantId}":`, err.message);
+      console.error(`[TenantProvisioner] Failed to provision tenant "${tenantId}". Check database connection or DDL syntax.`);
       try {
         await this.dropDatabase(dbName);
       } catch {}
