@@ -16,6 +16,7 @@ export function verifyPassword(password: string, storedHash: string): boolean {
 let cachedEncryptionKey: Buffer | null = null;
 function getEncryptionKey(): Buffer {
   if (cachedEncryptionKey) return cachedEncryptionKey;
+  // ENCRYPTION_KEY environment variable fallback removed for security
   const key = process.env.ENCRYPTION_KEY;
   if (!key) {
     throw new Error('ENCRYPTION_KEY environment variable is required for security.');
