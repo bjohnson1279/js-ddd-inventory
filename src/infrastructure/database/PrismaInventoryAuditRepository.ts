@@ -81,6 +81,34 @@ export class PrismaInventoryAuditRepository extends PrismaBaseRepository impleme
             }
           }))
         }
+<<<<<<< HEAD
+      });
+
+      // Upsert Inventory Audit Items in parallel chunks to avoid N+1 sequential blocking
+      const chunkSize = 100;
+      for (let i = 0; i < audit.items.length; i += chunkSize) {
+        const chunk = audit.items.slice(i, i + chunkSize);
+        await Promise.all(
+          chunk.map(item =>
+            tx.inventoryAuditItemModel.upsert({
+              where: { id: item.id },
+              update: {
+                countedQuantity: item.countedQuantity,
+                isCounted: item.isCounted,
+                expectedQuantity: item.expectedQuantity
+              },
+              create: {
+                id: item.id,
+                inventoryAuditId: audit.id,
+                variantId: item.variantId,
+                expectedQuantity: item.expectedQuantity,
+                countedQuantity: item.countedQuantity,
+                isCounted: item.isCounted
+              }
+            })
+          )
+        );
+=======
       },
       create: {
         id: audit.id,
@@ -97,6 +125,7 @@ export class PrismaInventoryAuditRepository extends PrismaBaseRepository impleme
             isCounted: item.isCounted
           }))
         }
+>>>>>>> origin/main
       }
     });
   }
