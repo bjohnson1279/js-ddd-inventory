@@ -1,3 +1,4 @@
+// Test coverage for PickingRouteOptimizer domain service
 import { PickingRouteOptimizer, PickItemInput } from "../../../src/domain/services/PickingRouteOptimizer";
 import { IWarehouseLocationRepository } from "../../../src/domain/repositories/IWarehouseLocationRepository";
 import { WarehouseLocation } from "../../../src/domain/product/entities/WarehouseLocation";
