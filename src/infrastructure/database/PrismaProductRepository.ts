@@ -66,10 +66,14 @@ export class PrismaProductRepository extends PrismaBaseRepository implements IPr
       return Array.from(productMap.values()).map(p => this.hydrate(p));
     } catch (e) {
       const results: Product[] = [];
-      for (const sku of skus) {
-        const product = await this.findBySku(sku);
-        if (product && !results.some(r => r.id === product.id)) {
-          results.push(product);
+      const skuSet = new Set(skus.map(s => s.getValue()));
+
+      for (const product of this.fallbackStore.values()) {
+        for (const variant of product.variants) {
+          if (skuSet.has(variant.sku.getValue())) {
+            results.push(product);
+            break; // found the product, move to the next one
+          }
         }
       }
       return results;
