@@ -2,15 +2,19 @@ import { IPurchaseOrderRepository } from "../../domain/repositories/IPurchaseOrd
 import { PurchaseOrder } from "../../domain/procurement/aggregates/PurchaseOrder";
 import { PurchaseOrderItem } from "../../domain/procurement/aggregates/PurchaseOrderItem";
 import { PurchaseOrderStatus } from "../../domain/procurement/enums/PurchaseOrderStatus";
+<<<<<<< HEAD
 import { prisma } from "./prisma";
 import { Prisma } from "@prisma/client";
 
 type PurchaseOrderRecord = Prisma.PurchaseOrderModelGetPayload<{
   include: { items: true };
 }>;
+=======
+>>>>>>> origin/main
 
-export class PrismaPurchaseOrderRepository implements IPurchaseOrderRepository {
-  private prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaPurchaseOrderRepository extends PrismaBaseRepository implements IPurchaseOrderRepository {
 
   private mapToDomain(record: PurchaseOrderRecord): PurchaseOrder {
     const items = (record.items || []).map(item =>
