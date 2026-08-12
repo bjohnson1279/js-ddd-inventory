@@ -79,13 +79,17 @@ export class ReceiveRMA {
       }
     } else {
       // Fallback if findBySkus is not implemented
+      const fetchPromises: Promise<any>[] = [];
       for (const [loc, skus] of skusByLocation.entries()) {
-        const fetchPromises = skus.map(async (sku) => {
-          const item = await this.inventoryRepository.findBySku(sku, loc);
-          if (item) inventoryItemsMap.set(`${item.sku.getValue()}__${loc}`, item);
-        });
-        await Promise.all(fetchPromises);
+        for (const sku of skus) {
+          const p = this.inventoryRepository.findBySku(sku, loc)
+            .then(item => {
+              if (item) inventoryItemsMap.set(`${item.sku.getValue()}__${loc}`, item);
+            });
+          fetchPromises.push(p);
+        }
       }
+      await Promise.all(fetchPromises);
     }
 
     // Optimization: Pre-fetch all serialized items to avoid N+1 DB lookups inside the loop
