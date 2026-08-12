@@ -8,14 +8,16 @@ import { AccountingMethod } from "../../domain/accounting/enums/AccountingMethod
 import { IOutboxRepository } from "../../domain/repositories/IOutboxRepository";
 import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreatedEvent";
 import { Prisma } from "@prisma/client";
-import { prisma } from "./prisma";
 
-export class PrismaJournalRepository implements IJournalRepository {
-  private prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaJournalRepository extends PrismaBaseRepository implements IJournalRepository {
 
   constructor(
     private readonly outboxRepository?: IOutboxRepository
-  ) {}
+  ) {
+    super();
+  }
 
   async save(entry: JournalEntry): Promise<void> {
     await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
