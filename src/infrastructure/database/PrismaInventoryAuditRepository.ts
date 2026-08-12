@@ -2,10 +2,10 @@ import { IInventoryAuditRepository } from "../../domain/repositories/IInventoryA
 import { InventoryAudit } from "../../domain/procurement/aggregates/InventoryAudit";
 import { InventoryAuditItem } from "../../domain/procurement/aggregates/InventoryAuditItem";
 import { AuditStatus } from "../../domain/procurement/enums/AuditStatus";
-import { prisma } from "./prisma";
 
-export class PrismaInventoryAuditRepository implements IInventoryAuditRepository {
-  private prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaInventoryAuditRepository extends PrismaBaseRepository implements IInventoryAuditRepository {
 
   private mapToDomain(record: any): InventoryAudit {
     const items = (record.items || []).map((item: any) => 
