@@ -58,42 +58,45 @@ export class PrismaInventoryAuditRepository implements IInventoryAuditRepository
   }
 
   async save(audit: InventoryAudit): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      // Upsert Inventory Audit
-      await tx.inventoryAuditModel.upsert({
-        where: { id: audit.id },
-        update: {
-          status: audit.status,
-          tenantId: audit.tenantId,
-          locationId: audit.locationId
-        },
-        create: {
-          id: audit.id,
-          auditNumber: audit.auditNumber,
-          status: audit.status,
-          tenantId: audit.tenantId,
-          locationId: audit.locationId
+    await this.prisma.inventoryAuditModel.upsert({
+      where: { id: audit.id },
+      update: {
+        status: audit.status,
+        tenantId: audit.tenantId,
+        locationId: audit.locationId,
+        items: {
+          upsert: audit.items.map(item => ({
+            where: { id: item.id },
+            update: {
+              countedQuantity: item.countedQuantity,
+              isCounted: item.isCounted,
+              expectedQuantity: item.expectedQuantity
+            },
+            create: {
+              id: item.id,
+              variantId: item.variantId,
+              expectedQuantity: item.expectedQuantity,
+              countedQuantity: item.countedQuantity,
+              isCounted: item.isCounted
+            }
+          }))
         }
-      });
-
-      // Upsert Inventory Audit Items
-      for (const item of audit.items) {
-        await tx.inventoryAuditItemModel.upsert({
-          where: { id: item.id },
-          update: {
-            countedQuantity: item.countedQuantity,
-            isCounted: item.isCounted,
-            expectedQuantity: item.expectedQuantity
-          },
-          create: {
+      },
+      create: {
+        id: audit.id,
+        auditNumber: audit.auditNumber,
+        status: audit.status,
+        tenantId: audit.tenantId,
+        locationId: audit.locationId,
+        items: {
+          create: audit.items.map(item => ({
             id: item.id,
-            inventoryAuditId: audit.id,
             variantId: item.variantId,
             expectedQuantity: item.expectedQuantity,
             countedQuantity: item.countedQuantity,
             isCounted: item.isCounted
-          }
-        });
+          }))
+        }
       }
     });
   }
