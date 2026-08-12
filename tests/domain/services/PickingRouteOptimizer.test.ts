@@ -1,3 +1,4 @@
+// Test coverage for PickingRouteOptimizer domain service
 import { PickingRouteOptimizer, PickItemInput } from "../../../src/domain/services/PickingRouteOptimizer";
 import { IWarehouseLocationRepository } from "../../../src/domain/repositories/IWarehouseLocationRepository";
 import { WarehouseLocation } from "../../../src/domain/product/entities/WarehouseLocation";
@@ -209,5 +210,23 @@ describe("PickingRouteOptimizer", () => {
     // Aisle defaults to 1 (odd), meaning ascending. So B1 comes before B2.
     expect(result[0].items[0].sku).toBe("SKU_BIN_1");
     expect(result[0].items[1].sku).toBe("SKU_BIN_2");
+  });
+
+  it("should handle multiple items mapping to the same location, preserving their initial order", async () => {
+    const loc1 = WarehouseLocation.parsePath("WH1-Z1-1-R1-S1-B1");
+
+    mockLocationRepo.findById.mockImplementation(async (id: LocationId) => {
+      if (id.value === loc1.id.value) return loc1;
+      return null;
+    });
+
+    const input: PickItemInput[] = [
+      { sku: "SKU_SAME_2", quantity: 2, locationId: loc1.id.value },
+      { sku: "SKU_SAME_1", quantity: 1, locationId: loc1.id.value },
+    ];
+
+    const result = await optimizer.optimizeRoute(input);
+    expect(result[0].items[0].sku).toBe("SKU_SAME_2");
+    expect(result[0].items[1].sku).toBe("SKU_SAME_1");
   });
 });

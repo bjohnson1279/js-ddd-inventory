@@ -4,11 +4,15 @@ import { RMAItem } from "../../domain/returns/entities/RMAItem";
 import { RMAStatus } from "../../domain/returns/enums/RMAStatus";
 import { RMAItemStatus } from "../../domain/returns/enums/RMAItemStatus";
 import { RMADisposition } from "../../domain/returns/enums/RMADisposition";
+<<<<<<< HEAD
 import { prisma } from "./prisma";
 import { RMAModel, RMAItemModel } from "@prisma/client";
+=======
+>>>>>>> origin/main
 
-export class PrismaRMARepository implements IRMARepository {
-  private prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaRMARepository extends PrismaBaseRepository implements IRMARepository {
 
   private mapToDomain(record: RMAModel & { items: RMAItemModel[] }): RMA {
     const items = (record.items || []).map((item: RMAItemModel) =>
