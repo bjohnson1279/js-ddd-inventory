@@ -13,9 +13,15 @@ export function verifyPassword(password: string, storedHash: string): boolean {
   return hash === verifyHash;
 }
 
+let cachedEncryptionKey: Buffer | null = null;
 function getEncryptionKey(): Buffer {
-  const key = process.env.ENCRYPTION_KEY || 'default_dev_key_change_in_prod';
-  return crypto.createHash('sha256').update(key).digest();
+  if (cachedEncryptionKey) return cachedEncryptionKey;
+  const key = process.env.ENCRYPTION_KEY;
+  if (!key) {
+    throw new Error('ENCRYPTION_KEY environment variable is required for security.');
+  }
+  cachedEncryptionKey = crypto.createHash('sha256').update(key).digest();
+  return cachedEncryptionKey;
 }
 
 export function encryptSymmetric(plaintext: string): string {

@@ -10,6 +10,11 @@ describe('TenantRegistry', () => {
       $queryRaw: jest.fn().mockResolvedValue([]),
     };
     registry = new TenantRegistry(mockPrisma);
+    process.env.ENCRYPTION_KEY = 'test_key_for_tenant_registry';
+  });
+
+  afterEach(() => {
+    delete process.env.ENCRYPTION_KEY;
   });
 
   describe('registerTenant', () => {
