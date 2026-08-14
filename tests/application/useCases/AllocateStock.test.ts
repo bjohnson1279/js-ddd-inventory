@@ -60,4 +60,23 @@ describe("AllocateStock Use Case", () => {
     expect(item.allocated.getValue()).toBe(5);
     expect(mockRepo.save).toHaveBeenCalledWith(item);
   });
+
+  it("should propagate errors thrown by the repository on findBySku", async () => {
+    const error = new Error("Database connection failed");
+    mockRepo.findBySku.mockRejectedValue(error);
+
+    await expect(useCase.execute("SKU-123", 5)).rejects.toThrow(error);
+    expect(mockRepo.save).not.toHaveBeenCalled();
+  });
+
+  it("should propagate errors thrown by the repository on save", async () => {
+    const sku = SKU.create("SKU-123");
+    const item = InventoryItem.create("item-1", sku, "default", Quantity.create(10));
+    mockRepo.findBySku.mockResolvedValue(item);
+
+    const error = new Error("Database save failed");
+    mockRepo.save.mockRejectedValue(error);
+
+    await expect(useCase.execute("SKU-123", 5)).rejects.toThrow(error);
+  });
 });
