@@ -146,4 +146,58 @@ describe("UpdateShipmentStatus Use Case", () => {
       status: ShipmentStatus.IN_TRANSIT,
     });
   });
+
+  it("should propagate error if shipmentRepository.save fails", async () => {
+    const shipment = new Shipment(
+      "shipment-123",
+      "SKU-1",
+      5,
+      "123 Main St",
+      "UPS",
+      "TRACK123",
+      "http://label",
+      1000,
+      ShipmentStatus.LABEL_GENERATED,
+      new Date(),
+      new Date()
+    );
+
+    mockShipmentRepository.findById.mockResolvedValue(shipment);
+    mockShipmentRepository.save.mockRejectedValue(new Error("Database failure"));
+
+    const command: UpdateShipmentStatusCommand = {
+      shipmentId: "shipment-123",
+      status: ShipmentStatus.IN_TRANSIT,
+    };
+
+    await expect(useCase.execute(command)).rejects.toThrow("Database failure");
+    expect(mockOutboxRepository.save).not.toHaveBeenCalled();
+  });
+
+  it("should propagate error if outboxRepository.save fails", async () => {
+    const shipment = new Shipment(
+      "shipment-123",
+      "SKU-1",
+      5,
+      "123 Main St",
+      "UPS",
+      "TRACK123",
+      "http://label",
+      1000,
+      ShipmentStatus.LABEL_GENERATED,
+      new Date(),
+      new Date()
+    );
+
+    mockShipmentRepository.findById.mockResolvedValue(shipment);
+    mockOutboxRepository.save.mockRejectedValue(new Error("Outbox failure"));
+
+    const command: UpdateShipmentStatusCommand = {
+      shipmentId: "shipment-123",
+      status: ShipmentStatus.IN_TRANSIT,
+    };
+
+    await expect(useCase.execute(command)).rejects.toThrow("Outbox failure");
+    expect(mockShipmentRepository.save).toHaveBeenCalled();
+  });
 });
