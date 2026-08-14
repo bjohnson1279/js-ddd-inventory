@@ -147,4 +147,17 @@ describe("CalculateSalesVelocity Use Case", () => {
     expect(result.averageDailySales90d).toBe(1.411);
   });
 
+  it("should propagate errors from the dispatch repository", async () => {
+    mockDispatchRepo.fetchHistory.mockRejectedValue(new Error("Database connection failed"));
+
+    await expect(useCase.execute("SKU-123", "loc-1")).rejects.toThrow("Database connection failed");
+  });
+
+  it("should propagate errors from the inventory repository", async () => {
+    mockDispatchRepo.fetchHistory.mockResolvedValue([]);
+    mockInventoryRepo.findBySku.mockRejectedValue(new Error("Inventory fetch failed"));
+
+    await expect(useCase.execute("SKU-123", "loc-1")).rejects.toThrow("Inventory fetch failed");
+  });
+
 });
