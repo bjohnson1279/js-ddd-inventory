@@ -4,11 +4,7 @@ import { RMAItem } from "../../domain/returns/entities/RMAItem";
 import { RMAStatus } from "../../domain/returns/enums/RMAStatus";
 import { RMAItemStatus } from "../../domain/returns/enums/RMAItemStatus";
 import { RMADisposition } from "../../domain/returns/enums/RMADisposition";
-<<<<<<< HEAD
-import { prisma } from "./prisma";
 import { RMAModel, RMAItemModel } from "@prisma/client";
-=======
->>>>>>> origin/main
 
 import { PrismaBaseRepository } from "./PrismaBaseRepository";
 
