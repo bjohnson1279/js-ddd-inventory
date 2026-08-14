@@ -2,13 +2,10 @@ import { IInventoryAuditRepository } from "../../domain/repositories/IInventoryA
 import { InventoryAudit } from "../../domain/procurement/aggregates/InventoryAudit";
 import { InventoryAuditItem } from "../../domain/procurement/aggregates/InventoryAuditItem";
 import { AuditStatus } from "../../domain/procurement/enums/AuditStatus";
-<<<<<<< HEAD
 import { prisma } from "./prisma";
 import { InventoryAuditModel, InventoryAuditItemModel } from "@prisma/client";
 
 type InventoryAuditRecord = InventoryAuditModel & { items: InventoryAuditItemModel[] };
-=======
->>>>>>> origin/main
 
 import { PrismaBaseRepository } from "./PrismaBaseRepository";
 
@@ -65,30 +62,21 @@ export class PrismaInventoryAuditRepository extends PrismaBaseRepository impleme
   }
 
   async save(audit: InventoryAudit): Promise<void> {
-    await this.prisma.inventoryAuditModel.upsert({
-      where: { id: audit.id },
-      update: {
-        status: audit.status,
-        tenantId: audit.tenantId,
-        locationId: audit.locationId,
-        items: {
-          upsert: audit.items.map(item => ({
-            where: { id: item.id },
-            update: {
-              countedQuantity: item.countedQuantity,
-              isCounted: item.isCounted,
-              expectedQuantity: item.expectedQuantity
-            },
-            create: {
-              id: item.id,
-              variantId: item.variantId,
-              expectedQuantity: item.expectedQuantity,
-              countedQuantity: item.countedQuantity,
-              isCounted: item.isCounted
-            }
-          }))
+    await this.prisma.$transaction(async (tx: any) => {
+      await tx.inventoryAuditModel.upsert({
+        where: { id: audit.id },
+        update: {
+          status: audit.status,
+          tenantId: audit.tenantId,
+          locationId: audit.locationId
+        },
+        create: {
+          id: audit.id,
+          status: audit.status,
+          tenantId: audit.tenantId,
+          locationId: audit.locationId,
+          createdAt: audit.createdAt
         }
-<<<<<<< HEAD
       });
 
       // Upsert Inventory Audit Items in parallel chunks to avoid N+1 sequential blocking
@@ -115,24 +103,6 @@ export class PrismaInventoryAuditRepository extends PrismaBaseRepository impleme
             })
           )
         );
-=======
-      },
-      create: {
-        id: audit.id,
-        auditNumber: audit.auditNumber,
-        status: audit.status,
-        tenantId: audit.tenantId,
-        locationId: audit.locationId,
-        items: {
-          create: audit.items.map(item => ({
-            id: item.id,
-            variantId: item.variantId,
-            expectedQuantity: item.expectedQuantity,
-            countedQuantity: item.countedQuantity,
-            isCounted: item.isCounted
-          }))
-        }
->>>>>>> origin/main
       }
     });
   }
