@@ -81,4 +81,13 @@ describe("TraceProductRecall Use Case", () => {
       expect(result).toHaveLength(1);
       expect(result[0].lotNumber).toEqual(lotNumber);
   });
+
+  it("should bubble up errors thrown by the repository", async () => {
+    const lotNumber = "LOT-123";
+    const dbError = new Error("Database connection error");
+    mockRepo.fetchByLotNumber.mockRejectedValue(dbError);
+
+    await expect(useCase.execute(lotNumber)).rejects.toThrow("Database connection error");
+    expect(mockRepo.fetchByLotNumber).toHaveBeenCalledWith(lotNumber);
+  });
 });
