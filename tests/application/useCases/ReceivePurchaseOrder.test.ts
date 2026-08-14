@@ -82,4 +82,20 @@ describe("ReceivePurchaseOrder Use Case", () => {
       ]
     })).rejects.toThrow("Item variant-C not found in purchase order PO-100.");
   });
+
+  it("should throw an error if saving the purchase order fails during Promise.all", async () => {
+    const itemA = new PurchaseOrderItem("item-1", "variant-A", 10, 1500);
+    const po = new PurchaseOrder("po-1", "PO-100", "vendor-1", "tenant-1", "location-1", PurchaseOrderStatus.Sent, [itemA]);
+
+    await poRepository.save(po);
+
+    jest.spyOn(poRepository, 'save').mockRejectedValueOnce(new Error("Database connection failed"));
+
+    await expect(useCase.execute({
+      purchaseOrderId: "po-1",
+      items: [
+        { variantId: "variant-A", quantityReceived: 4 }
+      ]
+    })).rejects.toThrow("Database connection failed");
+  });
 });
