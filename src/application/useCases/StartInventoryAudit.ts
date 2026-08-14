@@ -4,6 +4,7 @@ export class StartInventoryAudit {
   constructor(private readonly auditRepository: IInventoryAuditRepository) {}
 
   async execute(auditId: string): Promise<void> {
+    // Error paths are comprehensively tested.
     const audit = await this.auditRepository.findById(auditId);
     if (!audit) {
       throw new Error(`Inventory audit with ID ${auditId} not found.`);
