@@ -28,6 +28,17 @@ export function decrypt(encryptedText: string): string {
     return encryptedText;
   }
   const [ivHex, authTagHex, cipherHex] = parts;
+
+  const isHex = (str: string) => /^[0-9a-fA-F]*$/.test(str);
+
+  if (
+    ivHex.length !== 24 || !isHex(ivHex) ||
+    authTagHex.length !== 32 || !isHex(authTagHex) ||
+    cipherHex.length % 2 !== 0 || !isHex(cipherHex)
+  ) {
+    return encryptedText;
+  }
+
   try {
     const decipher = crypto.createDecipheriv(algorithm, getKey(), Buffer.from(ivHex, 'hex'));
     decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
