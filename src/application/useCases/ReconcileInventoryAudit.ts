@@ -105,10 +105,11 @@ export class ReconcileInventoryAudit {
 
     const journalPromises: Promise<any>[] = [];
 
-    await Promise.all(audit.items.map(async (item) => {
+    // Optimization: Replaced Promise.all map loop with sequential for-of loop since there are no asynchronous awaits inside. This removes unnecessary microtask overhead and promise allocations.
+    for (const item of audit.items) {
       const discrepancy = item.discrepancy;
       if (discrepancy === null || discrepancy === 0) {
-        return;
+        continue;
       }
 
       const sku = SKU.create(item.variantId);
@@ -194,7 +195,7 @@ export class ReconcileInventoryAudit {
           journalPromises.push(p);
         }
       }
-    }));
+    }
 
     await Promise.all(journalPromises);
 

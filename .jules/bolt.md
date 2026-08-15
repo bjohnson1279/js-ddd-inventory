@@ -24,3 +24,6 @@
 ## 2024-06-11 - Optimize Prisma Upsert with Nested Operations
 **Learning:** When saving an aggregate root along with its related child entities in Prisma, avoid iterating over the child entities and executing independent queries inside a `$transaction` (e.g., with `Promise.all()`). This triggers an N+1 query overhead. Instead, map the array into Prisma's nested operations structure (e.g., `update: { items: { upsert: [...] } }`) on the parent aggregate's query. This collapses the execution into a single, unified database operation for a measurable speedup in I/O latency.
 **Action:** Use nested writes (`create`, `upsert`, `connect`, etc.) provided by Prisma's relation API whenever saving a tree-like domain aggregate to avoid unnecessary network waterfalls and db roundtrips.
+## 2026-08-15 - Unnecessary async overhead in Promise.all map loops
+**Learning:** Wrapping a synchronous loop in `Promise.all(array.map(async (item) => ...))` where the callback contains no `await` statements is a performance anti-pattern. It incurs unnecessary microtask queuing overhead and memory allocation for promises on every item.
+**Action:** Replace such blocks with a standard synchronous `for...of` loop to improve execution speed and reduce garbage collection pressure.
