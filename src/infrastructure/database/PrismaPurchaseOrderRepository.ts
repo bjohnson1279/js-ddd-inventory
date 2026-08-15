@@ -2,15 +2,11 @@ import { IPurchaseOrderRepository } from "../../domain/repositories/IPurchaseOrd
 import { PurchaseOrder } from "../../domain/procurement/aggregates/PurchaseOrder";
 import { PurchaseOrderItem } from "../../domain/procurement/aggregates/PurchaseOrderItem";
 import { PurchaseOrderStatus } from "../../domain/procurement/enums/PurchaseOrderStatus";
-<<<<<<< HEAD
-import { prisma } from "./prisma";
 import { Prisma } from "@prisma/client";
 
 type PurchaseOrderRecord = Prisma.PurchaseOrderModelGetPayload<{
   include: { items: true };
 }>;
-=======
->>>>>>> origin/main
 
 import { PrismaBaseRepository } from "./PrismaBaseRepository";
 

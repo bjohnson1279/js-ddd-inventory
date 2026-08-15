@@ -38,11 +38,14 @@ export class OrderRoutingEngine {
     // 2. Score and evaluate each plan concurrently
     const rateCache = new Map<string, Promise<number>>();
 
+    // Optimization: Pre-compute candidate map to prevent O(N) lookup inside O(2^N) loop
+    const candidateMap = new Map(activeCandidates.map(c => [c.locationId, c]));
+
     const plans: FulfillmentPlan[] = await Promise.all(
       rawPlans.map(async (allocations) => {
         const allocResults = await Promise.all(
           allocations.map(async (alloc) => {
-            const candidate = activeCandidates.find(c => c.locationId === alloc.locationId)!;
+            const candidate = candidateMap.get(alloc.locationId)!;
             // Compute Haversine distance from origin warehouse to destination
             const dist = candidate.geoLocation.distanceTo(destination);
 
