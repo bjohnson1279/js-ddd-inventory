@@ -1,3 +1,4 @@
+import { PutawaySuggester } from "../../../src/domain/services/PutawaySuggester";
 import { SKU } from "../../../src/domain/valueObjects/SKU";
 import { ProductVariant } from "../../../src/domain/product/entities/ProductVariant";
 import { Product } from "../../../src/domain/product/aggregates/Product";
