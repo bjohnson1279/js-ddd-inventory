@@ -3,10 +3,6 @@ import { IInventoryRepository } from "../../../src/domain/repositories/IInventor
 import { ICostLayerRepository } from "../../../src/domain/repositories/ICostLayerRepository";
 import { ITenantConfigRepository } from "../../../src/domain/repositories/ITenantConfigRepository";
 import { IJournalRepository } from "../../../src/domain/repositories/IJournalRepository";
-<<<<<<< HEAD
-import { prisma } from "../../../src/infrastructure/database/prisma";
-import { AccountingMethod } from "../../../src/domain/accounting/enums/AccountingMethod";
-=======
 import { SKU } from "../../../src/domain/valueObjects/SKU";
 import { Quantity } from "../../../src/domain/valueObjects/Quantity";
 import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
@@ -16,61 +12,15 @@ import { TenantAccountingConfig } from "../../../src/domain/accounting/valueObje
 import { AccountingMethod } from "../../../src/domain/accounting/enums/AccountingMethod";
 import { CostingMethod } from "../../../src/domain/accounting/enums/CostingMethod";
 import { DebitCredit } from "../../../src/domain/accounting/enums/DebitCredit";
->>>>>>> origin/main
 
 jest.mock("../../../src/infrastructure/database/prisma", () => ({
   prisma: {
     kitModel: {
-<<<<<<< HEAD
-      findUnique: jest.fn(),
-    },
-  },
-}));
-
-jest.mock("../../../src/infrastructure/http/controllers/KitController", () => ({
-  getInMemoryKit: jest.fn().mockReturnValue(null),
-}));
-
-describe("AssembleKit Use Case", () => {
-  let mockInventoryRepo: jest.Mocked<IInventoryRepository>;
-  let mockCostLayerRepo: jest.Mocked<ICostLayerRepository>;
-  let mockTenantConfigRepo: jest.Mocked<ITenantConfigRepository>;
-  let mockJournalRepo: jest.Mocked<IJournalRepository>;
-  let useCase: AssembleKit;
-
-  beforeEach(() => {
-    mockInventoryRepo = {
-      findBySku: jest.fn(),
-      save: jest.fn(),
-      findBySkus: jest.fn(),
-      saveMany: jest.fn(),
-    } as any;
-
-    mockCostLayerRepo = {
-      save: jest.fn(),
-      getActiveLayers: jest.fn().mockResolvedValue([]),
-    } as any;
-
-    mockTenantConfigRepo = {
-      findByTenantId: jest.fn(),
-    } as any;
-
-    mockJournalRepo = {
-      save: jest.fn(),
-    } as any;
-
-    useCase = new AssembleKit(
-      mockInventoryRepo,
-      mockCostLayerRepo,
-      mockTenantConfigRepo,
-      mockJournalRepo
-=======
       findUnique: jest.fn()
     }
   }
 }));
 
-// We need to mock node:crypto for JournalEntry and other domain uses
 jest.mock("crypto", () => ({
   randomUUID: jest.fn().mockReturnValue("mock-uuid")
 }));
@@ -85,7 +35,7 @@ describe("AssembleKit", () => {
   beforeEach(() => {
     inventoryRepo = {
       findBySku: jest.fn(),
-      findBySkus: jest.fn() as any, // Cast to any to allow mock functions
+      findBySkus: jest.fn() as any,
       save: jest.fn(),
       saveMany: jest.fn() as any,
     } as any;
@@ -98,143 +48,22 @@ describe("AssembleKit", () => {
     tenantConfigRepo = {
       findByTenantId: jest.fn(),
       save: jest.fn(),
-    };
+    } as any;
     journalRepo = {
       save: jest.fn(),
       findAll: jest.fn(),
-    };
+    } as any;
 
     assembleKit = new AssembleKit(
       inventoryRepo,
       costLayerRepo,
       tenantConfigRepo,
       journalRepo
->>>>>>> origin/main
     );
 
     jest.clearAllMocks();
   });
 
-<<<<<<< HEAD
-  it("should throw an error if quantity to assemble is zero or negative", async () => {
-    const dto = {
-      tenantId: "tenant-1",
-      locationId: "loc-1",
-      kitSku: "KIT-SKU",
-      quantity: 0,
-      actorId: "actor-1",
-      referenceId: "ref-1",
-    };
-
-    await expect(useCase.execute(dto)).rejects.toThrow("Quantity to assemble must be greater than zero.");
-
-    dto.quantity = -5;
-    await expect(useCase.execute(dto)).rejects.toThrow("Quantity to assemble must be greater than zero.");
-  });
-
-  it("should throw an error if the kit is not found", async () => {
-    const dto = {
-      tenantId: "tenant-1",
-      locationId: "loc-1",
-      kitSku: "NON-EXISTENT-KIT",
-      quantity: 1,
-      actorId: "actor-1",
-      referenceId: "ref-1",
-    };
-
-    (prisma.kitModel.findUnique as jest.Mock).mockResolvedValue(null);
-
-    await expect(useCase.execute(dto)).rejects.toThrow("Kit with SKU NON-EXISTENT-KIT not found.");
-  });
-
-
-  it("should throw an error if stock for component is insufficient", async () => {
-    const dto = {
-      tenantId: "tenant-1",
-      locationId: "loc-1",
-      kitSku: "EXISTING-KIT",
-      quantity: 2,
-      actorId: "actor-1",
-      referenceId: "ref-1",
-    };
-
-    const mockKit = {
-      sku: "EXISTING-KIT",
-      components: [
-        { variantId: "COMP-1", quantity: 3 }
-      ]
-    };
-
-    (prisma.kitModel.findUnique as jest.Mock).mockResolvedValue(mockKit);
-
-    // Mock findBySku to return an item with insufficient quantity
-    const mockInventoryItem = {
-      sku: { getValue: () => "COMP-1" },
-      quantity: { getValue: () => 5 } // Needed: 3 * 2 = 6, Available: 5
-    };
-
-    mockInventoryRepo.findBySkus = jest.fn().mockResolvedValue([mockInventoryItem]);
-
-    await expect(useCase.execute(dto)).rejects.toThrow("Insufficient stock for component variant ID COMP-1. Needed: 6, Available: 5");
-  });
-
-
-  it("should successfully assemble a kit", async () => {
-    const dto = {
-      tenantId: "tenant-1",
-      locationId: "loc-1",
-      kitSku: "EXISTING-KIT",
-      quantity: 2,
-      actorId: "actor-1",
-      referenceId: "ref-1",
-    };
-
-    const mockKit = {
-      sku: "EXISTING-KIT",
-      components: [
-        { variantId: "COMP-1", quantity: 3 }
-      ]
-    };
-
-    (prisma.kitModel.findUnique as jest.Mock).mockResolvedValue(mockKit);
-
-    const mockInventoryItem = {
-      sku: { getValue: () => "COMP-1" },
-      quantity: { getValue: () => 10 }, // Needed: 6, Available: 10
-      dispatchStock: jest.fn(),
-    };
-
-    const mockKitItem = {
-      sku: { getValue: () => "EXISTING-KIT" },
-      quantity: { getValue: () => 0 },
-      receiveStock: jest.fn(),
-    };
-
-    mockInventoryRepo.findBySkus = jest.fn().mockResolvedValue([mockInventoryItem]);
-    mockInventoryRepo.findBySku = jest.fn().mockResolvedValue(mockKitItem);
-
-    // Mock the cost layer repository to avoid errors
-    const mockActiveLayer = {
-      variantId: "COMP-1",
-      remainingQuantity: 10,
-      unitCostCents: 100,
-      consume: jest.fn().mockReturnValue(6)
-    };
-    mockCostLayerRepo.getActiveLayers = jest.fn().mockResolvedValue([mockActiveLayer]);
-    mockCostLayerRepo.save = jest.fn();
-
-    // Mock tenant config
-    mockTenantConfigRepo.findByTenantId = jest.fn().mockResolvedValue({
-        accountingMethod: AccountingMethod.Accrual
-    });
-
-    await useCase.execute(dto);
-
-    expect(mockInventoryItem.dispatchStock).toHaveBeenCalled();
-    expect(mockKitItem.receiveStock).toHaveBeenCalled();
-    expect(mockInventoryRepo.saveMany).toHaveBeenCalled();
-    expect(mockCostLayerRepo.save).toHaveBeenCalled();
-=======
   it("should throw error if quantity is <= 0", async () => {
     await expect(assembleKit.execute({
       tenantId: "tenant-1",
@@ -267,7 +96,7 @@ describe("AssembleKit", () => {
       ]
     });
 
-    const comp1 = InventoryItem.create("item-1", SKU.create("COMP-1"), "loc-1", Quantity.create(1)); // Only 1 available, needs 2
+    const comp1 = InventoryItem.create("item-1", SKU.create("COMP-1"), "loc-1", Quantity.create(1));
     (inventoryRepo.findBySkus as jest.Mock).mockResolvedValue([comp1]);
 
     await expect(assembleKit.execute({
@@ -281,7 +110,6 @@ describe("AssembleKit", () => {
   });
 
   it("should assemble a kit successfully", async () => {
-    // Mock Kit
     (prisma.kitModel.findUnique as jest.Mock).mockResolvedValue({
       sku: "KIT-1",
       components: [
@@ -290,13 +118,11 @@ describe("AssembleKit", () => {
       ]
     });
 
-    // Mock InventoryItems
     const comp1 = InventoryItem.create("item-1", SKU.create("COMP-1"), "loc-1", Quantity.create(10));
     const comp2 = InventoryItem.create("item-2", SKU.create("COMP-2"), "loc-1", Quantity.create(5));
     (inventoryRepo.findBySkus as jest.Mock).mockResolvedValue([comp1, comp2]);
-    inventoryRepo.findBySku.mockResolvedValue(null); // For the newly assembled kit
+    inventoryRepo.findBySku.mockResolvedValue(null);
 
-    // Mock Cost Layers
     const layer1 = new InventoryCostLayer("l1", "COMP-1", "tenant-1", 10, 100, new Date(), "po-1", "loc-1");
     const layer2 = new InventoryCostLayer("l2", "COMP-2", "tenant-1", 5, 200, new Date(), "po-2", "loc-1");
 
@@ -304,9 +130,8 @@ describe("AssembleKit", () => {
       ["COMP-1", [layer1]],
       ["COMP-2", [layer2]]
     ]));
-    (costLayerRepo.getActiveLayers as jest.Mock).mockResolvedValue([]); // Fallback
+    (costLayerRepo.getActiveLayers as jest.Mock).mockResolvedValue([]);
 
-    // Mock Tenant Config
     tenantConfigRepo.findByTenantId.mockResolvedValue(
       new TenantAccountingConfig(AccountingMethod.Accrual, CostingMethod.FIFO, "USD", "01-01")
     );
@@ -320,27 +145,22 @@ describe("AssembleKit", () => {
       referenceId: "ref-1"
     });
 
-    // Verify stock deductions for components
-    expect(comp1.quantity.getValue()).toBe(8); // 10 - 2
-    expect(comp2.quantity.getValue()).toBe(4); // 5 - 1
+    expect(comp1.quantity.getValue()).toBe(8);
+    expect(comp2.quantity.getValue()).toBe(4);
 
-    // Verify stock creation for kit
     expect(inventoryRepo.save).toHaveBeenCalled();
     const savedKitItem = inventoryRepo.save.mock.calls.find(c => c[0].sku.getValue() === "KIT-1");
     expect(savedKitItem).toBeDefined();
     expect(savedKitItem![0].quantity.getValue()).toBe(1);
 
-    // Verify kit cost layer creation
     expect(costLayerRepo.save).toHaveBeenCalled();
     const kitCostLayer = costLayerRepo.save.mock.calls[0][0];
     expect(kitCostLayer.variantId).toBe("KIT-1");
-    expect(kitCostLayer.unitCostCents).toBe(400); // (2*100) + (1*200) = 400
+    expect(kitCostLayer.unitCostCents).toBe(400);
 
-    // Verify total cost calculation and journal entry
     expect(journalRepo.save).toHaveBeenCalled();
     const journalEntry = journalRepo.save.mock.calls[0][0];
 
-    // Debit WIP / Finished Goods, Credit Raw Materials.
     let totalDebit = 0;
     for (const line of journalEntry.lines) {
       if (line.type === DebitCredit.Debit) {
@@ -351,7 +171,6 @@ describe("AssembleKit", () => {
   });
 
   it("should not create journal entry if accounting method is not Accrual", async () => {
-    // Mock Kit
     (prisma.kitModel.findUnique as jest.Mock).mockResolvedValue({
       sku: "KIT-1",
       components: [
@@ -359,18 +178,15 @@ describe("AssembleKit", () => {
       ]
     });
 
-    // Mock InventoryItems
     const comp1 = InventoryItem.create("item-1", SKU.create("COMP-1"), "loc-1", Quantity.create(10));
     (inventoryRepo.findBySkus as jest.Mock).mockResolvedValue([comp1]);
     inventoryRepo.findBySku.mockResolvedValue(null);
 
-    // Mock Cost Layers
     const layer1 = new InventoryCostLayer("l1", "COMP-1", "tenant-1", 10, 100, new Date(), "po-1", "loc-1");
     (costLayerRepo.getActiveLayersByVariantIds as jest.Mock).mockResolvedValue(new Map([
       ["COMP-1", [layer1]]
     ]));
 
-    // Mock Tenant Config
     tenantConfigRepo.findByTenantId.mockResolvedValue(
       new TenantAccountingConfig(AccountingMethod.Cash, CostingMethod.WeightedAverageCost, "USD", "01-01")
     );
@@ -384,8 +200,6 @@ describe("AssembleKit", () => {
       referenceId: "ref-1"
     });
 
-    // Journal should not be saved for cash accounting in this context
     expect(journalRepo.save).not.toHaveBeenCalled();
->>>>>>> origin/main
   });
 });

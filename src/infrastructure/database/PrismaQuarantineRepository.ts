@@ -1,11 +1,7 @@
 import { IQuarantineRepository } from "../../domain/repositories/IQuarantineRepository";
 import { QuarantineItem } from "../../domain/returns/aggregates/QuarantineItem";
 import { QuarantineStatus } from "../../domain/returns/enums/QuarantineStatus";
-<<<<<<< HEAD
-import { prisma } from "./prisma";
 import { QuarantineItemModel } from "@prisma/client";
-=======
->>>>>>> origin/main
 
 import { PrismaBaseRepository } from "./PrismaBaseRepository";
 
