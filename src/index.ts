@@ -499,6 +499,11 @@ export const setupApp = (
     });
   });
 
+  // Healthcheck endpoints for container probes and conformance tests
+  app.get(["/api/health", "/health"], (_req, res) => {
+    res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   app.get("/api/supplier/otif-scorecard", (req, res) => {
     const supplierId = typeof req.query.supplierId === "string" ? req.query.supplierId : "SUP-101";
     res.json({
