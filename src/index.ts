@@ -215,6 +215,11 @@ export const setupApp = (
   // Legacy key for backwards compatibility
   app.set("repository", inventoryRepository);
 
+  // Healthcheck endpoints for container probes and conformance tests (unauthenticated)
+  app.get(["/api/health", "/health"], (_req, res) => {
+    res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   app.use("/api/auth", authRoutes);
   app.use("/api/shopify", shopifyRoutes);
 
@@ -497,11 +502,6 @@ export const setupApp = (
       status: 'IN_TRANSIT',
       createdAt: new Date().toISOString()
     });
-  });
-
-  // Healthcheck endpoints for container probes and conformance tests
-  app.get(["/api/health", "/health"], (_req, res) => {
-    res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
   app.get("/api/supplier/otif-scorecard", (req, res) => {
