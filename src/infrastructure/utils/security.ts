@@ -10,7 +10,9 @@ export function verifyPassword(password: string, storedHash: string): boolean {
   const [salt, hash] = storedHash.split(':');
   if (!salt || !hash) return false;
   const verifyHash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
-  return hash === verifyHash;
+
+  if (hash.length !== verifyHash.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(verifyHash));
 }
 
 let cachedEncryptionKey: Buffer | null = null;
