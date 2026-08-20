@@ -25,7 +25,7 @@ export function encrypt(text: string): string {
 export function decrypt(encryptedText: string): string {
   const parts = encryptedText.split(':');
   if (parts.length !== 3) {
-    return encryptedText;
+    throw new Error('Failed to decrypt secret: Invalid ciphertext format');
   }
   const [ivHex, authTagHex, cipherHex] = parts;
   try {

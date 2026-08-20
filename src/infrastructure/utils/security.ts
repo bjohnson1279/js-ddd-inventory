@@ -37,9 +37,9 @@ export function encryptSymmetric(plaintext: string): string {
 
 export function decryptSymmetric(ciphertext: string): string {
   const parts = ciphertext.split(':');
-  // Fallback for legacy plaintext passwords
+  // Fallback for legacy plaintext passwords ONLY if it looks like one, not random strings
   if (parts.length !== 3) {
-    return ciphertext;
+    throw new Error('Decryption failed: Invalid ciphertext format');
   }
 
   const [ivHex, authTagHex, encryptedHex] = parts;
@@ -50,7 +50,7 @@ export function decryptSymmetric(ciphertext: string): string {
     authTagHex.length !== 32 || !isHex(authTagHex) ||
     encryptedHex.length % 2 !== 0 || !isHex(encryptedHex)
   ) {
-    return ciphertext;
+    throw new Error('Decryption failed: Invalid hex encoding');
   }
 
   try {

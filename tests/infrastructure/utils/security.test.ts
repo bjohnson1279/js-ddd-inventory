@@ -100,14 +100,14 @@ describe('Security Utilities', () => {
       expect(() => decryptSymmetric(invalidCiphertext)).toThrow('Decryption failed');
     });
 
-    it('should return plaintext if format does not match hex requirements', () => {
+    it('should throw error if format does not match hex requirements', () => {
       const plaintext = 'not:hex:format';
-      expect(decryptSymmetric(plaintext)).toBe(plaintext);
+      expect(() => decryptSymmetric(plaintext)).toThrow('Decryption failed');
     });
 
-    it('should return plaintext if format length does not match requirements', () => {
+    it('should throw error if format length does not match requirements', () => {
       const plaintext = '1234:5678:9abc';
-      expect(decryptSymmetric(plaintext)).toBe(plaintext);
+      expect(() => decryptSymmetric(plaintext)).toThrow('Decryption failed');
     });
   });
 });
