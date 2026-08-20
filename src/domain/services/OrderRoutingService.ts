@@ -55,6 +55,10 @@ export class OrderRoutingService {
     // 2. We want to find the optimal allocation.
     let bestResult: OrderRoutingResult | null = null;
 
+    // Optimization: Pre-compute a Map of warehouses by ID to achieve O(1) lookups
+    // during the evaluation of combinations, preventing O(N) array scans inside the loop.
+    const warehouseMap = new Map(warehouses.map(w => [w.id, w]));
+
     const findAllocation = (
       lineIndex: number,
       currentAllocations: RouteAllocation[],
@@ -62,7 +66,7 @@ export class OrderRoutingService {
     ) => {
       if (lineIndex === orderLines.length) {
         // Evaluate current allocations
-        const result = this.evaluateAllocations(currentAllocations, warehouses, warehouseDistances);
+        const result = this.evaluateAllocations(currentAllocations, warehouseMap, warehouseDistances);
         if (result && (!bestResult || result.totalCostCents < bestResult.totalCostCents)) {
           bestResult = result;
         }
@@ -141,7 +145,7 @@ export class OrderRoutingService {
 
   private evaluateAllocations(
     allocations: RouteAllocation[],
-    warehouses: Warehouse[],
+    warehouseMap: Map<string, Warehouse>,
     warehouseDistances: Map<string, number>
   ): OrderRoutingResult | null {
     // Group allocations by warehouse
@@ -156,7 +160,7 @@ export class OrderRoutingService {
     let totalCostCents = 0;
 
     for (const [whId] of warehouseGroups.entries()) {
-      const wh = warehouses.find(w => w.id === whId)!;
+      const wh = warehouseMap.get(whId)!;
       const distance = warehouseDistances.get(whId) || 0;
 
       // Cost = base shipping fee + (distance * cost per mile)
