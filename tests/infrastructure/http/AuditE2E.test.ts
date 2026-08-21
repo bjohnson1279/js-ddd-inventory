@@ -60,7 +60,7 @@ describe("Audit REST API Endpoints", () => {
 
   beforeAll(() => {
     token = jwt.sign(
-      { tenantId: "tenant-1", actorId: "admin-actor", role: "admin" },
+      { tenantId: "tenant-1", actorId: "admin-actor", role: "admin", permissions: ["*:*"] },
       process.env.JWT_SECRET || ""
     );
   });

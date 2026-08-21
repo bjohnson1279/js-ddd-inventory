@@ -67,12 +67,20 @@ export function requirePermission(resource: string, action: string) {
       });
     }
     
-    // Explicit tenant boundary guard
-    const requestedTenant = req.body?.tenantId || req.query?.tenantId || req.params?.tenantId;
-    if (requestedTenant && req.user?.tenantId && requestedTenant !== req.user.tenantId) {
-       return res.status(403).json({ error: 'Forbidden: Cross-tenant access is not allowed.' });
+    // Enforce Tenant Boundary Guard
+    if (req.user?.tenantId) {
+      let requestTenant = req.body?.tenantId || req.query?.tenantId || req.params?.tenantId;
+      
+      // Handle Express query array type confusion safely
+      if (Array.isArray(requestTenant)) {
+        requestTenant = requestTenant[0];
+      }
+      
+      if (requestTenant && requestTenant !== req.user.tenantId) {
+        return res.status(403).json({ error: "Forbidden: Cross-tenant access denied." });
+      }
     }
-
+    
     next();
   };
 }
