@@ -10,7 +10,9 @@ if (!JWT_SECRET) {
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
-    role: string;
+    role: string;              // Primary role (backward compat)
+    roles: string[];           // All assigned role IDs
+    permissions: string[];     // Flat permission keys: ['inventory:dispatch', ...]
     email?: string;
     tenantId?: string;
   };
@@ -30,6 +32,8 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
     req.user = {
       id: decoded.actorId || decoded.userId,
       role: decoded.role || "viewer",
+      roles: decoded.roles || (decoded.role ? [decoded.role] : ["viewer"]),
+      permissions: decoded.permissions || [],
       email: decoded.email,
       tenantId: decoded.tenantId || "tenant-1"
     };
@@ -41,13 +45,35 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
   }
 }
 
+/**
+ * Permission-based authorization middleware.
+ * Checks whether the authenticated user's JWT contains the required resource:action permission.
+ */
+export function requirePermission(resource: string, action: string) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const required = `${resource}:${action}`;
+    if (!req.user?.permissions?.includes(required)) {
+      return res.status(403).json({
+        error: `Forbidden: Missing permission '${required}'.`
+      });
+    }
+    next();
+  };
+}
+
+/**
+ * Role-based authorization middleware (backward compatible).
+ * Checks whether any of the user's assigned roles match the allowed roles.
+ */
 export function requireRole(allowedRoles: string[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
+    const userRoles = req.user?.roles || (req.user?.role ? [req.user.role] : []);
+    const hasRole = userRoles.some(r => allowedRoles.includes(r));
+    if (!req.user || !hasRole) {
       return res.status(403).json({
         error: `Forbidden: You do not have permission to perform this action. Required role: one of [${allowedRoles.join(
           ", "
-        )}]. Current role: ${req.user?.role || "none"}`
+        )}]. Current role: ${userRoles.join(", ") || "none"}`
       });
     }
     next();
