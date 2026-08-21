@@ -77,7 +77,7 @@ export function requirePermission(resource: string, action: string) {
       }
       
       if (requestTenant && requestTenant !== req.user.tenantId) {
-        return res.status(403).json({ error: "Forbidden: Cross-tenant access denied." });
+        return res.status(403).json({ error: "Forbidden: Cross-tenant access is not allowed." });
       }
     }
     
