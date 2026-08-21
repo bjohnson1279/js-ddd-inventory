@@ -51,12 +51,28 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
  */
 export function requirePermission(resource: string, action: string) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const required = `${resource}:${action}`;
-    if (!req.user?.permissions?.includes(required)) {
+    const reqRes = resource.toLowerCase();
+    const reqAct = action.toLowerCase();
+    const required = `${reqRes}:${reqAct}`;
+    const permissions = (req.user?.permissions || []).map(p => p.toLowerCase());
+
+    const hasPermission = 
+      permissions.includes(required) || 
+      permissions.includes('*:*') || 
+      permissions.includes(`${reqRes}:*`);
+
+    if (!hasPermission) {
       return res.status(403).json({
-        error: `Forbidden: Missing permission '${required}'.`
+        error: `Forbidden: Missing permission '${resource}:${action}'.`
       });
     }
+    
+    // Explicit tenant boundary guard
+    const requestedTenant = req.body?.tenantId || req.query?.tenantId || req.params?.tenantId;
+    if (requestedTenant && req.user?.tenantId && requestedTenant !== req.user.tenantId) {
+       return res.status(403).json({ error: 'Forbidden: Cross-tenant access is not allowed.' });
+    }
+
     next();
   };
 }
