@@ -1,3 +1,4 @@
+process.env.JWT_SECRET = 'test-secret';
 import { requirePermission, AuthenticatedRequest } from '../../../../src/infrastructure/http/middleware/auth';
 import { Response, NextFunction } from 'express';
 

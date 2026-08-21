@@ -16,7 +16,7 @@ import { InventoryCostLayer } from "../../../src/domain/accounting/entities/Inve
 
 const getAdminToken = () => {
   const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
-  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" , permissions: ["*:*"]}, JWT_SECRET);
 };
 
 describe("E2E Integration Test Suite", () => {
@@ -401,8 +401,8 @@ describe("E2E Integration Test Suite", () => {
 
       // Sign tokens for RBAC tests
       const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
-      const adminToken = jwt.sign({ actorId: "admin-user", role: "admin", tenantId }, JWT_SECRET);
-      const viewerToken = jwt.sign({ actorId: "viewer-user", role: "viewer", tenantId }, JWT_SECRET);
+      const adminToken = jwt.sign({ actorId: "admin-user", role: "admin", tenantId , permissions: ["*:*"]}, JWT_SECRET);
+      const viewerToken = jwt.sign({ actorId: "viewer-user", role: "viewer", tenantId , permissions: []}, JWT_SECRET);
 
       // Test RBAC rejection on assemble
       const unauthorizedAssembleRes = await request(app)
