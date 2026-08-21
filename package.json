@@ -29,6 +29,7 @@
     "mqtt": "^5.15.2",
     "pg": "^8.21.0",
     "pg-format": "^1.0.4",
+    "undici": "^8.10.0",
     "ws": "^8.21.0"
   },
   "devDependencies": {
