@@ -69,15 +69,8 @@ export function requirePermission(resource: string, action: string) {
     
     // Enforce Tenant Boundary Guard
     if (req.user?.tenantId) {
-      let requestTenant = req.body?.tenantId || req.query?.tenantId || req.params?.tenantId;
-      
-      // Handle Express query array type confusion safely
-      if (typeof requestTenant === "object" && requestTenant !== null && !Array.isArray(requestTenant)) {
-        return res.status(400).json({ error: "Bad Request: Invalid tenant parameter type." });
-      }
-      if (Array.isArray(requestTenant)) {
-        return res.status(400).json({ error: "Bad Request: Invalid tenant parameter type." });
-      }
+      const rawTenant = req.body?.tenantId || req.query?.tenantId || req.params?.tenantId;
+      const requestTenant = typeof rawTenant === "string" ? rawTenant : undefined;
       
       if (requestTenant && requestTenant !== req.user.tenantId) {
         return res.status(403).json({ error: "Forbidden: Cross-tenant access is not allowed." });
