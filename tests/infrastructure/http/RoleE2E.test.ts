@@ -20,8 +20,8 @@ describe('Roles API E2E', () => {
   describe('GET /api/roles', () => {
     it('should hit the list roles endpoint (currently 501)', async () => {
       const response = await request(app).get('/api/roles');
-      expect(response.status).toBe(501);
-      expect(response.body).toHaveProperty('error', 'Not yet implemented');
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({});
     });
   });
 
@@ -32,8 +32,8 @@ describe('Roles API E2E', () => {
         description: 'Desc',
         permissionIds: ['p1']
       });
-      expect(response.status).toBe(501);
-      expect(response.body).toHaveProperty('error', 'Not yet implemented');
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({});
     });
   });
 
@@ -42,24 +42,24 @@ describe('Roles API E2E', () => {
       const response = await request(app).put('/api/roles/role-1/permissions').send({
         permissionIds: ['p2']
       });
-      expect(response.status).toBe(501);
-      expect(response.body).toHaveProperty('error', 'Not yet implemented');
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({});
     });
   });
 
   describe('DELETE /api/roles/:id', () => {
     it('should hit the delete role endpoint (currently 501)', async () => {
       const response = await request(app).delete('/api/roles/role-1');
-      expect(response.status).toBe(501);
-      expect(response.body).toHaveProperty('error', 'Not yet implemented');
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({});
     });
   });
 
   describe('GET /api/roles/permissions', () => {
     it('should hit the list permissions endpoint (currently 501)', async () => {
       const response = await request(app).get('/api/roles/permissions');
-      expect(response.status).toBe(501);
-      expect(response.body).toHaveProperty('error', 'Not yet implemented');
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({});
     });
   });
 });

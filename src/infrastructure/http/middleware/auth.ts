@@ -72,8 +72,11 @@ export function requirePermission(resource: string, action: string) {
       let requestTenant = req.body?.tenantId || req.query?.tenantId || req.params?.tenantId;
       
       // Handle Express query array type confusion safely
+      if (typeof requestTenant === "object" && requestTenant !== null && !Array.isArray(requestTenant)) {
+        return res.status(400).json({ error: "Bad Request: Invalid tenant parameter type." });
+      }
       if (Array.isArray(requestTenant)) {
-        requestTenant = requestTenant[0];
+        return res.status(400).json({ error: "Bad Request: Invalid tenant parameter type." });
       }
       
       if (requestTenant && requestTenant !== req.user.tenantId) {

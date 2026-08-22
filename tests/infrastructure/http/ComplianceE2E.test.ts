@@ -44,10 +44,9 @@ describe("Compliance Ledger E2E Tests", () => {
 
     // If type confusion causes an exception (e.g. Prisma expecting a string but getting array),
     // it returns 500. It should safely ignore or handle arrays and return 200.
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
     // Because tenantId was not a string, it defaults to undefined, so we should get the records for all (or no tenant filter).
-    expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body.length).toBe(1);
+    expect(res.body.error).toBe("Bad Request: Invalid tenant parameter type.");
   });
 
   it("should safely handle type confusion on verify endpoint (object tenantId)", async () => {
@@ -58,7 +57,7 @@ describe("Compliance Ledger E2E Tests", () => {
       .post("/api/compliance/verify?tenantId[foo]=bar")
       .set("Authorization", `Bearer ${adminToken}`);
 
-    expect(res.status).toBe(200);
-    expect(res.body.isValid).toBe(true);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Bad Request: Invalid tenant parameter type.");
   });
 });
