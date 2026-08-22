@@ -36,7 +36,7 @@ export function createTenantAdminRoutes(
         message: `Tenant "${tenantId}" provisioned successfully.`,
       });
     } catch (err: any) {
-      res.status(409).json({ error: err.message });
+      res.status(409).json({ error: "Conflict during provisioning" });
     }
   });
 
@@ -47,7 +47,7 @@ export function createTenantAdminRoutes(
       const tenants = await registry.listTenants(status);
       res.json({ tenants });
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -57,7 +57,7 @@ export function createTenantAdminRoutes(
       const stats = pool.getStats();
       res.json(stats);
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -70,7 +70,7 @@ export function createTenantAdminRoutes(
       }
       res.json(tenant);
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -84,7 +84,7 @@ export function createTenantAdminRoutes(
 
       res.json({ message: `Tenant "${req.params.id}" deprovisioned.` });
     } catch (err: any) {
-      res.status(404).json({ error: err.message });
+      res.status(404).json({ error: "Tenant not found or could not be deprovisioned" });
     }
   });
 

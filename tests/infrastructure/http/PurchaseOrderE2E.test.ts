@@ -15,7 +15,7 @@ import { PurchaseOrderStatus } from "../../../src/domain/procurement/enums/Purch
 
 const getAdminToken = () => {
   const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
-  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" , permissions: ["*:*"]}, JWT_SECRET);
 };
 
 describe("Purchase Order HTTP API Endpoints", () => {

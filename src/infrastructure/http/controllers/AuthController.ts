@@ -156,8 +156,22 @@ export class AuthController {
       }
 
       const userRole = user.userRoles && user.userRoles.length > 0 ? user.userRoles[0].role.id : "staff";
+      
+      let permissions: string[] = [];
+      if (userRole === "admin") {
+        permissions = ["*:*"];
+      } else if (userRole === "warehouse_operator") {
+        permissions = ["inventory:*", "purchase_order:*", "rma:*"];
+      } else if (userRole === "accountant") {
+        permissions = ["audit:*", "compliance:*"];
+      } else if (userRole === "viewer") {
+        permissions = [];
+      } else if (user.userRoles && user.userRoles[0].role.rolePermissions) {
+        permissions = user.userRoles[0].role.rolePermissions.map((rp: any) => `${rp.permission.resource}:${rp.permission.action}`.toLowerCase());
+      }
+
       const token = jwt.sign(
-        { tenantId, actorId: user.id, role: userRole },
+        { tenantId, actorId: user.id, role: userRole, permissions },
         JWT_SECRET,
         { expiresIn: "24h" }
       );
