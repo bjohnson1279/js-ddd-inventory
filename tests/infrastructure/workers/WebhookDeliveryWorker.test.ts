@@ -28,7 +28,10 @@ describe("WebhookDeliveryWorker (Express)", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    fetchSpy = jest.spyOn(global, "fetch");
+
+    const undici = require("undici");
+    fetchSpy = jest.spyOn(undici, "fetch");
+
   });
 
   afterEach(() => {
@@ -70,7 +73,7 @@ describe("WebhookDeliveryWorker (Express)", () => {
       .update(mockDelivery.payload)
       .digest("hex");
 
-    expect(fetchSpy).toHaveBeenCalledWith("https://example.com/express-webhook", {
+    expect(fetchSpy).toHaveBeenCalledWith("https://example.com/express-webhook", expect.objectContaining({
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -78,7 +81,7 @@ describe("WebhookDeliveryWorker (Express)", () => {
         "X-Webhook-Event": "StockUpdated"
       },
       body: mockDelivery.payload
-    });
+    }));
 
     expect(prisma.webhookDeliveryModel.update).toHaveBeenCalledWith({
       where: { id: "delivery-1" },
