@@ -1,22 +1,38 @@
 import request from 'supertest';
-import { app } from '../../../src/index';
+import { app, setupApp } from '../../../src/index';
+import { InMemoryInventoryRepository } from '../../../src/infrastructure/database/InMemoryInventoryRepository';
 
 // Mocks
 jest.mock('../../../src/infrastructure/http/middleware/auth', () => {
   return {
-    requirePermission: (resource: string, action: string) => (req: any, res: any, next: any) => {
-      // Mock passing the auth middleware
-      req.auth = {
+    authMiddleware: (req: any, res: any, next: any) => {
+      req.user = {
         tenantId: 'tenant-1',
         actorId: 'test-admin',
         permissions: ['approval:view']
       };
+      next();
+    },
+    requirePermission: (resource: string, action: string) => (req: any, res: any, next: any) => {
+      // Mock passing the auth middleware
+      req.user = {
+        tenantId: 'tenant-1',
+        actorId: 'test-admin',
+        permissions: ['approval:view']
+      };
+      next();
+    },
+    requireRole: (allowedRoles: string[]) => (req: any, res: any, next: any) => {
       next();
     }
   };
 });
 
 describe('Approvals API E2E', () => {
+  beforeEach(() => {
+    setupApp(new InMemoryInventoryRepository());
+  });
+
   describe('GET /api/approvals/workflows', () => {
     it('should hit the list workflows endpoint (currently 501)', async () => {
       const response = await request(app).get('/api/approvals/workflows');

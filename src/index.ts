@@ -101,6 +101,8 @@ import complianceRoutes from "./infrastructure/http/routes/compliance.routes";
 import rfidRoutes from "./infrastructure/http/routes/rfid.routes";
 import anomalyDetectionRoutes from "./infrastructure/http/routes/anomalyDetection.routes";
 import rebalanceRoutes from "./infrastructure/http/routes/rebalance.routes";
+import roleRoutes from "./infrastructure/http/routes/role.routes";
+import approvalRoutes from "./infrastructure/http/routes/approval.routes";
 import { WebSocketManager } from "./infrastructure/websocket/WebSocketManager";
 import { authMiddleware, requireRole, AuthenticatedRequest } from "./infrastructure/http/middleware/auth";
 import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
@@ -250,6 +252,8 @@ export const setupApp = (
   app.use("/api/rfid", rfidRoutes);
   app.use("/api/anomaly-detection", anomalyDetectionRoutes);
   app.use("/api/rebalance", rebalanceRoutes);
+  app.use("/api/roles", roleRoutes);
+  app.use("/api/approvals", approvalRoutes);
 
   // Tier-2 Distributed Cache Management Endpoints
   app.get("/api/admin/cache/stats", requireRole(["admin"]), (req, res) => {
