@@ -2,6 +2,10 @@ import { WebhookDeliveryWorker } from "../../../src/infrastructure/workers/Webho
 import { prisma } from "../../../src/infrastructure/database/prisma";
 import crypto from "crypto";
 
+// Set required environment variable before importing encryption utilities
+process.env.ENCRYPTION_KEY = 'test_encryption_key_for_webhook_worker';
+import { encrypt } from "../../../src/infrastructure/utils/encryption";
+
 jest.mock("../../../src/infrastructure/database/prisma", () => {
   return {
     prisma: {
@@ -47,7 +51,7 @@ describe("WebhookDeliveryWorker (Express)", () => {
       id: "sub-1",
       isActive: true,
       targetUrl: "https://example.com/express-webhook",
-      secret: "express-secret"
+      secret: encrypt("express-secret")
     };
 
     (prisma.webhookDeliveryModel.findMany as jest.Mock).mockResolvedValue([mockDelivery]);
@@ -102,7 +106,7 @@ describe("WebhookDeliveryWorker (Express)", () => {
       id: "sub-2",
       isActive: true,
       targetUrl: "https://example.com/express-webhook-fail",
-      secret: "express-secret-2"
+      secret: encrypt("express-secret-2")
     };
 
     (prisma.webhookDeliveryModel.findMany as jest.Mock).mockResolvedValue([mockDelivery]);

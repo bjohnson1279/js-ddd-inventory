@@ -62,6 +62,6 @@ export function decryptSymmetric(ciphertext: string): string {
     const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
     return decrypted.toString('utf8');
   } catch (err) {
-    throw new Error('Decryption failed');
+    throw new Error('Decryption failed: Cryptographic validation failed');
   }
 }
