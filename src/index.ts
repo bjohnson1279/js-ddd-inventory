@@ -20,6 +20,8 @@ import { IEmailService } from "./application/ports/IEmailService";
 import inventoryRoutes from "./infrastructure/http/routes/inventory.routes";
 import shopifyRoutes from "./infrastructure/http/routes/shopify.routes";
 import onboardingRoutes from "./infrastructure/http/routes/onboarding.routes";
+import roleRoutes from "./infrastructure/http/routes/role.routes";
+import approvalRoutes from "./infrastructure/http/routes/approval.routes";
 import { DomainEventDispatcher } from "./domain/events/DomainEventDispatcher";
 import { alertPurchasingOnStockDepleted } from "./application/eventHandlers/AlertPurchasingOnStockDepleted";
 import { syncJournalToQuickBooks } from "./application/eventHandlers/SyncJournalToQuickBooks";
@@ -228,6 +230,7 @@ export const setupApp = (
 
   app.use("/api/inventory", inventoryRoutes);
   app.use("/api/users", userRoutes);
+  app.use("/api/roles", roleRoutes);
   app.use("/api/barcodes", barcodeRoutes);
   app.use("/api/serials", serialRoutes);
   app.use("/api/kits", kitRoutes);
@@ -243,6 +246,7 @@ export const setupApp = (
   app.use("/api/shipping", shippingRoutes);
   app.use("/api/notifications", notificationRoutes);
   app.use("/api/compliance", complianceRoutes);
+  app.use("/api/approvals", approvalRoutes);
   app.use("/api/audit", auditRoutes);
   app.use("/api/tenant-audit", auditRoutes);
   app.use("/api/warehouse-locations", warehouseLocationRoutes);

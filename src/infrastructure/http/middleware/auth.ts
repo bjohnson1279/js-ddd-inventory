@@ -72,8 +72,8 @@ export function requirePermission(resource: string, action: string) {
       let requestTenant = req.body?.tenantId || req.query?.tenantId || req.params?.tenantId;
       
       // Handle Express query array type confusion safely
-      if (Array.isArray(requestTenant)) {
-        requestTenant = requestTenant[0];
+      if (typeof requestTenant !== 'string') {
+        requestTenant = undefined;
       }
       
       if (requestTenant && requestTenant !== req.user.tenantId) {

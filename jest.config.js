@@ -9,4 +9,5 @@ module.exports = {
     '!src/**/*.d.ts',
     '!src/index.ts',
   ],
+  maxWorkers: process.platform === 'win32' ? 1 : '50%',
 };

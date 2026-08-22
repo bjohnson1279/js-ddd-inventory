@@ -1,9 +1,12 @@
 import request from 'supertest';
-import { app } from '../../../src/index';
+import { app, setupApp } from '../../../src/index';
+import { InMemoryInventoryRepository } from '../../../src/infrastructure/database/InMemoryInventoryRepository';
 
 // Mocks
 jest.mock('../../../src/infrastructure/http/middleware/auth', () => {
   return {
+    authMiddleware: (req: any, res: any, next: any) => next(),
+    requireRole: (roles: string[]) => (req: any, res: any, next: any) => next(),
     requirePermission: (resource: string, action: string) => (req: any, res: any, next: any) => {
       // Mock passing the auth middleware
       req.auth = {
@@ -17,6 +20,10 @@ jest.mock('../../../src/infrastructure/http/middleware/auth', () => {
 });
 
 describe('Roles API E2E', () => {
+  beforeAll(() => {
+    setupApp(new InMemoryInventoryRepository());
+  });
+
   describe('GET /api/roles', () => {
     it('should hit the list roles endpoint (currently 501)', async () => {
       const response = await request(app).get('/api/roles');
