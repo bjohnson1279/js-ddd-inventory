@@ -10,7 +10,7 @@ export class RfidController {
       });
       res.status(200).json({ tags });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 
@@ -34,7 +34,7 @@ export class RfidController {
       });
       res.status(201).json({ message: "Tag assigned successfully", tag });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 
@@ -56,7 +56,7 @@ export class RfidController {
         client.publish(`tenants/${tenantId}/rfid/scans`, JSON.stringify(payload), { qos: 0 }, (err) => {
           client.end();
           if (err) {
-            return res.status(500).json({ error: "Failed to publish MQTT message: " + err.message });
+            return res.status(500).json({ error: "Internal server error" });
           }
           res.status(200).json({ message: "RFID scan simulation published." });
         });
@@ -64,10 +64,10 @@ export class RfidController {
 
       client.on("error", (err) => {
         client.end();
-        res.status(500).json({ error: "MQTT Connection Error: " + err.message });
+        res.status(500).json({ error: "Internal server error" });
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 }
