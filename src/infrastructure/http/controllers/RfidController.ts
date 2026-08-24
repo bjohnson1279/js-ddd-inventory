@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../../database/prisma";
 import * as mqtt from "mqtt";
+import { Logger } from "../../../infrastructure/logging/logger";
 
 export class RfidController {
   static async list(req: Request, res: Response) {
@@ -10,7 +11,8 @@ export class RfidController {
       });
       res.status(200).json({ tags });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      Logger.error({ context: "RfidController", message: "An error occurred", error: error.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 
@@ -34,7 +36,8 @@ export class RfidController {
       });
       res.status(201).json({ message: "Tag assigned successfully", tag });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      Logger.error({ context: "RfidController", message: "An error occurred", error: error.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 
@@ -56,7 +59,8 @@ export class RfidController {
         client.publish(`tenants/${tenantId}/rfid/scans`, JSON.stringify(payload), { qos: 0 }, (err) => {
           client.end();
           if (err) {
-            return res.status(500).json({ error: "Failed to publish MQTT message: " + err.message });
+            Logger.error({ context: "RfidController", message: "Failed to publish MQTT message", error: err.message });
+            return res.status(500).json({ error: "Failed to publish MQTT message" });
           }
           res.status(200).json({ message: "RFID scan simulation published." });
         });
@@ -64,10 +68,12 @@ export class RfidController {
 
       client.on("error", (err) => {
         client.end();
-        res.status(500).json({ error: "MQTT Connection Error: " + err.message });
+        Logger.error({ context: "RfidController", message: "MQTT Connection Error", error: err.message });
+        res.status(500).json({ error: "MQTT Connection Error" });
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      Logger.error({ context: "RfidController", message: "An error occurred", error: error.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 }
