@@ -88,7 +88,7 @@ describe("GetDemandPlanningReport Use Case", () => {
     expect(mockInventoryRepo.findAllByLocation).toHaveBeenCalledWith(locationId);
     expect(mockReorderPolicyRepo.findAllByLocation).toHaveBeenCalledWith(locationId);
     expect(mockDemandForecastRepo.findAllForLocation).toHaveBeenCalledWith(locationId);
-    expect(mockCalculateSalesVelocity.execute).toHaveBeenCalledWith(sku1Str, locationId, 15);
+    expect(mockCalculateSalesVelocity.execute).toHaveBeenCalledWith(sku1Str, locationId, 15, undefined);
 
     expect(report).toHaveLength(1);
     expect(report[0]).toEqual({
