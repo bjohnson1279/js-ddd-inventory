@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { RMAController } from "../controllers/RMAController";
-import { requireRole } from "../middleware/auth";
+import { requirePermission } from "../middleware/auth";
 
 const router = Router();
 
-router.post("/", requireRole(["admin", "warehouse_operator"]), RMAController.create);
+router.post("/", requirePermission('rma', 'view'), RMAController.create);
 router.get("/:id", RMAController.get);
-router.post("/:id/authorize", requireRole(["admin", "warehouse_operator"]), RMAController.authorize);
-router.post("/:id/receive", requireRole(["admin", "warehouse_operator"]), RMAController.receive);
+router.post("/:id/authorize", requirePermission('rma', 'view'), RMAController.authorize);
+router.post("/:id/receive", requirePermission('rma', 'view'), RMAController.receive);
 
 export default router;

@@ -10,7 +10,9 @@ if (!JWT_SECRET) {
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
-    role: string;
+    role: string;              // Primary role (backward compat)
+    roles: string[];           // All assigned role IDs
+    permissions: string[];     // Flat permission keys: ['inventory:dispatch', ...]
     email?: string;
     tenantId?: string;
   };
@@ -30,6 +32,8 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
     req.user = {
       id: decoded.actorId || decoded.userId,
       role: decoded.role || "viewer",
+      roles: decoded.roles || (decoded.role ? [decoded.role] : ["viewer"]),
+      permissions: decoded.permissions || [],
       email: decoded.email,
       tenantId: decoded.tenantId || "tenant-1"
     };
@@ -41,13 +45,55 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
   }
 }
 
+/**
+ * Permission-based authorization middleware.
+ * Checks whether the authenticated user's JWT contains the required resource:action permission.
+ */
+export function requirePermission(resource: string, action: string) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const reqRes = resource.toLowerCase();
+    const reqAct = action.toLowerCase();
+    const required = `${reqRes}:${reqAct}`;
+    const permissions = (req.user?.permissions || []).map(p => p.toLowerCase());
+
+    const hasPermission = 
+      permissions.includes(required) || 
+      permissions.includes('*:*') || 
+      permissions.includes(`${reqRes}:*`);
+
+    if (!hasPermission) {
+      return res.status(403).json({
+        error: `Forbidden: Missing permission '${resource}:${action}'.`
+      });
+    }
+    
+    // Enforce Tenant Boundary Guard
+    if (req.user?.tenantId) {
+      const rawTenant = req.body?.tenantId || req.query?.tenantId || req.params?.tenantId;
+      const requestTenant = typeof rawTenant === "string" ? rawTenant : undefined;
+      
+      if (requestTenant && requestTenant !== req.user.tenantId) {
+        return res.status(403).json({ error: "Forbidden: Cross-tenant access is not allowed." });
+      }
+    }
+    
+    next();
+  };
+}
+
+/**
+ * Role-based authorization middleware (backward compatible).
+ * Checks whether any of the user's assigned roles match the allowed roles.
+ */
 export function requireRole(allowedRoles: string[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
+    const userRoles = req.user?.roles || (req.user?.role ? [req.user.role] : []);
+    const hasRole = userRoles.some(r => allowedRoles.includes(r));
+    if (!req.user || !hasRole) {
       return res.status(403).json({
         error: `Forbidden: You do not have permission to perform this action. Required role: one of [${allowedRoles.join(
           ", "
-        )}]. Current role: ${req.user?.role || "none"}`
+        )}]. Current role: ${userRoles.join(", ") || "none"}`
       });
     }
     next();
