@@ -10,7 +10,9 @@ export function verifyPassword(password: string, storedHash: string): boolean {
   const [salt, hash] = storedHash.split(':');
   if (!salt || !hash) return false;
   const verifyHash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
-  return hash === verifyHash;
+
+  if (hash.length !== verifyHash.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(verifyHash));
 }
 
 let cachedEncryptionKey: Buffer | null = null;
@@ -60,6 +62,6 @@ export function decryptSymmetric(ciphertext: string): string {
     const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
     return decrypted.toString('utf8');
   } catch (err) {
-    throw new Error('Decryption failed');
+    throw new Error('Decryption failed: Cryptographic validation failed');
   }
 }

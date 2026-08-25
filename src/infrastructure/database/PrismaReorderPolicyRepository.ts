@@ -1,11 +1,7 @@
 import { IReorderPolicyRepository } from "../../domain/repositories/IReorderPolicyRepository";
 import { ReorderPolicy } from "../../domain/procurement/aggregates/ReorderPolicy";
 import { SKU } from "../../domain/valueObjects/SKU";
-<<<<<<< HEAD
-import { prisma } from "./prisma";
 import { ReorderPolicyModel } from "@prisma/client";
-=======
->>>>>>> origin/main
 
 import { PrismaBaseRepository } from "./PrismaBaseRepository";
 

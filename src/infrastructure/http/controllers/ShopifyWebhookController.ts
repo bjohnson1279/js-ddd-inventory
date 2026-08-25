@@ -64,12 +64,17 @@ export class ShopifyWebhookController {
         }
       }
 
-      const dispatchPromises = [];
-      for (const [sku, quantity] of skuQuantities.entries()) {
-        // We skip publishing back to Shopify because this change originated from Shopify
-        dispatchPromises.push(dispatchStock.execute(sku, quantity, "default", true));
+      const batchRequests = Array.from(skuQuantities.entries()).map(([skuStr, amount]) => ({
+        skuStr,
+        amount,
+        locationId: "default",
+        skipPublishing: true
+      }));
+      if (dispatchStock.executeBatch) {
+        await dispatchStock.executeBatch(batchRequests);
+      } else {
+        await Promise.all(batchRequests.map(r => dispatchStock.execute(r.skuStr, r.amount, r.locationId, r.skipPublishing)));
       }
-      await Promise.all(dispatchPromises);
 
       // Mark as processed
       await processedWebhookRepo.save(webhookId);
