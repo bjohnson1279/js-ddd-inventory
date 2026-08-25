@@ -6,17 +6,19 @@ import { DomainEventDispatcher } from "../../domain/events/DomainEventDispatcher
 import { IOutboxRepository } from "../../domain/repositories/IOutboxRepository";
 import { ConcurrencyException } from "../../domain/exceptions/ConcurrencyException";
 import { Prisma } from "@prisma/client";
-import { prisma } from "./prisma";
 import { WebSocketManager } from "../websocket/WebSocketManager";
 import { tenantLocalStorage } from "./tenantContext";
 import { ComplianceLedgerService } from "../../domain/services/ComplianceLedgerService";
 
-export class PrismaInventoryRepository implements IInventoryRepository {
-  private readonly prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaInventoryRepository extends PrismaBaseRepository implements IInventoryRepository {
 
   constructor(
     private readonly outboxRepository?: IOutboxRepository
-  ) {}
+  ) {
+    super();
+  }
 
   async findBySku(sku: SKU, locationId?: string): Promise<InventoryItem | null> {
     let record;
@@ -176,8 +178,14 @@ export class PrismaInventoryRepository implements IInventoryRepository {
           }
         }
 
-        for (const event of events) {
-          await this.outboxRepository!.save(event, tx);
+        if (events.length > 0) {
+          if (this.outboxRepository!.saveMany) {
+            await this.outboxRepository!.saveMany(events, tx);
+          } else {
+            for (const event of events) {
+              await this.outboxRepository!.save(event, tx);
+            }
+          }
         }
       });
     } else {
@@ -296,8 +304,14 @@ export class PrismaInventoryRepository implements IInventoryRepository {
             }
 
             const events = item.getDomainEvents();
-            for (const event of events) {
-              await this.outboxRepository!.save(event, tx);
+            if (events.length > 0) {
+              if (this.outboxRepository!.saveMany) {
+                await this.outboxRepository!.saveMany(events, tx);
+              } else {
+                for (const event of events) {
+                  await this.outboxRepository!.save(event, tx);
+                }
+              }
             }
             item.clearDomainEvents();
           }));

@@ -17,7 +17,7 @@ describe("Compliance Ledger E2E Tests", () => {
   beforeAll(async () => {
     // Generate valid admin token
     adminToken = jwt.sign(
-      { userId: "admin-user", role: "admin", tenantId: "tenant-acme" },
+      { userId: "admin-user", role: "admin", tenantId: "tenant-acme", permissions: ["*:*"] },
       process.env.JWT_SECRET!,
       { expiresIn: "1h" }
     );
