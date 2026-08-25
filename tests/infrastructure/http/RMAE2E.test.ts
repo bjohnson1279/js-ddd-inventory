@@ -64,8 +64,8 @@ describe("RMA and Quarantine HTTP API Endpoints", () => {
       quarantineRepo
     );
 
-    adminToken = jwt.sign({ actorId: "admin-user", role: "admin", tenantId }, JWT_SECRET);
-    viewerToken = jwt.sign({ actorId: "viewer-user", role: "viewer", tenantId }, JWT_SECRET);
+    adminToken = jwt.sign({ actorId: "admin-user", role: "admin", tenantId , permissions: ["*:*"]}, JWT_SECRET);
+    viewerToken = jwt.sign({ actorId: "viewer-user", role: "viewer", tenantId , permissions: []}, JWT_SECRET);
   });
 
   describe("RBAC Permissions", () => {
