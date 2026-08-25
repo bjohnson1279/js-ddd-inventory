@@ -27,3 +27,7 @@
 ## 2026-08-15 - Unnecessary async overhead in Promise.all map loops
 **Learning:** Wrapping a synchronous loop in `Promise.all(array.map(async (item) => ...))` where the callback contains no `await` statements is a performance anti-pattern. It incurs unnecessary microtask queuing overhead and memory allocation for promises on every item.
 **Action:** Replace such blocks with a standard synchronous `for...of` loop to improve execution speed and reduce garbage collection pressure.
+
+## YYYY-MM-DD - [Optimize Prisma bulk insertions with createMany and concurrent event processing]
+**Learning:** Replacing a loop of multiple individual `tx.model.create()` calls inside a chunked `Promise.all()` with a single `createMany` operation significantly reduces I/O latency for bulk inserts. However, when migrating to this bulk operation, subsequent per-item logic (such as logging domain events to an outbox repository) must also be processed concurrently in chunks. Implementing it sequentially via a standard `for...of` loop introduces a new latency bottleneck that counteracts the initial performance gain.
+**Action:** When refactoring multiple individual insert statements into a `createMany`, ensure any post-insert operations on those items (like saving domain events) are mapped over chunks in `Promise.all()` to maintain optimized execution latency.

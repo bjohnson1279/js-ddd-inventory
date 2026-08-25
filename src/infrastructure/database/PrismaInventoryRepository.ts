@@ -258,27 +258,43 @@ export class PrismaInventoryRepository extends PrismaBaseRepository implements I
       });
       const existingIds = new Set(existingItems.map(e => e.id));
 
-      // Run bulk writes chunked to avoid database concurrency issues in $transaction while reducing latency
-      await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        const chunkSize = 100;
-        for (let i = 0; i < items.length; i += chunkSize) {
-          const chunk = items.slice(i, i + chunkSize);
-          await Promise.all(chunk.map(async (item) => {
-            const existing = existingIds.has(item.id);
+      // Optimization: Partition items into creates and updates to leverage bulk createMany
+      const itemsToCreate = items.filter(item => !existingIds.has(item.id));
+      const itemsToUpdate = items.filter(item => existingIds.has(item.id));
 
-            if (!existing) {
-              await tx.inventoryModel.create({
-                data: {
-                  id: item.id,
-                  sku: item.sku.getValue(),
-                  locationId: item.locationId,
-                  quantity: item.quantity.getValue(),
-                  allocated: item.allocated.getValue(),
-                  inTransit: item.inTransit.getValue(),
-                  version: item.version
-                }
-              });
-            } else {
+      await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        if (itemsToCreate.length > 0) {
+          await tx.inventoryModel.createMany({
+            data: itemsToCreate.map(item => ({
+              id: item.id,
+              sku: item.sku.getValue(),
+              locationId: item.locationId,
+              quantity: item.quantity.getValue(),
+              allocated: item.allocated.getValue(),
+              inTransit: item.inTransit.getValue(),
+              version: item.version
+            }))
+          });
+
+          // Process events for newly created items concurrently in chunks
+          const chunkSize = 100;
+          for (let i = 0; i < itemsToCreate.length; i += chunkSize) {
+            const chunk = itemsToCreate.slice(i, i + chunkSize);
+            await Promise.all(chunk.map(async (item) => {
+              const events = item.getDomainEvents();
+              for (const event of events) {
+                await this.outboxRepository!.save(event, tx);
+              }
+              item.clearDomainEvents();
+            }));
+          }
+        }
+
+        if (itemsToUpdate.length > 0) {
+          const chunkSize = 100;
+          for (let i = 0; i < itemsToUpdate.length; i += chunkSize) {
+            const chunk = itemsToUpdate.slice(i, i + chunkSize);
+            await Promise.all(chunk.map(async (item) => {
               const result = await tx.inventoryModel.updateMany({
                 where: {
                   id: item.id,
@@ -295,14 +311,14 @@ export class PrismaInventoryRepository extends PrismaBaseRepository implements I
               if (result.count === 0) {
                 throw new ConcurrencyException(item.sku.getValue(), item.locationId);
               }
-            }
 
-            const events = item.getDomainEvents();
-            for (const event of events) {
-              await this.outboxRepository!.save(event, tx);
-            }
-            item.clearDomainEvents();
-          }));
+              const events = item.getDomainEvents();
+              for (const event of events) {
+                await this.outboxRepository!.save(event, tx);
+              }
+              item.clearDomainEvents();
+            }));
+          }
         }
       });
     } else {
@@ -311,27 +327,30 @@ export class PrismaInventoryRepository extends PrismaBaseRepository implements I
       });
       const existingIds = new Set(existingItems.map(e => e.id));
 
-      // Run bulk writes chunked to avoid database concurrency issues in $transaction while reducing latency
-      await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        const chunkSize = 100;
-        for (let i = 0; i < items.length; i += chunkSize) {
-          const chunk = items.slice(i, i + chunkSize);
-          await Promise.all(chunk.map(async (item) => {
-            const existing = existingIds.has(item.id);
+      // Optimization: Partition items into creates and updates to leverage bulk createMany
+      const itemsToCreate = items.filter(item => !existingIds.has(item.id));
+      const itemsToUpdate = items.filter(item => existingIds.has(item.id));
 
-            if (!existing) {
-              await tx.inventoryModel.create({
-                data: {
-                  id: item.id,
-                  sku: item.sku.getValue(),
-                  locationId: item.locationId,
-                  quantity: item.quantity.getValue(),
-                  allocated: item.allocated.getValue(),
-                  inTransit: item.inTransit.getValue(),
-                  version: item.version
-                }
-              });
-            } else {
+      await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        if (itemsToCreate.length > 0) {
+          await tx.inventoryModel.createMany({
+            data: itemsToCreate.map(item => ({
+              id: item.id,
+              sku: item.sku.getValue(),
+              locationId: item.locationId,
+              quantity: item.quantity.getValue(),
+              allocated: item.allocated.getValue(),
+              inTransit: item.inTransit.getValue(),
+              version: item.version
+            }))
+          });
+        }
+
+        if (itemsToUpdate.length > 0) {
+          const chunkSize = 100;
+          for (let i = 0; i < itemsToUpdate.length; i += chunkSize) {
+            const chunk = itemsToUpdate.slice(i, i + chunkSize);
+            await Promise.all(chunk.map(async (item) => {
               const result = await tx.inventoryModel.updateMany({
                 where: {
                   id: item.id,
@@ -348,8 +367,8 @@ export class PrismaInventoryRepository extends PrismaBaseRepository implements I
               if (result.count === 0) {
                 throw new ConcurrencyException(item.sku.getValue(), item.locationId);
               }
-            }
-          }));
+            }));
+          }
         }
       });
 
