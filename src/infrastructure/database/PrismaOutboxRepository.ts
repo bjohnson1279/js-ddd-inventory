@@ -25,6 +25,25 @@ export class PrismaOutboxRepository extends PrismaBaseRepository implements IOut
     });
   }
 
+  async saveMany(events: IDomainEvent[], tx?: any): Promise<void> {
+    if (events.length === 0) return;
+
+    const client = tx || this.prisma;
+    const data = events.map(event => ({
+      eventName: event.eventName,
+      payload: JSON.stringify({
+        ...event,
+        traceId: (event as any).traceId || getTraceId(),
+        occurredOn: event.occurredOn.toISOString()
+      }),
+      occurredOn: event.occurredOn
+    }));
+
+    await client.outboxEventModel.createMany({
+      data
+    });
+  }
+
   async fetchPending(limit: number, maxAttempts: number = 5): Promise<any[]> {
     return this.prisma.outboxEventModel.findMany({
       where: {
