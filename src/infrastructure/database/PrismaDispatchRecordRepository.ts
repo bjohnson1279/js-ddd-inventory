@@ -17,6 +17,22 @@ export class PrismaDispatchRecordRepository extends PrismaBaseRepository impleme
     });
   }
 
+  async fetchHistoryForLocation(locationId: string, since: Date): Promise<DispatchRecord[]> {
+    const records = await this.prisma.dispatchRecordModel.findMany({
+      where: {
+        locationId,
+        dispatchedAt: {
+          gte: since
+        }
+      },
+      orderBy: { dispatchedAt: "asc" }
+    });
+
+    return records.map(
+      (r) => new DispatchRecord(r.id, r.sku, r.locationId, r.quantity, r.dispatchedAt, r.lotNumber)
+    );
+  }
+
   async fetchHistory(sku: string, locationId: string, since: Date): Promise<DispatchRecord[]> {
     const records = await this.prisma.dispatchRecordModel.findMany({
       where: {
