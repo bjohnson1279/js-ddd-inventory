@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import crypto from "crypto";
 import { IJournalRepository } from "../../../domain/repositories/IJournalRepository";
 import { ICostLayerRepository } from "../../../domain/repositories/ICostLayerRepository";
 import { ITenantConfigRepository } from "../../../domain/repositories/ITenantConfigRepository";
@@ -375,7 +376,7 @@ export class AccountingController {
       const isMock = !apiKey || String(apiKey).toLowerCase().includes("mock") || apiKey === "";
       const totalCents = lines.reduce((sum: number, line: any) => sum + (line.amountCents || 0), 0);
       const prefix = provider.substring(0, 3).toLowerCase();
-      const mockId = `${prefix}-jrnl-${Math.floor(100000 + Math.random() * 900000)}`;
+      const mockId = `${prefix}-jrnl-${crypto.randomInt(100000, 1000000)}`;
 
       res.status(200).json({
         success: true,
