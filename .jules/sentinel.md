@@ -15,3 +15,7 @@ Security Mitigation (Database Passwords): If database passwords or legacy creden
 **Vulnerability:** The webhook delivery worker checked if a URL's host resolved to a private IP, but then used the global `fetch` with the original URL, which resolves the IP again. An attacker could exploit DNS rebinding to return a safe IP during the check and a private IP during the fetch, bypassing SSRF protection.
 **Learning:** Checking a hostname's IP and then requesting the hostname does not prevent SSRF if the DNS record has a short TTL (DNS Rebinding).
 **Prevention:** Pin the validated IP using a custom dispatcher (e.g., `undici.Agent`) that forces the HTTP request to use the exact IP that was validated.
+## 2026-08-25 - [Fix Information Disclosure in API Responses]
+**Vulnerability:** Raw error messages were being leaked to API clients.
+**Learning:** Returning raw error messages can lead to Information Disclosure vulnerabilities by exposing internal system paths, configuration secrets, or database schemas to clients.
+**Prevention:** Always return safe, generic error messages (e.g., 'Internal server error') in HTTP API responses and sanitize log outputs while preserving observability.
