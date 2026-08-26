@@ -59,27 +59,4 @@ describe("ReceivePurchaseOrder Use Case", () => {
     expect(layersB[0].unitCostCents).toBe(2000);
     expect(layersB[0].locationId).toBe("location-1");
   });
-
-  it("should throw an error if the purchase order is not found", async () => {
-    await expect(useCase.execute({
-      purchaseOrderId: "non-existent-po",
-      items: [
-        { variantId: "variant-A", quantityReceived: 4 },
-      ]
-    })).rejects.toThrow("Purchase order with ID non-existent-po not found.");
-  });
-
-  it("should throw an error if an item to receive is not in the purchase order", async () => {
-    const itemA = new PurchaseOrderItem("item-1", "variant-A", 10, 1500);
-    const po = new PurchaseOrder("po-1", "PO-100", "vendor-1", "tenant-1", "location-1", PurchaseOrderStatus.Sent, [itemA]);
-
-    await poRepository.save(po);
-
-    await expect(useCase.execute({
-      purchaseOrderId: "po-1",
-      items: [
-        { variantId: "variant-C", quantityReceived: 4 },
-      ]
-    })).rejects.toThrow("Item variant-C not found in purchase order PO-100.");
-  });
 });

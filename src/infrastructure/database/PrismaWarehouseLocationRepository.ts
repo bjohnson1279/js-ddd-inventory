@@ -1,10 +1,10 @@
 import { IWarehouseLocationRepository } from "../../domain/repositories/IWarehouseLocationRepository";
 import { WarehouseLocation } from "../../domain/product/entities/WarehouseLocation";
 import { LocationId } from "../../domain/valueObjects/LocationId";
+import { prisma } from "./prisma";
 
-import { PrismaBaseRepository } from "./PrismaBaseRepository";
-
-export class PrismaWarehouseLocationRepository extends PrismaBaseRepository implements IWarehouseLocationRepository {
+export class PrismaWarehouseLocationRepository implements IWarehouseLocationRepository {
+  private prisma = prisma;
 
   async save(location: WarehouseLocation): Promise<void> {
     await this.prisma.warehouseLocationModel.upsert({

@@ -58,27 +58,12 @@ export class GetDemandPlanningReport {
       }
     }
 
-    // 3. Pre-fetch dispatch history for location to avoid N+1 queries in CalculateSalesVelocity
-    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-    const dispatchRepo = (this.calculateSalesVelocity as any).dispatchRecordRepository;
-    let dispatchHistoryMap = new Map();
-    if (dispatchRepo && dispatchRepo.fetchHistoryForLocation) {
-      const allHistory = await dispatchRepo.fetchHistoryForLocation(locationId, ninetyDaysAgo);
-      for (const record of allHistory) {
-        if (!dispatchHistoryMap.has(record.sku)) {
-          dispatchHistoryMap.set(record.sku, []);
-        }
-        dispatchHistoryMap.get(record.sku).push(record);
-      }
-    }
-
     const reportItemsPromises = inventoryItems.map(async (item) => {
       const skuStr = item.sku.getValue();
 
       // Calculate Sales Velocity and Fetch Reorder Policy concurrently
       // We pass the current stock to execute to avoid an N+1 query inside CalculateSalesVelocity
-      const preFetchedHistory = dispatchHistoryMap.has(skuStr) ? dispatchHistoryMap.get(skuStr) : (dispatchRepo && dispatchRepo.fetchHistoryForLocation ? [] : undefined);
-      const velocity = await this.calculateSalesVelocity.execute(skuStr, locationId, item.quantity.getValue(), preFetchedHistory);
+      const velocity = await this.calculateSalesVelocity.execute(skuStr, locationId, item.quantity.getValue());
       const policy = policyMap ? policyMap.get(skuStr) : await this.reorderPolicyRepository.findBySkuAndLocation(item.sku, locationId);
       const reorderPoint = policy ? policy.reorderPoint : 10;
       const reorderQuantity = policy ? policy.reorderQuantity : 20;

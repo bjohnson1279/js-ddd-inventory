@@ -1,4 +1,3 @@
-import crypto from "crypto";
 export interface AutonomousTask {
   id: string;
   sku: string;
@@ -7,6 +6,8 @@ export interface AutonomousTask {
   status: 'PENDING_APPROVAL' | 'EXECUTED';
   timestamp: string;
 }
+
+import crypto from "crypto";
 
 export class AutonomousInventoryEngine {
   public runRebalanceRoutine(inventoryData: Array<{ sku: string; stock: number; minStock: number }>): AutonomousTask[] {

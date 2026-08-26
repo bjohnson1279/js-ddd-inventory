@@ -6,10 +6,10 @@ import { StatusTransition } from "../../domain/serial/valueObjects/StatusTransit
 import { SerialNumberNotFoundException } from "../../domain/serial/exceptions/SerialNumberNotFoundException";
 import { DomainEventDispatcher } from "../../domain/events/DomainEventDispatcher";
 import { Prisma } from "@prisma/client";
+import { prisma } from "./prisma";
 
-import { PrismaBaseRepository } from "./PrismaBaseRepository";
-
-export class PrismaSerializedItemRepository extends PrismaBaseRepository implements ISerializedItemRepository {
+export class PrismaSerializedItemRepository implements ISerializedItemRepository {
+  private prisma = prisma;
 
   private mapToDomain(record: any): SerializedItem {
     const history = record.transitions.map(

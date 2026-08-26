@@ -1,8 +1,8 @@
 import { IDemandForecastRepository, DemandForecast } from "../../domain/repositories/IDemandForecastRepository";
+import { prisma } from "./prisma";
 
-import { PrismaBaseRepository } from "./PrismaBaseRepository";
-
-export class PrismaDemandForecastRepository extends PrismaBaseRepository implements IDemandForecastRepository {
+export class PrismaDemandForecastRepository implements IDemandForecastRepository {
+  private prisma = prisma;
 
   async save(forecast: DemandForecast): Promise<void> {
     await this.prisma.demandForecastModel.upsert({

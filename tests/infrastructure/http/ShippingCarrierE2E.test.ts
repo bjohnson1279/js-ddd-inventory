@@ -23,7 +23,7 @@ import { ShipmentStatus } from "../../../src/domain/shipping/enums/ShipmentStatu
 
 const getAdminToken = () => {
   const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
-  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" , permissions: ["*:*"]}, JWT_SECRET);
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
 };
 
 describe("Shipping Carrier HTTP API Endpoints", () => {

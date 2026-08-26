@@ -18,7 +18,7 @@ import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
 
 const getAdminToken = () => {
   const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
-  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" , permissions: ["*:*"]}, JWT_SECRET);
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
 };
 
 describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
@@ -77,8 +77,11 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
   });
 
   it("should record dispatches, compute sales velocity/days of cover, and return demand planning report", async () => {
-    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
-    jest.setSystemTime(new Date("2023-06-15T12:00:00Z"));
+    jest.useFakeTimers().setSystemTime(new Date("2023-06-15T12:00:00Z"));
+    // Fix system time so all historical dispatch records (-2, -5, -10 days) fall within the same calendar month
+    // This prevents seasonal multiplier calculation issues when tests are run near the beginning of a month.
+    jest.useFakeTimers({ advanceTimers: true });
+    jest.setSystemTime(new Date("2026-07-15T12:00:00Z"));
 
     // 1. Set up an inventory item with stock level 50
     const sku = "IPHONE-15";
@@ -92,11 +95,11 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     // 30 units / 30 days = 1.0 Average Daily Sales (ADS).
     // Note: To prevent test flakiness at the beginning of the month (which affects the seasonal multiplier),
     // we set all dispatch dates to the same month as `now` (but safely within the last 30 days).
-    const now = new Date("2023-06-15T12:00:00Z");
+    const now = new Date();
 
-    const d1 = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000); // 2 days ago
-    const d2 = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000); // 5 days ago
-    const d3 = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000); // 10 days ago
+    const d1 = new Date(now.getTime() - 1 * 60 * 60 * 1000); // 1 hour ago
+    const d2 = new Date(now.getTime() - 2 * 60 * 60 * 1000); // 2 hours ago
+    const d3 = new Date(now.getTime() - 3 * 60 * 60 * 1000); // 3 hours ago
 
     await dispatchRecordRepo.save(new DispatchRecord("1", sku, locationId, 10, d1));
     await dispatchRecordRepo.save(new DispatchRecord("2", sku, locationId, 10, d2));

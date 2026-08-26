@@ -1,5 +1,4 @@
 import { TenantRegistry } from '../../../src/infrastructure/database/TenantRegistry';
-import { encryptSymmetric } from '../../../src/infrastructure/utils/security';
 
 describe('TenantRegistry', () => {
   let mockPrisma: any;
@@ -11,11 +10,6 @@ describe('TenantRegistry', () => {
       $queryRaw: jest.fn().mockResolvedValue([]),
     };
     registry = new TenantRegistry(mockPrisma);
-    process.env.ENCRYPTION_KEY = 'test_key_for_tenant_registry';
-  });
-
-  afterEach(() => {
-    delete process.env.ENCRYPTION_KEY;
   });
 
   describe('registerTenant', () => {
@@ -61,7 +55,7 @@ describe('TenantRegistry', () => {
         db_port: 5432,
         db_name: 'inventory_tenant_acme_corp',
         db_user: 'inventory_user',
-        db_password: encryptSymmetric('inventory_password'),
+        db_password: 'inventory_password',
         status: 'ACTIVE',
         provisioned_at: new Date(),
         migrated_version: '1',
@@ -78,7 +72,7 @@ describe('TenantRegistry', () => {
         db_port: 5432,
         db_name: 'inventory_tenant_old_tenant',
         db_user: 'inventory_user',
-        db_password: encryptSymmetric('inventory_password'),
+        db_password: 'inventory_password',
         status: 'DEPROVISIONED',
         provisioned_at: new Date(),
         migrated_version: '1',
@@ -109,7 +103,7 @@ describe('TenantRegistry', () => {
         db_port: 5432,
         db_name: 'inventory_tenant_acme_corp',
         db_user: 'inventory_user',
-        db_password: encryptSymmetric('inventory_password'),
+        db_password: 'inventory_password',
         status: 'ACTIVE',
         provisioned_at: new Date('2026-01-01'),
         migrated_version: '3',
@@ -130,8 +124,8 @@ describe('TenantRegistry', () => {
   describe('listTenants', () => {
     it('should list all tenants when no status filter provided', async () => {
       mockPrisma.$queryRaw.mockResolvedValue([
-        { tenant_id: 't1', db_host: 'h', db_port: 5432, db_name: 'd1', db_user: 'u', db_password: encryptSymmetric('p'), status: 'ACTIVE', provisioned_at: new Date(), migrated_version: '1' },
-        { tenant_id: 't2', db_host: 'h', db_port: 5432, db_name: 'd2', db_user: 'u', db_password: encryptSymmetric('p'), status: 'DEPROVISIONED', provisioned_at: new Date(), migrated_version: '1' },
+        { tenant_id: 't1', db_host: 'h', db_port: 5432, db_name: 'd1', db_user: 'u', db_password: 'p', status: 'ACTIVE', provisioned_at: new Date(), migrated_version: '1' },
+        { tenant_id: 't2', db_host: 'h', db_port: 5432, db_name: 'd2', db_user: 'u', db_password: 'p', status: 'DEPROVISIONED', provisioned_at: new Date(), migrated_version: '1' },
       ]);
 
       const tenants = await registry.listTenants();
@@ -142,7 +136,7 @@ describe('TenantRegistry', () => {
 
     it('should filter by status when provided', async () => {
       mockPrisma.$queryRaw.mockResolvedValue([
-        { tenant_id: 't1', db_host: 'h', db_port: 5432, db_name: 'd1', db_user: 'u', db_password: encryptSymmetric('p'), status: 'ACTIVE', provisioned_at: new Date(), migrated_version: '1' },
+        { tenant_id: 't1', db_host: 'h', db_port: 5432, db_name: 'd1', db_user: 'u', db_password: 'p', status: 'ACTIVE', provisioned_at: new Date(), migrated_version: '1' },
       ]);
 
       const tenants = await registry.listTenants('ACTIVE');

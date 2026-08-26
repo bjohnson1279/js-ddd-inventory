@@ -2,10 +2,10 @@ import { ITenantConfigRepository } from "../../domain/repositories/ITenantConfig
 import { TenantAccountingConfig } from "../../domain/accounting/valueObjects/TenantAccountingConfig";
 import { AccountingMethod } from "../../domain/accounting/enums/AccountingMethod";
 import { CostingMethod } from "../../domain/accounting/enums/CostingMethod";
+import { prisma } from "./prisma";
 
-import { PrismaBaseRepository } from "./PrismaBaseRepository";
-
-export class PrismaTenantConfigRepository extends PrismaBaseRepository implements ITenantConfigRepository {
+export class PrismaTenantConfigRepository implements ITenantConfigRepository {
+  private prisma = prisma;
 
   async findByTenantId(tenantId: string): Promise<TenantAccountingConfig | null> {
     const record = await this.prisma.tenantConfigModel.findUnique({

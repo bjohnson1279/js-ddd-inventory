@@ -1,7 +1,6 @@
 import { IDispatchRecordRepository } from "../../domain/repositories/IDispatchRecordRepository";
 import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
 import { SKU } from "../../domain/valueObjects/SKU";
-import { DispatchRecord } from "../../domain/repositories/IDispatchRecordRepository";
 
 export interface SalesVelocityResult {
   sku: string;
@@ -20,7 +19,7 @@ export class CalculateSalesVelocity {
     private readonly inventoryRepository: IInventoryRepository
   ) {}
 
-  async execute(skuStr: string, locationId: string = "default", preFetchedStock?: number, preFetchedHistory90d?: DispatchRecord[]): Promise<SalesVelocityResult> {
+  async execute(skuStr: string, locationId: string = "default", preFetchedStock?: number): Promise<SalesVelocityResult> {
     const now = new Date();
     
     // Define dates for intervals
@@ -29,7 +28,7 @@ export class CalculateSalesVelocity {
     const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
 
     // Fetch history once for the 90-day window to minimize database queries
-    const history90d = preFetchedHistory90d || await this.dispatchRecordRepository.fetchHistory(skuStr, locationId, ninetyDaysAgo);
+    const history90d = await this.dispatchRecordRepository.fetchHistory(skuStr, locationId, ninetyDaysAgo);
 
     // Filter the 90-day history in memory for 30-day and 7-day windows
     const thirtyDaysAgoTime = thirtyDaysAgo.getTime();
