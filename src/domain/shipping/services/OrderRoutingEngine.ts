@@ -35,6 +35,9 @@ export class OrderRoutingEngine {
       throw new Error(`Could not find any valid allocation combinations for quantity ${quantity}`);
     }
 
+    // Optimization: Cache rate calculations to avoid N*M redundant external carrier requests
+    const rateCache = new Map<string, Promise<number>>();
+
     // 2. Score and evaluate each plan concurrently
     const plans: FulfillmentPlan[] = await Promise.all(
       rawPlans.map(async (allocations) => {
@@ -45,7 +48,11 @@ export class OrderRoutingEngine {
             const dist = candidate.geoLocation.distanceTo(destination);
 
             // Fetch carrier rate for the specific allocated quantity from this origin
-            const rate = await rateCalculator(alloc.locationId, sku, alloc.quantity);
+            const cacheKey = `${alloc.locationId}:${alloc.quantity}`;
+            if (!rateCache.has(cacheKey)) {
+              rateCache.set(cacheKey, rateCalculator(alloc.locationId, sku, alloc.quantity));
+            }
+            const rate = await rateCache.get(cacheKey)!;
 
             return { dist, rate };
           })
