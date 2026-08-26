@@ -12,5 +12,6 @@ export class DispatchRecord {
 export interface IDispatchRecordRepository {
   save(record: DispatchRecord, tx?: any): Promise<void>;
   fetchHistory(sku: string, locationId: string, since: Date): Promise<DispatchRecord[]>;
+  fetchHistoryForLocation?(locationId: string, since: Date): Promise<DispatchRecord[]>;
   fetchByLotNumber(lotNumber: string): Promise<DispatchRecord[]>;
 }

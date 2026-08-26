@@ -1,9 +1,9 @@
 import { IRfidTagRepository } from "../../domain/repositories/IRfidTagRepository";
 import { RfidTag } from "../../domain/rfid/valueObjects/RfidTag";
-import { prisma } from "./prisma";
 
-export class PrismaRfidTagRepository implements IRfidTagRepository {
-  private prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaRfidTagRepository extends PrismaBaseRepository implements IRfidTagRepository {
 
   async findByEpc(tenantId: string, epc: string): Promise<RfidTag | null> {
     const record = await this.prisma.rfidTagModel.findUnique({

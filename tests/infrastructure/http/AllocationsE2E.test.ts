@@ -15,7 +15,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
 
 const getAdminToken = () => {
   const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
-  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" , permissions: ["*:*"]}, JWT_SECRET);
 };
 
 describe("Allocations & In-Transit Stock E2E Tests", () => {
@@ -27,8 +27,8 @@ describe("Allocations & In-Transit Stock E2E Tests", () => {
     repository = new InMemoryInventoryRepository();
     setupApp(repository);
 
-    adminToken = jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
-    viewerToken = jwt.sign({ actorId: "viewer-user", role: "viewer", tenantId: "tenant-1" }, JWT_SECRET);
+    adminToken = jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" , permissions: ["*:*"]}, JWT_SECRET);
+    viewerToken = jwt.sign({ actorId: "viewer-user", role: "viewer", tenantId: "tenant-1" , permissions: []}, JWT_SECRET);
   });
 
   describe("RBAC Role Constraints", () => {

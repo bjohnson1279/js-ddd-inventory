@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import crypto from "crypto";
 import { CalculateShippingRates } from "../../../application/useCases/CalculateShippingRates";
 import { PurchaseShippingLabel } from "../../../application/useCases/PurchaseShippingLabel";
 import { UpdateShipmentStatus } from "../../../application/useCases/UpdateShipmentStatus";
@@ -13,7 +14,7 @@ import { IOutboxRepository } from "../../../domain/repositories/IOutboxRepositor
 import { ShipmentStatus } from "../../../domain/shipping/enums/ShipmentStatus";
 import { DomainException } from "../../../domain/exceptions/DomainException";
 import { Logger } from "../../../infrastructure/logging/logger";
-import crypto from "crypto";
+
 
 export class ShippingController {
   static async getRates(req: Request, res: Response) {

@@ -1,4 +1,5 @@
 import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreatedEvent";
+import crypto from "crypto";
 import { Logger } from "../../infrastructure/logging/logger";
 import crypto from "crypto";
 
@@ -16,6 +17,7 @@ export class NetSuiteClient {
   public async publishJournalEntry(event: JournalEntryCreatedEvent): Promise<string> {
     if (!this.accountId || this.accountId.includes("mock") || !this.token || this.token.includes("mock")) {
       return `mock-netsuite-journal-${crypto.randomBytes(4).toString('hex')}`;
+      return `mock-netsuite-journal-${crypto.randomBytes(4).toString("hex")}`;
     }
 
     const nsLines = event.lines.map((line) => {
@@ -75,5 +77,6 @@ export class NetSuiteClient {
 
     const data: any = await response.json();
     return data.id || `mock-netsuite-journal-${crypto.randomBytes(4).toString('hex')}`;
+    return data.id || `mock-netsuite-journal-${crypto.randomBytes(4).toString("hex")}`;
   }
 }

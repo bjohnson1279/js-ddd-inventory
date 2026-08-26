@@ -5,10 +5,10 @@ import { BarcodeSymbology } from "../../domain/barcode/enums/BarcodeSymbology";
 import { BarcodeSource } from "../../domain/barcode/enums/BarcodeSource";
 import { DomainEventDispatcher } from "../../domain/events/DomainEventDispatcher";
 import { Prisma } from "@prisma/client";
-import { prisma } from "./prisma";
 
-export class PrismaBarcodeRepository implements IBarcodeRepository {
-  private prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaBarcodeRepository extends PrismaBaseRepository implements IBarcodeRepository {
 
   async findVariantByBarcodeValue(value: string): Promise<string | null> {
     const normalized = value.trim().toUpperCase();
