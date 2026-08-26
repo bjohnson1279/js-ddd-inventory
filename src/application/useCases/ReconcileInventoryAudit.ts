@@ -86,12 +86,35 @@ export class ReconcileInventoryAudit {
       }
     }
 
+    // Optimization: Batch fetch active layers for positive discrepancies to avoid N+1 lookups
+    const variantsWithGains = audit.items
+      .filter(i => i.discrepancy !== null && i.discrepancy > 0)
+      .map(i => i.variantId);
+
+    let activeLayersMap: Map<string, InventoryCostLayer[]>;
+    if (this.costLayerRepository.getActiveLayersByVariantIds && variantsWithGains.length > 0) {
+      activeLayersMap = await this.costLayerRepository.getActiveLayersByVariantIds(variantsWithGains, "desc");
+    } else {
+      activeLayersMap = new Map();
+      if (variantsWithGains.length > 0) {
+        await Promise.all(variantsWithGains.map(async (vId) => {
+          try {
+            const layers = await this.costLayerRepository.getActiveLayers(vId, "desc");
+            activeLayersMap.set(vId, layers);
+          } catch (err) {
+            activeLayersMap.set(vId, []);
+          }
+        }));
+      }
+    }
+
     const journalPromises: Promise<any>[] = [];
 
-    await Promise.all(audit.items.map(async (item) => {
+    // Optimization: Changed concurrent Promise.all to sequential loop to avoid optimistic locking race conditions
+    for (const item of audit.items) {
       const discrepancy = item.discrepancy;
       if (discrepancy === null || discrepancy === 0) {
-        return;
+        continue;
       }
 
       const sku = SKU.create(item.variantId);
@@ -144,7 +167,7 @@ export class ReconcileInventoryAudit {
         modifiedInventoryItems.set(skuValue, inventoryItem);
 
         // 2. Find last receipt unit cost, fallback to 0
-        const activeLayers = await this.costLayerRepository.getActiveLayers(item.variantId, "desc");
+        const activeLayers = activeLayersMap.get(item.variantId) || [];
         const unitCostCents = activeLayers.length > 0 ? activeLayers[0].unitCostCents : 0;
         const totalCostCents = unitCostCents * discrepancy;
 
@@ -177,7 +200,7 @@ export class ReconcileInventoryAudit {
           journalPromises.push(p);
         }
       }
-    }));
+    }
 
     await Promise.all(journalPromises);
 

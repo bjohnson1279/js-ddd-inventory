@@ -8,7 +8,7 @@ export class PrismaPurchaseOrderRepository implements IPurchaseOrderRepository {
   private prisma = prisma;
 
   private mapToDomain(record: any): PurchaseOrder {
-    const items = (record.items || []).map((item: any) => 
+    const items = (record.items || []).map((item: any) =>
       new PurchaseOrderItem(
         item.id,
         item.variantId,

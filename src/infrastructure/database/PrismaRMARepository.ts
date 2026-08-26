@@ -10,7 +10,7 @@ export class PrismaRMARepository implements IRMARepository {
   private prisma = prisma;
 
   private mapToDomain(record: any): RMA {
-    const items = (record.items || []).map((item: any) => 
+    const items = (record.items || []).map((item: any) =>
       new RMAItem(
         item.id,
         item.variantId,
