@@ -35,14 +35,17 @@ export class OrderRoutingEngine {
       throw new Error(`Could not find any valid allocation combinations for quantity ${quantity}`);
     }
 
+    // Optimization: Build a map of active candidates for O(1) lookups during evaluation
+    const candidatesMap = new Map(activeCandidates.map(c => [c.locationId, c]));
+
     // 2. Score and evaluate each plan concurrently
     const plans: FulfillmentPlan[] = await Promise.all(
       rawPlans.map(async (allocations) => {
         const allocResults = await Promise.all(
           allocations.map(async (alloc) => {
-            const candidate = activeCandidates.find(c => c.locationId === alloc.locationId)!;
+            const mappedCandidate = candidatesMap.get(alloc.locationId)!;
             // Compute Haversine distance from origin warehouse to destination
-            const dist = candidate.geoLocation.distanceTo(destination);
+            const dist = mappedCandidate.geoLocation.distanceTo(destination);
 
             // Fetch carrier rate for the specific allocated quantity from this origin
             const rate = await rateCalculator(alloc.locationId, sku, alloc.quantity);
