@@ -9,6 +9,7 @@ import { AccountingMethod } from "../../../domain/accounting/enums/AccountingMet
 import { CostingMethod } from "../../../domain/accounting/enums/CostingMethod";
 import { DomainException } from "../../../domain/exceptions/DomainException";
 import { Logger } from "../../../infrastructure/logging/logger";
+import crypto from "crypto";
 
 export class AccountingController {
   static async getLedger(req: Request, res: Response) {
@@ -375,7 +376,7 @@ export class AccountingController {
       const isMock = !apiKey || String(apiKey).toLowerCase().includes("mock") || apiKey === "";
       const totalCents = lines.reduce((sum: number, line: any) => sum + (line.amountCents || 0), 0);
       const prefix = provider.substring(0, 3).toLowerCase();
-      const mockId = `${prefix}-jrnl-${Math.floor(100000 + Math.random() * 900000)}`;
+      const mockId = `${prefix}-jrnl-${crypto.randomInt(100000, 1000000)}`;
 
       res.status(200).json({
         success: true,
