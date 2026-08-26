@@ -50,11 +50,7 @@ export class PerformFullStoreCount {
     if (this.inventoryRepository.saveMany) {
       await this.inventoryRepository.saveMany(itemsToSave);
     } else {
-      const chunkSize = 100;
-      for (let i = 0; i < itemsToSave.length; i += chunkSize) {
-        const chunk = itemsToSave.slice(i, i + chunkSize);
-        await Promise.all(chunk.map(item => this.inventoryRepository.save(item)));
-      }
+      await Promise.all(itemsToSave.map(item => this.inventoryRepository.save(item)));
     }
   }
 }

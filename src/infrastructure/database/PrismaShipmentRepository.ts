@@ -1,10 +1,10 @@
 import { IShipmentRepository } from "../../domain/repositories/IShipmentRepository";
 import { Shipment } from "../../domain/shipping/aggregates/Shipment";
 import { ShipmentStatus } from "../../domain/shipping/enums/ShipmentStatus";
+import { prisma } from "./prisma";
 
-import { PrismaBaseRepository } from "./PrismaBaseRepository";
-
-export class PrismaShipmentRepository extends PrismaBaseRepository implements IShipmentRepository {
+export class PrismaShipmentRepository implements IShipmentRepository {
+  private prisma = prisma;
 
   async save(shipment: Shipment): Promise<void> {
     // If the shipment ID is empty, prisma upsert will fail to match a unique condition, 

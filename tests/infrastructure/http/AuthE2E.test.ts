@@ -47,7 +47,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
 
     if (!user) {
       const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
-      const token = jwt.sign({ actorId: "alice", role: "admin", tenantId: "tenant-acme" , permissions: ["*:*"]}, JWT_SECRET);
+      const token = jwt.sign({ actorId: "alice", role: "admin", tenantId: "tenant-acme" }, JWT_SECRET);
       const listRes = await request(app).get("/api/users").set("Authorization", `Bearer ${token}`);
       if (listRes.body && Array.isArray(listRes.body.users)) {
         user = listRes.body.users.find((u: any) => u.email === "alice@acme.com");

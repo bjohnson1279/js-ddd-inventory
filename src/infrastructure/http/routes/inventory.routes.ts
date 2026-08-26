@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { InventoryController } from "../controllers/InventoryController";
-import { requirePermission } from "../middleware/auth";
+import { requireRole } from "../middleware/auth";
 
 const router = Router();
 
@@ -12,10 +12,10 @@ router.get("/fefo-pick", InventoryController.suggestFefoPick);
 router.get("/reports/recall/:lotNumber", InventoryController.traceRecall);
 router.get("/:sku", InventoryController.getLevel);
 
-router.post("/allocate", requirePermission('inventory', 'view'), InventoryController.allocate);
-router.post("/release-allocation", requirePermission('inventory', 'view'), InventoryController.releaseAllocation);
-router.post("/fulfill-allocation", requirePermission('inventory', 'view'), InventoryController.fulfillAllocation);
-router.post("/create-in-transit", requirePermission('inventory', 'view'), InventoryController.createInTransit);
-router.post("/receive-in-transit", requirePermission('inventory', 'view'), InventoryController.receiveInTransit);
+router.post("/allocate", requireRole(["admin", "warehouse_operator"]), InventoryController.allocate);
+router.post("/release-allocation", requireRole(["admin", "warehouse_operator"]), InventoryController.releaseAllocation);
+router.post("/fulfill-allocation", requireRole(["admin", "warehouse_operator"]), InventoryController.fulfillAllocation);
+router.post("/create-in-transit", requireRole(["admin", "warehouse_operator"]), InventoryController.createInTransit);
+router.post("/receive-in-transit", requireRole(["admin", "warehouse_operator"]), InventoryController.receiveInTransit);
 
 export default router;

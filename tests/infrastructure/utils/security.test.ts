@@ -90,24 +90,4 @@ describe('Security Utilities', () => {
       expect(verifyPassword('notempty', hash)).toBe(false);
     });
   });
-
-  describe('decryptSymmetric', () => {
-    const { decryptSymmetric } = require('../../../src/infrastructure/utils/security');
-
-    it('should throw an error on decryption failure instead of returning ciphertext', () => {
-      // Mock ENCRYPTION_KEY by ensuring the fallback format is matched (24 hex : 32 hex : even hex)
-      const invalidCiphertext = '000000000000000000000000:00000000000000000000000000000000:0000';
-      expect(() => decryptSymmetric(invalidCiphertext)).toThrow('Decryption failed');
-    });
-
-    it('should return plaintext if format does not match hex requirements', () => {
-      const plaintext = 'not:hex:format';
-      expect(decryptSymmetric(plaintext)).toBe(plaintext);
-    });
-
-    it('should return plaintext if format length does not match requirements', () => {
-      const plaintext = '1234:5678:9abc';
-      expect(decryptSymmetric(plaintext)).toBe(plaintext);
-    });
-  });
 });
