@@ -1,8 +1,8 @@
 import { IDispatchRecordRepository, DispatchRecord } from "../../domain/repositories/IDispatchRecordRepository";
-import { prisma } from "./prisma";
 
-export class PrismaDispatchRecordRepository implements IDispatchRecordRepository {
-  private prisma = prisma;
+import { PrismaBaseRepository } from "./PrismaBaseRepository";
+
+export class PrismaDispatchRecordRepository extends PrismaBaseRepository implements IDispatchRecordRepository {
 
   async save(record: DispatchRecord, tx?: any): Promise<void> {
     const client = tx || this.prisma;
@@ -15,6 +15,22 @@ export class PrismaDispatchRecordRepository implements IDispatchRecordRepository
         lotNumber: record.lotNumber || null
       }
     });
+  }
+
+  async fetchHistoryForLocation(locationId: string, since: Date): Promise<DispatchRecord[]> {
+    const records = await this.prisma.dispatchRecordModel.findMany({
+      where: {
+        locationId,
+        dispatchedAt: {
+          gte: since
+        }
+      },
+      orderBy: { dispatchedAt: "asc" }
+    });
+
+    return records.map(
+      (r) => new DispatchRecord(r.id, r.sku, r.locationId, r.quantity, r.dispatchedAt, r.lotNumber)
+    );
   }
 
   async fetchHistory(sku: string, locationId: string, since: Date): Promise<DispatchRecord[]> {

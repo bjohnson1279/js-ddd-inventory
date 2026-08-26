@@ -52,7 +52,7 @@ jest.mock("../../../src/infrastructure/database/prisma", () => {
 
 const getAdminToken = () => {
   const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
-  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
+  return jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" , permissions: ["*:*"]}, JWT_SECRET);
 };
 
 describe("Audit REST API Endpoints", () => {
@@ -60,7 +60,7 @@ describe("Audit REST API Endpoints", () => {
 
   beforeAll(() => {
     token = jwt.sign(
-      { tenantId: "tenant-1", actorId: "admin-actor", role: "admin" },
+      { tenantId: "tenant-1", actorId: "admin-actor", role: "admin", permissions: ["*:*"] },
       process.env.JWT_SECRET || ""
     );
   });
