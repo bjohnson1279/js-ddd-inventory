@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { prisma } from "../../database/prisma";
 import * as mqtt from "mqtt";
-import { Logger } from "../../../infrastructure/logging/logger";
 
 export class RfidController {
   static async list(req: Request, res: Response) {
@@ -11,8 +10,7 @@ export class RfidController {
       });
       res.status(200).json({ tags });
     } catch (error: any) {
-      Logger.error({ context: "RfidController", message: "Error listing tags" }, error);
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: error.message });
     }
   }
 
@@ -36,8 +34,7 @@ export class RfidController {
       });
       res.status(201).json({ message: "Tag assigned successfully", tag });
     } catch (error: any) {
-      Logger.error({ context: "RfidController", message: "Error assigning tag" }, error);
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: error.message });
     }
   }
 
@@ -59,8 +56,7 @@ export class RfidController {
         client.publish(`tenants/${tenantId}/rfid/scans`, JSON.stringify(payload), { qos: 0 }, (err) => {
           client.end();
           if (err) {
-            Logger.error({ context: "RfidController", message: "Failed to publish MQTT message" }, err);
-            return res.status(500).json({ error: "Internal server error" });
+            return res.status(500).json({ error: "Failed to publish MQTT message: " + err.message });
           }
           res.status(200).json({ message: "RFID scan simulation published." });
         });
@@ -68,12 +64,10 @@ export class RfidController {
 
       client.on("error", (err) => {
         client.end();
-        Logger.error({ context: "RfidController", message: "MQTT Connection Error" }, err);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "MQTT Connection Error: " + err.message });
       });
     } catch (error: any) {
-      Logger.error({ context: "RfidController", message: "Error simulating scan" }, error);
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: error.message });
     }
   }
 }

@@ -2,18 +2,13 @@ import { IPurchaseOrderRepository } from "../../domain/repositories/IPurchaseOrd
 import { PurchaseOrder } from "../../domain/procurement/aggregates/PurchaseOrder";
 import { PurchaseOrderItem } from "../../domain/procurement/aggregates/PurchaseOrderItem";
 import { PurchaseOrderStatus } from "../../domain/procurement/enums/PurchaseOrderStatus";
-import { Prisma } from "@prisma/client";
+import { prisma } from "./prisma";
 
-type PurchaseOrderRecord = Prisma.PurchaseOrderModelGetPayload<{
-  include: { items: true };
-}>;
+export class PrismaPurchaseOrderRepository implements IPurchaseOrderRepository {
+  private prisma = prisma;
 
-import { PrismaBaseRepository } from "./PrismaBaseRepository";
-
-export class PrismaPurchaseOrderRepository extends PrismaBaseRepository implements IPurchaseOrderRepository {
-
-  private mapToDomain(record: PurchaseOrderRecord): PurchaseOrder {
-    const items = (record.items || []).map(item =>
+  private mapToDomain(record: any): PurchaseOrder {
+    const items = (record.items || []).map((item: any) =>
       new PurchaseOrderItem(
         item.id,
         item.variantId,
@@ -64,50 +59,46 @@ export class PrismaPurchaseOrderRepository extends PrismaBaseRepository implemen
   }
 
   async save(po: PurchaseOrder): Promise<void> {
-    // ⚡ Bolt Optimization: Replace loop of independent DB ops inside $transaction with a nested Prisma relation write
-    // 🎯 Impact: Reduces N+1 queries for purchase order items down to 1 operation (O(1)), cutting DB I/O latency.
-    await this.prisma.purchaseOrderModel.upsert({
-      where: { id: po.id },
-      update: {
-        status: po.status,
-        vendorId: po.vendorId,
-        locationId: po.locationId,
-        tenantId: po.tenantId,
-        items: {
-          upsert: po.items.map(item => ({
-            where: { id: item.id },
-            update: {
-              receivedQuantity: item.receivedQuantity,
-              quantity: item.quantity,
-              unitCostCents: item.unitCostCents
-            },
-            create: {
-              id: item.id,
-              variantId: item.variantId,
-              quantity: item.quantity,
-              receivedQuantity: item.receivedQuantity,
-              unitCostCents: item.unitCostCents
-            }
-          }))
+    await this.prisma.$transaction(async (tx) => {
+      // Upsert Purchase Order
+      await tx.purchaseOrderModel.upsert({
+        where: { id: po.id },
+        update: {
+          status: po.status,
+          vendorId: po.vendorId,
+          locationId: po.locationId,
+          tenantId: po.tenantId
+        },
+        create: {
+          id: po.id,
+          purchaseOrderNumber: po.purchaseOrderNumber,
+          status: po.status,
+          vendorId: po.vendorId,
+          locationId: po.locationId,
+          tenantId: po.tenantId
         }
-      },
-      create: {
-        id: po.id,
-        purchaseOrderNumber: po.purchaseOrderNumber,
-        status: po.status,
-        vendorId: po.vendorId,
-        locationId: po.locationId,
-        tenantId: po.tenantId,
-        items: {
-          create: po.items.map(item => ({
+      });
+
+      // Upsert Purchase Order Items
+      const itemOperations = po.items.map(item =>
+        tx.purchaseOrderItemModel.upsert({
+          where: { id: item.id },
+          update: {
+            receivedQuantity: item.receivedQuantity,
+            quantity: item.quantity,
+            unitCostCents: item.unitCostCents
+          },
+          create: {
             id: item.id,
+            purchaseOrderId: po.id,
             variantId: item.variantId,
             quantity: item.quantity,
             receivedQuantity: item.receivedQuantity,
             unitCostCents: item.unitCostCents
-          }))
-        }
-      }
+          }
+        })
+      );
+      await Promise.all(itemOperations);
     });
   }
 }

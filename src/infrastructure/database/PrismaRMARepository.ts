@@ -4,14 +4,13 @@ import { RMAItem } from "../../domain/returns/entities/RMAItem";
 import { RMAStatus } from "../../domain/returns/enums/RMAStatus";
 import { RMAItemStatus } from "../../domain/returns/enums/RMAItemStatus";
 import { RMADisposition } from "../../domain/returns/enums/RMADisposition";
-import { RMAModel, RMAItemModel } from "@prisma/client";
+import { prisma } from "./prisma";
 
-import { PrismaBaseRepository } from "./PrismaBaseRepository";
+export class PrismaRMARepository implements IRMARepository {
+  private prisma = prisma;
 
-export class PrismaRMARepository extends PrismaBaseRepository implements IRMARepository {
-
-  private mapToDomain(record: RMAModel & { items: RMAItemModel[] }): RMA {
-    const items = (record.items || []).map((item: RMAItemModel) =>
+  private mapToDomain(record: any): RMA {
+    const items = (record.items || []).map((item: any) =>
       new RMAItem(
         item.id,
         item.variantId,

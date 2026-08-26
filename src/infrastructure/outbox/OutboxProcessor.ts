@@ -85,19 +85,19 @@ export class OutboxProcessor {
               });
 
               if (subscriptions.length > 0) {
-                // Optimization: Replaced Promise.all map loop of individual create queries with a single bulk createMany
-                // Impact: Reduces db roundtrips from O(N) to O(1), significantly lowering network latency during outbox processing
-                await prisma.webhookDeliveryModel.createMany({
-                  data: subscriptions.map((sub: any) => ({
-                    tenantId: eventTenantId,
-                    subscriptionId: sub.id,
-                    eventType: record.eventName,
-                    payload: record.payload,
-                    status: "Pending",
-                    attempts: 0,
-                    nextAttemptAt: new Date()
-                  }))
-                });
+                await Promise.all(subscriptions.map((sub: any) =>
+                  prisma.webhookDeliveryModel.create({
+                    data: {
+                      tenantId: eventTenantId,
+                      subscriptionId: sub.id,
+                      eventType: record.eventName,
+                      payload: record.payload,
+                      status: "Pending",
+                      attempts: 0,
+                      nextAttemptAt: new Date()
+                    }
+                  })
+                ));
               }
             } catch (e) {}
 

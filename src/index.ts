@@ -94,8 +94,6 @@ import shippingRoutes from "./infrastructure/http/routes/shipping.routes";
 import authRoutes from "./infrastructure/http/routes/auth.routes";
 import userRoutes from "./infrastructure/http/routes/user.routes";
 import warehouseLocationRoutes from "./infrastructure/http/routes/warehouseLocation.routes";
-import roleRoutes from "./infrastructure/http/routes/role.routes";
-import approvalRoutes from "./infrastructure/http/routes/approval.routes";
 import notificationRoutes from "./infrastructure/http/routes/notification.routes";
 import auditRoutes from "./infrastructure/http/routes/audit.routes";
 import webhookSubscriptionRoutes from "./infrastructure/http/routes/webhookSubscription.routes";
@@ -217,11 +215,6 @@ export const setupApp = (
   // Legacy key for backwards compatibility
   app.set("repository", inventoryRepository);
 
-  // Healthcheck endpoints for container probes and conformance tests (unauthenticated)
-  app.get(["/api/health", "/health"], (_req, res) => {
-    res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
-  });
-
   app.use("/api/auth", authRoutes);
   app.use("/api/shopify", shopifyRoutes);
 
@@ -248,8 +241,6 @@ export const setupApp = (
   app.use("/api/audit", auditRoutes);
   app.use("/api/tenant-audit", auditRoutes);
   app.use("/api/warehouse-locations", warehouseLocationRoutes);
-  app.use("/api/roles", roleRoutes);
-  app.use("/api/approvals", approvalRoutes);
   app.use("/api/webhooks/subscriptions", webhookSubscriptionRoutes);
   app.use("/api/rfid", rfidRoutes);
   app.use("/api/anomaly-detection", anomalyDetectionRoutes);
@@ -308,8 +299,8 @@ export const setupApp = (
       }
       res.json(lot);
     } catch (err: unknown) {
-      Logger.error({ context: "API", message: "An error occurred", error: err instanceof Error ? err.message : String(err) });
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+      res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
     }
   });
 
@@ -344,8 +335,7 @@ export const setupApp = (
       }
       res.json(lot);
     } catch (err: unknown) {
-      Logger.error({ context: "API", message: "An error occurred", error: err instanceof Error ? err.message : String(err) });
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -365,8 +355,7 @@ export const setupApp = (
       });
       res.json(lot);
     } catch (err: unknown) {
-      Logger.error({ context: "API", message: "An error occurred", error: err instanceof Error ? err.message : String(err) });
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -406,8 +395,7 @@ export const setupApp = (
       const report = LotRecallService.generateTraceabilityReport(lotEntity, costLayers, shipments);
       res.json(report);
     } catch (err: unknown) {
-      Logger.error({ context: "API", message: "An error occurred", error: err instanceof Error ? err.message : String(err) });
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -419,8 +407,7 @@ export const setupApp = (
       const result = CrossDockingEngine.evaluate(purchaseOrderId, inboundItems || [], backorders || []);
       res.json(result);
     } catch (err: unknown) {
-      Logger.error({ context: "API", message: "An error occurred", error: err instanceof Error ? err.message : String(err) });
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -593,8 +580,7 @@ export const setupApp = (
         createdAt: new Date().toISOString()
       });
     } catch (err: unknown) {
-      Logger.error({ context: "API", message: "An error occurred", error: err instanceof Error ? err.message : String(err) });
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 };

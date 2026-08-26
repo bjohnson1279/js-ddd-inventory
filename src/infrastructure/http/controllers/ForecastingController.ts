@@ -8,7 +8,7 @@ import { IDemandForecastRepository } from "../../../domain/repositories/IDemandF
 import { IDispatchRecordRepository } from "../../../domain/repositories/IDispatchRecordRepository";
 import { DomainException } from "../../../domain/exceptions/DomainException";
 import { Logger } from "../../../infrastructure/logging/logger";
-import { Prisma } from "@prisma/client";
+
 
 export class ForecastingController {
   static async getReport(req: Request, res: Response) {
@@ -100,14 +100,14 @@ export class ForecastingController {
 
       let results;
       if (sku) {
-        results = await prisma.$queryRaw(Prisma.sql`SELECT bucket::text, sku, "locationId", total_dispatched as "totalDispatched", dispatch_count as "dispatchCount"
+        results = await prisma.$queryRaw`SELECT bucket::text, sku, "locationId", total_dispatched as "totalDispatched", dispatch_count as "dispatchCount"
            FROM daily_dispatch_summary
            WHERE sku = ${sku}
-           ORDER BY bucket DESC`);
+           ORDER BY bucket DESC`;
       } else {
-        results = await prisma.$queryRaw(Prisma.sql`SELECT bucket::text, sku, "locationId", total_dispatched as "totalDispatched", dispatch_count as "dispatchCount"
+        results = await prisma.$queryRaw`SELECT bucket::text, sku, "locationId", total_dispatched as "totalDispatched", dispatch_count as "dispatchCount"
            FROM daily_dispatch_summary
-           ORDER BY bucket DESC`);
+           ORDER BY bucket DESC`;
       }
       
       res.status(200).json(results);
