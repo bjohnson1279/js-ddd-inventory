@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { ComplianceController } from "../controllers/ComplianceController";
-import { requirePermission } from "../middleware/auth";
+import { requireRole } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/ledger", requirePermission('compliance', 'view'), ComplianceController.list);
-router.post("/verify", requirePermission('compliance', 'view'), ComplianceController.verify);
-router.get("/reconstruct", requirePermission('compliance', 'view'), ComplianceController.reconstruct);
-router.get("/replay", requirePermission('compliance', 'view'), ComplianceController.replay);
+router.get("/ledger", requireRole(["admin"]), ComplianceController.list);
+router.post("/verify", requireRole(["admin"]), ComplianceController.verify);
+router.get("/reconstruct", requireRole(["admin"]), ComplianceController.reconstruct);
+router.get("/replay", requireRole(["admin"]), ComplianceController.replay);
 
 export default router;

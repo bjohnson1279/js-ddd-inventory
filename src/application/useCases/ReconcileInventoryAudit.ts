@@ -59,19 +59,13 @@ export class ReconcileInventoryAudit {
 
     // Pre-calculate shrinkage components for batch consumption to avoid N+1 queries
     const shrinkages: { variantId: string; quantity: number }[] = [];
-    const gains: string[] = []; // Store variant IDs of gains to pre-fetch active layers
-
-    for (const item of audit.items) {
-      if (item.discrepancy !== null) {
-        if (item.discrepancy < 0 && config.accountingMethod === AccountingMethod.Accrual && (config.costingMethod === CostingMethod.FIFO || config.costingMethod === CostingMethod.WeightedAverageCost)) {
+    if (config.accountingMethod === AccountingMethod.Accrual && (config.costingMethod === CostingMethod.FIFO || config.costingMethod === CostingMethod.WeightedAverageCost)) {
+      for (const item of audit.items) {
+        if (item.discrepancy !== null && item.discrepancy < 0) {
           shrinkages.push({
             variantId: item.variantId,
             quantity: Math.abs(item.discrepancy)
           });
-        } else if (item.discrepancy > 0) {
-          if (!gains.includes(item.variantId)) {
-            gains.push(item.variantId);
-          }
         }
       }
     }
@@ -111,21 +105,12 @@ export class ReconcileInventoryAudit {
             activeLayersMap.set(vId, []);
           }
         }));
-    // Optimization: Bulk pre-fetch active layers for items with positive discrepancies to avoid N+1 queries.
-    let activeLayersByVariantIds = new Map<string, InventoryCostLayer[]>();
-    if (gains.length > 0) {
-      if (this.costLayerRepository.getActiveLayersByVariantIds) {
-        activeLayersByVariantIds = await this.costLayerRepository.getActiveLayersByVariantIds(gains, "desc");
-      } else {
-        const layers = await Promise.all(gains.map(vId => this.costLayerRepository.getActiveLayers(vId, "desc")));
-        gains.forEach((vId, idx) => activeLayersByVariantIds.set(vId, layers[idx]));
       }
     }
 
     const journalPromises: Promise<any>[] = [];
 
     // Optimization: Changed concurrent Promise.all to sequential loop to avoid optimistic locking race conditions
-    // Optimization: Replaced Promise.all map loop with sequential for-of loop since there are no asynchronous awaits inside. This removes unnecessary microtask overhead and promise allocations.
     for (const item of audit.items) {
       const discrepancy = item.discrepancy;
       if (discrepancy === null || discrepancy === 0) {
@@ -183,7 +168,6 @@ export class ReconcileInventoryAudit {
 
         // 2. Find last receipt unit cost, fallback to 0
         const activeLayers = activeLayersMap.get(item.variantId) || [];
-        const activeLayers = activeLayersByVariantIds.get(item.variantId) || [];
         const unitCostCents = activeLayers.length > 0 ? activeLayers[0].unitCostCents : 0;
         const totalCostCents = unitCostCents * discrepancy;
 

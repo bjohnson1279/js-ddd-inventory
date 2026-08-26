@@ -1,10 +1,10 @@
 import { IOutboxRepository } from "../../domain/repositories/IOutboxRepository";
 import { IDomainEvent } from "../../domain/events/IDomainEvent";
+import { prisma } from "./prisma";
 import { getTraceId } from "../telemetry/traceContext";
 
-import { PrismaBaseRepository } from "./PrismaBaseRepository";
-
-export class PrismaOutboxRepository extends PrismaBaseRepository implements IOutboxRepository {
+export class PrismaOutboxRepository implements IOutboxRepository {
+  private prisma = prisma;
 
   async save(event: IDomainEvent, tx?: any): Promise<void> {
     const client = tx || this.prisma;
@@ -22,25 +22,6 @@ export class PrismaOutboxRepository extends PrismaBaseRepository implements IOut
         payload,
         occurredOn: event.occurredOn
       }
-    });
-  }
-
-  async saveMany(events: IDomainEvent[], tx?: any): Promise<void> {
-    if (events.length === 0) return;
-
-    const client = tx || this.prisma;
-    const data = events.map(event => ({
-      eventName: event.eventName,
-      payload: JSON.stringify({
-        ...event,
-        traceId: (event as any).traceId || getTraceId(),
-        occurredOn: event.occurredOn.toISOString()
-      }),
-      occurredOn: event.occurredOn
-    }));
-
-    await client.outboxEventModel.createMany({
-      data
     });
   }
 

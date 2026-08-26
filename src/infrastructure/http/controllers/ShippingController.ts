@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import crypto from "crypto";
 import { CalculateShippingRates } from "../../../application/useCases/CalculateShippingRates";
 import { PurchaseShippingLabel } from "../../../application/useCases/PurchaseShippingLabel";
 import { UpdateShipmentStatus } from "../../../application/useCases/UpdateShipmentStatus";
@@ -238,7 +237,7 @@ export class ShippingController {
 
       const labelFormat = format || 'BOTH';
       const trackingPrefix = carrier === 'FEDEX' ? 'FX' : carrier === 'UPS' ? '1Z' : carrier === 'DHL' ? 'DHL' : 'LTL';
-      const trackingNumber = `${trackingPrefix}${crypto.randomInt(1000000000, 10000000000)}`;
+      const trackingNumber = `${trackingPrefix}${Math.floor(1000000000 + Math.random() * 9000000000)}`;
 
       const zplString = (labelFormat === 'ZPL' || labelFormat === 'BOTH')
         ? `^XA^FO50,50^A0N,50,50^FD${carrier} SHIPPING LABEL^FS^FO50,120^A0N,30,30^FDTo: ${recipientName}^FS^FO50,160^A0N,25,25^FDAddr: ${shippingAddress}^FS^FO50,210^BY3^BCN,100,Y,N,N^FD${trackingNumber}^FS^XZ`

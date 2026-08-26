@@ -1,5 +1,4 @@
 import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreatedEvent";
-import crypto from "crypto";
 import { Logger } from "../../infrastructure/logging/logger";
 
 export class QuickBooksClient {
@@ -17,7 +16,7 @@ export class QuickBooksClient {
 
   public async publishJournalEntry(event: JournalEntryCreatedEvent): Promise<string> {
     if (!this.realmId || this.realmId.includes("mock") || !this.accessToken || this.accessToken.includes("mock")) {
-      return `mock-qbo-journal-${crypto.randomBytes(4).toString("hex")}`;
+      return `mock-qbo-journal-${Math.random().toString(36).substring(7)}`;
     }
 
     // Map lines to QuickBooks API Schema
@@ -80,6 +79,6 @@ export class QuickBooksClient {
     }
 
     const data: any = await response.json();
-    return data.JournalEntry?.Id || data.Id || `mock-qbo-journal-${crypto.randomBytes(4).toString("hex")}`;
+    return data.JournalEntry?.Id || data.Id || `mock-qbo-journal-${Math.random().toString(36).substring(7)}`;
   }
 }

@@ -24,14 +24,6 @@ export class InMemoryOutboxRepository implements IOutboxRepository {
     });
   }
 
-  async saveMany(events: IDomainEvent[], tx?: any): Promise<void> {
-    if (events.length === 0) return;
-
-    for (const event of events) {
-      await this.save(event, tx);
-    }
-  }
-
   async fetchPending(limit: number, maxAttempts: number = 5): Promise<any[]> {
     const now = new Date();
     return this.entries

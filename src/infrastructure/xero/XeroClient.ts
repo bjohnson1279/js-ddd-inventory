@@ -1,5 +1,4 @@
 import { JournalEntryCreatedEvent } from "../../domain/events/JournalEntryCreatedEvent";
-import crypto from "crypto";
 import { Logger } from "../../infrastructure/logging/logger";
 
 export class XeroClient {
@@ -14,7 +13,7 @@ export class XeroClient {
 
   public async publishJournalEntry(event: JournalEntryCreatedEvent): Promise<string> {
     if (!this.tenantId || this.tenantId.includes("mock") || !this.accessToken || this.accessToken.includes("mock")) {
-      return `mock-xero-journal-${crypto.randomBytes(4).toString("hex")}`;
+      return `mock-xero-journal-${Math.random().toString(36).substring(7)}`;
     }
 
     const xeroLines = event.lines.map((line) => {
@@ -70,6 +69,6 @@ export class XeroClient {
     }
 
     const data: any = await response.json();
-    return data.ManualJournals?.[0]?.ManualJournalID || `mock-xero-journal-${crypto.randomBytes(4).toString("hex")}`;
+    return data.ManualJournals?.[0]?.ManualJournalID || `mock-xero-journal-${Math.random().toString(36).substring(7)}`;
   }
 }

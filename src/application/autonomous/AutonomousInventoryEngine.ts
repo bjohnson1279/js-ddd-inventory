@@ -1,4 +1,3 @@
-import crypto from "crypto";
 export interface AutonomousTask {
   id: string;
   sku: string;
@@ -15,7 +14,7 @@ export class AutonomousInventoryEngine {
     inventoryData.forEach((item) => {
       if (item.stock < item.minStock) {
         tasks.push({
-          id: `task-${Date.now()}-${crypto.randomInt(1000)}`,
+          id: `task-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
           sku: item.sku,
           action: 'AUTO_REORDER',
           quantity: item.minStock * 2 - item.stock,

@@ -1,43 +1,37 @@
 import { prisma } from "../database/prisma";
 import crypto from "crypto";
-import dns from "dns";
+import dns from "dns/promises";
 import { WebSocketManager } from "../websocket/WebSocketManager";
 import { Logger } from "../../infrastructure/logging/logger";
 import { decrypt } from "../utils/encryption";
-import { Agent, fetch } from "undici";
 
 
-function checkIsSafeIp(address: string): boolean {
-  if (address === "127.0.0.1" || address === "::1" || address === "0.0.0.0") return false;
+async function isSafeUrl(urlStr: string): Promise<boolean> {
+  try {
+    const url = new URL(urlStr);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return false;
 
-  const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
-  const match = address.match(ipv4Regex);
-  if (match) {
-    const p1 = parseInt(match[1], 10);
-    const p2 = parseInt(match[2], 10);
+    const { address } = await dns.lookup(url.hostname);
 
-    if (p1 === 10) return false;
-    if (p1 === 172 && p2 >= 16 && p2 <= 31) return false;
-    if (p1 === 192 && p2 === 168) return false;
-    if (p1 === 169 && p2 === 254) return false;
-  }
+    if (address === "127.0.0.1" || address === "::1" || address === "0.0.0.0") return false;
 
-  return true;
-}
+    const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    const match = address.match(ipv4Regex);
+    if (match) {
+      const p1 = parseInt(match[1], 10);
+      const p2 = parseInt(match[2], 10);
 
-const safeAgent = new Agent({
-  connect: {
-    lookup: (hostname, options, callback) => {
-      dns.lookup(hostname, (err, address, family) => {
-        if (err) return callback(err, []);
-        if (!checkIsSafeIp(address)) {
-          return callback(new Error("Unsafe webhook target URL blocked"), []);
-        }
-        callback(null, [{ address, family }]);
-      });
+      if (p1 === 10) return false;
+      if (p1 === 172 && p2 >= 16 && p2 <= 31) return false;
+      if (p1 === 192 && p2 === 168) return false;
+      if (p1 === 169 && p2 === 254) return false;
     }
+
+    return true;
+  } catch {
+    return false;
   }
-});
+}
 
 export class WebhookDeliveryWorker {
   private static isRunning = false;
@@ -97,14 +91,12 @@ export class WebhookDeliveryWorker {
           const signature = hmac.update(delivery.payload).digest("hex");
 
           // Verify target URL is safe to prevent SSRF
-          const parsedUrl = new URL(subscription.targetUrl);
-          if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
+          if (!(await isSafeUrl(subscription.targetUrl))) {
             throw new Error("Unsafe webhook target URL blocked");
           }
 
           // Send POST request
           const response = await fetch(subscription.targetUrl, {
-            dispatcher: safeAgent,
             method: "POST",
             headers: {
               "Content-Type": "application/json",

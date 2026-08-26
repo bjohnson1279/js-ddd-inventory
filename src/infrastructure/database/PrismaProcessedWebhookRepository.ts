@@ -1,8 +1,8 @@
 import { IProcessedWebhookRepository } from "../../domain/repositories/IProcessedWebhookRepository";
+import { prisma } from "./prisma";
 
-import { PrismaBaseRepository } from "./PrismaBaseRepository";
-
-export class PrismaProcessedWebhookRepository extends PrismaBaseRepository implements IProcessedWebhookRepository {
+export class PrismaProcessedWebhookRepository implements IProcessedWebhookRepository {
+  private prisma = prisma;
 
   async exists(id: string): Promise<boolean> {
     const record = await this.prisma.processedWebhookModel.findUnique({
