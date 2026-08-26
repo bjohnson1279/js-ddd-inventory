@@ -8,7 +8,7 @@ export class PrismaInventoryAuditRepository implements IInventoryAuditRepository
   private prisma = prisma;
 
   private mapToDomain(record: any): InventoryAudit {
-    const items = (record.items || []).map((item: any) => 
+    const items = (record.items || []).map((item: any) =>
       new InventoryAuditItem(
         item.id,
         item.variantId,
