@@ -72,7 +72,7 @@ export class AuthController {
       inMemoryUsers.set(adminId, userObj);
 
       try {
-        const roles = ["admin", "warehouse_operator", "accountant", "viewer"];
+        const roles = ["admin", "warehouse_operator", "inventory_manager", "finance_auditor", "read_only", "accountant", "viewer"];
         const existingRoles = await prisma.roleModel.findMany({
           where: { id: { in: roles } }
         });
@@ -136,7 +136,9 @@ export class AuthController {
             where: { tenantId, email: normalizedEmail },
             include: {
               userRoles: {
-                include: { role: true }
+                include: { role: {
+                  include: { rolePermissions: true }
+                } }
               }
             }
           });
@@ -156,8 +158,12 @@ export class AuthController {
       }
 
       const userRole = user.userRoles && user.userRoles.length > 0 ? user.userRoles[0].role.id : "staff";
+      const permissions = user.userRoles && user.userRoles.length > 0 && user.userRoles[0].role.rolePermissions
+        ? user.userRoles[0].role.rolePermissions.map((rp: any) => rp.permission)
+        : [];
+
       const token = jwt.sign(
-        { tenantId, actorId: user.id, role: userRole },
+        { tenantId, actorId: user.id, role: userRole, permissions },
         JWT_SECRET,
         { expiresIn: "24h" }
       );
