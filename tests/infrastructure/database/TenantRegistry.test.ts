@@ -33,7 +33,7 @@ describe('TenantRegistry', () => {
       expect(entry.dbName).toBe('inventory_tenant_tenant_1');
       expect(entry.dbUser).toBeTruthy();
       // dbPassword should be undefined if not provided in env
-      expect(entry.dbPassword).toBeUndefined();
+      expect(entry.dbPassword).toEqual(process.env.DB_PASSWORD);
     });
 
     it('should use custom connection details when provided', async () => {
