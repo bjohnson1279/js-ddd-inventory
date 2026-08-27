@@ -1,10 +1,10 @@
-import { DisassembleKit, DisassembleKitDTO } from "../../../src/application/useCases/DisassembleKit";
+import { DisassembleKit } from "../../../src/application/useCases/DisassembleKit";
 import { prisma } from "../../../src/infrastructure/database/prisma";
-import { IInventoryRepository } from "../../../src/domain/repositories/IInventoryRepository";
-import { ICostLayerRepository } from "../../../src/domain/repositories/ICostLayerRepository";
-import { ITenantConfigRepository } from "../../../src/domain/repositories/ITenantConfigRepository";
-import { IJournalRepository } from "../../../src/domain/repositories/IJournalRepository";
+import { SKU } from "../../../src/domain/valueObjects/SKU";
+import { Quantity } from "../../../src/domain/valueObjects/Quantity";
+import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
 
+// Mock dependencies
 jest.mock("../../../src/infrastructure/database/prisma", () => ({
   prisma: {
     kitModel: {
@@ -13,70 +13,116 @@ jest.mock("../../../src/infrastructure/database/prisma", () => ({
   },
 }));
 
+jest.mock("../../../src/infrastructure/http/controllers/KitController", () => ({
+  getInMemoryKit: jest.fn(),
+}), { virtual: true });
+
 describe("DisassembleKit Use Case", () => {
-  let useCase: DisassembleKit;
-  let mockInventoryRepo: jest.Mocked<IInventoryRepository>;
-  let mockCostLayerRepo: jest.Mocked<ICostLayerRepository>;
-  let mockTenantConfigRepo: jest.Mocked<ITenantConfigRepository>;
-  let mockJournalRepo: jest.Mocked<IJournalRepository>;
+  let disassembleKit: DisassembleKit;
+  let mockInventoryRepo: any;
+  let mockCostLayerRepo: any;
+  let mockTenantConfigRepo: any;
+  let mockJournalRepo: any;
 
   beforeEach(() => {
+    jest.clearAllMocks();
+
     mockInventoryRepo = {
       findBySku: jest.fn(),
+      findBySkus: jest.fn(),
       save: jest.fn(),
-      findAll: jest.fn(),
-      findAllByLocation: jest.fn(),
-      hasAnyEntries: jest.fn(),
-      hasConflicts: jest.fn(),
-    } as any;
+      saveMany: jest.fn(),
+    };
 
     mockCostLayerRepo = {
       getActiveLayers: jest.fn(),
       getActiveLayersByVariantIds: jest.fn(),
       save: jest.fn(),
       saveMany: jest.fn(),
-    } as any;
+    };
 
     mockTenantConfigRepo = {
       findByTenantId: jest.fn(),
-      save: jest.fn(),
-    } as any;
+    };
 
     mockJournalRepo = {
       save: jest.fn(),
-      findByTenantAndDateRange: jest.fn(),
-    } as any;
+    };
 
-    useCase = new DisassembleKit(
+    disassembleKit = new DisassembleKit(
       mockInventoryRepo,
       mockCostLayerRepo,
       mockTenantConfigRepo,
       mockJournalRepo
     );
 
-    jest.clearAllMocks();
+    // Default mock for cost layer service consumeFifoLayers
+    (disassembleKit as any).costLayerService.consumeFifoLayers = jest.fn().mockResolvedValue({ totalCostCents: 1000 });
   });
 
-  it("should handle prisma.kitModel.findUnique error without crashing and fallback to throwing not found if fallback also fails", async () => {
-    // Mock prisma to throw an error
-    (prisma.kitModel.findUnique as jest.Mock).mockRejectedValue(new Error("Database connection lost"));
+  it("should handle error when prisma.kitModel.findUnique fails and kit is not in memory", async () => {
+    // Arrange
+    (prisma.kitModel.findUnique as jest.Mock).mockRejectedValue(new Error("Database connection error"));
 
-    const dto: DisassembleKitDTO = {
+    const { getInMemoryKit } = require("../../../src/infrastructure/http/controllers/KitController");
+    (getInMemoryKit as jest.Mock).mockReturnValue(null);
+
+    const dto = {
       tenantId: "tenant-1",
       locationId: "loc-1",
-      kitSku: "KIT-XYZ",
+      kitSku: "KIT-123",
       quantity: 1,
       actorId: "actor-1",
       referenceId: "ref-1",
     };
 
-    // Should not crash with unhandled rejection, but throw the expected "not found" error because the in-memory fallback will return null by default in tests.
-    await expect(useCase.execute(dto)).rejects.toThrow("Kit with SKU KIT-XYZ not found.");
+    // Act & Assert
+    await expect(disassembleKit.execute(dto)).rejects.toThrow("Kit with SKU KIT-123 not found.");
 
-    // Verify that Prisma was indeed called
     expect(prisma.kitModel.findUnique).toHaveBeenCalledWith({
-      where: { sku: "KIT-XYZ" },
+      where: { sku: "KIT-123" },
       include: { components: true },
     });
+    expect(getInMemoryKit).toHaveBeenCalledWith("KIT-123");
+  });
+
+  it("should handle error when prisma.kitModel.findUnique fails but kit is found in memory fallback", async () => {
+    // Arrange
+    (prisma.kitModel.findUnique as jest.Mock).mockRejectedValue(new Error("Database connection error"));
+
+    const { getInMemoryKit } = require("../../../src/infrastructure/http/controllers/KitController");
+    (getInMemoryKit as jest.Mock).mockReturnValue({
+      sku: "KIT-123",
+      components: [
+        { variantId: "COMP-1", quantity: 2 }
+      ]
+    });
+
+    const mockInvItem = {
+        quantity: { getValue: () => 5 },
+        dispatchStock: jest.fn(),
+        sku: { getValue: () => "KIT-123" }
+    };
+    mockInventoryRepo.findBySku.mockResolvedValue(mockInvItem);
+    mockInventoryRepo.findBySkus.mockResolvedValue([]);
+    mockCostLayerRepo.getActiveLayersByVariantIds.mockResolvedValue(new Map());
+
+    const dto = {
+      tenantId: "tenant-1",
+      locationId: "loc-1",
+      kitSku: "KIT-123",
+      quantity: 1,
+      actorId: "actor-1",
+      referenceId: "ref-1",
+    };
+
+    // Act
+    await disassembleKit.execute(dto);
+
+    // Assert
+    expect(prisma.kitModel.findUnique).toHaveBeenCalled();
+    expect(getInMemoryKit).toHaveBeenCalledWith("KIT-123");
+    expect(mockInventoryRepo.findBySku).toHaveBeenCalled();
+    expect(mockInvItem.dispatchStock).toHaveBeenCalled();
   });
 });

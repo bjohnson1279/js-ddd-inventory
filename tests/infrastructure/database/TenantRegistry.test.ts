@@ -26,18 +26,19 @@ describe('TenantRegistry', () => {
     });
 
     it('should use default host/port/credentials from env when not provided', async () => {
-      const entry = await registry.registerTenant('tenant-1');
+      const originalDbPassword = process.env.DB_PASSWORD;
+      delete process.env.DB_PASSWORD;
+      try {
+        const entry = await registry.registerTenant('tenant-1');
 
-      expect(entry.dbHost).toBeTruthy();
-      expect(entry.dbPort).toBeGreaterThan(0);
-      expect(entry.dbName).toBe('inventory_tenant_tenant_1');
-      expect(entry.dbUser).toBeTruthy();
-      // When DB_PASSWORD is provided to jest, it shouldn't be undefined.
-      // This test is testing that we fallback to the env variable.
-      if (process.env.DB_PASSWORD) {
-        expect(entry.dbPassword).toBe(process.env.DB_PASSWORD);
-      } else {
+        expect(entry.dbHost).toBeTruthy();
+        expect(entry.dbPort).toBeGreaterThan(0);
+        expect(entry.dbName).toBe('inventory_tenant_tenant_1');
+        expect(entry.dbUser).toBeTruthy();
+        // dbPassword should be undefined if not provided in env
         expect(entry.dbPassword).toBeUndefined();
+      } finally {
+        process.env.DB_PASSWORD = originalDbPassword;
       }
     });
 
