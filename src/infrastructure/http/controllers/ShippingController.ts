@@ -3,6 +3,7 @@ import { CalculateShippingRates } from "../../../application/useCases/CalculateS
 import { PurchaseShippingLabel } from "../../../application/useCases/PurchaseShippingLabel";
 import { UpdateShipmentStatus } from "../../../application/useCases/UpdateShipmentStatus";
 import { RouteOrder } from "../../../application/useCases/RouteOrder";
+import { MockGeocoderService } from "../../services/MockGeocoderService";
 import { IShipmentRepository } from "../../../domain/repositories/IShipmentRepository";
 import { ICarrierService } from "../../../application/ports/ICarrierService";
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
@@ -161,8 +162,9 @@ export class ShippingController {
     try {
       const inventoryRepository = req.app.get("inventoryRepository") as IInventoryRepository;
       const carrierService = req.app.get("carrierService") as ICarrierService;
+      const geocoderService = req.app.get("geocoderService") || new MockGeocoderService();
 
-      const useCase = new RouteOrder(inventoryRepository, carrierService);
+      const useCase = new RouteOrder(inventoryRepository, carrierService, geocoderService);
 
       const { sku, quantity, destinationAddress, strategyName } = req.body;
 

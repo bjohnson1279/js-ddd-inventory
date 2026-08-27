@@ -8,6 +8,7 @@ import { Quantity } from "../../../src/domain/valueObjects/Quantity";
 describe("RouteOrder Use Case", () => {
   let mockInventoryRepo: jest.Mocked<IInventoryRepository>;
   let mockCarrierService: jest.Mocked<ICarrierService>;
+  let mockGeocoderService: any;
   let useCase: RouteOrder;
 
   beforeEach(() => {
@@ -23,8 +24,11 @@ describe("RouteOrder Use Case", () => {
       fetchRates: jest.fn(),
       generateLabel: jest.fn(),
     } as any;
+    mockGeocoderService = {
+      geocode: jest.fn().mockReturnValue({ getLatitude: () => 40.7128, getLongitude: () => -74.0060 } as any)
+    } as any;
 
-    useCase = new RouteOrder(mockInventoryRepo, mockCarrierService);
+    useCase = new RouteOrder(mockInventoryRepo, mockCarrierService, mockGeocoderService);
   });
 
   it("should successfully route an order based on nearest location and low cost", async () => {
