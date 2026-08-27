@@ -72,6 +72,20 @@ export class AuthController {
       inMemoryUsers.set(adminId, userObj);
 
       try {
+        const systemPermissions = [
+          { id: "inventory:read", resource: "inventory", action: "read" },
+          { id: "inventory:write", resource: "inventory", action: "write" },
+          { id: "roles:read", resource: "roles", action: "read" },
+          { id: "roles:write", resource: "roles", action: "write" }
+        ];
+
+        for (const p of systemPermissions) {
+          const exists = await prisma.permissionModel.findUnique({ where: { id: p.id }});
+          if (!exists) {
+            await prisma.permissionModel.create({ data: p });
+          }
+        }
+
         const roles = ["admin", "warehouse_operator", "inventory_manager", "finance_auditor", "read_only", "accountant", "viewer"];
         const existingRoles = await prisma.roleModel.findMany({
           where: { id: { in: roles } }
@@ -79,13 +93,26 @@ export class AuthController {
         const existingRoleIds = new Set(existingRoles.map(r => r.id));
         const rolesToCreate = roles.filter(r => !existingRoleIds.has(r)).map(r => ({
           id: r,
-          name: r.replace("_", " ")
+          name: r.replace("_", " "),
+          isCustom: false
         }));
 
         if (rolesToCreate.length > 0) {
           await prisma.roleModel.createMany({
             data: rolesToCreate
           });
+        }
+        
+        // Give admin all permissions
+        for (const p of systemPermissions) {
+          const rpExists = await prisma.rolePermissionModel.findUnique({
+            where: { roleId_permissionId: { roleId: "admin", permissionId: p.id } }
+          });
+          if (!rpExists) {
+            await prisma.rolePermissionModel.create({
+              data: { roleId: "admin", permissionId: p.id }
+            });
+          }
         }
 
         await prisma.userModel.create({
@@ -137,7 +164,9 @@ export class AuthController {
             include: {
               userRoles: {
                 include: { role: {
-                  include: { rolePermissions: true }
+                  include: { rolePermissions: {
+                    include: { permission: true }
+                  } }
                 } }
               }
             }
@@ -159,7 +188,7 @@ export class AuthController {
 
       const userRole = user.userRoles && user.userRoles.length > 0 ? user.userRoles[0].role.id : "staff";
       const permissions = user.userRoles && user.userRoles.length > 0 && user.userRoles[0].role.rolePermissions
-        ? user.userRoles[0].role.rolePermissions.map((rp: any) => rp.permission)
+        ? user.userRoles[0].role.rolePermissions.map((rp: any) => rp.permission?.id || rp.permissionId)
         : [];
 
       const token = jwt.sign(

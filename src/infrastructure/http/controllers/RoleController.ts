@@ -1,22 +1,38 @@
 import { Request, Response } from "express";
 import { prisma } from "../../database/prisma";
 import { Logger } from "../../../infrastructure/logging/logger";
-
-const DEFAULT_ROLES = ["admin", "warehouse_operator", "inventory_manager", "finance_auditor", "read_only", "accountant", "viewer"];
+import { AuthenticatedRequest } from "../middleware/auth";
 
 export class RoleController {
-  static async listRoles(req: Request, res: Response) {
+  static async listRoles(req: AuthenticatedRequest, res: Response) {
     try {
+      const tenantId = req.tenantId || "tenant-1";
       const roles = await prisma.roleModel.findMany({
+        where: {
+          OR: [
+            { isCustom: false },
+            { tenantId: tenantId }
+          ]
+        },
         include: {
-          rolePermissions: true
-        }
+          rolePermissions: {
+            include: { permission: true }
+          }
+        },
+        orderBy: { name: 'asc' }
       });
       
       const formattedRoles = roles.map((role: any) => ({
         id: role.id,
         name: role.name,
-        permissions: role.rolePermissions.map((rp: any) => rp.permission)
+        description: role.description,
+        isCustom: role.isCustom,
+        permissions: role.rolePermissions.map((rp: any) => ({
+          id: rp.permission.id,
+          resource: rp.permission.resource,
+          action: rp.permission.action,
+          description: rp.permission.description
+        }))
       }));
 
       return res.status(200).json({ roles: formattedRoles });
@@ -26,50 +42,76 @@ export class RoleController {
     }
   }
 
-  static async createRole(req: Request, res: Response) {
+  static async createRole(req: AuthenticatedRequest, res: Response) {
     try {
-      const { id, name, permissions } = req.body;
+      const tenantId = req.tenantId || "tenant-1";
+      const { name, description, permissionIds } = req.body;
 
-      if (!id || !name) {
-        return res.status(400).json({ error: "id and name are required." });
+      if (!name) {
+        return res.status(400).json({ error: "name is required." });
       }
 
-      const existingRole = await prisma.roleModel.findUnique({ where: { id } });
-      if (existingRole) {
-        return res.status(400).json({ error: `Role with id ${id} already exists.` });
+      const id = `custom_${tenantId}_${name.toLowerCase().replace(/\\s+/g, '_')}_${Date.now()}`;
+
+      let validPermissionIds: string[] = [];
+      if (permissionIds && Array.isArray(permissionIds)) {
+        const validPermissions = await prisma.permissionModel.findMany({
+          where: { id: { in: permissionIds } }
+        });
+        if (validPermissions.length !== permissionIds.length) {
+          const valid = new Set(validPermissions.map(p => p.id));
+          const invalid = permissionIds.filter(pid => !valid.has(pid));
+          return res.status(400).json({ error: `Invalid permission IDs: ${invalid.join(', ')}` });
+        }
+        validPermissionIds = permissionIds;
       }
 
       await prisma.$transaction(async (tx: any) => {
         await tx.roleModel.create({
-          data: { id, name }
+          data: { 
+            id, 
+            name, 
+            description: description || "",
+            isCustom: true,
+            tenantId
+          }
         });
 
-        if (permissions && Array.isArray(permissions)) {
+        if (validPermissionIds.length > 0) {
           await tx.rolePermissionModel.createMany({
-            data: permissions.map((p: string) => ({ roleId: id, permission: p }))
+            data: validPermissionIds.map((pid: string) => ({ roleId: id, permissionId: pid }))
           });
         }
       });
 
-      return res.status(201).json({ success: true, message: "Role created successfully." });
+      return res.status(201).json({ success: true, message: "Role created successfully.", id });
     } catch (error: any) {
       Logger.error({ context: "RoleController", message: "Failed to create role", error: error });
       return res.status(500).json({ error: "Internal server error" });
     }
   }
 
-  static async updateRolePermissions(req: Request, res: Response) {
+  static async updateRolePermissions(req: AuthenticatedRequest, res: Response) {
     try {
       const { roleId } = req.params;
-      const { permissions } = req.body;
+      const { permissionIds } = req.body;
 
-      if (!Array.isArray(permissions)) {
-        return res.status(400).json({ error: "permissions must be an array." });
+      if (!Array.isArray(permissionIds)) {
+        return res.status(400).json({ error: "permissionIds must be an array." });
       }
 
       const existingRole = await prisma.roleModel.findUnique({ where: { id: roleId } });
       if (!existingRole) {
         return res.status(404).json({ error: `Role ${roleId} not found.` });
+      }
+
+      const validPermissions = await prisma.permissionModel.findMany({
+        where: { id: { in: permissionIds } }
+      });
+      if (validPermissions.length !== permissionIds.length) {
+        const valid = new Set(validPermissions.map(p => p.id));
+        const invalid = permissionIds.filter(pid => !valid.has(pid));
+        return res.status(400).json({ error: `Invalid permission IDs: ${invalid.join(', ')}` });
       }
 
       await prisma.$transaction(async (tx: any) => {
@@ -79,9 +121,9 @@ export class RoleController {
         });
 
         // Assign new permissions
-        if (permissions.length > 0) {
+        if (permissionIds.length > 0) {
           await tx.rolePermissionModel.createMany({
-            data: permissions.map((p: string) => ({ roleId, permission: p }))
+            data: permissionIds.map((pid: string) => ({ roleId, permissionId: pid }))
           });
         }
       });
@@ -93,17 +135,25 @@ export class RoleController {
     }
   }
 
-  static async deleteRole(req: Request, res: Response) {
+  static async deleteRole(req: AuthenticatedRequest, res: Response) {
     try {
       const { roleId } = req.params;
 
-      if (DEFAULT_ROLES.includes(roleId)) {
-        return res.status(403).json({ error: "Cannot delete a default system role." });
-      }
-
-      const existingRole = await prisma.roleModel.findUnique({ where: { id: roleId } });
+      const existingRole = await prisma.roleModel.findUnique({ 
+        where: { id: roleId },
+        include: { userRoles: true }
+      });
+      
       if (!existingRole) {
         return res.status(404).json({ error: `Role ${roleId} not found.` });
+      }
+
+      if (!existingRole.isCustom) {
+        return res.status(403).json({ error: "Cannot delete a built-in system role." });
+      }
+
+      if (existingRole.userRoles.length > 0) {
+        return res.status(403).json({ error: `Cannot delete role '${existingRole.name}': ${existingRole.userRoles.length} user(s) are currently assigned.` });
       }
 
       await prisma.roleModel.delete({

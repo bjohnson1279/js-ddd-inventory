@@ -308,10 +308,11 @@ model ShipmentModel {
 }
 
 model TenantModel {
-  id        String      @id
-  name      String
-  createdAt DateTime    @default(now())
-  users     UserModel[]
+  id          String      @id
+  name        String
+  createdAt   DateTime    @default(now())
+  users       UserModel[]
+  customRoles RoleModel[]
 }
 
 model UserModel {
@@ -332,8 +333,23 @@ model UserModel {
 model RoleModel {
   id              String                @id
   name            String
+  description     String                @default("")
+  isCustom        Boolean               @default(false) @map("is_custom")
+  tenantId        String?               @map("tenant_id")
   userRoles       UserRoleModel[]
   rolePermissions RolePermissionModel[]
+  tenant          TenantModel?          @relation(fields: [tenantId], references: [id])
+}
+
+model PermissionModel {
+  id              String                @id
+  resource        String
+  action          String
+  description     String                @default("")
+  rolePermissions RolePermissionModel[]
+
+  @@unique([resource, action])
+  @@map("permissions")
 }
 
 model UserRoleModel {
@@ -346,11 +362,12 @@ model UserRoleModel {
 }
 
 model RolePermissionModel {
-  roleId     String
-  permission String
-  role       RoleModel @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId       String
+  permissionId String
+  role         RoleModel       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   PermissionModel @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
-  @@id([roleId, permission])
+  @@id([roleId, permissionId])
 }
 
 model ApiTokenModel {
