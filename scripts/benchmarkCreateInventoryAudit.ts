@@ -74,6 +74,20 @@ async function runBenchmark() {
       const results = await Promise.all(fetchPromises);
       inventoryItems = results.filter((item: any): item is InventoryItem => item !== null && item !== undefined);
     }
+
+    // Proposed Fix: Use a Map for O(1) lookups instead of potentially finding items in a loop
+    const itemsBySku = new Map(inventoryItems.map((item: any) => [item.sku.getValue(), item]));
+    const auditItems: any[] = [];
+
+    for (const variantId of variants) {
+      const inventoryItem = itemsBySku.get(variantId);
+      const expectedQuantity = inventoryItem ? inventoryItem.quantity.getValue() : 0;
+      auditItems.push({
+        variantId,
+        expectedQuantity
+      });
+    }
+
     return { id: 'mock' } as any;
   }
 
