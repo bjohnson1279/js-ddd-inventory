@@ -68,10 +68,73 @@ export class ComplianceLedgerService {
       await prisma.complianceLedgerModel.create({
         data: entryData
       });
-    } catch (e) {}
+    } catch (e) {
+      Logger.error({ context: "ComplianceLedgerService", message: "Failed to create ledger entry" }, e);
+    }
 
     Logger.info({ context: "ComplianceLedgerService", message: `[ComplianceLedger] Recorded entry #${sequenceNumber} for event: ${eventType} (Hash: ${hash.substring(0, 10)}...)` });
     return entryData;
+  }
+
+
+  public static async logEvents(tenantId: string, eventType: string, payloads: LedgerLogPayload[]): Promise<any[]> {
+    if (payloads.length === 0) return [];
+
+    const privateKey = this.getPrivateKey();
+
+    // Find the latest ledger entry to chain
+    let lastEntry: any = null;
+    try {
+      lastEntry = await prisma.complianceLedgerModel.findFirst({
+        orderBy: { sequenceNumber: "desc" }
+      });
+    } catch (e) {
+      if (inMemoryLedger.length > 0) {
+        lastEntry = inMemoryLedger[inMemoryLedger.length - 1];
+      }
+    }
+
+    const timestamp = new Date();
+    const newEntries = [];
+
+    let currentSequenceNumber = lastEntry ? lastEntry.sequenceNumber + 1 : 1;
+    let currentPreviousHash = lastEntry ? lastEntry.hash : "0000000000000000000000000000000000000000000000000000000000000000";
+
+    for (const payload of payloads) {
+      const payloadStr = JSON.stringify(payload);
+      const hashInput = `${currentSequenceNumber}|${tenantId}|${eventType}|${payloadStr}|${timestamp.toISOString()}|${currentPreviousHash}`;
+      const hash = crypto.createHash("sha256").update(hashInput).digest("hex");
+      const signature = crypto.createHmac("sha256", privateKey).update(hash).digest("hex");
+
+      const entryData = {
+        id: crypto.randomUUID(),
+        sequenceNumber: currentSequenceNumber,
+        tenantId,
+        eventType,
+        payload: payloadStr,
+        timestamp,
+        previousHash: currentPreviousHash,
+        hash,
+        signature
+      };
+
+      newEntries.push(entryData);
+      inMemoryLedger.push(entryData);
+
+      currentSequenceNumber++;
+      currentPreviousHash = hash;
+    }
+
+    try {
+      await prisma.complianceLedgerModel.createMany({
+        data: newEntries
+      });
+    } catch (e) {
+      Logger.error({ context: "ComplianceLedgerService", message: "Failed to create ledger entries" }, e);
+    }
+
+    Logger.info({ context: "ComplianceLedgerService", message: `[ComplianceLedger] Recorded ${newEntries.length} entries for event: ${eventType}` });
+    return newEntries;
   }
 
   public static async validateLedger(tenantId?: string): Promise<{ isValid: boolean; failedSequenceNumber?: number; reason?: string }> {

@@ -363,17 +363,22 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     }
 
     const tenantId = tenantLocalStorage.getStore() || "tenant-1";
-    for (const item of items) {
-      await ComplianceLedgerService.logEvent(tenantId, "STOCK_ADJUSTED", {
-        sku: item.sku.getValue(),
-        locationId: item.locationId,
-        quantity: item.quantity.getValue(),
-        allocated: item.allocated.getValue(),
-        inTransit: item.inTransit.getValue(),
-        version: item.version,
-        reason: "Inventory repository saveMany operation"
-      });
 
+    // Log Stock Adjustments to Compliance Ledger in bulk
+    const ledgerPayloads = items.map(item => ({
+      sku: item.sku.getValue(),
+      locationId: item.locationId,
+      quantity: item.quantity.getValue(),
+      allocated: item.allocated.getValue(),
+      inTransit: item.inTransit.getValue(),
+      version: item.version,
+      reason: "Inventory repository saveMany operation"
+    }));
+
+    await ComplianceLedgerService.logEvents(tenantId, "STOCK_ADJUSTED", ledgerPayloads);
+
+    // Broadcast WebSocket events synchronously
+    for (const item of items) {
       WebSocketManager.broadcastToTenant(tenantId, {
         type: "stock_changed",
         sku: item.sku.getValue(),
