@@ -11,6 +11,7 @@ import { InventoryItem } from "../../domain/aggregates/InventoryItem";
 import { InventoryCostLayer } from "../../domain/accounting/entities/InventoryCostLayer";
 import { AccountingMethod } from "../../domain/accounting/enums/AccountingMethod";
 import crypto from "crypto";
+import { batchSave } from "../../utils/batchSave";
 
 export interface DisassembleKitDTO {
   tenantId: string;
@@ -185,18 +186,10 @@ export class DisassembleKit {
     }
 
     // Batch save inventory items if possible, otherwise Promise.all
-    if ('saveMany' in this.inventoryRepository && typeof (this.inventoryRepository as any).saveMany === 'function') {
-      await (this.inventoryRepository as any).saveMany(itemsToSave);
-    } else {
-      await Promise.all(itemsToSave.map(item => this.inventoryRepository.save(item)));
-    }
+    await batchSave(this.inventoryRepository, itemsToSave);
 
     // Batch save cost layers if possible, otherwise Promise.all
-    if ('saveMany' in this.costLayerRepository && typeof (this.costLayerRepository as any).saveMany === 'function') {
-      await (this.costLayerRepository as any).saveMany(restoreLayers);
-    } else {
-      await Promise.all(restoreLayers.map(l => this.costLayerRepository.save(l)));
-    }
+    await batchSave(this.costLayerRepository, restoreLayers);
 
     // 7. Write balanced journal entry if Accrual
     const config = await this.tenantConfigRepository.findByTenantId(tenantId);
