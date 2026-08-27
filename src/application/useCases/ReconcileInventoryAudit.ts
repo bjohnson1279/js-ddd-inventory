@@ -88,6 +88,34 @@ export class ReconcileInventoryAudit {
 
     const journalPromises: Promise<any>[] = [];
 
+    // Optimization: Pre-fetch all required active layers in a single batch to avoid N+1 DB lookups during positive discrepancies
+    let activeLayersMap = new Map<string, InventoryCostLayer[]>();
+    const positiveDiscrepancyVariantIds = audit.items
+      .filter(item => item.discrepancy !== null && item.discrepancy > 0)
+      .map(item => item.variantId);
+
+    if (positiveDiscrepancyVariantIds.length > 0) {
+      // Optimization: Deduplicate variant IDs and pre-fetch layers concurrently to avoid N+1 DB lookups
+      const uniqueVariantIds = Array.from(new Set(positiveDiscrepancyVariantIds));
+      if ('getActiveLayersByVariantIds' in this.costLayerRepository && typeof (this.costLayerRepository as any).getActiveLayersByVariantIds === 'function') {
+        const result = await (this.costLayerRepository as any).getActiveLayersByVariantIds(uniqueVariantIds, "desc");
+        // Safely handle both Map and Object return types from the repository
+        if (result instanceof Map) {
+          activeLayersMap = result;
+        } else {
+          for (const [key, value] of Object.entries(result)) {
+            activeLayersMap.set(key, value as InventoryCostLayer[]);
+          }
+        }
+      } else {
+        const layersPromises = uniqueVariantIds.map(async variantId => {
+          const layers = await this.costLayerRepository.getActiveLayers(variantId, "desc");
+          activeLayersMap.set(variantId, layers);
+        });
+        await Promise.all(layersPromises);
+      }
+    }
+
     await Promise.all(audit.items.map(async (item) => {
       const discrepancy = item.discrepancy;
       if (discrepancy === null || discrepancy === 0) {
@@ -144,7 +172,7 @@ export class ReconcileInventoryAudit {
         modifiedInventoryItems.set(skuValue, inventoryItem);
 
         // 2. Find last receipt unit cost, fallback to 0
-        const activeLayers = await this.costLayerRepository.getActiveLayers(item.variantId, "desc");
+        const activeLayers = activeLayersMap.get(item.variantId) || [];
         const unitCostCents = activeLayers.length > 0 ? activeLayers[0].unitCostCents : 0;
         const totalCostCents = unitCostCents * discrepancy;
 
@@ -186,7 +214,12 @@ export class ReconcileInventoryAudit {
       if ('saveMany' in this.inventoryRepository && typeof (this.inventoryRepository as any).saveMany === 'function') {
         await (this.inventoryRepository as any).saveMany(Array.from(modifiedInventoryItems.values()));
       } else {
-        await Promise.all(Array.from(modifiedInventoryItems.values()).map(item => this.inventoryRepository.save(item)));
+        // Optimization: Execute chunked Promise.all for sequential DB saves instead of concurrent batch
+        const items = Array.from(modifiedInventoryItems.values());
+        for (let i = 0; i < items.length; i += 50) {
+          const chunk = items.slice(i, i + 50);
+          await Promise.all(chunk.map(item => this.inventoryRepository.save(item)));
+        }
       }
     }
 
@@ -195,7 +228,11 @@ export class ReconcileInventoryAudit {
       if ('saveMany' in this.costLayerRepository && typeof (this.costLayerRepository as any).saveMany === 'function') {
         await (this.costLayerRepository as any).saveMany(newCostLayers);
       } else {
-        await Promise.all(newCostLayers.map(layer => this.costLayerRepository.save(layer)));
+        // Optimization: Execute chunked Promise.all for sequential DB saves instead of concurrent batch
+        for (let i = 0; i < newCostLayers.length; i += 50) {
+          const chunk = newCostLayers.slice(i, i + 50);
+          await Promise.all(chunk.map(layer => this.costLayerRepository.save(layer)));
+        }
       }
     }
 
