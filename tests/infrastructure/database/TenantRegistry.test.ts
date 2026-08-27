@@ -32,8 +32,13 @@ describe('TenantRegistry', () => {
       expect(entry.dbPort).toBeGreaterThan(0);
       expect(entry.dbName).toBe('inventory_tenant_tenant_1');
       expect(entry.dbUser).toBeTruthy();
-      // dbPassword should be undefined if not provided in env
-      expect(entry.dbPassword).toEqual(process.env.DB_PASSWORD);
+      // When DB_PASSWORD is provided to jest, it shouldn't be undefined.
+      // This test is testing that we fallback to the env variable.
+      if (process.env.DB_PASSWORD) {
+        expect(entry.dbPassword).toBe(process.env.DB_PASSWORD);
+      } else {
+        expect(entry.dbPassword).toBeUndefined();
+      }
     });
 
     it('should use custom connection details when provided', async () => {
