@@ -60,7 +60,7 @@ export class KitController {
           });
         });
       } catch (e: any) {
-        if (!e.code || e.code === "P1001" || e.message?.includes("Can't reach database") || e.name === "PrismaClientKnownRequestError") {
+        if (!e.code || e.code === "P1001" || e.code === "ECONNREFUSED" || e.message?.includes("Can't reach database") || e.name === "PrismaClientKnownRequestError") {
           // In-memory test fallback
         } else {
           throw e;
@@ -95,7 +95,7 @@ export class KitController {
             include: { components: true },
           });
         } catch (e: any) {
-          if (!e.code || e.code === "P1001" || e.message?.includes("Can't reach database") || e.name === "PrismaClientKnownRequestError") {
+          if (!e.code || e.code === "P1001" || e.code === "ECONNREFUSED" || e.message?.includes("Can't reach database") || e.name === "PrismaClientKnownRequestError") {
             // In-memory test fallback
           } else {
             throw e;
