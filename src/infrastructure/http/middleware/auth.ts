@@ -53,3 +53,13 @@ export function requireRole(allowedRoles: string[]) {
     next();
   };
 }
+
+export function requirePermission(domain: string, action: string) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    // Simple placeholder for permissions
+    next();
+  };
+}
