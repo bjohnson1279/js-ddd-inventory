@@ -565,3 +565,118 @@ model EsgEmissionsRecord {
 
 
 
+
+model ReportDefinitionModel {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  name        String
+  description String?
+  type        String
+  filters     String   @db.Text
+  grouping    String?  @db.Text
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  schedules  ReportScheduleModel[]
+  executions ReportExecutionModel[]
+
+  @@map("report_definitions")
+}
+
+model ReportScheduleModel {
+  id                 String                @id @default(uuid())
+  reportDefinitionId String                @map("report_definition_id")
+  cronExpression     String                @map("cron_expression")
+  nextRunAt          DateTime              @map("next_run_at")
+  lastRunAt          DateTime?             @map("last_run_at")
+  status             String                @default("ACTIVE")
+  deliveryMethod     String                @default("INTERNAL") @map("delivery_method")
+
+  reportDefinition   ReportDefinitionModel @relation(fields: [reportDefinitionId], references: [id], onDelete: Cascade)
+
+  @@map("report_schedules")
+}
+
+model ReportExecutionModel {
+  id                 String                @id @default(uuid())
+  reportDefinitionId String                @map("report_definition_id")
+  startedAt          DateTime              @default(now()) @map("started_at")
+  completedAt        DateTime?             @map("completed_at")
+  status             String                @default("PENDING")
+  fileUrl            String?               @map("file_url")
+  format             String                
+  error              String?               @db.Text
+
+  reportDefinition   ReportDefinitionModel @relation(fields: [reportDefinitionId], references: [id], onDelete: Cascade)
+  sharedLinks        SharedReportLinkModel[]
+
+  @@map("report_executions")
+}
+
+model SharedReportLinkModel {
+  id                String               @id @default(uuid())
+  reportExecutionId String               @map("report_execution_id")
+  token             String               @unique
+  expiresAt         DateTime             @map("expires_at")
+  viewerPermissions String?              @map("viewer_permissions")
+  
+  reportExecution   ReportExecutionModel @relation(fields: [reportExecutionId], references: [id], onDelete: Cascade)
+
+  @@map("shared_report_links")
+}
+
+model DashboardWidgetModel {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  type        String
+  config      String   @db.Text
+  layoutX     Int      @default(0) @map("layout_x")
+  layoutY     Int      @default(0) @map("layout_y")
+  width       Int      @default(1)
+  height      Int      @default(1)
+
+  @@map("dashboard_widgets")
+}
+
+model ApprovalWorkflowModel {
+  id           String   @id
+  tenantId     String   @map("tenant_id")
+  name         String
+  triggerEvent String   @map("trigger_event")
+  config       String   @db.Text
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  requests     ApprovalRequestModel[]
+
+  @@map("approval_workflows")
+}
+
+model ApprovalRequestModel {
+  id           String   @id
+  tenantId     String   @map("tenant_id")
+  workflowId   String   @map("workflow_id")
+  status       String   @default("PENDING")
+  currentStep  Int      @default(0) @map("current_step")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  workflow     ApprovalWorkflowModel @relation(fields: [workflowId], references: [id])
+  decisions    ApprovalDecisionModel[]
+
+  @@map("approval_requests")
+}
+
+model ApprovalDecisionModel {
+  id           String   @id
+  requestId    String   @map("request_id")
+  stepIndex    Int      @map("step_index")
+  deciderId    String   @map("decider_id")
+  decision     String
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  request      ApprovalRequestModel @relation(fields: [requestId], references: [id])
+
+  @@map("approval_decisions")
+}

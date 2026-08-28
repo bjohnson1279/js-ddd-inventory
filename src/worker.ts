@@ -24,6 +24,19 @@ const outboxProcessor = new OutboxProcessor(outboxRepo, messageBroker);
 const intervalMs = process.env.WORKER_INTERVAL_MS ? parseInt(process.env.WORKER_INTERVAL_MS) : 3000;
 outboxProcessor.start(intervalMs);
 WebhookDeliveryWorker.start(intervalMs);
+
+import { ReportSchedulerWorker } from "./infrastructure/workers/ReportSchedulerWorker";
+import { ReportGenerationWorker } from "./infrastructure/workers/ReportGenerationWorker";
+import { DomainEventDispatcher } from "./domain/events/DomainEventDispatcher";
+
+const reportScheduler = new ReportSchedulerWorker();
+reportScheduler.start(60000); // Check schedules every minute
+
+const reportWorker = new ReportGenerationWorker();
+DomainEventDispatcher.register("ReportExecutionRequested", async (event: any) => {
+  await reportWorker.processEvent(JSON.stringify(event));
+});
+
 Logger.info({ context: "Worker", message: `[Worker] Outbox worker started (polling every ${intervalMs}ms)` });
 
 // Graceful shutdown
@@ -41,6 +54,7 @@ Logger.info({ context: "Worker", message: `[Worker] Outbox worker started (polli
     Logger.info({ context: "Worker", message: "[Worker] Shutting down outbox worker..." });
     outboxProcessor.stop();
     WebhookDeliveryWorker.stop();
+    reportScheduler.stop();
     await safeDisconnect();
     process.exit(0);
   });
@@ -49,6 +63,7 @@ Logger.info({ context: "Worker", message: `[Worker] Outbox worker started (polli
     Logger.info({ context: "Worker", message: "[Worker] Shutting down outbox worker..." });
     outboxProcessor.stop();
     WebhookDeliveryWorker.stop();
+    reportScheduler.stop();
     await safeDisconnect();
     process.exit(0);
   });

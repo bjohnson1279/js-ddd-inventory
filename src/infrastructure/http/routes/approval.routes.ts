@@ -3,29 +3,22 @@ import { requirePermission } from "../middleware/auth";
 import { ManageApprovalWorkflowsUseCase } from "../../../application/useCases/ManageApprovalWorkflowsUseCase";
 
 const router = Router();
-
-/**
- * Approval Workflow Routes
- *
- * GET  /api/approvals/workflows            — List workflows for tenant
- * POST /api/approvals/workflows            — Create workflow
- * PUT  /api/approvals/workflows/:id        — Update workflow config
- * POST /api/approvals/workflows/:id/toggle — Toggle active/inactive
- * GET  /api/approvals/pending              — List pending approval requests
- * GET  /api/approvals/:id                  — Get approval request detail
- * POST /api/approvals/:id/decide           — Submit approval decision
- */
+const useCase = new ManageApprovalWorkflowsUseCase();
 
 // Workflow management (admin only)
-router.get("/workflows", requirePermission('approval', 'view'), (req, res) => {
-  // TODO: Wire to ManageApprovalWorkflowsUseCase.listWorkflows
-  res.status(501).json({ error: "Not yet implemented" });
-});
-
-router.post("/workflows", requirePermission('approval', 'view'), async (req, res) => {
+router.get("/workflows", requirePermission('approval', 'view'), async (req, res) => {
   try {
     const tenantId = (req as any).tenantId || "default-tenant";
-    const useCase = new ManageApprovalWorkflowsUseCase();
+    const result = await useCase.listWorkflows(tenantId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/workflows", requirePermission('approval', 'manage'), async (req, res) => {
+  try {
+    const tenantId = (req as any).tenantId || "default-tenant";
     const result = await useCase.createWorkflow(tenantId, req.body);
     res.status(201).json(result);
   } catch (error: any) {
@@ -33,30 +26,58 @@ router.post("/workflows", requirePermission('approval', 'view'), async (req, res
   }
 });
 
-router.put("/workflows/:id", requirePermission('approval', 'view'), (req, res) => {
-  // TODO: Wire to ManageApprovalWorkflowsUseCase.updateWorkflow
-  res.status(501).json({ error: "Not yet implemented" });
+router.put("/workflows/:id", requirePermission('approval', 'manage'), async (req, res) => {
+  try {
+    const tenantId = (req as any).tenantId || "default-tenant";
+    const result = await useCase.updateWorkflow(tenantId, req.params.id, req.body.config);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
 });
 
-router.post("/workflows/:id/toggle", requirePermission('approval', 'view'), (req, res) => {
-  // TODO: Wire to ManageApprovalWorkflowsUseCase.toggleWorkflow
-  res.status(501).json({ error: "Not yet implemented" });
+router.post("/workflows/:id/toggle", requirePermission('approval', 'manage'), async (req, res) => {
+  try {
+    const tenantId = (req as any).tenantId || "default-tenant";
+    const result = await useCase.toggleWorkflow(tenantId, req.params.id);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
 });
 
 // Approval request management
-router.get("/pending", requirePermission('approval', 'view'), (req, res) => {
-  // TODO: Wire to ManageApprovalWorkflowsUseCase.listPendingRequests
-  res.status(501).json({ error: "Not yet implemented" });
+router.get("/pending", requirePermission('approval', 'view'), async (req, res) => {
+  try {
+    const tenantId = (req as any).tenantId || "default-tenant";
+    const result = await useCase.listPendingRequests(tenantId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-router.get("/:id", requirePermission('approval', 'view'), (req, res) => {
-  // TODO: Wire to ManageApprovalWorkflowsUseCase.getApprovalRequest
-  res.status(501).json({ error: "Not yet implemented" });
+router.get("/:id", requirePermission('approval', 'view'), async (req, res) => {
+  try {
+    const tenantId = (req as any).tenantId || "default-tenant";
+    const result = await useCase.getApprovalRequest(tenantId, req.params.id);
+    if (!result) return res.status(404).json({ error: "Not found" });
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-router.post("/:id/decide", requirePermission('approval', 'view'), (req, res) => {
-  // TODO: Wire to ManageApprovalWorkflowsUseCase.submitDecision
-  res.status(501).json({ error: "Not yet implemented" });
+router.post("/:id/decide", requirePermission('approval', 'manage'), async (req, res) => {
+  try {
+    const tenantId = (req as any).tenantId || "default-tenant";
+    const deciderId = (req as any).userId || "system"; // Get from auth ideally
+    const { decision, notes } = req.body;
+    const result = await useCase.submitDecision(tenantId, req.params.id, deciderId, decision, notes);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
 });
 
 export default router;

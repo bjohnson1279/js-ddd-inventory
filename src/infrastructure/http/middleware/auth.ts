@@ -56,19 +56,26 @@ export function requireRole(allowedRoles: string[]) {
   };
 }
 
-export function requirePermission(allowedPermissions: string[]) {
+export function requirePermission(resource: string, action: string) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user || !req.user.permissions) {
       return res.status(403).json({ error: "Forbidden: No permissions associated with user." });
     }
     
-    // Check if the user has at least one of the allowed permissions
-    const hasPermission = req.user.permissions.some(p => allowedPermissions.includes(p));
+    const reqRes = resource.toLowerCase();
+    const reqAct = action.toLowerCase();
+    const required = `${reqRes}:${reqAct}`;
     
-    // Admin override
+    const permissions = req.user.permissions.map(p => p.toLowerCase());
+    
+    const hasPermission = 
+      permissions.includes(required) || 
+      permissions.includes('*:*') || 
+      permissions.includes(`${reqRes}:*`);
+    
     if (!hasPermission && req.user.role !== "admin") {
       return res.status(403).json({
-        error: `Forbidden: You do not have permission to perform this action. Required permission: one of [${allowedPermissions.join(", ")}].`
+        error: `Forbidden: You do not have permission to perform this action. Required permission: ${required}.`
       });
     }
     next();

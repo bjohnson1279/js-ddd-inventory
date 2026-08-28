@@ -102,6 +102,7 @@ import rfidRoutes from "./infrastructure/http/routes/rfid.routes";
 import anomalyDetectionRoutes from "./infrastructure/http/routes/anomalyDetection.routes";
 import rebalanceRoutes from "./infrastructure/http/routes/rebalance.routes";
 import roleRoutes from "./infrastructure/http/routes/role.routes";
+import reportRoutes from "./infrastructure/http/routes/report.routes";
 import { WebSocketManager } from "./infrastructure/websocket/WebSocketManager";
 import { authMiddleware, requireRole, AuthenticatedRequest } from "./infrastructure/http/middleware/auth";
 import { IWarehouseLocationRepository } from "./domain/repositories/IWarehouseLocationRepository";
@@ -225,6 +226,7 @@ export const setupApp = (
   app.use("/api/inventory", inventoryRoutes);
   app.use("/api/users", userRoutes);
   app.use("/api/roles", roleRoutes);
+  app.use("/api/reports", reportRoutes);
   app.use("/api/barcodes", barcodeRoutes);
   app.use("/api/serials", serialRoutes);
   app.use("/api/kits", kitRoutes);
