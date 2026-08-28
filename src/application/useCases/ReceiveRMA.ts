@@ -236,7 +236,11 @@ export class ReceiveRMA {
       if (this.serializedItemRepository.saveMany) {
         await this.serializedItemRepository.saveMany(modifiedSerialItems);
       } else {
-        await Promise.all(modifiedSerialItems.map(item => this.serializedItemRepository!.save(item)));
+        // Optimization: Execute chunked Promise.all for sequential DB saves instead of concurrent batch
+        for (let i = 0; i < modifiedSerialItems.length; i += 50) {
+          const chunk = modifiedSerialItems.slice(i, i + 50);
+          await Promise.all(chunk.map(item => this.serializedItemRepository!.save(item)));
+        }
       }
     }
 
@@ -245,7 +249,12 @@ export class ReceiveRMA {
       if (this.inventoryRepository.saveMany) {
         await this.inventoryRepository.saveMany(Array.from(modifiedInventoryItems.values()));
       } else {
-        await Promise.all(Array.from(modifiedInventoryItems.values()).map(item => this.inventoryRepository.save(item)));
+        // Optimization: Execute chunked Promise.all for sequential DB saves instead of concurrent batch
+        const items = Array.from(modifiedInventoryItems.values());
+        for (let i = 0; i < items.length; i += 50) {
+          const chunk = items.slice(i, i + 50);
+          await Promise.all(chunk.map(item => this.inventoryRepository.save(item)));
+        }
       }
     }
 
@@ -254,7 +263,11 @@ export class ReceiveRMA {
       if (this.costLayerRepository.saveMany) {
         await this.costLayerRepository.saveMany(newCostLayers);
       } else {
-        await Promise.all(newCostLayers.map(layer => this.costLayerRepository.save(layer)));
+        // Optimization: Execute chunked Promise.all for sequential DB saves instead of concurrent batch
+        for (let i = 0; i < newCostLayers.length; i += 50) {
+          const chunk = newCostLayers.slice(i, i + 50);
+          await Promise.all(chunk.map(layer => this.costLayerRepository.save(layer)));
+        }
       }
     }
 
@@ -263,7 +276,11 @@ export class ReceiveRMA {
       if (this.quarantineRepository.saveMany) {
         await this.quarantineRepository.saveMany(newQuarantineItems);
       } else {
-        await Promise.all(newQuarantineItems.map(item => this.quarantineRepository.save(item)));
+        // Optimization: Execute chunked Promise.all for sequential DB saves instead of concurrent batch
+        for (let i = 0; i < newQuarantineItems.length; i += 50) {
+          const chunk = newQuarantineItems.slice(i, i + 50);
+          await Promise.all(chunk.map(item => this.quarantineRepository.save(item)));
+        }
       }
     }
 
