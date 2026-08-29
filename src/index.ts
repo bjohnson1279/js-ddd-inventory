@@ -57,6 +57,7 @@ import serialRoutes from "./infrastructure/http/routes/serial.routes";
 import kitRoutes from "./infrastructure/http/routes/kit.routes";
 import accountingRoutes from "./infrastructure/http/routes/accounting.routes";
 import purchaseOrderRoutes from "./infrastructure/http/routes/purchaseOrder.routes";
+import integrationRoutes from "./infrastructure/http/routes/integration.routes";
 import { IPurchaseOrderRepository } from "./domain/repositories/IPurchaseOrderRepository";
 import { PrismaPurchaseOrderRepository } from "./infrastructure/database/PrismaPurchaseOrderRepository";
 import { InMemoryPurchaseOrderRepository } from "./infrastructure/database/InMemoryPurchaseOrderRepository";
@@ -249,6 +250,7 @@ export const setupApp = (
   app.use("/api/rfid", rfidRoutes);
   app.use("/api/anomaly-detection", anomalyDetectionRoutes);
   app.use("/api/rebalance", rebalanceRoutes);
+  app.use("/api/integrations", integrationRoutes);
 
   // Tier-2 Distributed Cache Management Endpoints
   app.get("/api/admin/cache/stats", requireRole(["admin"]), (req, res) => {
