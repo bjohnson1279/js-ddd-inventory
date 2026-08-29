@@ -680,3 +680,54 @@ model ApprovalDecisionModel {
 
   @@map("approval_decisions")
 }
+
+model ChannelModel {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  name      String
+  type      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  orders      OrderModel[]
+  allocations ChannelAllocationModel[]
+
+  @@map("channels")
+}
+
+model ChannelAllocationModel {
+  id                String   @id @default(uuid())
+  channelId         String   @map("channel_id")
+  variantId         String   @map("variant_id")
+  allocatedQuantity Int      @map("allocated_quantity")
+
+  channel ChannelModel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@map("channel_allocations")
+}
+
+model OrderModel {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  channelId       String   @map("channel_id")
+  externalOrderId String   @map("external_order_id")
+  status          String   @default("pending")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  channel ChannelModel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  items   OrderLineModel[]
+
+  @@map("orders")
+}
+
+model OrderLineModel {
+  id             String     @id @default(uuid())
+  orderId        String     @map("order_id")
+  variantId      String     @map("variant_id")
+  quantity       Int
+  unitPriceCents Int        @map("unit_price_cents")
+
+  order OrderModel @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_lines")
+}
