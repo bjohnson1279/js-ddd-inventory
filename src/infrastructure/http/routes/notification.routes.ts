@@ -1,12 +1,41 @@
-import { Router } from "express";
-import { NotificationController } from "../controllers/NotificationController";
+import { Router, Request, Response } from 'express';
+import { prisma } from '../../database/prisma';
+import { NotificationPrismaRepository } from '../../repositories/NotificationPrismaRepository';
 
-const router = Router();
+export const notificationRouter = Router();
+const repo = new NotificationPrismaRepository(prisma as any);
 
-router.get("/", NotificationController.list);
-router.post("/", NotificationController.create);
-router.post("/read-all", NotificationController.readAll);
-router.get("/subscribe", NotificationController.subscribe);
-router.post("/:id/read", NotificationController.read);
+notificationRouter.get('/:tenantId', async (req: Request, res: Response) => {
+  try {
+    const notifications = await repo.getUnread(req.params.tenantId);
+    res.status(200).json(notifications);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+});
 
-export default router;
+notificationRouter.patch('/:id/read', async (req: Request, res: Response) => {
+  try {
+    await repo.markAsRead(req.params.id);
+    res.status(200).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to mark notification as read' });
+  }
+});
+
+notificationRouter.post('/preferences', async (req: Request, res: Response) => {
+  try {
+    const prefs = await repo.savePreferences({
+      userId: req.body.userId,
+      tenantId: req.body.tenantId,
+      channel: req.body.channel,
+      eventType: req.body.eventType,
+      isEnabled: req.body.isEnabled
+    });
+    res.status(201).json(prefs);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to save preferences' });
+  }
+});
+
+export default notificationRouter;

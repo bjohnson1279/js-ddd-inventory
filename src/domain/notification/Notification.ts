@@ -1,9 +1,9 @@
 export interface Notification {
   id: string;
   tenantId: string;
-  userId: string;
-  type: string;
+  title: string;
   message: string;
+  type: 'info' | 'warning' | 'error' | 'success';
   isRead: boolean;
   createdAt: Date;
 }

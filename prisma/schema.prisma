@@ -30,16 +30,16 @@ model BarcodeAssignmentModel {
 }
 
 model ProductModel {
-  id          String                @id
-  name        String
-  variants    ProductVariantModel[]
+  id       String                @id
+  name     String
+  variants ProductVariantModel[]
 }
 
 model ProductVariantModel {
   id                String       @id
   productId         String
   sku               String       @unique
-  attributes        String       // Serialized variant attributes JSON string (e.g. [{"name":"size","value":"M"}])
+  attributes        String // Serialized variant attributes JSON string (e.g. [{"name":"size","value":"M"}])
   weightGrams       Int?
   volumeCubicMeters Float?
   product           ProductModel @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -71,8 +71,8 @@ model StatusTransitionModel {
 }
 
 model KitModel {
-  id         String               @id
-  sku        String               @unique
+  id         String              @id
+  sku        String              @unique
   name       String
   components KitComponentModel[]
 }
@@ -86,7 +86,7 @@ model KitComponentModel {
 }
 
 model InventoryCostLayerModel {
-  id                String   @id
+  id                String    @id
   variantId         String
   locationId        String?
   tenantId          String
@@ -95,7 +95,7 @@ model InventoryCostLayerModel {
   unitCostCents     Int
   receivedAt        DateTime
   purchaseOrderId   String
-  isConsumed        Boolean  @default(false)
+  isConsumed        Boolean   @default(false)
   lotNumber         String?
   expirationDate    DateTime?
 }
@@ -175,14 +175,14 @@ model WebhookDeliveryModel {
 }
 
 model PurchaseOrderModel {
-  id                  String                    @id
-  purchaseOrderNumber String                    @unique
+  id                  String                   @id
+  purchaseOrderNumber String                   @unique
   vendorId            String
   tenantId            String
   status              String
   locationId          String
-  createdAt           DateTime                  @default(now())
-  updatedAt           DateTime                  @updatedAt
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
   items               PurchaseOrderItemModel[]
 }
 
@@ -197,15 +197,15 @@ model PurchaseOrderItemModel {
 }
 
 model ReorderPolicyModel {
-  id              String   @id
-  sku             String
-  locationId      String
-  reorderPoint    Int
-  reorderQuantity Int
-  safetyStock     Int
+  id                String   @id
+  sku               String
+  locationId        String
+  reorderPoint      Int
+  reorderQuantity   Int
+  safetyStock       Int
   dynamicRopEnabled Boolean  @default(false) @map("dynamic_rop_enabled")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@unique([sku, locationId])
 }
@@ -410,34 +410,34 @@ model NotificationModel {
 }
 
 model NetsuiteJournalMappingModel {
-  id                 String   @id @default(uuid())
-  journalEntryId     String   @unique
-  netsuiteJournalId  String   @unique
-  createdAt          DateTime @default(now())
+  id                String   @id @default(uuid())
+  journalEntryId    String   @unique
+  netsuiteJournalId String   @unique
+  createdAt         DateTime @default(now())
 }
 
 model XeroJournalMappingModel {
-  id                 String   @id @default(uuid())
-  journalEntryId     String   @unique
-  xeroJournalId      String   @unique
-  createdAt          DateTime @default(now())
+  id             String   @id @default(uuid())
+  journalEntryId String   @unique
+  xeroJournalId  String   @unique
+  createdAt      DateTime @default(now())
 }
 
 model QuickbooksJournalMappingModel {
-  id                 String   @id @default(uuid())
-  journalEntryId     String   @unique
-  quickbooksJournalId String  @unique
-  createdAt          DateTime @default(now())
+  id                  String   @id @default(uuid())
+  journalEntryId      String   @unique
+  quickbooksJournalId String   @unique
+  createdAt           DateTime @default(now())
 }
 
 model AuditDiscrepancyModel {
   id              String    @id @default(uuid())
   tenantId        String    @map("tenant_id")
-  type            String    
-  referenceId     String    @map("reference_id") 
+  type            String
+  referenceId     String    @map("reference_id")
   externalRefId   String?   @map("external_ref_id")
   description     String
-  status          String    @default("OPEN") 
+  status          String    @default("OPEN")
   occurredAt      DateTime  @default(now()) @map("occurred_at")
   resolvedAt      DateTime? @map("resolved_at")
   resolutionNotes String?   @map("resolution_notes")
@@ -502,25 +502,25 @@ model BillOfLading {
 }
 
 model ReturnMerchandiseAuthorization {
-  id        String    @id @default(uuid())
-  rmaNumber String    @unique @map("rma_number")
-  orderId   String    @map("order_id")
-  customerId String   @map("customer_id")
-  status    String    @default("PENDING_INSPECTION")
-  createdAt DateTime  @default(now()) @map("created_at")
-  items     RmaItem[]
+  id         String    @id @default(uuid())
+  rmaNumber  String    @unique @map("rma_number")
+  orderId    String    @map("order_id")
+  customerId String    @map("customer_id")
+  status     String    @default("PENDING_INSPECTION")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  items      RmaItem[]
 
   @@map("return_merchandise_authorizations")
 }
 
 model RmaItem {
-  id          String   @id @default(uuid())
-  rmaId       String   @map("rma_id")
+  id          String                         @id @default(uuid())
+  rmaId       String                         @map("rma_id")
   sku         String
   quantity    Int
   reason      String
-  disposition String   @default("PENDING")
-  inspectedAt DateTime? @map("inspected_at")
+  disposition String                         @default("PENDING")
+  inspectedAt DateTime?                      @map("inspected_at")
   rma         ReturnMerchandiseAuthorization @relation(fields: [rmaId], references: [id], onDelete: Cascade)
 
   @@map("rma_items")
@@ -563,9 +563,6 @@ model EsgEmissionsRecord {
   @@map("esg_emissions_records")
 }
 
-
-
-
 model ReportDefinitionModel {
   id          String   @id @default(uuid())
   tenantId    String   @map("tenant_id")
@@ -585,56 +582,56 @@ model ReportDefinitionModel {
 }
 
 model ReportScheduleModel {
-  id                 String                @id @default(uuid())
-  reportDefinitionId String                @map("report_definition_id")
-  cronExpression     String                @map("cron_expression")
-  nextRunAt          DateTime              @map("next_run_at")
-  lastRunAt          DateTime?             @map("last_run_at")
-  status             String                @default("ACTIVE")
-  deliveryMethod     String                @default("INTERNAL") @map("delivery_method")
+  id                 String    @id @default(uuid())
+  reportDefinitionId String    @map("report_definition_id")
+  cronExpression     String    @map("cron_expression")
+  nextRunAt          DateTime  @map("next_run_at")
+  lastRunAt          DateTime? @map("last_run_at")
+  status             String    @default("ACTIVE")
+  deliveryMethod     String    @default("INTERNAL") @map("delivery_method")
 
-  reportDefinition   ReportDefinitionModel @relation(fields: [reportDefinitionId], references: [id], onDelete: Cascade)
+  reportDefinition ReportDefinitionModel @relation(fields: [reportDefinitionId], references: [id], onDelete: Cascade)
 
   @@map("report_schedules")
 }
 
 model ReportExecutionModel {
-  id                 String                @id @default(uuid())
-  reportDefinitionId String                @map("report_definition_id")
-  startedAt          DateTime              @default(now()) @map("started_at")
-  completedAt        DateTime?             @map("completed_at")
-  status             String                @default("PENDING")
-  fileUrl            String?               @map("file_url")
-  format             String                
-  error              String?               @db.Text
+  id                 String    @id @default(uuid())
+  reportDefinitionId String    @map("report_definition_id")
+  startedAt          DateTime  @default(now()) @map("started_at")
+  completedAt        DateTime? @map("completed_at")
+  status             String    @default("PENDING")
+  fileUrl            String?   @map("file_url")
+  format             String
+  error              String?   @db.Text
 
-  reportDefinition   ReportDefinitionModel @relation(fields: [reportDefinitionId], references: [id], onDelete: Cascade)
-  sharedLinks        SharedReportLinkModel[]
+  reportDefinition ReportDefinitionModel   @relation(fields: [reportDefinitionId], references: [id], onDelete: Cascade)
+  sharedLinks      SharedReportLinkModel[]
 
   @@map("report_executions")
 }
 
 model SharedReportLinkModel {
-  id                String               @id @default(uuid())
-  reportExecutionId String               @map("report_execution_id")
-  token             String               @unique
-  expiresAt         DateTime             @map("expires_at")
-  viewerPermissions String?              @map("viewer_permissions")
-  
-  reportExecution   ReportExecutionModel @relation(fields: [reportExecutionId], references: [id], onDelete: Cascade)
+  id                String   @id @default(uuid())
+  reportExecutionId String   @map("report_execution_id")
+  token             String   @unique
+  expiresAt         DateTime @map("expires_at")
+  viewerPermissions String?  @map("viewer_permissions")
+
+  reportExecution ReportExecutionModel @relation(fields: [reportExecutionId], references: [id], onDelete: Cascade)
 
   @@map("shared_report_links")
 }
 
 model DashboardWidgetModel {
-  id          String   @id @default(uuid())
-  tenantId    String   @map("tenant_id")
-  type        String
-  config      String   @db.Text
-  layoutX     Int      @default(0) @map("layout_x")
-  layoutY     Int      @default(0) @map("layout_y")
-  width       Int      @default(1)
-  height      Int      @default(1)
+  id       String @id @default(uuid())
+  tenantId String @map("tenant_id")
+  type     String
+  config   String @db.Text
+  layoutX  Int    @default(0) @map("layout_x")
+  layoutY  Int    @default(0) @map("layout_y")
+  width    Int    @default(1)
+  height   Int    @default(1)
 
   @@map("dashboard_widgets")
 }
@@ -648,35 +645,62 @@ model ApprovalWorkflowModel {
   isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  requests     ApprovalRequestModel[]
+  requests ApprovalRequestModel[]
 
   @@map("approval_workflows")
 }
 
 model ApprovalRequestModel {
-  id           String   @id
-  tenantId     String   @map("tenant_id")
-  workflowId   String   @map("workflow_id")
-  status       String   @default("PENDING")
-  currentStep  Int      @default(0) @map("current_step")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id          String   @id
+  tenantId    String   @map("tenant_id")
+  workflowId  String   @map("workflow_id")
+  status      String   @default("PENDING")
+  currentStep Int      @default(0) @map("current_step")
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  workflow     ApprovalWorkflowModel @relation(fields: [workflowId], references: [id])
-  decisions    ApprovalDecisionModel[]
+  workflow  ApprovalWorkflowModel   @relation(fields: [workflowId], references: [id])
+  decisions ApprovalDecisionModel[]
 
   @@map("approval_requests")
 }
 
 model ApprovalDecisionModel {
-  id           String   @id
-  requestId    String   @map("request_id")
-  stepIndex    Int      @map("step_index")
-  deciderId    String   @map("decider_id")
-  decision     String
-  notes        String?
-  createdAt    DateTime @default(now()) @map("created_at")
+  id        String   @id
+  requestId String   @map("request_id")
+  stepIndex Int      @map("step_index")
+  deciderId String   @map("decider_id")
+  decision  String
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
 
-  request      ApprovalRequestModel @relation(fields: [requestId], references: [id])
+  request ApprovalRequestModel @relation(fields: [requestId], references: [id])
 
   @@map("approval_decisions")
 }
+
+model CycleCountPlanModel {
+  id                String   @id @default(uuid())
+  tenantId          String   @map("tenant_id")
+  name              String
+  abcClassification String   @map("abc_classification") // e.g. "A", "B", "C"
+  frequencyDays     Int      @map("frequency_days")
+  zone              String?
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("cycle_count_plans")
+}
+
+model NotificationPreferenceModel {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tenantId  String   @map("tenant_id")
+  channel   String // "EMAIL", "SMS", "IN_APP", "WEBHOOK"
+  eventType String   @map("event_type") // e.g. "LOW_STOCK", "ALL"
+  isEnabled Boolean  @default(true) @map("is_enabled")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, channel, eventType])
+  @@map("notification_preferences")
+}
+
