@@ -53,5 +53,27 @@ describe('AutonomousInventoryEngine', () => {
       expect(tasks[1].sku).toBe('SKU-3');
       expect(tasks[1].quantity).toBe(19); // 10 * 2 - 1 = 19
     });
+
+    it('should handle empty inventory data', () => {
+      const tasks = engine.runRebalanceRoutine([]);
+      expect(tasks).toHaveLength(0);
+    });
+
+    it('should not generate a task if stock equals minStock', () => {
+      const inventoryData = [
+        { sku: 'SKU-1', stock: 5, minStock: 5 },
+      ];
+      const tasks = engine.runRebalanceRoutine(inventoryData);
+      expect(tasks).toHaveLength(0);
+    });
+
+    it('should handle negative stock values', () => {
+      const inventoryData = [
+        { sku: 'SKU-1', stock: -2, minStock: 5 },
+      ];
+      const tasks = engine.runRebalanceRoutine(inventoryData);
+      expect(tasks).toHaveLength(1);
+      expect(tasks[0].quantity).toBe(12); // 5 * 2 - (-2) = 12
+    });
   });
 });
