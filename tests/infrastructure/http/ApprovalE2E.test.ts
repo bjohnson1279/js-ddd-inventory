@@ -14,9 +14,6 @@ const getAdminToken = () => {
 };
 
 describe("Approval E2E Integration Test Suite", () => {
-  beforeAll(async () => {
-    await setupApp();
-  });
   beforeEach(async () => {
     await prisma.approvalDecisionModel.deleteMany();
     await prisma.approvalRequestModel.deleteMany();
