@@ -72,8 +72,14 @@ router.post("/:id/decide", requirePermission('approval', 'manage'), async (req, 
   try {
     const tenantId = (req as any).tenantId || "default-tenant";
     const deciderId = (req as any).userId || "system"; // Get from auth ideally
-    const { decision, notes } = req.body;
-    const result = await useCase.submitDecision(tenantId, req.params.id, deciderId, decision, notes);
+    const decisionPayload = req.body;
+    const result = await useCase.submitDecision(
+      tenantId,
+      req.params.id,
+      deciderId,
+      decisionPayload.decision,
+      decisionPayload.notes
+    );
     res.json(result);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
