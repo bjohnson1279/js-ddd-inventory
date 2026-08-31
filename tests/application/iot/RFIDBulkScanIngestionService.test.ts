@@ -86,4 +86,25 @@ describe("RFIDBulkScanIngestionService", () => {
     expect(result3.processedCount).toBe(0);
     expect(result3.duplicateCount).toBe(1);
   });
+
+  it("should process an empty batch successfully", () => {
+    const result = service.processBatch([]);
+
+    expect(result.batchSize).toBe(0);
+    expect(result.processedCount).toBe(0);
+    expect(result.duplicateCount).toBe(0);
+  });
+
+  it("should process exactly on the TTL boundary correctly (not a duplicate)", () => {
+    service.processBatch([createRecord("EPC1")]);
+
+    // Advance time by exactly 60000ms (DUP_TTL_MS)
+    jest.advanceTimersByTime(60000);
+
+    const result = service.processBatch([createRecord("EPC1")]);
+
+    expect(result.batchSize).toBe(1);
+    expect(result.processedCount).toBe(1);
+    expect(result.duplicateCount).toBe(0);
+  });
 });
