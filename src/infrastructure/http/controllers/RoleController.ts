@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { prisma } from "../../database/prisma";
 import { Logger } from "../../../infrastructure/logging/logger";
 import { AuthenticatedRequest } from "../middleware/auth";
+import { ManageRolesUseCase } from "../../../application/useCases/ManageRolesUseCase";
 
 export class RoleController {
   static async listRoles(req: AuthenticatedRequest, res: Response) {
@@ -131,6 +132,16 @@ export class RoleController {
       return res.status(200).json({ success: true, message: "Role permissions updated successfully." });
     } catch (error: any) {
       Logger.error({ context: "RoleController", message: "Failed to update role permissions", error: error });
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  static async listPermissions(req: AuthenticatedRequest, res: Response) {
+    try {
+      const permissions = await ManageRolesUseCase.listPermissions();
+      return res.status(200).json({ permissions });
+    } catch (error: any) {
+      Logger.error({ context: "RoleController", message: "Failed to list permissions", error });
       return res.status(500).json({ error: "Internal server error" });
     }
   }
