@@ -4,7 +4,7 @@ process.env.SHOPIFY_API_SECRET = "dummy_test_secret";
 
 import request from "supertest";
 import jwt from "jsonwebtoken";
-import { app } from "../../../src/index";
+import { app, setupApp } from "../../../src/index";
 import { prisma } from "../../../src/infrastructure/database/prisma";
 import { randomUUID } from "crypto";
 
@@ -14,6 +14,9 @@ const getAdminToken = () => {
 };
 
 describe("Approval E2E Integration Test Suite", () => {
+  beforeAll(async () => {
+    await setupApp();
+  });
   beforeEach(async () => {
     await prisma.approvalDecisionModel.deleteMany();
     await prisma.approvalRequestModel.deleteMany();
