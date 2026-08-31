@@ -18,6 +18,7 @@ router.get("/workflows", requirePermission('approval', 'view'), async (req, res)
 
 router.post("/workflows", requirePermission('approval', 'manage'), async (req, res) => {
   try {
+    // Wired to ManageApprovalWorkflowsUseCase.createWorkflow
     const tenantId = (req as any).tenantId || "default-tenant";
     const result = await useCase.createWorkflow(tenantId, req.body);
     res.status(201).json(result);
