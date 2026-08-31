@@ -58,6 +58,7 @@ import kitRoutes from "./infrastructure/http/routes/kit.routes";
 import accountingRoutes from "./infrastructure/http/routes/accounting.routes";
 import purchaseOrderRoutes from "./infrastructure/http/routes/purchaseOrder.routes";
 import integrationRoutes from "./infrastructure/http/routes/integration.routes";
+import { intercompanyRouter } from "./infrastructure/http/routes/intercompany.routes";
 import { IPurchaseOrderRepository } from "./domain/repositories/IPurchaseOrderRepository";
 import { PrismaPurchaseOrderRepository } from "./infrastructure/database/PrismaPurchaseOrderRepository";
 import { InMemoryPurchaseOrderRepository } from "./infrastructure/database/InMemoryPurchaseOrderRepository";
@@ -117,6 +118,7 @@ import { PrismaProductRepository } from "./infrastructure/database/PrismaProduct
 import { WMSCapacityService } from "./domain/services/WMSCapacityService";
 
 import { traceMiddleware } from "./infrastructure/http/middleware/traceMiddleware";
+import { platformThrottlingMiddleware } from "./infrastructure/http/middleware/platformThrottling";
 
 const app = express();
 app.disable("x-powered-by");
@@ -225,6 +227,9 @@ export const setupApp = (
 
   // Secure all other endpoints under auth middleware
   app.use(authMiddleware);
+  
+  // Apply platform throttling to authenticated requests
+  app.use(platformThrottlingMiddleware);
 
   app.use("/api/inventory", inventoryRoutes);
   app.use("/api/users", userRoutes);
@@ -255,6 +260,7 @@ export const setupApp = (
   app.use("/api/integrations", integrationRoutes);
   app.use("/api/cycle-count", cycleCountRouter);
   app.use("/api/supplier", supplierPortalRouter);
+  app.use("/api/intercompany", intercompanyRouter);
 
   // Tier-2 Distributed Cache Management Endpoints
   app.get("/api/admin/cache/stats", requireRole(["admin"]), (req, res) => {

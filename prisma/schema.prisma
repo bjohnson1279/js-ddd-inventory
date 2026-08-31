@@ -704,3 +704,41 @@ model NotificationPreferenceModel {
   @@map("notification_preferences")
 }
 
+
+model LegalEntityModel {
+  id             String   @id @default(uuid())
+  tenantId       String   @map("tenant_id")
+  name           String
+  baseCurrency   String   @map("base_currency")
+  taxIdentifier  String?  @map("tax_identifier")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("legal_entities")
+}
+
+model IntercompanyTransferModel {
+  id               String   @id @default(uuid())
+  tenantId         String   @map("tenant_id")
+  fromEntityId     String   @map("from_entity_id")
+  toEntityId       String   @map("to_entity_id")
+  sku              String
+  quantity         Int
+  transferPrice    Int      @map("transfer_price") // in cents
+  dutyCents        Int      @default(0) @map("duty_cents")
+  status           String   @default("COMPLETED")
+  journalEntryId   String?  @map("journal_entry_id") // Reference to elimination journal entry
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@map("intercompany_transfers")
+}
+
+model ApiUsageMetricModel {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  date      DateTime @db.Date
+  metric    String   // e.g., 'API_REQUESTS', 'STORAGE'
+  value     Int      @default(0)
+
+  @@unique([tenantId, date, metric])
+  @@map("api_usage_metrics")
+}
