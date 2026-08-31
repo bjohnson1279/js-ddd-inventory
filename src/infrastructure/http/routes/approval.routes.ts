@@ -5,10 +5,12 @@ import { ManageApprovalWorkflowsUseCase } from "../../../application/useCases/Ma
 const router = Router();
 const useCase = new ManageApprovalWorkflowsUseCase();
 
+const getTenantId = (req: any) => req.tenantId || "default-tenant";
+
 // Workflow management (admin only)
 router.get("/workflows", requirePermission('approval', 'view'), async (req, res) => {
   try {
-    const tenantId = (req as any).tenantId || "default-tenant";
+    const tenantId = getTenantId(req);
     const result = await useCase.listWorkflows(tenantId);
     res.json(result);
   } catch (error: any) {
@@ -18,7 +20,7 @@ router.get("/workflows", requirePermission('approval', 'view'), async (req, res)
 
 router.post("/workflows", requirePermission('approval', 'manage'), async (req, res) => {
   try {
-    const tenantId = (req as any).tenantId || "default-tenant";
+    const tenantId = getTenantId(req);
     const result = await useCase.createWorkflow(tenantId, req.body);
     res.status(201).json(result);
   } catch (error: any) {
@@ -28,7 +30,7 @@ router.post("/workflows", requirePermission('approval', 'manage'), async (req, r
 
 router.put("/workflows/:id", requirePermission('approval', 'manage'), async (req, res) => {
   try {
-    const tenantId = (req as any).tenantId || "default-tenant";
+    const tenantId = getTenantId(req);
     const result = await useCase.updateWorkflow(tenantId, req.params.id, req.body.config);
     res.json(result);
   } catch (error: any) {
@@ -38,7 +40,7 @@ router.put("/workflows/:id", requirePermission('approval', 'manage'), async (req
 
 router.post("/workflows/:id/toggle", requirePermission('approval', 'manage'), async (req, res) => {
   try {
-    const tenantId = (req as any).tenantId || "default-tenant";
+    const tenantId = getTenantId(req);
     const result = await useCase.toggleWorkflow(tenantId, req.params.id);
     res.json(result);
   } catch (error: any) {
@@ -49,7 +51,7 @@ router.post("/workflows/:id/toggle", requirePermission('approval', 'manage'), as
 // Approval request management
 router.get("/pending", requirePermission('approval', 'view'), async (req, res) => {
   try {
-    const tenantId = (req as any).tenantId || "default-tenant";
+    const tenantId = getTenantId(req);
     const result = await useCase.listPendingRequests(tenantId);
     res.json(result);
   } catch (error: any) {
@@ -59,7 +61,7 @@ router.get("/pending", requirePermission('approval', 'view'), async (req, res) =
 
 router.get("/:id", requirePermission('approval', 'view'), async (req, res) => {
   try {
-    const tenantId = (req as any).tenantId || "default-tenant";
+    const tenantId = getTenantId(req);
     const result = await useCase.getApprovalRequest(tenantId, req.params.id);
     if (!result) return res.status(404).json({ error: "Not found" });
     res.json(result);
@@ -70,7 +72,7 @@ router.get("/:id", requirePermission('approval', 'view'), async (req, res) => {
 
 router.post("/:id/decide", requirePermission('approval', 'manage'), async (req, res) => {
   try {
-    const tenantId = (req as any).tenantId || "default-tenant";
+    const tenantId = getTenantId(req);
     const deciderId = (req as any).userId || "system"; // Get from auth ideally
     const { decision, notes } = req.body;
     const result = await useCase.submitDecision(tenantId, req.params.id, deciderId, decision, notes);
