@@ -57,6 +57,7 @@ router.get("/pending", requirePermission('approval', 'view'), async (req, res) =
   }
 });
 
+// Get a specific approval request
 router.get("/:id", requirePermission('approval', 'view'), async (req, res) => {
   try {
     const tenantId = (req as any).tenantId || "default-tenant";
