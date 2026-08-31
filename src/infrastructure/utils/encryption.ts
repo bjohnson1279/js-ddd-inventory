@@ -1,10 +1,11 @@
 import crypto from "crypto";
 
 const algorithm = 'aes-256-gcm';
-if (!process.env.ENCRYPTION_KEY) {
+const envKey = process.env.ENCRYPTION_KEY || (process.env.NODE_ENV === 'test' ? 'test_fallback_secret_key_123456' : undefined);
+if (!envKey) {
   throw new Error("ENCRYPTION_KEY environment variable is required for security.");
 }
-const key = crypto.scryptSync(process.env.ENCRYPTION_KEY, 'salt', 32);
+const key = crypto.scryptSync(envKey, 'salt', 32);
 
 export function encrypt(text: string): string {
   const iv = crypto.randomBytes(12);

@@ -22,7 +22,7 @@ export function verifyPassword(password: string, storedHash: string): boolean {
 }
 
 function getEncryptionKey(): Buffer {
-  const key = process.env.ENCRYPTION_KEY;
+  const key = process.env.ENCRYPTION_KEY || (process.env.NODE_ENV === 'test' ? 'test_fallback_secret_key_123456' : undefined);
   if (!key) {
     throw new Error("ENCRYPTION_KEY environment variable is required for security.");
   }
