@@ -235,6 +235,7 @@ export const setupApp = (
   app.use("/api/inventory", inventoryRoutes);
   app.use("/api/users", userRoutes);
   app.use("/api/roles", roleRoutes);
+  app.use("/api/approvals", approvalRoutes);
   app.use("/api/reports", reportRoutes);
   app.use("/api/barcodes", barcodeRoutes);
   app.use("/api/serials", serialRoutes);
