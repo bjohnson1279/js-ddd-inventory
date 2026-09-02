@@ -58,9 +58,13 @@ router.get("/pending", requirePermission('approval', 'view'), async (req, res) =
 });
 
 <<<<<<< HEAD
+// Retrieve an approval request by ID
+=======
+<<<<<<< HEAD
 // Get a specific approval request
 =======
 // TODO: Wire to ManageApprovalWorkflowsUseCase.getApprovalRequest
+>>>>>>> origin/main
 >>>>>>> origin/main
 router.get("/:id", requirePermission('approval', 'view'), async (req, res) => {
   try {
