@@ -5,7 +5,7 @@ import { ManageApprovalWorkflowsUseCase } from "../../../application/useCases/Ma
 const router = Router();
 const useCase = new ManageApprovalWorkflowsUseCase();
 
-// Workflow management (admin only)
+// Workflow management (admin only) - routes
 router.get("/workflows", requirePermission('approval', 'view'), async (req, res) => {
   try {
     const tenantId = (req as any).tenantId || "default-tenant";
