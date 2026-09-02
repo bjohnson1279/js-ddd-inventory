@@ -57,11 +57,14 @@ router.get("/pending", requirePermission('approval', 'view'), async (req, res) =
   }
 });
 
+// TODO: Wire to ManageApprovalWorkflowsUseCase.getApprovalRequest
 router.get("/:id", requirePermission('approval', 'view'), async (req, res) => {
   try {
     const tenantId = (req as any).tenantId || "default-tenant";
     const result = await useCase.getApprovalRequest(tenantId, req.params.id);
-    if (!result) return res.status(404).json({ error: "Not found" });
+    if (!result) {
+      return res.status(404).json({ error: "Not found" });
+    }
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
