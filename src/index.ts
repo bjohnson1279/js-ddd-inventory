@@ -263,7 +263,6 @@ export const setupApp = (
   app.use("/api/cycle-count", cycleCountRouter);
   app.use("/api/supplier", supplierPortalRouter);
   app.use("/api/intercompany", intercompanyRouter);
-  app.use("/api/approvals", approvalRoutes);
 
   // Tier-2 Distributed Cache Management Endpoints
   app.get("/api/admin/cache/stats", requireRole(["admin"]), (req, res) => {

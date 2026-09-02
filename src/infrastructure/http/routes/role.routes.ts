@@ -5,6 +5,7 @@ import { ManageRolesUseCase } from "../../../application/useCases/ManageRolesUse
 import { Logger } from "../../../infrastructure/logging/logger";
 
 const router = Router();
+
 // Only tenant admins can manage roles and permissions
 router.use(requireRole(["admin"]));
 
@@ -29,6 +30,7 @@ router.post("/", requirePermission('user', 'edit_role'), async (req: any, res: a
 
 router.put("/:roleId/permissions", requirePermission('user', 'edit_role'), RoleController.updateRolePermissions);
 
+router.put("/:roleId/permissions", RoleController.updateRolePermissions);
 router.delete("/:roleId", RoleController.deleteRole);
 
 export default router;

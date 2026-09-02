@@ -113,6 +113,7 @@ export class RoleController {
       return res.status(500).json({ error: "Internal server error" });
     }
   }
+
   static async deleteRole(req: AuthenticatedRequest, res: Response) {
     try {
       const { roleId } = req.params;
