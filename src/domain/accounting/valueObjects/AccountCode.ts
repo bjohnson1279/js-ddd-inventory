@@ -47,6 +47,18 @@ export class AccountCode {
     return new AccountCode("5300", "Inventory Write-Off Expense", AccountCategory.Expense);
   }
 
+  public static intercompanyRevenue(): AccountCode {
+    return new AccountCode("4800", "Intercompany Revenue", AccountCategory.Revenue);
+  }
+
+  public static intercompanyCogs(): AccountCode {
+    return new AccountCode("5800", "Intercompany COGS", AccountCategory.Expense);
+  }
+
+  public static intercompanyElimination(): AccountCode {
+    return new AccountCode("9000", "Intercompany Elimination", AccountCategory.Equity);
+  }
+
   public static fromCode(code: string): AccountCode {
     switch (code) {
       case "1000": return AccountCode.cash();
@@ -59,6 +71,9 @@ export class AccountCode {
       case "5200": return AccountCode.inventoryShrinkageExpense();
       case "4100": return AccountCode.inventoryAdjustmentGain();
       case "5300": return AccountCode.inventoryWriteOffExpense();
+      case "4800": return AccountCode.intercompanyRevenue();
+      case "5800": return AccountCode.intercompanyCogs();
+      case "9000": return AccountCode.intercompanyElimination();
       default: {
         const category = code.startsWith("2") ? AccountCategory.Liability
                        : code.startsWith("3") ? AccountCategory.Equity

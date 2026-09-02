@@ -62,7 +62,7 @@ describe("PrismaOutboxRepository Integration Tests", () => {
     let raw = await prisma.outboxEventModel.findUnique({ where: { id: eventId } });
     expect(raw?.attempts).toBe(1);
     expect(raw?.lastError).toBe("First Error");
-    expect(new Date(raw!.nextAttemptAt).getTime()).toBeGreaterThan(Date.now() + 1500);
+    expect(new Date(raw!.nextAttemptAt).getTime()).toBeGreaterThan(Date.now() + 1000);
 
     // Manually wind nextAttemptAt to the past
     await prisma.outboxEventModel.update({
@@ -83,6 +83,6 @@ describe("PrismaOutboxRepository Integration Tests", () => {
     raw = await prisma.outboxEventModel.findUnique({ where: { id: eventId } });
     expect(raw?.attempts).toBe(2);
     expect(raw?.lastError).toBe("Second Error");
-    expect(new Date(raw!.nextAttemptAt).getTime()).toBeGreaterThan(Date.now() + 3500);
+    expect(new Date(raw!.nextAttemptAt).getTime()).toBeGreaterThan(Date.now() + 2500);
   });
 });

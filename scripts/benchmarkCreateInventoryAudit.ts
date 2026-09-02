@@ -88,7 +88,7 @@ async function runBenchmark() {
       });
     }
 
-    return { id: 'mock' } as any;
+    return { id: 'mock', items: auditItems.length } as any;
   }
 
   console.log(`\nRunning optimized (reusing items)...`);

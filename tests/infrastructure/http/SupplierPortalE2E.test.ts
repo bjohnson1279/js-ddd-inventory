@@ -6,7 +6,18 @@ const app = express();
 app.use(express.json());
 app.use('/api/supplier', supplierRouter);
 
+import { prisma } from '../../../src/infrastructure/database/prisma';
+
 describe('SupplierPortal E2E', () => {
+  beforeEach(async () => {
+    try {
+      await prisma.supplierASN.deleteMany();
+    } catch (e) {}
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
   it('should create an ASN', async () => {
     const res = await request(app)
       .post('/api/supplier/asn')
@@ -16,6 +27,9 @@ describe('SupplierPortal E2E', () => {
         expectedDelivery: new Date().toISOString(),
       });
     
+    if (res.status !== 201) {
+      console.log(res.body);
+    }
     expect(res.status).toBe(201);
     expect(res.body.asnNumber).toBe('ASN-1234');
   });

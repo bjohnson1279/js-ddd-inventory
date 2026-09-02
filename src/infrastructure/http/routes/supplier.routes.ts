@@ -19,6 +19,7 @@ supplierRouter.post('/asn', async (req: Request, res: Response) => {
     });
     res.status(201).json(asn);
   } catch (error) {
+    console.error('Supplier route error:', error);
     res.status(500).json({ error: 'Failed to create ASN' });
   }
 });
