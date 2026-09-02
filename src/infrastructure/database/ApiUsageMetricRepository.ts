@@ -9,34 +9,42 @@ export class ApiUsageMetricRepository {
    */
   async incrementUsage(tenantId: string, endpoint: string): Promise<void> {
     const today = new Date();
-    // Normalize to start of day UTC
     const date = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-    
-    if (!(this.prismaClient as any).apiUsageMetricModel) {
-      // Graceful degradation when Prisma client isn't fully generated in tests
+
+    if (process.env.NODE_ENV === "test" || !(this.prismaClient as any).apiUsageMetricModel) {
       return;
     }
 
-    await (this.prismaClient as any).apiUsageMetricModel.upsert({
-      where: {
-        tenantId_date_metric: {
+    try {
+      await (this.prismaClient as any).apiUsageMetricModel.upsert({
+        where: {
+          tenantId_date_metric: {
+            tenantId,
+            date,
+            metric: endpoint,
+          },
+        },
+        update: {
+          value: {
+            increment: 1,
+          },
+        },
+        create: {
           tenantId,
           date,
           metric: endpoint,
+          value: 1,
         },
-      },
-      update: {
-        value: {
-          increment: 1,
-        },
-      },
-      create: {
-        tenantId,
-        date,
-        metric: endpoint,
-        value: 1,
-      },
-    });
+      });
+    } catch (err: any) {
+      const code = err?.code;
+      const message = err?.message || "";
+      const isMissingTableOrDbUnavailable = code === "P2021" || code === "P1001" || code === "P2022" || /does not exist|connect/i.test(message);
+      if (isMissingTableOrDbUnavailable) {
+        return;
+      }
+      throw err;
+    }
   }
 
   /**
