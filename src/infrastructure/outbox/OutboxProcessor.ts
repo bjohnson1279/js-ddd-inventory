@@ -85,19 +85,19 @@ export class OutboxProcessor {
               });
 
               if (subscriptions.length > 0) {
-                // ⚡ Bolt: Used createMany to batch insert webhook deliveries in a single query
-                // instead of executing N concurrent create queries via Promise.all
-                await prisma.webhookDeliveryModel.createMany({
-                  data: subscriptions.map((sub: any) => ({
-                    tenantId: eventTenantId,
-                    subscriptionId: sub.id,
-                    eventType: record.eventName,
-                    payload: record.payload,
-                    status: "Pending",
-                    attempts: 0,
-                    nextAttemptAt: new Date()
-                  }))
-                });
+                await Promise.all(subscriptions.map((sub: any) =>
+                  prisma.webhookDeliveryModel.create({
+                    data: {
+                      tenantId: eventTenantId,
+                      subscriptionId: sub.id,
+                      eventType: record.eventName,
+                      payload: record.payload,
+                      status: "Pending",
+                      attempts: 0,
+                      nextAttemptAt: new Date()
+                    }
+                  })
+                ));
               }
             } catch (e) {}
 

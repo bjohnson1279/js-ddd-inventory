@@ -1,7 +1,7 @@
-
+import { PrismaClient } from '@prisma/client';
 import { randomUUID } from 'crypto';
 
-import { prisma } from '../../infrastructure/database/prisma';
+const prisma = new PrismaClient();
 
 export class ManageApprovalWorkflowsUseCase {
   

@@ -21,10 +21,6 @@ export const platformThrottlingMiddleware = async (req: Request, res: Response, 
   const authReq = req as AuthenticatedRequest;
   const tenantId = authReq.tenantId;
 
-  if (process.env.NODE_ENV === "test") {
-    return next();
-  }
-
   // If no tenantId is present (e.g. public endpoint), we can fall back to standard IP-based rate limiting,
   // but for tenant-level throttling, we skip if tenantId is missing.
   if (!tenantId) {
