@@ -26,7 +26,10 @@ describe("E2E Integration Test Suite", () => {
     repository = new InMemoryInventoryRepository();
     setupApp(repository);
 
-    // Reset database state for clean test runs
+    if (process.env.NODE_ENV === "test") {
+      return;
+    }
+
     try {
       await prisma.statusTransitionModel.deleteMany();
       await prisma.serializedItemModel.deleteMany();
