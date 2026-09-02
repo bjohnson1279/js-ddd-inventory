@@ -48,45 +48,13 @@ export class RoleController {
       const tenantId = req.tenantId || "tenant-1";
       const { name, description, permissionIds } = req.body;
 
-      if (!name) {
-        return res.status(400).json({ error: "name is required." });
-      }
+      const result = await ManageRolesUseCase.createCustomRole(tenantId, name, description, permissionIds);
 
-      const id = `custom_${tenantId}_${name.toLowerCase().replace(/\\s+/g, '_')}_${Date.now()}`;
-
-      let validPermissionIds: string[] = [];
-      if (permissionIds && Array.isArray(permissionIds)) {
-        const validPermissions = await prisma.permissionModel.findMany({
-          where: { id: { in: permissionIds } }
-        });
-        if (validPermissions.length !== permissionIds.length) {
-          const valid = new Set(validPermissions.map(p => p.id));
-          const invalid = permissionIds.filter(pid => !valid.has(pid));
-          return res.status(400).json({ error: `Invalid permission IDs: ${invalid.join(', ')}` });
-        }
-        validPermissionIds = permissionIds;
-      }
-
-      await prisma.$transaction(async (tx: any) => {
-        await tx.roleModel.create({
-          data: { 
-            id, 
-            name, 
-            description: description || "",
-            isCustom: true,
-            tenantId
-          }
-        });
-
-        if (validPermissionIds.length > 0) {
-          await tx.rolePermissionModel.createMany({
-            data: validPermissionIds.map((pid: string) => ({ roleId: id, permissionId: pid }))
-          });
-        }
-      });
-
-      return res.status(201).json({ success: true, message: "Role created successfully.", id });
+      return res.status(201).json({ success: true, message: "Role created successfully.", id: result.id });
     } catch (error: any) {
+      if (error.message && (error.message.includes("name is required") || error.message.includes("Invalid permission IDs"))) {
+        return res.status(400).json({ error: error.message });
+      }
       Logger.error({ context: "RoleController", message: "Failed to create role", error: error });
       return res.status(500).json({ error: "Internal server error" });
     }
