@@ -5,7 +5,7 @@ import { ManageApprovalWorkflowsUseCase } from "../../../application/useCases/Ma
 const router = Router();
 const useCase = new ManageApprovalWorkflowsUseCase();
 
-// Workflow management (admin only)
+// Workflow management (admin only) - routes
 router.get("/workflows", requirePermission('approval', 'view'), async (req, res) => {
   try {
     const tenantId = (req as any).tenantId || "default-tenant";
@@ -57,11 +57,14 @@ router.get("/pending", requirePermission('approval', 'view'), async (req, res) =
   }
 });
 
+// TODO: Wire to ManageApprovalWorkflowsUseCase.getApprovalRequest
 router.get("/:id", requirePermission('approval', 'view'), async (req, res) => {
   try {
     const tenantId = (req as any).tenantId || "default-tenant";
     const result = await useCase.getApprovalRequest(tenantId, req.params.id);
-    if (!result) return res.status(404).json({ error: "Not found" });
+    if (!result) {
+      return res.status(404).json({ error: "Not found" });
+    }
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -87,3 +90,4 @@ router.post("/:id/decide", requirePermission('approval', 'manage'), async (req, 
 });
 
 export default router;
+// EOF
