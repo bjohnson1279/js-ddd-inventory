@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { RoleController } from "../controllers/RoleController";
 import { requireRole, requirePermission } from "../middleware/auth";
+<<<<<<< HEAD
+=======
 import { ManageRolesUseCase } from "../../../application/useCases/ManageRolesUseCase";
+>>>>>>> origin/main
 
 const router = Router();
 const manageRolesUseCase = new ManageRolesUseCase();
@@ -9,6 +12,7 @@ const manageRolesUseCase = new ManageRolesUseCase();
 // Only tenant admins can manage roles and permissions
 router.use(requireRole(["admin"]));
 
+router.get("/permissions", requirePermission('user', 'edit_role'), RoleController.listPermissions);
 router.get("/", RoleController.listRoles);
 router.post("/", RoleController.createRole);
 router.put("/:id/permissions", requirePermission('user', 'edit_role'), async (req: any, res: any) => {

@@ -1,6 +1,21 @@
 import { prisma } from "../../infrastructure/database/prisma";
 
 export class ManageRolesUseCase {
+<<<<<<< HEAD
+  static async listPermissions() {
+    const permissions = await prisma.permissionModel.findMany({
+      orderBy: [
+        { resource: 'asc' },
+        { action: 'asc' }
+      ]
+    });
+    return permissions.map((p: any) => ({
+      id: p.id,
+      resource: p.resource,
+      action: p.action,
+      description: p.description
+    }));
+=======
   async updateRolePermissions(roleId: string, permissionIds: string[]): Promise<void> {
     const existingRole = await prisma.roleModel.findUnique({ where: { id: roleId } });
     if (!existingRole) {
@@ -29,5 +44,6 @@ export class ManageRolesUseCase {
         });
       }
     });
+>>>>>>> origin/main
   }
 }
