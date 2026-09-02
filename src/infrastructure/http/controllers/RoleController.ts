@@ -135,16 +135,6 @@ export class RoleController {
     }
   }
 
-  static async listPermissions(req: AuthenticatedRequest, res: Response) {
-    try {
-      const permissions = await ManageRolesUseCase.listPermissions();
-      return res.status(200).json({ permissions });
-    } catch (error: any) {
-      Logger.error({ context: "RoleController", message: "Failed to list permissions", error });
-      return res.status(500).json({ error: "Internal server error" });
-    }
-  }
-
   static async deleteRole(req: AuthenticatedRequest, res: Response) {
     try {
       const { roleId } = req.params;

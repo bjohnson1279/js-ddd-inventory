@@ -59,7 +59,6 @@ import accountingRoutes from "./infrastructure/http/routes/accounting.routes";
 import purchaseOrderRoutes from "./infrastructure/http/routes/purchaseOrder.routes";
 import integrationRoutes from "./infrastructure/http/routes/integration.routes";
 import { intercompanyRouter } from "./infrastructure/http/routes/intercompany.routes";
-import approvalRoutes from "./infrastructure/http/routes/approval.routes";
 import { IPurchaseOrderRepository } from "./domain/repositories/IPurchaseOrderRepository";
 import { PrismaPurchaseOrderRepository } from "./infrastructure/database/PrismaPurchaseOrderRepository";
 import { InMemoryPurchaseOrderRepository } from "./infrastructure/database/InMemoryPurchaseOrderRepository";
@@ -235,7 +234,6 @@ export const setupApp = (
   app.use("/api/inventory", inventoryRoutes);
   app.use("/api/users", userRoutes);
   app.use("/api/roles", roleRoutes);
-  app.use("/api/approvals", approvalRoutes);
   app.use("/api/reports", reportRoutes);
   app.use("/api/barcodes", barcodeRoutes);
   app.use("/api/serials", serialRoutes);
