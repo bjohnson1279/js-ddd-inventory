@@ -59,6 +59,7 @@ import accountingRoutes from "./infrastructure/http/routes/accounting.routes";
 import purchaseOrderRoutes from "./infrastructure/http/routes/purchaseOrder.routes";
 import integrationRoutes from "./infrastructure/http/routes/integration.routes";
 import { intercompanyRouter } from "./infrastructure/http/routes/intercompany.routes";
+import approvalRoutes from "./infrastructure/http/routes/approval.routes";
 import { IPurchaseOrderRepository } from "./domain/repositories/IPurchaseOrderRepository";
 import { PrismaPurchaseOrderRepository } from "./infrastructure/database/PrismaPurchaseOrderRepository";
 import { InMemoryPurchaseOrderRepository } from "./infrastructure/database/InMemoryPurchaseOrderRepository";
@@ -104,6 +105,7 @@ import rfidRoutes from "./infrastructure/http/routes/rfid.routes";
 import anomalyDetectionRoutes from "./infrastructure/http/routes/anomalyDetection.routes";
 import rebalanceRoutes from "./infrastructure/http/routes/rebalance.routes";
 import roleRoutes from "./infrastructure/http/routes/role.routes";
+import approvalRoutes from "./infrastructure/http/routes/approval.routes";
 import { cycleCountRouter } from "./infrastructure/http/routes/cycleCount.routes";
 import { supplierPortalRouter } from "./infrastructure/http/routes/supplierPortal.routes";
 import reportRoutes from "./infrastructure/http/routes/report.routes";
@@ -234,6 +236,7 @@ export const setupApp = (
   app.use("/api/inventory", inventoryRoutes);
   app.use("/api/users", userRoutes);
   app.use("/api/roles", roleRoutes);
+  app.use("/api/approvals", approvalRoutes);
   app.use("/api/reports", reportRoutes);
   app.use("/api/barcodes", barcodeRoutes);
   app.use("/api/serials", serialRoutes);
@@ -261,6 +264,7 @@ export const setupApp = (
   app.use("/api/cycle-count", cycleCountRouter);
   app.use("/api/supplier", supplierPortalRouter);
   app.use("/api/intercompany", intercompanyRouter);
+  app.use("/api/approvals", approvalRoutes);
 
   // Tier-2 Distributed Cache Management Endpoints
   app.get("/api/admin/cache/stats", requireRole(["admin"]), (req, res) => {
