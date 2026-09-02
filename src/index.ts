@@ -59,6 +59,7 @@ import accountingRoutes from "./infrastructure/http/routes/accounting.routes";
 import purchaseOrderRoutes from "./infrastructure/http/routes/purchaseOrder.routes";
 import integrationRoutes from "./infrastructure/http/routes/integration.routes";
 import { intercompanyRouter } from "./infrastructure/http/routes/intercompany.routes";
+import approvalRoutes from "./infrastructure/http/routes/approval.routes";
 import { IPurchaseOrderRepository } from "./domain/repositories/IPurchaseOrderRepository";
 import { PrismaPurchaseOrderRepository } from "./infrastructure/database/PrismaPurchaseOrderRepository";
 import { InMemoryPurchaseOrderRepository } from "./infrastructure/database/InMemoryPurchaseOrderRepository";
@@ -263,6 +264,7 @@ export const setupApp = (
   app.use("/api/cycle-count", cycleCountRouter);
   app.use("/api/supplier", supplierPortalRouter);
   app.use("/api/intercompany", intercompanyRouter);
+  app.use("/api/approvals", approvalRoutes);
 
   // Tier-2 Distributed Cache Management Endpoints
   app.get("/api/admin/cache/stats", requireRole(["admin"]), (req, res) => {
