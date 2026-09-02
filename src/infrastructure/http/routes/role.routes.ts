@@ -5,7 +5,6 @@ import { ManageRolesUseCase } from "../../../application/useCases/ManageRolesUse
 import { Logger } from "../../../infrastructure/logging/logger";
 
 const router = Router();
-const manageRolesUseCase = new ManageRolesUseCase();
 
 // Only tenant admins can manage roles and permissions
 router.use(requireRole(["admin"]));
