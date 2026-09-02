@@ -1,15 +1,8 @@
 import { Router } from "express";
 import { RoleController } from "../controllers/RoleController";
 import { requireRole, requirePermission } from "../middleware/auth";
-<<<<<<< HEAD
-import { ManageRolesUseCase } from "../../../application/useCases/ManageRolesUseCase";
 import { Logger } from "../../../infrastructure/logging/logger";
-=======
-<<<<<<< HEAD
-=======
 import { ManageRolesUseCase } from "../../../application/useCases/ManageRolesUseCase";
->>>>>>> origin/main
->>>>>>> origin/main
 
 const router = Router();
 const manageRolesUseCase = new ManageRolesUseCase();
@@ -19,7 +12,6 @@ router.use(requireRole(["admin"]));
 
 router.get("/permissions", requirePermission('user', 'edit_role'), RoleController.listPermissions);
 router.get("/", RoleController.listRoles);
-<<<<<<< HEAD
 router.post("/", requirePermission('user', 'edit_role'), async (req: any, res: any) => {
   try {
     const tenantId = req.tenantId || "tenant-1";
@@ -37,7 +29,6 @@ router.post("/", requirePermission('user', 'edit_role'), async (req: any, res: a
   }
 });
 router.put("/:roleId/permissions", RoleController.updateRolePermissions);
-=======
 router.post("/", RoleController.createRole);
 router.put("/:id/permissions", requirePermission('user', 'edit_role'), async (req: any, res: any) => {
   try {
@@ -60,7 +51,6 @@ router.put("/:id/permissions", requirePermission('user', 'edit_role'), async (re
     return res.status(500).json({ error: "Internal server error" });
   }
 });
->>>>>>> origin/main
 router.delete("/:roleId", RoleController.deleteRole);
 
 export default router;
