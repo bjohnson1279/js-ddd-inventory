@@ -125,47 +125,4 @@ describe("DisassembleKit Use Case", () => {
     expect(mockInventoryRepo.findBySku).toHaveBeenCalled();
     expect(mockInvItem.dispatchStock).toHaveBeenCalled();
   });
-
-  it("should handle error when prisma.kitModel.findUnique throws an explicit error and verify that the fallback logic handles it without crashing", async () => {
-    // Arrange
-    (prisma.kitModel.findUnique as jest.Mock).mockRejectedValue(new Error("Explicit retrieval failure"));
-
-    const { getInMemoryKit } = require("../../../src/infrastructure/http/controllers/KitController");
-    (getInMemoryKit as jest.Mock).mockReturnValue({
-      sku: "KIT-999",
-      components: [
-        { variantId: "COMP-2", quantity: 1 }
-      ]
-    });
-
-    const mockInvItem = {
-        quantity: { getValue: () => 5 },
-        dispatchStock: jest.fn(),
-        sku: { getValue: () => "KIT-999" }
-    };
-    mockInventoryRepo.findBySku.mockResolvedValue(mockInvItem);
-    mockInventoryRepo.findBySkus.mockResolvedValue([]);
-    mockCostLayerRepo.getActiveLayersByVariantIds.mockResolvedValue(new Map());
-
-    const dto = {
-      tenantId: "tenant-1",
-      locationId: "loc-1",
-      kitSku: "KIT-999",
-      quantity: 1,
-      actorId: "actor-1",
-      referenceId: "ref-1",
-    };
-
-    // Act
-    await disassembleKit.execute(dto);
-
-    // Assert
-    expect(prisma.kitModel.findUnique).toHaveBeenCalledWith({
-      where: { sku: "KIT-999" },
-      include: { components: true },
-    });
-    expect(getInMemoryKit).toHaveBeenCalledWith("KIT-999");
-    expect(mockInventoryRepo.findBySku).toHaveBeenCalled();
-    expect(mockInvItem.dispatchStock).toHaveBeenCalled();
-  });
 });

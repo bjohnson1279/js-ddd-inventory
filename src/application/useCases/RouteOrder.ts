@@ -51,7 +51,7 @@ export class RouteOrder {
     // 4. Map stock items to candidate locations with geocodes
     const candidates = stockItems.map(item => {
       const locationId = item.locationId;
-      const geoLocation = this.geocoderService.geocode(locationId);
+      const geoLocation = this.getWarehouseGeoLocation(locationId);
 
       // Calculate available stock (on-hand - allocated)
       const availableQuantity = item.quantity.getValue() - item.allocated.getValue();
@@ -84,5 +84,17 @@ export class RouteOrder {
     return bestPlan;
   }
 
-
+  private getWarehouseGeoLocation(locationId: string): GeoLocation {
+    const loc = locationId.toUpperCase();
+    if (loc.includes("EAST") || loc.includes("WH1") || loc.includes("NY")) {
+      return GeoLocation.create(40.7306, -73.9352);
+    }
+    if (loc.includes("WEST") || loc.includes("WH2") || loc.includes("LA")) {
+      return GeoLocation.create(34.0522, -118.2437);
+    }
+    if (loc.includes("CENTRAL") || loc.includes("WH3") || loc.includes("CH")) {
+      return GeoLocation.create(41.8781, -87.6298);
+    }
+    return GeoLocation.create(39.8283, -98.5795);
+  }
 }

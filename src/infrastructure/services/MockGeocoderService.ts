@@ -4,14 +4,8 @@ import { GeoLocation } from "../../domain/valueObjects/GeoLocation";
 export class MockGeocoderService implements IGeocoderService {
   geocode(address: string): GeoLocation {
     const normalized = address.toLowerCase();
-    if (normalized.includes("east") || normalized.includes("wh1") || normalized.includes("new york") || normalized.includes("ny") || normalized.includes("10001")) {
+    if (normalized.includes("new york") || normalized.includes("ny") || normalized.includes("10001")) {
       return GeoLocation.create(40.7128, -74.0060);
-    }
-    if (normalized.includes("west") || normalized.includes("wh2")) {
-      return GeoLocation.create(34.0522, -118.2437);
-    }
-    if (normalized.includes("central") || normalized.includes("wh3")) {
-      return GeoLocation.create(41.8781, -87.6298);
     }
     if (normalized.includes("los angeles") || normalized.includes("ca") || normalized.includes("90210")) {
       return GeoLocation.create(34.0522, -118.2437);

@@ -15,10 +15,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
     repository = new InMemoryInventoryRepository();
     setupApp(repository);
 
-    if (process.env.NODE_ENV === "test") {
-      return;
-    }
-
+    // Clean up authentication tables
     try {
       await prisma.userRoleModel.deleteMany();
       await prisma.userModel.deleteMany();

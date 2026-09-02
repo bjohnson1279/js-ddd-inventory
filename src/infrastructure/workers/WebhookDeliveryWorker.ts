@@ -13,7 +13,7 @@ async function isSafeUrl(urlStr: string): Promise<boolean> {
 
     const { address } = await dns.lookup(url.hostname);
 
-    if (address === "::1") return false;
+    if (address === "127.0.0.1" || address === "::1" || address === "0.0.0.0") return false;
 
     const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
     const match = address.match(ipv4Regex);
@@ -21,8 +21,6 @@ async function isSafeUrl(urlStr: string): Promise<boolean> {
       const p1 = parseInt(match[1], 10);
       const p2 = parseInt(match[2], 10);
 
-      if (p1 === 127) return false;
-      if (p1 === 0) return false;
       if (p1 === 10) return false;
       if (p1 === 172 && p2 >= 16 && p2 <= 31) return false;
       if (p1 === 192 && p2 === 168) return false;
