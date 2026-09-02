@@ -105,6 +105,7 @@ import rfidRoutes from "./infrastructure/http/routes/rfid.routes";
 import anomalyDetectionRoutes from "./infrastructure/http/routes/anomalyDetection.routes";
 import rebalanceRoutes from "./infrastructure/http/routes/rebalance.routes";
 import roleRoutes from "./infrastructure/http/routes/role.routes";
+import approvalRoutes from "./infrastructure/http/routes/approval.routes";
 import { cycleCountRouter } from "./infrastructure/http/routes/cycleCount.routes";
 import { supplierPortalRouter } from "./infrastructure/http/routes/supplierPortal.routes";
 import reportRoutes from "./infrastructure/http/routes/report.routes";
@@ -235,6 +236,7 @@ export const setupApp = (
   app.use("/api/inventory", inventoryRoutes);
   app.use("/api/users", userRoutes);
   app.use("/api/roles", roleRoutes);
+  app.use("/api/approvals", approvalRoutes);
   app.use("/api/reports", reportRoutes);
   app.use("/api/barcodes", barcodeRoutes);
   app.use("/api/serials", serialRoutes);
