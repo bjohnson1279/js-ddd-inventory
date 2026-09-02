@@ -91,50 +91,6 @@ export class RoleController {
     }
   }
 
-  static async updateRolePermissions(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { roleId } = req.params;
-      const { permissionIds } = req.body;
-
-      if (!Array.isArray(permissionIds)) {
-        return res.status(400).json({ error: "permissionIds must be an array." });
-      }
-
-      const existingRole = await prisma.roleModel.findUnique({ where: { id: roleId } });
-      if (!existingRole) {
-        return res.status(404).json({ error: `Role ${roleId} not found.` });
-      }
-
-      const validPermissions = await prisma.permissionModel.findMany({
-        where: { id: { in: permissionIds } }
-      });
-      if (validPermissions.length !== permissionIds.length) {
-        const valid = new Set(validPermissions.map(p => p.id));
-        const invalid = permissionIds.filter(pid => !valid.has(pid));
-        return res.status(400).json({ error: `Invalid permission IDs: ${invalid.join(', ')}` });
-      }
-
-      await prisma.$transaction(async (tx: any) => {
-        // Clear existing permissions
-        await tx.rolePermissionModel.deleteMany({
-          where: { roleId }
-        });
-
-        // Assign new permissions
-        if (permissionIds.length > 0) {
-          await tx.rolePermissionModel.createMany({
-            data: permissionIds.map((pid: string) => ({ roleId, permissionId: pid }))
-          });
-        }
-      });
-
-      return res.status(200).json({ success: true, message: "Role permissions updated successfully." });
-    } catch (error: any) {
-      Logger.error({ context: "RoleController", message: "Failed to update role permissions", error: error });
-      return res.status(500).json({ error: "Internal server error" });
-    }
-  }
-
   static async deleteRole(req: AuthenticatedRequest, res: Response) {
     try {
       const { roleId } = req.params;
