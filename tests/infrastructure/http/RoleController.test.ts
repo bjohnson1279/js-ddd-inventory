@@ -7,8 +7,10 @@ import { AuthenticatedRequest } from "../../../src/infrastructure/http/middlewar
 // Mock ManageRolesUseCase
 jest.mock("../../../src/application/useCases/ManageRolesUseCase", () => {
   return {
-    ManageRolesUseCase: {
-      listPermissions: jest.fn()
+    ManageRolesUseCase: class ManageRolesUseCase {
+      static listPermissions = jest.fn();
+      static createCustomRole = jest.fn();
+      updateRolePermissions = jest.fn();
     }
   };
 });

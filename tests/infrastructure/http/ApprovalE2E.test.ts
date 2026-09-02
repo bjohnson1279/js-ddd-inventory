@@ -44,47 +44,6 @@ describe('Approval E2E', () => {
   it('should list pending requests', async () => {
     const res = await request(app)
       .get('/api/approvals/pending');
-  afterAll(async () => {
-    await prisma.$disconnect();
-  });
-
-  it("should list workflows and get an approval request", async () => {
-    const token = getAdminToken();
-    const workflowId = randomUUID();
-    const requestId = randomUUID();
-
-    // Create workflow
-    await prisma.approvalWorkflowModel.create({
-      data: {
-        id: workflowId,
-        tenantId: "tenant-1",
-        name: "Test Workflow",
-        triggerEvent: "TestEvent",
-        config: JSON.stringify({ steps: ["reviewer1"] })
-      }
-    });
-
-    // Create request
-    await prisma.approvalRequestModel.create({
-        id: requestId,
-        workflowId: workflowId,
-
-
-        status: "PENDING",
-        currentStep: 0,
-
-      }
-
-    // Get the request via API
-    const getRes = await request(app)
-      .get(`/api/approvals/${requestId}`)
-      .set("Authorization", `Bearer ${token}`);
-
-    console.log("Response body:", getRes.body);
-
-    expect(getRes.status).toBe(200);
-    expect(getRes.body.id).toBe(requestId);
-    expect(getRes.body.workflowId).toBe(workflowId);
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
