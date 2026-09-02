@@ -15,6 +15,13 @@ const getAdminToken = () => {
 
 describe("Approval E2E Integration Test Suite", () => {
   beforeEach(async () => {
+    // We must call setupApp to mount routes
+    setupApp(
+      {} as any, {} as any, {} as any, {} as any, {} as any,
+      {} as any, {} as any, {} as any, {} as any, {} as any,
+      {} as any, {} as any, {} as any, {} as any, {} as any,
+      {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any
+    );
     await prisma.approvalDecisionModel.deleteMany();
     await prisma.approvalRequestModel.deleteMany();
     await prisma.approvalWorkflowModel.deleteMany();

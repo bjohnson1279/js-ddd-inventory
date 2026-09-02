@@ -27,10 +27,8 @@ router.post("/", requirePermission('user', 'edit_role'), async (req: any, res: a
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-
 router.put("/:roleId/permissions", requirePermission('user', 'edit_role'), RoleController.updateRolePermissions);
 
-router.put("/:roleId/permissions", RoleController.updateRolePermissions);
 router.delete("/:roleId", RoleController.deleteRole);
 
 export default router;
