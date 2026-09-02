@@ -60,7 +60,6 @@ export class RoleController {
     }
   }
 
-<<<<<<< HEAD
   static async updateRolePermissions(req: AuthenticatedRequest, res: Response) {
     try {
       const { roleId } = req.params;
@@ -115,8 +114,6 @@ export class RoleController {
     }
   }
 
-=======
->>>>>>> origin/main
   static async deleteRole(req: AuthenticatedRequest, res: Response) {
     try {
       const { roleId } = req.params;

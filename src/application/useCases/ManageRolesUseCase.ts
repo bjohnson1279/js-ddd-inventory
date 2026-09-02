@@ -1,7 +1,6 @@
 import { prisma } from "../../infrastructure/database/prisma";
 
 export class ManageRolesUseCase {
-<<<<<<< HEAD
   static async createCustomRole(
     tenantId: string,
     name: string,
@@ -12,7 +11,7 @@ export class ManageRolesUseCase {
       throw new Error("name is required.");
     }
 
-    const id = `custom_${tenantId}_${name.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`;
+    const id = `custom_${tenantId}_${name.toLowerCase().replace(/\\s+/g, '_')}_${Date.now()}`;
 
     let validPermissionIds: string[] = [];
     if (permissionIds && Array.isArray(permissionIds)) {
@@ -46,8 +45,8 @@ export class ManageRolesUseCase {
     });
 
     return { id, name, description, isCustom: true, tenantId };
-=======
-<<<<<<< HEAD
+  }
+
   static async listPermissions() {
     const permissions = await prisma.permissionModel.findMany({
       orderBy: [
@@ -61,8 +60,9 @@ export class ManageRolesUseCase {
       action: p.action,
       description: p.description
     }));
-=======
-  async updateRolePermissions(roleId: string, permissionIds: string[]): Promise<void> {
+  }
+
+  static async updateRolePermissions(roleId: string, permissionIds: string[]): Promise<void> {
     const existingRole = await prisma.roleModel.findUnique({ where: { id: roleId } });
     if (!existingRole) {
       throw new Error(`NOT_FOUND: Role ${roleId} not found.`);
@@ -90,7 +90,5 @@ export class ManageRolesUseCase {
         });
       }
     });
->>>>>>> origin/main
->>>>>>> origin/main
   }
 }

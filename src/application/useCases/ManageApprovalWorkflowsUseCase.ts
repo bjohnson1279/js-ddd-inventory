@@ -1,14 +1,5 @@
-<<<<<<< HEAD
 import { randomUUID } from 'crypto';
-
 import { prisma } from '../../infrastructure/database/prisma';
-
-=======
-
-import { randomUUID } from 'crypto';
-
-import { prisma } from '../../infrastructure/database/prisma';
->>>>>>> origin/main
 
 export class ManageApprovalWorkflowsUseCase {
   
