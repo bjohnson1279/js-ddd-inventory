@@ -59,6 +59,8 @@ describe("Approval E2E Integration Test Suite", () => {
       .get(`/api/approvals/${requestId}`)
       .set("Authorization", `Bearer ${token}`);
 
+    console.log("Response body:", getRes.body);
+
     expect(getRes.status).toBe(200);
     expect(getRes.body.id).toBe(requestId);
     expect(getRes.body.workflowId).toBe(workflowId);
