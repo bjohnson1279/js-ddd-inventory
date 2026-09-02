@@ -57,7 +57,11 @@ router.get("/pending", requirePermission('approval', 'view'), async (req, res) =
   }
 });
 
+<<<<<<< HEAD
+// Get a specific approval request
+=======
 // TODO: Wire to ManageApprovalWorkflowsUseCase.getApprovalRequest
+>>>>>>> origin/main
 router.get("/:id", requirePermission('approval', 'view'), async (req, res) => {
   try {
     const tenantId = (req as any).tenantId || "default-tenant";
