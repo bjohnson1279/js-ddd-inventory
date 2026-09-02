@@ -11,7 +11,7 @@ export class ManageRolesUseCase {
       throw new Error("name is required.");
     }
 
-    const id = \custom_\_\_\\;
+    const id = `custom_${tenantId}_${name.toLowerCase().replace(/\\s+/g, '_')}_${Date.now()}`;
 
     let validPermissionIds: string[] = [];
     if (permissionIds && Array.isArray(permissionIds)) {
@@ -21,7 +21,7 @@ export class ManageRolesUseCase {
       if (validPermissions.length !== permissionIds.length) {
         const valid = new Set(validPermissions.map((p: any) => p.id));
         const invalid = permissionIds.filter((pid: string) => !valid.has(pid));
-        throw new Error(\Invalid permission IDs: \\);
+        throw new Error(`Invalid permission IDs: ${invalid.join(', ')}`);
       }
       validPermissionIds = permissionIds;
     }
@@ -65,7 +65,7 @@ export class ManageRolesUseCase {
   static async updateRolePermissions(roleId: string, permissionIds: string[]): Promise<void> {
     const existingRole = await prisma.roleModel.findUnique({ where: { id: roleId } });
     if (!existingRole) {
-      throw new Error(\NOT_FOUND: Role \ not found.\);
+      throw new Error(`NOT_FOUND: Role ${roleId} not found.`);
     }
 
     const validPermissions = await prisma.permissionModel.findMany({
@@ -74,7 +74,7 @@ export class ManageRolesUseCase {
     if (validPermissions.length !== permissionIds.length) {
       const valid = new Set(validPermissions.map(p => p.id));
       const invalid = permissionIds.filter(pid => !valid.has(pid));
-      throw new Error(\INVALID_INPUT: Invalid permission IDs: \\);
+      throw new Error(`INVALID_INPUT: Invalid permission IDs: ${invalid.join(', ')}`);
     }
 
     await prisma.$transaction(async (tx: any) => {
