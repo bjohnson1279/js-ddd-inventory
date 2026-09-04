@@ -127,7 +127,7 @@ describe("PrismaJournalRepository Integration Tests", () => {
     expect(outboxEvents.length).toBe(1);
     expect(outboxEvents[0].eventName).toBe("JournalEntryCreatedEvent");
     const payload = JSON.parse(outboxEvents[0].payload);
-    expect(payload.id).toBe(entryId);
+    expect(payload.aggregateId).toBe(entryId);
     expect(payload.description).toBe("Outbox description");
     expect(payload.lines.length).toBe(2);
   });
