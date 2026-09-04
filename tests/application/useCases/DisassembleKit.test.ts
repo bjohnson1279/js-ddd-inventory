@@ -62,7 +62,7 @@ describe("DisassembleKit Use Case", () => {
 
   it("should handle error when prisma.kitModel.findUnique fails and kit is not in memory", async () => {
     // Arrange
-    (prisma.kitModel.findUnique as jest.Mock).mockRejectedValue(new Error("Database connection error"));
+    (prisma.kitModel.findUnique as jest.Mock).mockRejectedValue(Object.assign(new Error(), { code: 'ECONNREFUSED' }));
 
     const { getInMemoryKit } = require("../../../src/infrastructure/http/controllers/KitController");
     (getInMemoryKit as jest.Mock).mockReturnValue(null);
@@ -88,7 +88,7 @@ describe("DisassembleKit Use Case", () => {
 
   it("should handle error when prisma.kitModel.findUnique fails but kit is found in memory fallback", async () => {
     // Arrange
-    (prisma.kitModel.findUnique as jest.Mock).mockRejectedValue(new Error("Database connection error"));
+    (prisma.kitModel.findUnique as jest.Mock).mockRejectedValue(Object.assign(new Error(), { code: 'ECONNREFUSED' }));
 
     const { getInMemoryKit } = require("../../../src/infrastructure/http/controllers/KitController");
     (getInMemoryKit as jest.Mock).mockReturnValue({
@@ -128,7 +128,7 @@ describe("DisassembleKit Use Case", () => {
 
   it("should handle error when prisma.kitModel.findUnique throws an explicit error and verify that the fallback logic handles it without crashing", async () => {
     // Arrange
-    (prisma.kitModel.findUnique as jest.Mock).mockRejectedValue(new Error("Explicit retrieval failure"));
+    (prisma.kitModel.findUnique as jest.Mock).mockRejectedValue(Object.assign(new Error("Explicit retrieval failure"), { name: 'PrismaClientKnownRequestError' }));
 
     const { getInMemoryKit } = require("../../../src/infrastructure/http/controllers/KitController");
     (getInMemoryKit as jest.Mock).mockReturnValue({
