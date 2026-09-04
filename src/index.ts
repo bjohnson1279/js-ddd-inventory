@@ -59,6 +59,7 @@ import accountingRoutes from "./infrastructure/http/routes/accounting.routes";
 import purchaseOrderRoutes from "./infrastructure/http/routes/purchaseOrder.routes";
 import integrationRoutes from "./infrastructure/http/routes/integration.routes";
 import { intercompanyRouter } from "./infrastructure/http/routes/intercompany.routes";
+import approvalRoutes from "./infrastructure/http/routes/approval.routes";
 import { IPurchaseOrderRepository } from "./domain/repositories/IPurchaseOrderRepository";
 import { PrismaPurchaseOrderRepository } from "./infrastructure/database/PrismaPurchaseOrderRepository";
 import { InMemoryPurchaseOrderRepository } from "./infrastructure/database/InMemoryPurchaseOrderRepository";
@@ -234,6 +235,7 @@ export const setupApp = (
   app.use("/api/inventory", inventoryRoutes);
   app.use("/api/users", userRoutes);
   app.use("/api/roles", roleRoutes);
+  app.use("/api/approvals", approvalRoutes);
   app.use("/api/reports", reportRoutes);
   app.use("/api/barcodes", barcodeRoutes);
   app.use("/api/serials", serialRoutes);
@@ -428,7 +430,7 @@ export const setupApp = (
   });
 
   // Section 11 Enterprise Extensions Endpoints
-  app.post("/api/shipping/quote", (req, res) => {
+  app.post("/api/shipping/quote", requireRole(["admin", "manager", "auditor"]), (req, res) => {
     const { carrier, weightKg, serviceLevel } = req.body;
     const base = Math.round((parseFloat(weightKg) || 1.0) * 450);
     res.json([
@@ -444,7 +446,7 @@ export const setupApp = (
     ]);
   });
 
-  app.post("/api/shipping/label", (req, res) => {
+  app.post("/api/shipping/label", requireRole(["admin", "manager", "auditor"]), (req, res) => {
     const { carrier, recipientName, shippingAddress, weightKg, format } = req.body;
     const trackingNumber = `${carrier || 'CARRIER'}-${crypto.randomInt(100000000, 1000000000)}`;
     res.json({
@@ -458,7 +460,7 @@ export const setupApp = (
     });
   });
 
-  app.post("/api/shipping/bol", (req, res) => {
+  app.post("/api/shipping/bol", requireRole(["admin", "manager", "auditor"]), (req, res) => {
     const { carrier, originAddress, destinationAddress, weightKg, totalPackages } = req.body;
     const bolNumber = `BOL-${crypto.randomInt(100000, 1000000)}`;
     res.json({
@@ -474,7 +476,7 @@ export const setupApp = (
     });
   });
 
-  app.post("/api/erp/sync", (req, res) => {
+  app.post("/api/erp/sync", requireRole(["admin", "manager", "auditor"]), (req, res) => {
     const { provider, referenceId, lines } = req.body;
     const lineArr = Array.isArray(lines) ? lines : [];
     const postedAmountCents = lineArr.reduce((sum: number, l: any) => sum + (parseInt(l.amountCents) || 0), 0);
@@ -489,7 +491,7 @@ export const setupApp = (
     });
   });
 
-  app.post("/api/rma/inspect", (req, res) => {
+  app.post("/api/rma/inspect", requireRole(["admin", "manager", "auditor"]), (req, res) => {
     const { rmaNumber, sku, disposition, notes } = req.body;
     res.json({
       success: true,
@@ -502,7 +504,7 @@ export const setupApp = (
     });
   });
 
-  app.post("/api/supplier/asn", (req, res) => {
+  app.post("/api/supplier/asn", requireRole(["admin", "manager", "auditor"]), (req, res) => {
     const { asnNumber, supplierId, expectedDelivery, lineItemsJson } = req.body;
     res.json({
       success: true,
@@ -515,7 +517,7 @@ export const setupApp = (
     });
   });
 
-  app.get("/api/supplier/otif-scorecard", (req, res) => {
+  app.get("/api/supplier/otif-scorecard", requireRole(["admin", "manager", "auditor"]), (req, res) => {
     const supplierId = typeof req.query.supplierId === "string" ? req.query.supplierId : "SUP-101";
     res.json({
       supplierId,
@@ -528,7 +530,7 @@ export const setupApp = (
     });
   });
 
-  app.post("/api/hardware/print-thermal", (req, res) => {
+  app.post("/api/hardware/print-thermal", requireRole(["admin", "manager", "auditor"]), (req, res) => {
     const { printerName, labelType, barcodeValue, subtitle } = req.body;
     const zplCode = `^XA\n^FO50,50^A0N,36,36^FD${(labelType || 'LABEL').toUpperCase()} TAG^FS\n^FO50,100^BCN,100,Y,N,N^FD${barcodeValue || 'BARCODE'}^FS\n^FO50,220^A0N,24,24^FD${subtitle || ''}^FS\n^XZ`;
     res.json({
@@ -540,7 +542,7 @@ export const setupApp = (
     });
   });
 
-  app.post("/api/digital-twin/simulate", (req, res) => {
+  app.post("/api/digital-twin/simulate", requireRole(["admin", "manager", "auditor"]), (req, res) => {
     const { orderWaveCount, activePickersCount } = req.body;
     const waves = parseInt(orderWaveCount) || 10;
     const pickers = parseInt(activePickersCount) || 5;
@@ -557,7 +559,7 @@ export const setupApp = (
     });
   });
 
-  app.post("/api/copilot/query", (req, res) => {
+  app.post("/api/copilot/query", requireRole(["admin", "manager", "auditor"]), (req, res) => {
     const { query } = req.body;
     res.json({
       query: query || "What is the stockout risk?",
@@ -568,7 +570,7 @@ export const setupApp = (
     });
   });
 
-  app.get("/api/sustainability/emissions-report", (req, res) => {
+  app.get("/api/sustainability/emissions-report", requireRole(["admin", "manager", "auditor"]), (req, res) => {
     const tenantId = typeof req.query.tenantId === "string" ? req.query.tenantId : "tenant-1";
     res.json({
       tenantId,
