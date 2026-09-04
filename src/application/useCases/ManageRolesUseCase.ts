@@ -59,7 +59,6 @@ export class ManageRolesUseCase {
         rolePermissions: {
           include: { permission: true }
         }
-      },
       orderBy: { name: 'asc' }
     });
 
