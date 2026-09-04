@@ -11,7 +11,7 @@ export class ManageRolesUseCase {
       throw new Error("name is required.");
     }
 
-    const id = `custom_${tenantId}_${name.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`;
+    const id = `custom_${tenantId}_${name.toLowerCase().replace(/\\s+/g, '_')}_${Date.now()}`;
 
     let validPermissionIds: string[] = [];
     if (permissionIds && Array.isArray(permissionIds)) {
