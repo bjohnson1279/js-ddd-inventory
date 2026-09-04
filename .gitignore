@@ -20,3 +20,5 @@ dev.db-journal
 .antigravitycli/
 
 coverage/
+js_remaining_e2e.json
+e2e_output.txt
