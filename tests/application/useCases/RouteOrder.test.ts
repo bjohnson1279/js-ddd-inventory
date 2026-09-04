@@ -25,7 +25,11 @@ describe("RouteOrder Use Case", () => {
       generateLabel: jest.fn(),
     } as any;
     mockGeocoderService = {
-      geocode: jest.fn().mockReturnValue({ getLatitude: () => 40.7128, getLongitude: () => -74.0060 } as any)
+      geocode: jest.fn().mockReturnValue({
+        getLatitude: () => 40.7128,
+        getLongitude: () => -74.0060,
+        distanceTo: jest.fn().mockReturnValue(100)
+      } as any)
     } as any;
 
     useCase = new RouteOrder(mockInventoryRepo, mockCarrierService, mockGeocoderService);

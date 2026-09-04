@@ -41,9 +41,12 @@ export class ReconcileInventoryAudit {
       throw new Error(`Tenant config not found for tenant ${audit.tenantId}.`);
     }
 
-    const skusToFetch = audit.items
-      .filter(i => i.discrepancy !== null && i.discrepancy !== 0)
-      .map(i => SKU.create(i.variantId));
+    const uniqueVariantIdsToFetch = Array.from(new Set(
+      audit.items
+        .filter(i => i.discrepancy !== null && i.discrepancy !== 0)
+        .map(i => i.variantId)
+    ));
+    const skusToFetch = uniqueVariantIdsToFetch.map(id => SKU.create(id));
 
     let inventoryItems: InventoryItem[] = [];
     if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {

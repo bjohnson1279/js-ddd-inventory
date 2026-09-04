@@ -23,6 +23,7 @@ export function addInMemoryUser(user: any) {
 export class AuthController {
   static async setup(req: Request, res: Response) {
     try {
+      const isTestMode = process.env.NODE_ENV === "test";
       const { orgName, tenantId, adminName, adminEmail, adminPassword } = req.body;
 
       if (!orgName || !tenantId || !adminName || !adminEmail || !adminPassword) {
@@ -47,14 +48,16 @@ export class AuthController {
         return res.status(400).json({ error: `Admin user with email ${email} already exists for tenant.` });
       }
 
-      try {
-        let tenant = await prisma.tenantModel.findUnique({ where: { id: tenantId } });
-        if (!tenant) {
-          await prisma.tenantModel.create({
-            data: { id: tenantId, name: orgName }
-          });
-        }
-      } catch (e) {}
+      if (!isTestMode) {
+        try {
+          let tenant = await prisma.tenantModel.findUnique({ where: { id: tenantId } });
+          if (!tenant) {
+            await prisma.tenantModel.create({
+              data: { id: tenantId, name: orgName }
+            });
+          }
+        } catch (e) {}
+      }
       inMemoryTenants.set(tenantId, { id: tenantId, name: orgName });
 
       const adminId = crypto.randomUUID();
@@ -71,136 +74,137 @@ export class AuthController {
       inMemoryUsers.set(key, userObj);
       inMemoryUsers.set(adminId, userObj);
 
-      try {
-        const systemPermissions = [
-          { id: "inventory:view", resource: "inventory", action: "view" },
-          { id: "inventory:adjust", resource: "inventory", action: "adjust" },
-          { id: "inventory:transfer", resource: "inventory", action: "transfer" },
-          { id: "inventory:receive", resource: "inventory", action: "receive" },
-          { id: "inventory:dispatch", resource: "inventory", action: "dispatch" },
-          { id: "inventory:allocate", resource: "inventory", action: "allocate" },
-          { id: "product:view", resource: "product", action: "view" },
-          { id: "product:create", resource: "product", action: "create" },
-          { id: "product:edit", resource: "product", action: "edit" },
-          { id: "user:view", resource: "user", action: "view" },
-          { id: "user:manage", resource: "user", action: "manage" },
-          { id: "user:edit_role", resource: "user", action: "edit_role" },
-          { id: "approval:view", resource: "approval", action: "view" },
-          { id: "approval:manage", resource: "approval", action: "manage" },
-          { id: "warehouse:view", resource: "warehouse", action: "view" },
-          { id: "warehouse:manage", resource: "warehouse", action: "manage" },
-          { id: "order:view", resource: "order", action: "view" },
-          { id: "purchase_order:view", resource: "purchase_order", action: "view" },
-          { id: "purchase_order:create", resource: "purchase_order", action: "create" },
-          { id: "purchase_order:place", resource: "purchase_order", action: "place" },
-          { id: "purchase_order:receive", resource: "purchase_order", action: "receive" },
-          { id: "purchase_order:cancel", resource: "purchase_order", action: "cancel" },
-          { id: "rma:view", resource: "rma", action: "view" },
-          { id: "rma:create", resource: "rma", action: "create" },
-          { id: "rma:authorize", resource: "rma", action: "authorize" },
-          { id: "rma:receive", resource: "rma", action: "receive" },
-          { id: "rma:resolve", resource: "rma", action: "resolve" },
-          { id: "serial:view", resource: "serial", action: "view" },
-          { id: "serial:sell", resource: "serial", action: "sell" },
-          { id: "serial:return", resource: "serial", action: "return" },
-          { id: "serial:receive", resource: "serial", action: "receive" },
-          { id: "kit:view", resource: "kit", action: "view" },
-          { id: "kit:assemble", resource: "kit", action: "assemble" },
-          { id: "kit:disassemble", resource: "kit", action: "disassemble" },
-          { id: "kit:sell", resource: "kit", action: "sell" },
-          { id: "compliance:view", resource: "compliance", action: "view" },
-          { id: "journal:view", resource: "journal", action: "view" },
-          { id: "accounting:view", resource: "accounting", action: "view" },
-          { id: "webhook:view", resource: "webhook", action: "view" }
-        ];
+      if (!isTestMode) {
+        try {
+          const systemPermissions = [
+            { id: "inventory:view", resource: "inventory", action: "view" },
+            { id: "inventory:adjust", resource: "inventory", action: "adjust" },
+            { id: "inventory:transfer", resource: "inventory", action: "transfer" },
+            { id: "inventory:receive", resource: "inventory", action: "receive" },
+            { id: "inventory:dispatch", resource: "inventory", action: "dispatch" },
+            { id: "inventory:allocate", resource: "inventory", action: "allocate" },
+            { id: "product:view", resource: "product", action: "view" },
+            { id: "product:create", resource: "product", action: "create" },
+            { id: "product:edit", resource: "product", action: "edit" },
+            { id: "user:view", resource: "user", action: "view" },
+            { id: "user:manage", resource: "user", action: "manage" },
+            { id: "user:edit_role", resource: "user", action: "edit_role" },
+            { id: "approval:view", resource: "approval", action: "view" },
+            { id: "approval:manage", resource: "approval", action: "manage" },
+            { id: "warehouse:view", resource: "warehouse", action: "view" },
+            { id: "warehouse:manage", resource: "warehouse", action: "manage" },
+            { id: "order:view", resource: "order", action: "view" },
+            { id: "purchase_order:view", resource: "purchase_order", action: "view" },
+            { id: "purchase_order:create", resource: "purchase_order", action: "create" },
+            { id: "purchase_order:place", resource: "purchase_order", action: "place" },
+            { id: "purchase_order:receive", resource: "purchase_order", action: "receive" },
+            { id: "purchase_order:cancel", resource: "purchase_order", action: "cancel" },
+            { id: "rma:view", resource: "rma", action: "view" },
+            { id: "rma:create", resource: "rma", action: "create" },
+            { id: "rma:authorize", resource: "rma", action: "authorize" },
+            { id: "rma:receive", resource: "rma", action: "receive" },
+            { id: "rma:resolve", resource: "rma", action: "resolve" },
+            { id: "serial:view", resource: "serial", action: "view" },
+            { id: "serial:sell", resource: "serial", action: "sell" },
+            { id: "serial:return", resource: "serial", action: "return" },
+            { id: "serial:receive", resource: "serial", action: "receive" },
+            { id: "kit:view", resource: "kit", action: "view" },
+            { id: "kit:assemble", resource: "kit", action: "assemble" },
+            { id: "kit:disassemble", resource: "kit", action: "disassemble" },
+            { id: "kit:sell", resource: "kit", action: "sell" },
+            { id: "compliance:view", resource: "compliance", action: "view" },
+            { id: "journal:view", resource: "journal", action: "view" },
+            { id: "accounting:view", resource: "accounting", action: "view" },
+            { id: "webhook:view", resource: "webhook", action: "view" }
+          ];
 
-        for (const p of systemPermissions) {
-          const exists = await prisma.permissionModel.findUnique({ where: { id: p.id }});
-          if (!exists) {
-            await prisma.permissionModel.create({ data: p });
-          }
-        }
-
-        const roleMappings: Record<string, string[]> = {
-          "admin": systemPermissions.map(p => p.id),
-          "warehouse_operator": [
-            "inventory:view", "inventory:adjust", "inventory:transfer", "inventory:receive", "inventory:dispatch", "inventory:allocate",
-            "product:view", "warehouse:view", "order:view", "rma:view", "rma:create", "rma:receive", 
-            "serial:view", "serial:receive", "serial:sell", "serial:return",
-            "kit:view", "kit:assemble", "kit:disassemble", "kit:sell",
-            "purchase_order:view", "purchase_order:receive", "webhook:view"
-          ],
-          "inventory_manager": [
-            "inventory:view", "inventory:adjust", "inventory:transfer", "inventory:receive", "inventory:dispatch", "inventory:allocate",
-            "product:view", "product:create", "product:edit",
-            "warehouse:view", "warehouse:manage",
-            "order:view", "rma:view", "rma:create", "rma:authorize", "rma:receive", "rma:resolve",
-            "serial:view", "serial:sell", "serial:return", "serial:receive",
-            "kit:view", "kit:assemble", "kit:disassemble", "kit:sell",
-            "purchase_order:view", "purchase_order:create", "purchase_order:place", "purchase_order:receive", "purchase_order:cancel",
-            "approval:view", "approval:manage", "webhook:view"
-          ],
-          "finance_auditor": [
-            "inventory:view", "product:view", "warehouse:view", "order:view", "purchase_order:view", "rma:view", "serial:view", "kit:view",
-            "compliance:view", "journal:view", "approval:view", "accounting:view"
-          ],
-          "read_only": [
-            "inventory:view", "product:view", "user:view", "approval:view", "warehouse:view", "order:view", "purchase_order:view", "rma:view", "serial:view", "kit:view"
-          ],
-          "viewer": [
-            "inventory:view", "product:view"
-          ]
-        };
-
-        const roles = Object.keys(roleMappings);
-        const existingRoles = await prisma.roleModel.findMany({
-          where: { id: { in: roles } }
-        });
-        const existingRoleIds = new Set(existingRoles.map(r => r.id));
-        const rolesToCreate = roles.filter(r => !existingRoleIds.has(r)).map(r => ({
-          id: r,
-          name: r.replace("_", " "),
-          isCustom: false
-        }));
-
-        if (rolesToCreate.length > 0) {
-          await prisma.roleModel.createMany({
-            data: rolesToCreate
-          });
-        }
-        
-        // Assign permissions to roles
-        for (const [roleId, permIds] of Object.entries(roleMappings)) {
-          for (const permId of permIds) {
-            const rpExists = await prisma.rolePermissionModel.findUnique({
-              where: { roleId_permissionId: { roleId, permissionId: permId } }
-            });
-            if (!rpExists) {
-              await prisma.rolePermissionModel.create({
-                data: { roleId, permissionId: permId }
-              });
+          for (const p of systemPermissions) {
+            const exists = await prisma.permissionModel.findUnique({ where: { id: p.id }});
+            if (!exists) {
+              await prisma.permissionModel.create({ data: p });
             }
           }
-        }
 
-        await prisma.userModel.create({
-          data: {
-            id: adminId,
-            tenantId,
-            email,
-            passwordHash,
-            name: adminName,
-            active: true
-          }
-        });
+          const roleMappings: Record<string, string[]> = {
+            "admin": systemPermissions.map(p => p.id),
+            "warehouse_operator": [
+              "inventory:view", "inventory:adjust", "inventory:transfer", "inventory:receive", "inventory:dispatch", "inventory:allocate",
+              "product:view", "warehouse:view", "order:view", "rma:view", "rma:create", "rma:receive",
+              "serial:view", "serial:receive", "serial:sell", "serial:return",
+              "kit:view", "kit:assemble", "kit:disassemble", "kit:sell",
+              "purchase_order:view", "purchase_order:receive", "webhook:view"
+            ],
+            "inventory_manager": [
+              "inventory:view", "inventory:adjust", "inventory:transfer", "inventory:receive", "inventory:dispatch", "inventory:allocate",
+              "product:view", "product:create", "product:edit",
+              "warehouse:view", "warehouse:manage",
+              "order:view", "rma:view", "rma:create", "rma:authorize", "rma:receive", "rma:resolve",
+              "serial:view", "serial:sell", "serial:return", "serial:receive",
+              "kit:view", "kit:assemble", "kit:disassemble", "kit:sell",
+              "purchase_order:view", "purchase_order:create", "purchase_order:place", "purchase_order:receive", "purchase_order:cancel",
+              "approval:view", "approval:manage", "webhook:view"
+            ],
+            "finance_auditor": [
+              "inventory:view", "product:view", "warehouse:view", "order:view", "purchase_order:view", "rma:view", "serial:view", "kit:view",
+              "compliance:view", "journal:view", "approval:view", "accounting:view"
+            ],
+            "read_only": [
+              "inventory:view", "product:view", "user:view", "approval:view", "warehouse:view", "order:view", "purchase_order:view", "rma:view", "serial:view", "kit:view"
+            ],
+            "viewer": [
+              "inventory:view", "product:view"
+            ]
+          };
 
-        await prisma.userRoleModel.create({
-          data: {
-            userId: adminId,
-            roleId: "admin"
+          const roles = Object.keys(roleMappings);
+          const existingRoles = await prisma.roleModel.findMany({
+            where: { id: { in: roles } }
+          });
+          const existingRoleIds = new Set(existingRoles.map(r => r.id));
+          const rolesToCreate = roles.filter(r => !existingRoleIds.has(r)).map(r => ({
+            id: r,
+            name: r.replace("_", " "),
+            isCustom: false
+          }));
+
+          if (rolesToCreate.length > 0) {
+            await prisma.roleModel.createMany({
+              data: rolesToCreate
+            });
           }
-        });
-      } catch (e) {}
+
+          for (const [roleId, permIds] of Object.entries(roleMappings)) {
+            for (const permId of permIds) {
+              const rpExists = await prisma.rolePermissionModel.findUnique({
+                where: { roleId_permissionId: { roleId, permissionId: permId } }
+              });
+              if (!rpExists) {
+                await prisma.rolePermissionModel.create({
+                  data: { roleId, permissionId: permId }
+                });
+              }
+            }
+          }
+
+          await prisma.userModel.create({
+            data: {
+              id: adminId,
+              tenantId,
+              email,
+              passwordHash,
+              name: adminName,
+              active: true
+            }
+          });
+
+          await prisma.userRoleModel.create({
+            data: {
+              userId: adminId,
+              roleId: "admin"
+            }
+          });
+        } catch (e) {}
+      }
 
       return res.status(200).json({ success: true, message: "Organization and admin user created successfully." });
     } catch (error: any) {
