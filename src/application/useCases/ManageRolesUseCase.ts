@@ -1,9 +1,6 @@
 import { prisma } from "../../infrastructure/database/prisma";
 
 export class ManageRolesUseCase {
-  static async listRoles() {
-    return [];
-  }
 
   static async createCustomRole(
     tenantId: string,
@@ -51,14 +48,17 @@ export class ManageRolesUseCase {
     return { id, name, description, isCustom: true, tenantId };
   }
 
-  static async listRoles(tenantId: string) {
+  static async listRoles(tenantId?: string) {
+    const whereClause: any = tenantId
+      ? {
+          OR: [
+            { isCustom: false },
+            { tenantId: tenantId }
+          ]
+        }
+      : {};
     const roles = await prisma.roleModel.findMany({
-      where: {
-        OR: [
-          { isCustom: false },
-          { tenantId: tenantId }
-        ]
-      },
+      where: whereClause,
       include: {
         rolePermissions: {
           include: { permission: true }
