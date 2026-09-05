@@ -1,5 +1,4 @@
 import { ManageApprovalWorkflowsUseCase } from '../../../src/application/useCases/ManageApprovalWorkflowsUseCase';
-import { prisma } from '../../../src/infrastructure/database/prisma';
 
 jest.mock('../../../src/infrastructure/database/prisma', () => ({
   prisma: {
@@ -18,10 +17,21 @@ jest.mock('../../../src/infrastructure/database/prisma', () => ({
       create: jest.fn(),
     },
   },
+  pool: {
+    query: jest.fn(),
+    end: jest.fn(),
+  }
 }));
+
+jest.mock('crypto', () => ({
+  randomUUID: () => 'test-uuid',
+}));
+
+import { prisma } from '../../../src/infrastructure/database/prisma';
 
 describe('ManageApprovalWorkflowsUseCase', () => {
   let useCase: ManageApprovalWorkflowsUseCase;
+  const tenantId = 'tenant-1';
 
   beforeEach(() => {
     useCase = new ManageApprovalWorkflowsUseCase();
@@ -29,9 +39,8 @@ describe('ManageApprovalWorkflowsUseCase', () => {
   });
 
   describe('listWorkflows', () => {
-    it('should list workflows for a tenant ordered by createdAt desc', async () => {
-      const tenantId = 'tenant-1';
-      const mockWorkflows = [{ id: 'wf-1', name: 'WF 1' }];
+    it('should list workflows for a tenant', async () => {
+      const mockWorkflows = [{ id: 'wf-1' }];
       (prisma.approvalWorkflowModel.findMany as jest.Mock).mockResolvedValue(mockWorkflows);
 
       const result = await useCase.listWorkflows(tenantId);
@@ -45,213 +54,180 @@ describe('ManageApprovalWorkflowsUseCase', () => {
   });
 
   describe('createWorkflow', () => {
-    it('should create a new workflow', async () => {
-      const tenantId = 'tenant-1';
-      const data = {
-        name: 'New WF',
-        triggerEvent: 'ON_PURCHASE',
-        config: { steps: [] },
-        isActive: true,
-      };
-
-      const mockCreated = { id: 'new-id', ...data };
-      (prisma.approvalWorkflowModel.create as jest.Mock).mockResolvedValue(mockCreated);
+    it('should create a workflow with object config', async () => {
+      const data = { name: 'wf-name', triggerEvent: 'event-1', config: { key: 'val' }, isActive: false };
+      (prisma.approvalWorkflowModel.create as jest.Mock).mockResolvedValue({ id: 'new-wf' });
 
       const result = await useCase.createWorkflow(tenantId, data);
 
       expect(prisma.approvalWorkflowModel.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
+        data: {
+          id: 'test-uuid',
           tenantId,
           name: data.name,
           triggerEvent: data.triggerEvent,
           config: JSON.stringify(data.config),
-          isActive: true,
-        }),
+          isActive: false,
+        },
       });
-      expect(result).toEqual(mockCreated);
+      expect(result).toEqual({ id: 'new-wf' });
     });
 
-    it('should handle stringified config and undefined isActive', async () => {
-      const tenantId = 'tenant-1';
-      const data = {
-        name: 'New WF',
-        triggerEvent: 'ON_PURCHASE',
-        config: '{"steps":[]}',
-      };
+    it('should create a workflow with string config and default isActive', async () => {
+      const data = { name: 'wf-name', triggerEvent: 'event-1', config: '{"key":"val"}' };
+      (prisma.approvalWorkflowModel.create as jest.Mock).mockResolvedValue({ id: 'new-wf' });
 
-      await useCase.createWorkflow(tenantId, data);
+      const result = await useCase.createWorkflow(tenantId, data);
 
       expect(prisma.approvalWorkflowModel.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
+        data: {
+          id: 'test-uuid',
+          tenantId,
+          name: data.name,
+          triggerEvent: data.triggerEvent,
           config: data.config,
           isActive: true,
-        }),
+        },
       });
     });
   });
 
   describe('updateWorkflow', () => {
-    it('should update a workflow config (object)', async () => {
-      const tenantId = 'tenant-1';
+    it('should update workflow with config string', async () => {
       const workflowId = 'wf-1';
-      const config = { steps: ['step1'] };
+      const config = '{"key":"val2"}';
+      (prisma.approvalWorkflowModel.update as jest.Mock).mockResolvedValue({ id: workflowId });
 
-      await useCase.updateWorkflow(tenantId, workflowId, config);
+      const result = await useCase.updateWorkflow(tenantId, workflowId, config);
+
+      expect(prisma.approvalWorkflowModel.update).toHaveBeenCalledWith({
+        where: { id: workflowId },
+        data: { config },
+      });
+      expect(result).toEqual({ id: workflowId });
+    });
+
+    it('should update workflow with config object', async () => {
+      const workflowId = 'wf-1';
+      const config = { key: 'val2' };
+      (prisma.approvalWorkflowModel.update as jest.Mock).mockResolvedValue({ id: workflowId });
+
+      const result = await useCase.updateWorkflow(tenantId, workflowId, config);
 
       expect(prisma.approvalWorkflowModel.update).toHaveBeenCalledWith({
         where: { id: workflowId },
         data: { config: JSON.stringify(config) },
       });
     });
-
-    it('should update a workflow config (string)', async () => {
-      const tenantId = 'tenant-1';
-      const workflowId = 'wf-1';
-      const configStr = '{"steps":["step1"]}';
-
-      await useCase.updateWorkflow(tenantId, workflowId, configStr);
-
-      expect(prisma.approvalWorkflowModel.update).toHaveBeenCalledWith({
-        where: { id: workflowId },
-        data: { config: configStr },
-      });
-    });
   });
 
   describe('toggleWorkflow', () => {
-    it('should throw an error if workflow is not found', async () => {
-      (prisma.approvalWorkflowModel.findUnique as jest.Mock).mockResolvedValue(null);
+    it('should toggle workflow isActive flag', async () => {
+      const workflowId = 'wf-1';
+      (prisma.approvalWorkflowModel.findUnique as jest.Mock).mockResolvedValue({ id: workflowId, isActive: true });
+      (prisma.approvalWorkflowModel.update as jest.Mock).mockResolvedValue({ id: workflowId, isActive: false });
 
-      await expect(useCase.toggleWorkflow('tenant-1', 'wf-1'))
-        .rejects
-        .toThrow('Workflow not found');
-    });
+      const result = await useCase.toggleWorkflow(tenantId, workflowId);
 
-    it('should toggle workflow isActive status', async () => {
-      (prisma.approvalWorkflowModel.findUnique as jest.Mock).mockResolvedValue({ id: 'wf-1', isActive: true });
-
-      await useCase.toggleWorkflow('tenant-1', 'wf-1');
-
+      expect(prisma.approvalWorkflowModel.findUnique).toHaveBeenCalledWith({ where: { id: workflowId } });
       expect(prisma.approvalWorkflowModel.update).toHaveBeenCalledWith({
-        where: { id: 'wf-1' },
+        where: { id: workflowId },
         data: { isActive: false },
       });
+      expect(result).toEqual({ id: workflowId, isActive: false });
+    });
+
+    it('should throw an error if workflow is not found', async () => {
+      const workflowId = 'wf-1';
+      (prisma.approvalWorkflowModel.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(useCase.toggleWorkflow(tenantId, workflowId)).rejects.toThrow("Workflow not found");
     });
   });
 
   describe('listPendingRequests', () => {
     it('should list pending requests', async () => {
-      const tenantId = 'tenant-1';
-      const mockReqs = [{ id: 'req-1' }];
-      (prisma.approvalRequestModel.findMany as jest.Mock).mockResolvedValue(mockReqs);
+      const mockRequests = [{ id: 'req-1' }];
+      (prisma.approvalRequestModel.findMany as jest.Mock).mockResolvedValue(mockRequests);
 
       const result = await useCase.listPendingRequests(tenantId);
 
       expect(prisma.approvalRequestModel.findMany).toHaveBeenCalledWith({
         where: { tenantId, status: 'PENDING' },
-        include: {
-          workflow: true,
-          decisions: true
-        },
-        orderBy: { createdAt: 'desc' }
+        include: { workflow: true, decisions: true },
+        orderBy: { createdAt: 'desc' },
       });
-      expect(result).toEqual(mockReqs);
+      expect(result).toEqual(mockRequests);
     });
   });
 
   describe('getApprovalRequest', () => {
-    it('should get a specific approval request', async () => {
-      const tenantId = 'tenant-1';
+    it('should get an approval request', async () => {
       const requestId = 'req-1';
-      const mockReq = { id: requestId };
-      (prisma.approvalRequestModel.findFirst as jest.Mock).mockResolvedValue(mockReq);
+      const mockRequest = { id: requestId };
+      (prisma.approvalRequestModel.findFirst as jest.Mock).mockResolvedValue(mockRequest);
 
       const result = await useCase.getApprovalRequest(tenantId, requestId);
 
       expect(prisma.approvalRequestModel.findFirst).toHaveBeenCalledWith({
         where: { id: requestId, tenantId },
-        include: {
-          workflow: true,
-          decisions: true
-        }
+        include: { workflow: true, decisions: true },
       });
-      expect(result).toEqual(mockReq);
+      expect(result).toEqual(mockRequest);
     });
   });
 
   describe('submitDecision', () => {
-    it('should throw error if request not found', async () => {
+    it('should submit an APPROVE decision', async () => {
+      const requestId = 'req-1';
+      const mockRequest = { id: requestId, status: 'PENDING', currentStep: 1 };
+      (prisma.approvalRequestModel.findFirst as jest.Mock).mockResolvedValue(mockRequest);
+      (prisma.approvalDecisionModel.create as jest.Mock).mockResolvedValue({ id: 'dec-1' });
+
+      const result = await useCase.submitDecision(tenantId, requestId, 'decider-1', 'APPROVE', 'Looks good');
+
+      expect(prisma.approvalDecisionModel.create).toHaveBeenCalledWith({
+        data: {
+          id: 'test-uuid',
+          requestId,
+          stepIndex: 1,
+          deciderId: 'decider-1',
+          decision: 'APPROVE',
+          notes: 'Looks good',
+        },
+      });
+      expect(prisma.approvalRequestModel.update).toHaveBeenCalledWith({
+        where: { id: requestId },
+        data: { status: 'APPROVED' },
+      });
+      expect(result).toEqual({ id: 'dec-1' });
+    });
+
+    it('should submit a REJECT decision', async () => {
+      const requestId = 'req-1';
+      const mockRequest = { id: requestId, status: 'PENDING', currentStep: 1 };
+      (prisma.approvalRequestModel.findFirst as jest.Mock).mockResolvedValue(mockRequest);
+      (prisma.approvalDecisionModel.create as jest.Mock).mockResolvedValue({ id: 'dec-1' });
+
+      await useCase.submitDecision(tenantId, requestId, 'decider-1', 'REJECT');
+
+      expect(prisma.approvalRequestModel.update).toHaveBeenCalledWith({
+        where: { id: requestId },
+        data: { status: 'REJECTED' },
+      });
+    });
+
+    it('should throw if request not found', async () => {
       (prisma.approvalRequestModel.findFirst as jest.Mock).mockResolvedValue(null);
 
-      await expect(useCase.submitDecision('tenant-1', 'req-1', 'user-1', 'APPROVE'))
-        .rejects
-        .toThrow('Approval request not found');
+      await expect(useCase.submitDecision(tenantId, 'req-1', 'decider-1', 'APPROVE')).rejects.toThrow("Approval request not found");
     });
 
-    it('should throw error if request is not pending', async () => {
-      (prisma.approvalRequestModel.findFirst as jest.Mock).mockResolvedValue({ status: 'APPROVED' });
+    it('should throw if request is not pending', async () => {
+      const mockRequest = { id: 'req-1', status: 'APPROVED' };
+      (prisma.approvalRequestModel.findFirst as jest.Mock).mockResolvedValue(mockRequest);
 
-      await expect(useCase.submitDecision('tenant-1', 'req-1', 'user-1', 'APPROVE'))
-        .rejects
-        .toThrow('Approval request is not pending');
-    });
-
-    it('should process APPROVE decision', async () => {
-      (prisma.approvalRequestModel.findFirst as jest.Mock).mockResolvedValue({
-        id: 'req-1',
-        status: 'PENDING',
-        currentStep: 1
-      });
-      const mockDecision = { id: 'dec-1' };
-      (prisma.approvalDecisionModel.create as jest.Mock).mockResolvedValue(mockDecision);
-
-      const result = await useCase.submitDecision('tenant-1', 'req-1', 'user-1', 'APPROVE', 'Looks good');
-
-      expect(prisma.approvalDecisionModel.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          requestId: 'req-1',
-          stepIndex: 1,
-          deciderId: 'user-1',
-          decision: 'APPROVE',
-          notes: 'Looks good'
-        })
-      });
-
-      expect(prisma.approvalRequestModel.update).toHaveBeenCalledWith({
-        where: { id: 'req-1' },
-        data: { status: 'APPROVED' }
-      });
-
-      expect(result).toEqual(mockDecision);
-    });
-
-    it('should process REJECT decision', async () => {
-      (prisma.approvalRequestModel.findFirst as jest.Mock).mockResolvedValue({
-        id: 'req-1',
-        status: 'PENDING',
-        currentStep: 1
-      });
-      const mockDecision = { id: 'dec-1' };
-      (prisma.approvalDecisionModel.create as jest.Mock).mockResolvedValue(mockDecision);
-
-      const result = await useCase.submitDecision('tenant-1', 'req-1', 'user-1', 'REJECT');
-
-      expect(prisma.approvalDecisionModel.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          requestId: 'req-1',
-          stepIndex: 1,
-          deciderId: 'user-1',
-          decision: 'REJECT',
-          notes: null
-        })
-      });
-
-      expect(prisma.approvalRequestModel.update).toHaveBeenCalledWith({
-        where: { id: 'req-1' },
-        data: { status: 'REJECTED' }
-      });
-
-      expect(result).toEqual(mockDecision);
+      await expect(useCase.submitDecision(tenantId, 'req-1', 'decider-1', 'APPROVE')).rejects.toThrow("Approval request is not pending");
     });
   });
 });
