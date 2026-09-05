@@ -8,8 +8,35 @@ export class RoleController {
   static async listRoles(req: AuthenticatedRequest, res: Response) {
     try {
       const tenantId = req.tenantId || "tenant-1";
-      const roles = await ManageRolesUseCase.listRoles(tenantId);
-      return res.status(200).json({ roles });
+      const roles = await prisma.roleModel.findMany({
+        where: {
+          OR: [
+            { isCustom: false },
+            { tenantId: tenantId }
+          ]
+        },
+        include: {
+          rolePermissions: {
+            include: { permission: true }
+          }
+        },
+        orderBy: { name: 'asc' }
+      });
+      
+      const formattedRoles = roles.map((role: any) => ({
+        id: role.id,
+        name: role.name,
+        description: role.description,
+        isCustom: role.isCustom,
+        permissions: role.rolePermissions.map((rp: any) => ({
+          id: rp.permission.id,
+          resource: rp.permission.resource,
+          action: rp.permission.action,
+          description: rp.permission.description
+        }))
+      }));
+
+      return res.status(200).json({ roles: formattedRoles });
     } catch (error: any) {
       Logger.error({ context: "RoleController", message: "Failed to list roles", error: error });
       return res.status(500).json({ error: "Internal server error" });
