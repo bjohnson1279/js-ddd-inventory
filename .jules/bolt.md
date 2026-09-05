@@ -11,3 +11,7 @@
 ## 2024-09-02 - N+1 Webhook Deliveries via Promise.all
 **Learning:** When multiple webhook subscriptions match a single emitted domain event, using `Promise.all(subscriptions.map(sub => prisma.webhookDeliveryModel.create({ ... })))` creates severe N+1 insert queries that can exhaust the database connection pool. Since Prisma's `create` operations return the inserted records but the `OutboxProcessor` does not assign or use these return values, we can safely substitute this pattern with `createMany`.
 **Action:** Always replace concurrent individual database inserts via `Promise.all` with a single batch operation like `createMany` when the inserted entities' IDs or return objects are not strictly required for subsequent synchronous logic in the immediate scope.
+
+## 2024-11-20 - O(N^2) lookup optimization via pre-sorting
+**Learning:** Nested loops where the inner loop checks an array to find a specific target (like a minimal difference or distance) can easily cause O(N^2) bottlenecks when operating on the same large array.
+**Action:** When working on algorithms requiring nested array comparisons for proximity or difference mapping, do not exhaustively search the inner loop. Instead, pre-sort a shallow copy of the target array based on the desired target attribute (e.g. `distance`). This allows the inner loop to find the exact match immediately and implement an early `break`, significantly reducing time complexity from O(N^2) to O(N log N) + pruned O(N).
