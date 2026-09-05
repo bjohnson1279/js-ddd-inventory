@@ -27,15 +27,25 @@ async function isSafeUrl(urlStr: string): Promise<boolean> {
       if (p1 === 169 && p2 === 254) return false;
     } else if (net.isIPv6(address)) {
       // Normalize IPv6 address string
-      // Note: A full IPv6 parser might be more robust, but we can do basic prefix matching
-      // since dns.lookup returns a normalized string format for most standard IP stack implementations.
+      // A full parser is more robust against bypasses (e.g. 0:0:0:0:0:ffff:127.0.0.1 or ::ffff:7f00:1)
       const lower = address.toLowerCase();
+
+      // Block all unspecified or loopback variations including compressed or long forms
+      // dns.lookup output for loopback varies, but '::1' and '::' are standard
       if (lower === "::1" || lower === "0:0:0:0:0:0:0:1") return false;
       if (lower === "::" || lower === "0:0:0:0:0:0:0:0") return false;
 
-      // IPv4-mapped IPv6 addresses (::ffff:w.x.y.z)
+      // Check if it's an IPv4-mapped address and extract the IPv4 portion
+      let v4Part = null;
       if (lower.startsWith("::ffff:")) {
-        const v4Part = lower.substring(7);
+        v4Part = lower.substring(7);
+      } else if (lower.startsWith("0:0:0:0:0:ffff:")) {
+        v4Part = lower.substring(15);
+      }
+
+      if (v4Part) {
+        // IPv4 mapped addresses can be standard ipv4 or hex encoded in the last 32 bits
+        // e.g. ::ffff:127.0.0.1 or ::ffff:7f00:1 (hex format)
         if (net.isIPv4(v4Part)) {
           const parts = v4Part.split('.');
           const p1 = parseInt(parts[0], 10);
@@ -47,6 +57,25 @@ async function isSafeUrl(urlStr: string): Promise<boolean> {
           if (p1 === 172 && p2 >= 16 && p2 <= 31) return false;
           if (p1 === 192 && p2 === 168) return false;
           if (p1 === 169 && p2 === 254) return false;
+        } else {
+            // Hex format (e.g. 7f00:1 == 127.0.0.1)
+            const parts = v4Part.split(':');
+            if (parts.length > 0) {
+               const hexP1P2 = parts[0];
+               if (hexP1P2) {
+                   const blockInt = parseInt(hexP1P2, 16);
+                   if (!isNaN(blockInt)) {
+                       const p1 = (blockInt >> 8) & 0xff;
+                       const p2 = blockInt & 0xff;
+                       if (p1 === 127) return false;
+                       if (p1 === 0) return false;
+                       if (p1 === 10) return false;
+                       if (p1 === 172 && p2 >= 16 && p2 <= 31) return false;
+                       if (p1 === 192 && p2 === 168) return false;
+                       if (p1 === 169 && p2 === 254) return false;
+                   }
+               }
+            }
         }
       }
 

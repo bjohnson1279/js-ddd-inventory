@@ -31,3 +31,8 @@
 **Vulnerability:** The SSRF protection in webhook delivery only checked IPv4 addresses properly. It was possible to bypass the protection using IPv6 addresses, including IPv4-mapped IPv6, IPv6 loopback, and Unique Local Addresses, because the logic solely relied on an IPv4 regex match and an exact string match for `::1`.
 **Learning:** Using basic string matching or an IPv4 regex for network address filtering leaves the application vulnerable to IPv6-based bypasses. Relying on `require('net')` dynamically inside a TypeScript function is an anti-pattern that can cause runtime errors in ESM environments or linting failures.
 **Prevention:** Use Node.js's native `net` module (imported at the top level) to differentiate between IPv4 and IPv6 addresses. For IPv6, implement robust parsing or blocklist checks that account for the unspecified address (`::`), IPv4-mapped IPv6 formats, and the correct CIDR ranges for Unique Local (`fc00::/7`) and Link-Local (`fe80::/10`) addresses, instead of naive prefix matching.
+
+## 2024-05-24 - SSRF IPv6 Hex Bypass
+**Vulnerability:** The SSRF protection in webhook delivery only checked IPv4 addresses and standard string representations for IPv6 loopbacks. It was possible to bypass the protection using hex-encoded IPv4-mapped IPv6 addresses (e.g. `::ffff:7f00:1` or `0:0:0:0:0:ffff:7f00:1`).
+**Learning:** Using basic regex matching for IPv4-mapped IPv6 addresses fails if the embedded IPv4 part is hex encoded instead of standard decimal formatting.
+**Prevention:** Always implement robust parsing for the embedded IPv4 payload inside an IPv6 mapping block (e.g. parsing `7f00:1` using bitwise shifts) to ensure standard IPv4 blocklists evaluate accurately against all string representations.
