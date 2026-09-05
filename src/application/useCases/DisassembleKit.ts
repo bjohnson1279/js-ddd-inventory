@@ -51,8 +51,9 @@ export class DisassembleKit {
         include: { components: true }
       });
     } catch (e: any) {
-      if (e.code === 'P1001' || e.code === 'ECONNREFUSED' || e.name === 'PrismaClientKnownRequestError' || e.message) {
-        // Suppress Prisma errors so that memory fallback works
+      if (e.code === 'ECONNREFUSED' || e.code === 'P1001' || e instanceof Error) {
+        const { getInMemoryKit } = require("../../infrastructure/http/controllers/KitController");
+        kitRecord = getInMemoryKit ? getInMemoryKit(kitSku) : null;
       }
     }
 
