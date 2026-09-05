@@ -73,7 +73,7 @@ export class PrismaWarehouseLocationRepository implements IWarehouseLocationRepo
       }
     });
 
-    return models.map(model => new WarehouseLocation(
+    return models.map((model: any) => new WarehouseLocation(
       new LocationId(model.id),
       model.warehouseId,
       model.zone,
@@ -97,7 +97,7 @@ export class PrismaWarehouseLocationRepository implements IWarehouseLocationRepo
 
   async findAll(): Promise<WarehouseLocation[]> {
     const models = await this.prisma.warehouseLocationModel.findMany();
-    return models.map(model => new WarehouseLocation(
+    return models.map((model: any) => new WarehouseLocation(
       new LocationId(model.id),
       model.warehouseId,
       model.zone,
