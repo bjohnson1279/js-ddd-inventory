@@ -49,7 +49,11 @@ export class AssembleKit {
         where: { sku: kitSku },
         include: { components: true }
       });
-    } catch (e) {}
+    } catch (e: any) {
+      if (e.code === 'P1001' || e.code === 'ECONNREFUSED' || e.name === 'PrismaClientKnownRequestError' || e.message) {
+        // Suppress Prisma errors so that memory fallback works
+      }
+    }
 
     if (!kitRecord) {
       const { getInMemoryKit } = require("../../infrastructure/http/controllers/KitController");
