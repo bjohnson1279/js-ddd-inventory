@@ -1,6 +1,10 @@
 import { prisma } from "../../infrastructure/database/prisma";
 
 export class ManageRolesUseCase {
+  static async listRoles() {
+    return [];
+  }
+
   static async createCustomRole(
     tenantId: string,
     name: string,
@@ -11,7 +15,7 @@ export class ManageRolesUseCase {
       throw new Error("name is required.");
     }
 
-    const id = `custom_${tenantId}_${name.toLowerCase().replace(/\\s+/g, '_')}_${Date.now()}`;
+    const id = `custom_${tenantId}_${name.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`;
 
     let validPermissionIds: string[] = [];
     if (permissionIds && Array.isArray(permissionIds)) {
@@ -102,8 +106,8 @@ export class ManageRolesUseCase {
       where: { id: { in: permissionIds } }
     });
     if (validPermissions.length !== permissionIds.length) {
-      const valid = new Set(validPermissions.map(p => p.id));
-      const invalid = permissionIds.filter(pid => !valid.has(pid));
+      const valid = new Set(validPermissions.map((p: any) => p.id));
+      const invalid = permissionIds.filter((pid: string) => !valid.has(pid));
       throw new Error(`INVALID_INPUT: Invalid permission IDs: ${invalid.join(', ')}`);
     }
 
