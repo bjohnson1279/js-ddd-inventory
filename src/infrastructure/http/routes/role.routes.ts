@@ -11,9 +11,10 @@ router.use(requireRole(["admin"]));
 
 router.get("/permissions", requirePermission('user', 'edit_role'), RoleController.listPermissions);
 
-router.get("/", requirePermission('user', 'edit_role'), async (req, res) => {
+router.get("/", requirePermission('user', 'edit_role'), async (req: any, res: any) => {
   try {
-    const roles = await ManageRolesUseCase.listRoles();
+    const tenantId = req.tenantId || "tenant-1";
+    const roles = await ManageRolesUseCase.listRoles(tenantId);
     return res.status(200).json(roles);
   } catch (error) {
     return res.status(500).json({ error: "Internal server error" });
