@@ -51,6 +51,36 @@ export class ManageRolesUseCase {
     return { id, name, description, isCustom: true, tenantId };
   }
 
+  static async listRoles(tenantId: string) {
+    const roles = await prisma.roleModel.findMany({
+      where: {
+        OR: [
+          { isCustom: false },
+          { tenantId: tenantId }
+        ]
+      },
+      include: {
+        rolePermissions: {
+          include: { permission: true }
+        }
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    return roles.map((role: any) => ({
+      id: role.id,
+      name: role.name,
+      description: role.description,
+      isCustom: role.isCustom,
+      permissions: role.rolePermissions.map((rp: any) => ({
+        id: rp.permission.id,
+        resource: rp.permission.resource,
+        action: rp.permission.action,
+        description: rp.permission.description
+      }))
+    }));
+  }
+
   static async listPermissions() {
     const permissions = await prisma.permissionModel.findMany({
       orderBy: [
