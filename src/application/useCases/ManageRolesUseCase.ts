@@ -1,7 +1,9 @@
+import { prisma } from "../../infrastructure/database/prisma";
+
 export class ManageRolesUseCase {
   static async listRoles() {
     return [];
-import { prisma } from "../../infrastructure/database/prisma";
+  }
 
   static async createCustomRole(
     tenantId: string,
@@ -13,7 +15,7 @@ import { prisma } from "../../infrastructure/database/prisma";
       throw new Error("name is required.");
     }
 
-    const id = `custom_${tenantId}_${name.toLowerCase().replace(/\\s+/g, '_')}_${Date.now()}`;
+    const id = `custom_${tenantId}_${name.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`;
 
     let validPermissionIds: string[] = [];
     if (permissionIds && Array.isArray(permissionIds)) {
@@ -37,6 +39,7 @@ import { prisma } from "../../infrastructure/database/prisma";
           isCustom: true,
           tenantId
         }
+      });
 
       if (validPermissionIds.length > 0) {
         await tx.rolePermissionModel.createMany({
@@ -54,6 +57,7 @@ import { prisma } from "../../infrastructure/database/prisma";
         { resource: 'asc' },
         { action: 'asc' }
       ]
+    });
     return permissions.map((p: any) => ({
       id: p.id,
       resource: p.resource,
@@ -70,19 +74,25 @@ import { prisma } from "../../infrastructure/database/prisma";
 
     const validPermissions = await prisma.permissionModel.findMany({
       where: { id: { in: permissionIds } }
+    });
     if (validPermissions.length !== permissionIds.length) {
-      const valid = new Set(validPermissions.map(p => p.id));
-      const invalid = permissionIds.filter(pid => !valid.has(pid));
+      const valid = new Set(validPermissions.map((p: any) => p.id));
+      const invalid = permissionIds.filter((pid: string) => !valid.has(pid));
       throw new Error(`INVALID_INPUT: Invalid permission IDs: ${invalid.join(', ')}`);
     }
 
+    await prisma.$transaction(async (tx: any) => {
       // Clear existing permissions
       await tx.rolePermissionModel.deleteMany({
         where: { roleId }
+      });
 
       // Assign new permissions
       if (permissionIds.length > 0) {
+        await tx.rolePermissionModel.createMany({
           data: permissionIds.map((pid: string) => ({ roleId, permissionId: pid }))
+        });
       }
+    });
   }
 }
