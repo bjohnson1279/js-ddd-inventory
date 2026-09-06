@@ -15,3 +15,15 @@
 ## 2024-11-20 - O(N^2) lookup optimization via pre-sorting
 **Learning:** Nested loops where the inner loop checks an array to find a specific target (like a minimal difference or distance) can easily cause O(N^2) bottlenecks when operating on the same large array.
 **Action:** When working on algorithms requiring nested array comparisons for proximity or difference mapping, do not exhaustively search the inner loop. Instead, pre-sort a shallow copy of the target array based on the desired target attribute (e.g. `distance`). This allows the inner loop to find the exact match immediately and implement an early `break`, significantly reducing time complexity from O(N^2) to O(N log N) + pruned O(N).
+
+## Prevention Directives for Automated Refactoring
+- **Never Overwrite Complete Files**: Always use range-scoped replacement chunks (`StartLine`/`EndLine`) for edits to `schema.prisma`, `index.ts`, `public/index.php`, or DDL SQL scripts.
+- **Do Not Remove Core Declarations**: Do not delete existing route registrations or database DDL tables.
+- **Environment Isolation Compatibility**: When replacing fallback secrets, preserve test environment execution via `!getenv('APP_ENV')` or `getenv('APP_ENV') === 'testing'`.
+- **No Scratch Files**: Never stage or commit `test_*.ts`, `test_*.js`, `test.cjs`, `fix_*.php`, or `test.js` files to git.
+- **No Unresolved Conflict Markers**: Never stage or commit files containing Git merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`, `|||||||`). Always resolve conflicts cleanly before committing.
+
+## Hallucinatory Task & Empty PR Directives
+- **Zero-Diff Task Termination**: If the requested optimization, refactor, or fix is ALREADY natively present in the target branch, DO NOT create an empty pull request or commit an acknowledgment PR. Exit the task cleanly without opening a PR.
+- **Stale Suggestion Guard**: Always verify the current code on `main`/`master` before planning changes. If no actionable diff is required, cancel task execution immediately.
+
