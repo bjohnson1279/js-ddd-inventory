@@ -97,6 +97,9 @@ export class SlottingOptimizer {
 
     itemRecords.sort((a, b) => b.velocity - a.velocity);
 
+    // Optimization: Create a secondary sorted array by distance (ascending) to prevent O(N^2) full traversal.
+    const targetsByDistance = [...itemRecords].sort((a, b) => a.distance - b.distance);
+
     const suggestions: SlottingSuggestion[] = [];
     const matchedLocations = new Set<string>();
 
@@ -107,16 +110,17 @@ export class SlottingOptimizer {
       let bestSwapTarget: typeof itemRecords[0] | null = null;
       let maxDistanceDiff = 0;
 
-      for (const target of itemRecords) {
+      for (const target of targetsByDistance) {
+        // If the target distance is no better than current, skip the rest since they are sorted
+        if (target.distance >= item.distance) break;
+
         if (target.locationId === item.locationId) continue;
         if (matchedLocations.has(target.locationId)) continue;
         
-        if (target.distance < item.distance && target.velocity < item.velocity) {
-          const distanceDiff = item.distance - target.distance;
-          if (distanceDiff > maxDistanceDiff) {
-            maxDistanceDiff = distanceDiff;
-            bestSwapTarget = target;
-          }
+        if (target.velocity < item.velocity) {
+          maxDistanceDiff = item.distance - target.distance;
+          bestSwapTarget = target;
+          break; // First match is the best match because we want minimum target distance
         }
       }
 
