@@ -61,18 +61,20 @@ async function isSafeUrl(urlStr: string): Promise<boolean> {
             // Hex format (e.g. 7f00:1 == 127.0.0.1)
             const parts = v4Part.split(':');
             if (parts.length > 0) {
-               const hexP1P2 = parts[0];
-               if (hexP1P2) {
-                   const blockInt = parseInt(hexP1P2, 16);
-                   if (!isNaN(blockInt)) {
-                       const p1 = (blockInt >> 8) & 0xff;
-                       const p2 = blockInt & 0xff;
-                       if (p1 === 127) return false;
-                       if (p1 === 0) return false;
-                       if (p1 === 10) return false;
-                       if (p1 === 172 && p2 >= 16 && p2 <= 31) return false;
-                       if (p1 === 192 && p2 === 168) return false;
-                       if (p1 === 169 && p2 === 254) return false;
+               for (let i=0; i<parts.length; i++) {
+                   const hexP = parts[i];
+                   if (hexP) {
+                       const blockInt = parseInt(hexP, 16);
+                       if (!isNaN(blockInt)) {
+                           const p1 = (blockInt >> 8) & 0xff;
+                           const p2 = blockInt & 0xff;
+                           if (p1 === 127) return false;
+                           if (p1 === 0) return false;
+                           if (p1 === 10) return false;
+                           if (p1 === 172 && p2 >= 16 && p2 <= 31) return false;
+                           if (p1 === 192 && p2 === 168) return false;
+                           if (p1 === 169 && p2 === 254) return false;
+                       }
                    }
                }
             }
