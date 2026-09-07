@@ -257,4 +257,42 @@ describe("AssembleKit Use Case", () => {
 
     expect(mockInventoryRepo.save).toHaveBeenCalled();
   });
+
+  it("should handle error when cost layer service fails", async () => {
+    (prisma.kitModel.findUnique as jest.Mock).mockResolvedValue({
+      sku: "KIT-123",
+      components: [
+        { variantId: "COMP-1", quantity: 2 }
+      ]
+    });
+
+    const mockCompItem = {
+      sku: { getValue: () => "COMP-1" },
+      quantity: { getValue: () => 10 },
+      dispatchStock: jest.fn(),
+    };
+
+    mockInventoryRepo.findBySkus.mockResolvedValue([mockCompItem]);
+
+    const mockKitItem = {
+      sku: { getValue: () => "KIT-123" },
+      quantity: { getValue: () => 0 },
+      receiveStock: jest.fn(),
+    };
+    mockInventoryRepo.findBySku.mockResolvedValue(mockKitItem);
+    mockTenantConfigRepo.findByTenantId.mockResolvedValue({ accountingMethod: AccountingMethod.Accrual });
+
+    (assembleKit as any).costLayerService.consumeFifoLayersBatch = jest.fn().mockRejectedValue(new Error("Cost layer failed"));
+
+    const dto = {
+      tenantId: "tenant-1",
+      locationId: "loc-1",
+      kitSku: "KIT-123",
+      quantity: 1,
+      actorId: "actor-1",
+      referenceId: "ref-1",
+    };
+
+    await expect(assembleKit.execute(dto)).rejects.toThrow("Cost layer failed");
+  });
 });
