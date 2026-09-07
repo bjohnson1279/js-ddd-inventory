@@ -109,4 +109,19 @@ describe("InMemoryJournalRepository", () => {
     expect(allEntries).toContain(entry1);
     expect(allEntries).toContain(entry2);
   });
+
+  it("should return empty array if no entries exist", async () => {
+    const repo = new InMemoryJournalRepository();
+    const entries = await repo.findAll();
+    expect(entries).toHaveLength(0);
+  });
+
+  it("should return empty array if tenant has no entries", async () => {
+    const repo = new InMemoryJournalRepository();
+    const entry1 = createValidJournalEntry("entry-8", "tenant-A");
+    await repo.save(entry1);
+
+    const entries = await repo.findAll("tenant-B");
+    expect(entries).toHaveLength(0);
+  });
 });
