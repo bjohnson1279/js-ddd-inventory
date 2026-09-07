@@ -122,4 +122,16 @@ describe("PurchaseShippingLabel Use Case", () => {
     expect(result.trackingNumber).toBe("TRACK123");
     expect(journalRepository.save).not.toHaveBeenCalled();
   });
+  it("should gracefully handle saving errors for ledger entry", async () => {
+    const mockInventoryItem = {
+      quantity: { getValue: () => 10 },
+      dispatchStock: jest.fn()
+    };
+    inventoryRepository.findBySku.mockResolvedValue(mockInventoryItem as any);
+    carrierService.generateLabel.mockResolvedValue({ trackingNumber: "TRACK123", labelUrl: "http://label", rateCents: 1500 });
+    tenantConfigRepository.findByTenantId.mockResolvedValue({ accountingMethod: AccountingMethod.Cash } as any);
+    journalRepository.save.mockRejectedValue(new Error("DB Error"));
+
+    await expect(useCase.execute(validCommand)).rejects.toThrow("DB Error");
+  });
 });
