@@ -53,6 +53,27 @@ describe("PrismaCostLayerRepository", () => {
       expect(result.get("V2")?.[0].remainingQuantity).toBe(5);
     });
 
+
+    it("should handle expiration desc order correctly", async () => {
+      (prisma.inventoryCostLayerModel.findMany as jest.Mock).mockResolvedValue([]);
+      await repository.getActiveLayersByVariantIds(["V1"], "expiration desc");
+      expect(prisma.inventoryCostLayerModel.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: [{ expirationDate: "desc" }, { receivedAt: "asc" }]
+        })
+      );
+    });
+
+    it("should handle generic non-expiration order correctly", async () => {
+      (prisma.inventoryCostLayerModel.findMany as jest.Mock).mockResolvedValue([]);
+      await repository.getActiveLayersByVariantIds(["V1"], "asc");
+      expect(prisma.inventoryCostLayerModel.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: { receivedAt: "asc" }
+        })
+      );
+    });
+
     it("should return empty arrays for variants with no active layers", async () => {
       (prisma.inventoryCostLayerModel.findMany as jest.Mock).mockResolvedValue([]);
       const result = await repository.getActiveLayersByVariantIds(["V1"]);
@@ -61,6 +82,37 @@ describe("PrismaCostLayerRepository", () => {
   });
 
   describe("getActiveLayers", () => {
+
+    it("should handle expiration desc order correctly for a single variant", async () => {
+      (prisma.inventoryCostLayerModel.findMany as jest.Mock).mockResolvedValue([]);
+      await repository.getActiveLayers("V1", "expiration desc");
+      expect(prisma.inventoryCostLayerModel.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: [{ expirationDate: "desc" }, { receivedAt: "asc" }]
+        })
+      );
+    });
+
+    it("should handle generic non-expiration order correctly for a single variant", async () => {
+      (prisma.inventoryCostLayerModel.findMany as jest.Mock).mockResolvedValue([]);
+      await repository.getActiveLayers("V1", "asc");
+      expect(prisma.inventoryCostLayerModel.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: { receivedAt: "asc" }
+        })
+      );
+    });
+
+    it("should handle no order by specified for a single variant", async () => {
+      (prisma.inventoryCostLayerModel.findMany as jest.Mock).mockResolvedValue([]);
+      await repository.getActiveLayers("V1");
+      expect(prisma.inventoryCostLayerModel.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: undefined
+        })
+      );
+    });
+
     it("should return active layers for a single variant", async () => {
       const mockRecord = {
         id: "L1", variantId: "V1", tenantId: "T1", originalQuantity: 10, unitCostCents: 100,
