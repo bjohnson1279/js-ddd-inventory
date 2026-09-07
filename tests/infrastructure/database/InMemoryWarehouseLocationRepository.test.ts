@@ -38,6 +38,28 @@ describe("InMemoryWarehouseLocationRepository", () => {
       const found = await repository.findById(new LocationId("NON_EXISTENT-ZONEA-A03-R02-S01-B10"));
       expect(found).toBeNull();
     });
+
+    it("should overwrite an existing location if saved with the same ID", async () => {
+      const location = createLocation();
+      await repository.save(location);
+
+      const updatedLocation = new WarehouseLocation(
+        new LocationId("WH1-ZONEA-A03-R02-S01-B10"),
+        "WH1",
+        "ZONEA",
+        "A03",
+        "R02",
+        "S01",
+        "B10",
+        2000,
+        2
+      );
+      await repository.save(updatedLocation);
+
+      const found = await repository.findById(location.id);
+      expect(found?.maxWeightGrams).toBe(2000);
+      expect(found?.maxVolumeCubicMeters).toBe(2);
+    });
   });
 
   describe("delete", () => {
