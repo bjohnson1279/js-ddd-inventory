@@ -48,3 +48,8 @@
 - **Zero-Diff Task Termination**: If the requested optimization, refactor, or fix is ALREADY natively present in the target branch, DO NOT create an empty pull request or commit an acknowledgment PR. Exit the task cleanly without opening a PR.
 - **Stale Suggestion Guard**: Always verify the current code on `main`/`master` before planning changes. If no actionable diff is required, cancel task execution immediately.
 
+
+## 2024-09-07 - Path Traversal in FileStorageService
+**Vulnerability:** Path traversal in `FileStorageService` allowed reading/writing arbitrary files via unvalidated filename input to `path.join`.
+**Learning:** `path.join` does not prevent directory traversal (e.g., using `../../`). It only concatenates paths. User-controlled inputs passed to path manipulation functions must be validated.
+**Prevention:** Use `path.resolve` and strictly verify that the resulting absolute path begins with the intended base directory using `.startsWith(baseDirectory + path.sep)`.

@@ -2,67 +2,84 @@ import fs from 'fs';
 import path from 'path';
 import { FileStorageService } from '../../../src/infrastructure/services/FileStorageService';
 
-jest.mock('fs');
+jest.mock('fs', () => ({
+  existsSync: jest.fn(),
+  mkdirSync: jest.fn(),
+  writeFileSync: jest.fn(),
+  createWriteStream: jest.fn(),
+}));
 
 describe('FileStorageService', () => {
+  let fileStorageService: FileStorageService;
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('should create the storage directory if it does not exist', () => {
-    (fs.existsSync as jest.Mock).mockReturnValue(false);
+  describe('constructor', () => {
+    it('should create the storage directory if it does not exist', () => {
+      (fs.existsSync as jest.Mock).mockReturnValue(false);
+      fileStorageService = new FileStorageService();
+      expect(fs.mkdirSync).toHaveBeenCalledWith(expect.any(String), { recursive: true });
+    });
 
-    new FileStorageService();
-
-    expect(fs.existsSync).toHaveBeenCalled();
-    expect(fs.mkdirSync).toHaveBeenCalledWith(
-      expect.stringContaining(path.join('uploads', 'reports')),
-      { recursive: true }
-    );
+    it('should not create the storage directory if it already exists', () => {
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      fileStorageService = new FileStorageService();
+      expect(fs.mkdirSync).not.toHaveBeenCalled();
+    });
   });
 
-  it('should not create the storage directory if it already exists', () => {
-    (fs.existsSync as jest.Mock).mockReturnValue(true);
+  describe('getFilePath', () => {
+    beforeEach(() => {
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      fileStorageService = new FileStorageService();
+    });
 
-    new FileStorageService();
+    it('should return the correct file path for a valid filename', () => {
+      const filename = 'test.pdf';
+      const expectedPath = path.resolve(path.join((fileStorageService as any).storageDir, filename));
+      expect(fileStorageService.getFilePath(filename)).toBe(expectedPath);
+    });
 
-    expect(fs.existsSync).toHaveBeenCalled();
-    expect(fs.mkdirSync).not.toHaveBeenCalled();
+    it('should throw an error for path traversal attempt', () => {
+      expect(() => {
+        fileStorageService.getFilePath('../../../etc/passwd');
+      }).toThrow('Invalid filename: Path traversal detected');
+    });
   });
 
-  it('should return the correct file path', () => {
-    (fs.existsSync as jest.Mock).mockReturnValue(true);
-    const service = new FileStorageService();
+  describe('saveFile', () => {
+    beforeEach(() => {
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      fileStorageService = new FileStorageService();
+    });
 
-    const filePath = service.getFilePath('test.txt');
-    expect(filePath).toContain(path.join('uploads', 'reports', 'test.txt'));
+    it('should save a file and return the relative path', async () => {
+      const filename = 'test.pdf';
+      const buffer = Buffer.from('test data');
+      const expectedPath = path.resolve(path.join((fileStorageService as any).storageDir, filename));
+      const result = await fileStorageService.saveFile(filename, buffer);
+      expect(fs.writeFileSync).toHaveBeenCalledWith(expectedPath, buffer);
+      expect(result).toBe(`/uploads/reports/${filename}`);
+    });
   });
 
-  it('should save a file and return the relative path', async () => {
-    (fs.existsSync as jest.Mock).mockReturnValue(true);
-    const service = new FileStorageService();
+  describe('getWriteStream', () => {
+    beforeEach(() => {
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      fileStorageService = new FileStorageService();
+    });
 
-    const buffer = Buffer.from('test data');
-    const result = await service.saveFile('test.txt', buffer);
+    it('should return a write stream for a file', () => {
+      const filename = 'test.pdf';
+      const expectedPath = path.resolve(path.join((fileStorageService as any).storageDir, filename));
+      const mockStream = {} as fs.WriteStream;
+      (fs.createWriteStream as jest.Mock).mockReturnValue(mockStream);
 
-    expect(fs.writeFileSync).toHaveBeenCalledWith(
-      expect.stringContaining(path.join('uploads', 'reports', 'test.txt')),
-      buffer
-    );
-    expect(result).toBe('/uploads/reports/test.txt');
-  });
-
-  it('should return a write stream for a file', () => {
-    (fs.existsSync as jest.Mock).mockReturnValue(true);
-    const mockWriteStream = {} as fs.WriteStream;
-    (fs.createWriteStream as jest.Mock).mockReturnValue(mockWriteStream);
-
-    const service = new FileStorageService();
-    const stream = service.getWriteStream('test.txt');
-
-    expect(fs.createWriteStream).toHaveBeenCalledWith(
-      expect.stringContaining(path.join('uploads', 'reports', 'test.txt'))
-    );
-    expect(stream).toBe(mockWriteStream);
+      const result = fileStorageService.getWriteStream(filename);
+      expect(fs.createWriteStream).toHaveBeenCalledWith(expectedPath);
+      expect(result).toBe(mockStream);
+    });
   });
 });

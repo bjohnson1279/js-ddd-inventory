@@ -12,7 +12,11 @@ export class FileStorageService {
   }
 
   public getFilePath(filename: string): string {
-    return path.join(this.storageDir, filename);
+    const fullPath = path.resolve(path.join(this.storageDir, filename));
+    if (!fullPath.startsWith(path.resolve(this.storageDir) + path.sep)) {
+      throw new Error("Invalid filename: Path traversal detected");
+    }
+    return fullPath;
   }
 
   public async saveFile(filename: string, buffer: Buffer): Promise<string> {
