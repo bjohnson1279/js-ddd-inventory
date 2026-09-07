@@ -178,4 +178,29 @@ describe("GenerateDemandForecast Use Case", () => {
 
     expect(result.confidenceLevel).toBe(0.50);
   });
+
+  it("should set correct confidence level when sales > 0 and seasonal multiplier is 1.0", async () => {
+    mockCalculateSalesVelocity.execute.mockResolvedValue({
+      sku: "SKU-123",
+      locationId: "loc-1",
+      currentStock: 100,
+      averageDailySales7d: 5,
+      averageDailySales30d: 10,
+      averageDailySales90d: 5,
+      daysOfCover: 10,
+      runOutDate: new Date(),
+    });
+
+    // History is empty, so seasonalMultiplier defaults to 1.0
+    mockDispatchRecordRepo.fetchHistory.mockResolvedValue([]);
+
+    const result = await useCase.execute({
+      sku: "SKU-123",
+      locationId: "loc-1",
+      forecastDays: 10,
+    });
+
+    expect(result.confidenceLevel).toBe(0.85);
+    expect(result.forecastedQuantity).toBe(100);
+  });
 });
