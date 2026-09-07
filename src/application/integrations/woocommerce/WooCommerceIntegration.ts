@@ -1,4 +1,4 @@
-import { BaseChannelAdapter } from '../../../../shared/src/api/integrations/types';
+import { BaseChannelAdapter } from '../types';
 
 export class WooCommerceIntegration implements BaseChannelAdapter<any> {
   constructor(
