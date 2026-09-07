@@ -54,7 +54,7 @@ export class PrismaAuditDiscrepancyRepository implements IAuditDiscrepancyReposi
       orderBy: { occurredAt: "desc" }
     });
     return models.map(
-      (m) =>
+      (m: any) =>
         new AuditDiscrepancy(
           m.id,
           m.tenantId,
