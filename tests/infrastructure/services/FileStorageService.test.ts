@@ -30,6 +30,14 @@ describe('FileStorageService', () => {
     expect(fs.mkdirSync).not.toHaveBeenCalled();
   });
 
+  it('should accurately resolve paths containing spaces', () => {
+    (fs.existsSync as jest.Mock).mockReturnValue(true);
+    const service = new FileStorageService();
+
+    const filePath = service.getFilePath('file with spaces.txt');
+    expect(filePath).toContain('file with spaces.txt');
+  });
+
   it('should return the correct file path', () => {
     (fs.existsSync as jest.Mock).mockReturnValue(true);
     const service = new FileStorageService();
@@ -50,6 +58,14 @@ describe('FileStorageService', () => {
       buffer
     );
     expect(result).toBe('/uploads/reports/test.txt');
+  });
+
+  it('should format file path properly for a nested directory', () => {
+    (fs.existsSync as jest.Mock).mockReturnValue(true);
+    const service = new FileStorageService();
+
+    const filePath = service.getFilePath('nested/dir/test.txt');
+    expect(filePath).toContain(path.join('uploads', 'reports', 'nested', 'dir', 'test.txt'));
   });
 
   it('should return a write stream for a file', () => {
