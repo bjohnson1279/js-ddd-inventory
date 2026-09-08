@@ -21,9 +21,12 @@
 - **Do Not Remove Core Declarations**: Do not delete existing route registrations or database DDL tables.
 - **Environment Isolation Compatibility**: When replacing fallback secrets, preserve test environment execution via `!getenv('APP_ENV')` or `getenv('APP_ENV') === 'testing'`.
 - **No Scratch Files**: Never stage or commit `test_*.ts`, `test_*.js`, `test.cjs`, `fix_*.php`, or `test.js` files to git.
-- **No Unresolved Conflict Markers**: Never stage or commit files containing Git merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`, `|||||||`). Always resolve conflicts cleanly before committing.
+- **No Unresolved Conflict Markers**: Never stage or commit files inside git merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`, `|||||||`). Always resolve conflicts cleanly before committing.
 
 ## Hallucinatory Task & Empty PR Directives
 - **Zero-Diff Task Termination**: If the requested optimization, refactor, or fix is ALREADY natively present in the target branch, DO NOT create an empty pull request or commit an acknowledgment PR. Exit the task cleanly without opening a PR.
 - **Stale Suggestion Guard**: Always verify the current code on `main`/`master` before planning changes. If no actionable diff is required, cancel task execution immediately.
 
+## 2024-11-27 - Haversine Distance in Combinatorial Loops
+**Learning:** The Haversine distance algorithm involves multiple expensive mathematical operations (sin, cos, atan2, sqrt). Placing these computations inside an inner evaluation loop for combinatorial outcomes (e.g., routing permutations) results in exponentially degraded execution time because the distance between static locations is recalculated for every generated plan.
+**Action:** Always pre-calculate expensive static properties—such as geographical distances between candidate locations and a fixed destination—and store them in an O(1) Map *before* initiating any permutation generation or combination evaluation loops.
