@@ -1,3 +1,4 @@
+import { IDispatchRecordRepository } from '../../../src/domain/repositories/IDispatchRecordRepository';
 import { GetDemandPlanningReport } from "../../../src/application/useCases/GetDemandPlanningReport";
 import { IInventoryRepository } from "../../../src/domain/repositories/IInventoryRepository";
 import { IReorderPolicyRepository } from "../../../src/domain/repositories/IReorderPolicyRepository";
@@ -12,6 +13,7 @@ describe("GetDemandPlanningReport", () => {
   let inventoryRepo: jest.Mocked<IInventoryRepository>;
   let reorderPolicyRepo: any; // using any since it has optional methods that TS complains about mocking
   let demandForecastRepo: jest.Mocked<IDemandForecastRepository>;
+  let dispatchRecordRepo: jest.Mocked<IDispatchRecordRepository>;
   let calcSalesVelocity: jest.Mocked<CalculateSalesVelocity>;
   let useCase: GetDemandPlanningReport;
 
@@ -38,6 +40,10 @@ describe("GetDemandPlanningReport", () => {
       findForecast: jest.fn(),
     } as any;
 
+    dispatchRecordRepo = {
+      fetchHistoryByLocation: jest.fn().mockResolvedValue([]),
+    } as any;
+
     calcSalesVelocity = {
       execute: jest.fn(),
     } as any;
@@ -46,6 +52,7 @@ describe("GetDemandPlanningReport", () => {
       inventoryRepo,
       reorderPolicyRepo,
       demandForecastRepo,
+      dispatchRecordRepo,
       calcSalesVelocity
     );
 
@@ -116,6 +123,7 @@ describe("GetDemandPlanningReport", () => {
       inventoryRepo,
       customReorderRepo,
       demandForecastRepo,
+      dispatchRecordRepo,
       calcSalesVelocity
     );
 
@@ -218,6 +226,7 @@ describe("GetDemandPlanningReport", () => {
       inventoryRepo,
       customReorderRepo,
       demandForecastRepo,
+      dispatchRecordRepo,
       calcSalesVelocity
     );
 
@@ -256,6 +265,7 @@ describe("GetDemandPlanningReport", () => {
       inventoryRepo,
       customReorderRepo,
       demandForecastRepo,
+      dispatchRecordRepo,
       calcSalesVelocity
     );
 

@@ -1,6 +1,7 @@
 import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
 import { IReorderPolicyRepository } from "../../domain/repositories/IReorderPolicyRepository";
 import { IDemandForecastRepository } from "../../domain/repositories/IDemandForecastRepository";
+import { IDispatchRecordRepository } from "../../domain/repositories/IDispatchRecordRepository";
 import { CalculateSalesVelocity } from "./CalculateSalesVelocity";
 
 export interface DemandPlanningReportItem {
@@ -32,6 +33,7 @@ export class GetDemandPlanningReport {
     private readonly inventoryRepository: IInventoryRepository,
     private readonly reorderPolicyRepository: IReorderPolicyRepository,
     private readonly demandForecastRepository: IDemandForecastRepository,
+    private readonly dispatchRecordRepository: IDispatchRecordRepository,
     private readonly calculateSalesVelocity: CalculateSalesVelocity
   ) {}
 
@@ -58,12 +60,32 @@ export class GetDemandPlanningReport {
       }
     }
 
+
+    // Optimization: Bulk fetch 90-day dispatch history for the location to prevent N+1 queries
+    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    const historyMap = new Map<string, any[]>();
+    if (this.dispatchRecordRepository.fetchHistoryByLocation) {
+      const allHistory = await this.dispatchRecordRepository.fetchHistoryByLocation(locationId, ninetyDaysAgo);
+      for (const record of allHistory) {
+        if (!historyMap.has(record.sku)) {
+          historyMap.set(record.sku, []);
+        }
+        historyMap.get(record.sku)!.push(record);
+      }
+    }
+
     const reportItemsPromises = inventoryItems.map(async (item) => {
       const skuStr = item.sku.getValue();
 
       // Calculate Sales Velocity and Fetch Reorder Policy concurrently
       // We pass the current stock to execute to avoid an N+1 query inside CalculateSalesVelocity
-      const velocity = await this.calculateSalesVelocity.execute(skuStr, locationId, item.quantity.getValue());
+      let skuHistory;
+      if (this.dispatchRecordRepository.fetchHistoryByLocation) {
+        skuHistory = historyMap.get(skuStr) || [];
+      } else {
+        skuHistory = undefined;
+      }
+      const velocity = await this.calculateSalesVelocity.execute(skuStr, locationId, item.quantity.getValue(), skuHistory);
       const policy = policyMap ? policyMap.get(skuStr) : await this.reorderPolicyRepository.findBySkuAndLocation(item.sku, locationId);
       const reorderPoint = policy ? policy.reorderPoint : 10;
       const reorderQuantity = policy ? policy.reorderQuantity : 20;
