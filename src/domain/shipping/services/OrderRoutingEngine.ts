@@ -41,14 +41,17 @@ export class OrderRoutingEngine {
     // Optimization: Pre-compute candidate map for O(1) lookups
     const activeCandidatesMap = new Map(activeCandidates.map(c => [c.locationId, c]));
 
+    // Optimization: Pre-compute distances from candidates to destination for O(1) lookups
+    const distanceCache = new Map(activeCandidates.map(c => [c.locationId, c.geoLocation.distanceTo(destination)]));
+
     // 2. Score and evaluate each plan concurrently
     const plans: FulfillmentPlan[] = await Promise.all(
       rawPlans.map(async (allocations) => {
         const allocResults = await Promise.all(
           allocations.map(async (alloc) => {
             const candidate = activeCandidatesMap.get(alloc.locationId)!;
-            // Compute Haversine distance from origin warehouse to destination
-            const dist = candidate.geoLocation.distanceTo(destination);
+            // Lookup pre-computed Haversine distance from origin warehouse to destination
+            const dist = distanceCache.get(alloc.locationId)!;
 
             // Fetch carrier rate for the specific allocated quantity from this origin
             const cacheKey = `${alloc.locationId}:${alloc.quantity}`;
