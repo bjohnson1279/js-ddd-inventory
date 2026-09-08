@@ -48,3 +48,7 @@
 - **Zero-Diff Task Termination**: If the requested optimization, refactor, or fix is ALREADY natively present in the target branch, DO NOT create an empty pull request or commit an acknowledgment PR. Exit the task cleanly without opening a PR.
 - **Stale Suggestion Guard**: Always verify the current code on `main`/`master` before planning changes. If no actionable diff is required, cancel task execution immediately.
 
+## 2024-05-15 - Multi-IP SSRF DNS Bypass
+**Vulnerability:** The SSRF mitigation `isSafeUrl` was only verifying the first IP address returned by `dns.lookup`, allowing attackers to register a domain with multiple A/AAAA records (a public IP followed by an internal IP) to bypass validation and access internal services.
+**Learning:** Checking only the first result of `dns.lookup` is insufficient for SSRF protection because it ignores potentially malicious secondary records that HTTP clients (like fetch) might fallback to, or round-robin DNS configurations.
+**Prevention:** Always use `dns.lookup(hostname, { all: true })` (or `dns.resolve`) and validate every single IP address in the returned array to ensure no internal addresses can be reached.
