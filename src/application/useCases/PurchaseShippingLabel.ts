@@ -1,3 +1,4 @@
+import * as crypto from "crypto";
 import { IShipmentRepository } from "../../domain/repositories/IShipmentRepository";
 import { ICarrierService } from "../ports/ICarrierService";
 import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
