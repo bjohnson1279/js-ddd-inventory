@@ -113,22 +113,55 @@ describe("PostgresInventoryRepository", () => {
   describe("findBySkus", () => {
     it("should return a list of items for multiple SKUs", async () => {
       mockPool.query.mockResolvedValueOnce({
+        rows: [
+          {
+            id: "item-1",
+            sku: "SKU-1",
+            location_id: "default",
+            quantity: 10,
+            allocated: 2,
+            in_transit: 0,
+            version: 1
+          },
+          {
+            id: "item-2",
+            sku: "SKU-2",
+            location_id: "default",
+            quantity: 5,
+            allocated: 1,
+            in_transit: 0,
+            version: 1
+          }
+        ]
+      });
+      const result = await repository.findBySkus([SKU.create("SKU-1"), SKU.create("SKU-2")], "default");
+      expect(result).toHaveLength(2);
+      expect(result[0]).toBeInstanceOf(InventoryItem);
+      expect(result[1]).toBeInstanceOf(InventoryItem);
+      expect(mockPool.query).toHaveBeenCalledWith(
+        "SELECT * FROM inventory_items WHERE sku = ANY($1) AND location_id = $2",
+        [["SKU-1", "SKU-2"], "default"]
+      );
+    });
+
+    it("should return a list of items for multiple SKUs with default locationId", async () => {
+      mockPool.query.mockResolvedValueOnce({
         rows: [{
-          id: "item-1",
-          sku: "SKU-1",
+          id: "item-3",
+          sku: "SKU-3",
           location_id: "default",
-          quantity: 10,
-          allocated: 2,
+          quantity: 15,
+          allocated: 3,
           in_transit: 0,
           version: 1
         }]
       });
-      const result = await repository.findBySkus([SKU.create("SKU-1")], "default");
+      const result = await repository.findBySkus([SKU.create("SKU-3")]);
       expect(result).toHaveLength(1);
       expect(result[0]).toBeInstanceOf(InventoryItem);
       expect(mockPool.query).toHaveBeenCalledWith(
         "SELECT * FROM inventory_items WHERE sku = ANY($1) AND location_id = $2",
-        [["SKU-1"], "default"]
+        [["SKU-3"], "default"]
       );
     });
   });
