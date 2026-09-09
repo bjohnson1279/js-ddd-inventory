@@ -20,6 +20,7 @@ export class ReorderPolicyService {
     windowDays: number = 30
   ): Promise<{ sku: string; locationId: string; reorderPoint: number; triggered: boolean; reason?: string }[]> {
     const policies = await this.reorderPolicyRepository.findAll();
+    const allPos = await this.poRepository.findAll();
     const results: any[] = [];
 
     for (const policy of policies) {
@@ -50,7 +51,6 @@ export class ReorderPolicyService {
       let reason = "";
 
       if (policy.shouldReorder(currentQty)) {
-        const allPos = await this.poRepository.findAll();
         const alreadyOrdered = allPos.some((po) => {
           if (po.tenantId !== tenantId || po.locationId !== policy.locationId) return false;
           if (
