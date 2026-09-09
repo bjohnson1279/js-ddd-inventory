@@ -81,4 +81,17 @@ describe('FileStorageService', () => {
     );
     expect(stream).toBe(mockWriteStream);
   });
+
+  it('should block path traversal attempts', () => {
+    (fs.existsSync as jest.Mock).mockReturnValue(true);
+    const service = new FileStorageService();
+
+    expect(() => {
+      service.getFilePath('../../../../etc/passwd');
+    }).toThrow("Invalid file path: path traversal detected.");
+
+    expect(() => {
+      service.getFilePath('../../forbidden.txt');
+    }).toThrow("Invalid file path: path traversal detected.");
+  });
 });

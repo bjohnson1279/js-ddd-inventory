@@ -5,14 +5,18 @@ export class FileStorageService {
   private readonly storageDir: string;
 
   constructor() {
-    this.storageDir = path.join(__dirname, '../../../../uploads/reports');
+    this.storageDir = path.resolve(__dirname, '../../../../uploads/reports');
     if (!fs.existsSync(this.storageDir)) {
       fs.mkdirSync(this.storageDir, { recursive: true });
     }
   }
 
   public getFilePath(filename: string): string {
-    return path.join(this.storageDir, filename);
+    const fullPath = path.resolve(this.storageDir, filename);
+    if (!fullPath.startsWith(this.storageDir + path.sep)) {
+      throw new Error("Invalid file path: path traversal detected.");
+    }
+    return fullPath;
   }
 
   public async saveFile(filename: string, buffer: Buffer): Promise<string> {
