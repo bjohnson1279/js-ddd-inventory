@@ -36,3 +36,19 @@
 **Vulnerability:** The SSRF protection in webhook delivery only checked IPv4 addresses and standard string representations for IPv6 loopbacks. It was possible to bypass the protection using hex-encoded IPv4-mapped IPv6 addresses (e.g. `::ffff:7f00:1` or `0:0:0:0:0:ffff:7f00:1`).
 **Learning:** Using basic regex matching for IPv4-mapped IPv6 addresses fails if the embedded IPv4 part is hex encoded instead of standard decimal formatting.
 **Prevention:** Always implement robust parsing for the embedded IPv4 payload inside an IPv6 mapping block (e.g. parsing `7f00:1` using bitwise shifts) to ensure standard IPv4 blocklists evaluate accurately against all string representations.
+
+## Prevention Directives for Automated Refactoring
+- **Never Overwrite Complete Files**: Always use range-scoped replacement chunks (`StartLine`/`EndLine`) for edits to `schema.prisma`, `index.ts`, `public/index.php`, or DDL SQL scripts.
+- **Do Not Remove Core Declarations**: Do not delete existing route registrations or database DDL tables.
+- **Environment Isolation Compatibility**: When replacing fallback secrets, preserve test environment execution via `!getenv('APP_ENV')` or `getenv('APP_ENV') === 'testing'`.
+- **No Scratch Files**: Never stage or commit `test_*.ts`, `test_*.js`, `test.cjs`, `fix_*.php`, or `test.js` files to git.
+- **No Unresolved Conflict Markers**: Never stage or commit files containing Git merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`, `|||||||`). Always resolve conflicts cleanly before committing.
+
+## Hallucinatory Task & Empty PR Directives
+- **Zero-Diff Task Termination**: If the requested optimization, refactor, or fix is ALREADY natively present in the target branch, DO NOT create an empty pull request or commit an acknowledgment PR. Exit the task cleanly without opening a PR.
+- **Stale Suggestion Guard**: Always verify the current code on `main`/`master` before planning changes. If no actionable diff is required, cancel task execution immediately.
+
+## 2024-05-15 - Multi-IP SSRF DNS Bypass
+**Vulnerability:** The SSRF mitigation `isSafeUrl` was only verifying the first IP address returned by `dns.lookup`, allowing attackers to register a domain with multiple A/AAAA records (a public IP followed by an internal IP) to bypass validation and access internal services.
+**Learning:** Checking only the first result of `dns.lookup` is insufficient for SSRF protection because it ignores potentially malicious secondary records that HTTP clients (like fetch) might fallback to, or round-robin DNS configurations.
+**Prevention:** Always use `dns.lookup(hostname, { all: true })` (or `dns.resolve`) and validate every single IP address in the returned array to ensure no internal addresses can be reached.

@@ -34,4 +34,10 @@ describe("InMemoryProcessedWebhookRepository", () => {
     const exists = await repository.exists("webhook-123");
     expect(exists).toBe(true);
   });
+
+  it("should handle empty string as an ID", async () => {
+    await repository.save("");
+    expect(await repository.exists("")).toBe(true);
+    expect(await repository.exists("webhook-123")).toBe(false);
+  });
 });

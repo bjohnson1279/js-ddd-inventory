@@ -20,6 +20,13 @@ export class InMemoryDispatchRecordRepository implements IDispatchRecordReposito
     );
   }
 
+
+  async fetchHistoryByLocation(locationId: string, since: Date): Promise<DispatchRecord[]> {
+    return this.records.filter(
+      (r) => r.locationId === locationId && r.dispatchedAt >= since
+    );
+  }
+
   async fetchByLotNumber(lotNumber: string): Promise<DispatchRecord[]> {
     return this.records.filter((r) => r.lotNumber === lotNumber);
   }

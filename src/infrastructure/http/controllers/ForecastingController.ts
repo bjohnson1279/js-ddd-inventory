@@ -23,6 +23,7 @@ export class ForecastingController {
         inventoryRepository,
         reorderPolicyRepository,
         demandForecastRepository,
+        dispatchRecordRepository,
         salesVelocityService
       );
 

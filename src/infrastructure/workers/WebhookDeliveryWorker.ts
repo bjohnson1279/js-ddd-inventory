@@ -12,83 +12,89 @@ async function isSafeUrl(urlStr: string): Promise<boolean> {
     const url = new URL(urlStr);
     if (url.protocol !== "https:" && url.protocol !== "http:") return false;
 
-    const { address } = await dns.lookup(url.hostname);
+    const addresses = await dns.lookup(url.hostname, { all: true });
 
-    if (net.isIPv4(address)) {
-      const parts = address.split('.');
-      const p1 = parseInt(parts[0], 10);
-      const p2 = parseInt(parts[1], 10);
+    for (const record of addresses) {
+      const address = record.address;
 
-      if (p1 === 127) return false;
-      if (p1 === 0) return false;
-      if (p1 === 10) return false;
-      if (p1 === 172 && p2 >= 16 && p2 <= 31) return false;
-      if (p1 === 192 && p2 === 168) return false;
-      if (p1 === 169 && p2 === 254) return false;
-    } else if (net.isIPv6(address)) {
-      // Normalize IPv6 address string
-      // A full parser is more robust against bypasses (e.g. 0:0:0:0:0:ffff:127.0.0.1 or ::ffff:7f00:1)
-      const lower = address.toLowerCase();
+      if (net.isIPv4(address)) {
+        const parts = address.split('.');
+        const p1 = parseInt(parts[0], 10);
+        const p2 = parseInt(parts[1], 10);
 
-      // Block all unspecified or loopback variations including compressed or long forms
-      // dns.lookup output for loopback varies, but '::1' and '::' are standard
-      if (lower === "::1" || lower === "0:0:0:0:0:0:0:1") return false;
-      if (lower === "::" || lower === "0:0:0:0:0:0:0:0") return false;
+        if (p1 === 127) return false;
+        if (p1 === 0) return false;
+        if (p1 === 10) return false;
+        if (p1 === 172 && p2 >= 16 && p2 <= 31) return false;
+        if (p1 === 192 && p2 === 168) return false;
+        if (p1 === 169 && p2 === 254) return false;
+      } else if (net.isIPv6(address)) {
+        // Normalize IPv6 address string
+        // A full parser is more robust against bypasses (e.g. 0:0:0:0:0:ffff:127.0.0.1 or ::ffff:7f00:1)
+        const lower = address.toLowerCase();
 
-      // Check if it's an IPv4-mapped address and extract the IPv4 portion
-      let v4Part = null;
-      if (lower.startsWith("::ffff:")) {
-        v4Part = lower.substring(7);
-      } else if (lower.startsWith("0:0:0:0:0:ffff:")) {
-        v4Part = lower.substring(15);
-      }
+        // Block all unspecified or loopback variations including compressed or long forms
+        // dns.lookup output for loopback varies, but '::1' and '::' are standard
+        if (lower === "::1" || lower === "0:0:0:0:0:0:0:1") return false;
+        if (lower === "::" || lower === "0:0:0:0:0:0:0:0") return false;
 
-      if (v4Part) {
-        // IPv4 mapped addresses can be standard ipv4 or hex encoded in the last 32 bits
-        // e.g. ::ffff:127.0.0.1 or ::ffff:7f00:1 (hex format)
-        if (net.isIPv4(v4Part)) {
-          const parts = v4Part.split('.');
-          const p1 = parseInt(parts[0], 10);
-          const p2 = parseInt(parts[1], 10);
-
-          if (p1 === 127) return false;
-          if (p1 === 0) return false;
-          if (p1 === 10) return false;
-          if (p1 === 172 && p2 >= 16 && p2 <= 31) return false;
-          if (p1 === 192 && p2 === 168) return false;
-          if (p1 === 169 && p2 === 254) return false;
-        } else {
-            // Hex format (e.g. 7f00:1 == 127.0.0.1)
-            const parts = v4Part.split(':');
-            if (parts.length > 0) {
-               const hexP1P2 = parts[0];
-               if (hexP1P2) {
-                   const blockInt = parseInt(hexP1P2, 16);
-                   if (!isNaN(blockInt)) {
-                       const p1 = (blockInt >> 8) & 0xff;
-                       const p2 = blockInt & 0xff;
-                       if (p1 === 127) return false;
-                       if (p1 === 0) return false;
-                       if (p1 === 10) return false;
-                       if (p1 === 172 && p2 >= 16 && p2 <= 31) return false;
-                       if (p1 === 192 && p2 === 168) return false;
-                       if (p1 === 169 && p2 === 254) return false;
-                   }
-               }
-            }
+        // Check if it's an IPv4-mapped address and extract the IPv4 portion
+        let v4Part = null;
+        if (lower.startsWith("::ffff:")) {
+          v4Part = lower.substring(7);
+        } else if (lower.startsWith("0:0:0:0:0:ffff:")) {
+          v4Part = lower.substring(15);
         }
-      }
 
-      // Check for Unique Local Addresses (fc00::/7) and Link Local (fe80::/10)
-      // Since dns.lookup returns compressed/normalized, we can check the first hex block
-      const firstBlock = lower.split(':')[0];
-      if (firstBlock) {
-        const blockInt = parseInt(firstBlock, 16);
-        if (!isNaN(blockInt)) {
-          // fc00::/7 means the first 7 bits are 1111 110 (0xfc or 0xfd)
-          if ((blockInt & 0xfe00) === 0xfc00) return false;
-          // fe80::/10 means the first 10 bits are 1111 1110 10 (0xfe80 - 0xfebf)
-          if ((blockInt & 0xffc0) === 0xfe80) return false;
+        if (v4Part) {
+          // IPv4 mapped addresses can be standard ipv4 or hex encoded in the last 32 bits
+          // e.g. ::ffff:127.0.0.1 or ::ffff:7f00:1 (hex format)
+          if (net.isIPv4(v4Part)) {
+            const parts = v4Part.split('.');
+            const p1 = parseInt(parts[0], 10);
+            const p2 = parseInt(parts[1], 10);
+
+            if (p1 === 127) return false;
+            if (p1 === 0) return false;
+            if (p1 === 10) return false;
+            if (p1 === 172 && p2 >= 16 && p2 <= 31) return false;
+            if (p1 === 192 && p2 === 168) return false;
+            if (p1 === 169 && p2 === 254) return false;
+          } else {
+              // Hex format (e.g. 7f00:1 == 127.0.0.1)
+              const parts = v4Part.split(':');
+              if (parts.length > 0) {
+                 for (let i=0; i<parts.length; i++) {
+                     const hexP = parts[i];
+                     if (hexP) {
+                         const blockInt = parseInt(hexP, 16);
+                         if (!isNaN(blockInt)) {
+                             const p1 = (blockInt >> 8) & 0xff;
+                             const p2 = blockInt & 0xff;
+                             if (p1 === 127) return false;
+                             if (p1 === 0) return false;
+                             if (p1 === 10) return false;
+                             if (p1 === 172 && p2 >= 16 && p2 <= 31) return false;
+                             if (p1 === 192 && p2 === 168) return false;
+                             if (p1 === 169 && p2 === 254) return false;
+                         }
+                     }
+                 }
+              }
+          }
+        }
+
+        // Check for Unique Local Addresses (fc00::/7) and Link Local (fe80::/10)
+        // Since dns.lookup returns compressed/normalized, we can check the first hex block
+        const firstBlock = lower.split(':')[0];
+        if (firstBlock) {
+          const blockInt = parseInt(firstBlock, 16);
+          if (!isNaN(blockInt)) {
+            // fc00::/7 means the first 7 bits are 1111 110 (0xfc or 0xfd)
+            if ((blockInt & 0xfe00) === 0xfc00) return false;
+            // fe80::/10 means the first 10 bits are 1111 1110 10 (0xfe80 - 0xfebf)
+            if ((blockInt & 0xffc0) === 0xfe80) return false;
+          }
         }
       }
     }
