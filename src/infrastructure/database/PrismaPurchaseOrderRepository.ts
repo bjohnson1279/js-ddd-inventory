@@ -58,6 +58,23 @@ export class PrismaPurchaseOrderRepository implements IPurchaseOrderRepository {
     return records.map(record => this.mapToDomain(record));
   }
 
+  async findPendingByTenantAndLocationAndVariant(tenantId: string, locationId: string, variantId: string): Promise<PurchaseOrder[]> {
+    const records = await this.prisma.purchaseOrderModel.findMany({
+      where: {
+        tenantId,
+        locationId,
+        status: { in: [PurchaseOrderStatus.Draft, PurchaseOrderStatus.Approved, PurchaseOrderStatus.Sent] },
+        items: {
+          some: {
+            variantId
+          }
+        }
+      },
+      include: { items: true }
+    });
+    return records.map(record => this.mapToDomain(record));
+  }
+
   async save(po: PurchaseOrder): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       // Upsert Purchase Order
