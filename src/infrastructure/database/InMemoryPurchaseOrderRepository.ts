@@ -1,3 +1,4 @@
+import { PurchaseOrderStatus } from "../../domain/procurement/enums/PurchaseOrderStatus";
 import { IPurchaseOrderRepository } from "../../domain/repositories/IPurchaseOrderRepository";
 import { PurchaseOrder } from "../../domain/procurement/aggregates/PurchaseOrder";
 
@@ -19,6 +20,21 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
 
   async findAll(): Promise<PurchaseOrder[]> {
     return Array.from(this.pos.values());
+  }
+
+  async findPendingByTenantAndLocationAndVariant(tenantId: string, locationId: string, variantId: string): Promise<PurchaseOrder[]> {
+    const allPos = Array.from(this.pos.values());
+    return allPos.filter(po => {
+      if (po.tenantId !== tenantId || po.locationId !== locationId) return false;
+      if (
+        po.status === PurchaseOrderStatus.Draft ||
+        po.status === PurchaseOrderStatus.Approved ||
+        po.status === PurchaseOrderStatus.Sent
+      ) {
+        return po.items.some(item => item.variantId === variantId && item.receivedQuantity < item.quantity);
+      }
+      return false;
+    });
   }
 
   async save(po: PurchaseOrder): Promise<void> {

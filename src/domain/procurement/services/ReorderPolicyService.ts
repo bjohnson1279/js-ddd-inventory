@@ -50,20 +50,13 @@ export class ReorderPolicyService {
       let reason = "";
 
       if (policy.shouldReorder(currentQty)) {
-        const allPos = await this.poRepository.findAll();
-        const alreadyOrdered = allPos.some((po) => {
-          if (po.tenantId !== tenantId || po.locationId !== policy.locationId) return false;
-          if (
-            po.status === PurchaseOrderStatus.Draft ||
-            po.status === PurchaseOrderStatus.Approved ||
-            po.status === PurchaseOrderStatus.Sent
-          ) {
-            return po.items.some(
-              (item) => item.variantId === skuStr && item.receivedQuantity < item.quantity
-            );
-          }
-          return false;
-        });
+        // Optimization: Push O(N) memory filtering down to the database for pending POs
+        const pendingPos = await this.poRepository.findPendingByTenantAndLocationAndVariant(tenantId, policy.locationId, skuStr);
+        const alreadyOrdered = pendingPos.some((po) =>
+          po.items.some(
+            (item) => item.variantId === skuStr && item.receivedQuantity < item.quantity
+          )
+        );
 
         if (!alreadyOrdered) {
           const createPoUseCase = new CreatePurchaseOrder(this.poRepository);
@@ -121,20 +114,13 @@ export class ReorderPolicyService {
       await DomainEventDispatcher.dispatch([event]);
 
       // 2. Check if a draft/approved/sent purchase order already exists for this vendor/location and includes this sku
-      const allPos = await this.poRepository.findAll();
-      const alreadyOrdered = allPos.some((po) => {
-        if (po.tenantId !== tenantId || po.locationId !== locationId) return false;
-        if (
-          po.status === PurchaseOrderStatus.Draft ||
-          po.status === PurchaseOrderStatus.Approved ||
-          po.status === PurchaseOrderStatus.Sent
-        ) {
-          return po.items.some(
-            (item) => item.variantId === skuStr && item.receivedQuantity < item.quantity
-          );
-        }
-        return false;
-      });
+      // Optimization: Push O(N) memory filtering down to the database for pending POs
+      const pendingPos = await this.poRepository.findPendingByTenantAndLocationAndVariant(tenantId, locationId, skuStr);
+      const alreadyOrdered = pendingPos.some((po) =>
+        po.items.some(
+          (item) => item.variantId === skuStr && item.receivedQuantity < item.quantity
+        )
+      );
 
       if (!alreadyOrdered) {
         // Automatically create a draft purchase order!
