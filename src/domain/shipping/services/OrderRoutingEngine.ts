@@ -44,42 +44,51 @@ export class OrderRoutingEngine {
     // Optimization: Pre-compute distances from candidates to destination for O(1) lookups
     const distanceCache = new Map(activeCandidates.map(c => [c.locationId, c.geoLocation.distanceTo(destination)]));
 
-    // 2. Score and evaluate each plan concurrently
-    const plans: FulfillmentPlan[] = await Promise.all(
-      rawPlans.map(async (allocations) => {
-        const allocResults = await Promise.all(
-          allocations.map(async (alloc) => {
-            const candidate = activeCandidatesMap.get(alloc.locationId)!;
-            // Lookup pre-computed Haversine distance from origin warehouse to destination
-            const dist = distanceCache.get(alloc.locationId)!;
+    // Optimization: Pre-compute rates in parallel upfront to avoid N*M concurrent Promise.all overhead
+    const ratePromises: Promise<void>[] = [];
+    for (const plan of rawPlans) {
+      for (const alloc of plan) {
+        const cacheKey = `${alloc.locationId}:${alloc.quantity}`;
+        if (!rateCache.has(cacheKey)) {
+          const promise = rateCalculator(alloc.locationId, sku, alloc.quantity);
+          rateCache.set(cacheKey, promise);
+          ratePromises.push(promise.then(() => {}));
+        }
+      }
+    }
+    await Promise.all(ratePromises);
 
-            // Fetch carrier rate for the specific allocated quantity from this origin
-            const cacheKey = `${alloc.locationId}:${alloc.quantity}`;
-            if (!rateCache.has(cacheKey)) {
-              rateCache.set(cacheKey, rateCalculator(alloc.locationId, sku, alloc.quantity));
-            }
-            const rate = await rateCache.get(cacheKey)!;
+    // 2. Score and evaluate each plan sequentially now that async data is fetched
+    const plans: FulfillmentPlan[] = [];
+    for (const allocations of rawPlans) {
+      let totalDistance = 0;
+      let totalCost = 0;
 
-            return { dist, rate };
-          })
-        );
+      for (const alloc of allocations) {
+        // Lookup pre-computed Haversine distance from origin warehouse to destination
+        const dist = distanceCache.get(alloc.locationId)!;
 
-        const totalDistance = allocResults.reduce((sum, res) => sum + res.dist, 0);
-        const totalCost = allocResults.reduce((sum, res) => sum + res.rate, 0);
-        const splitCount = allocations.length - 1;
+        // Rate is already computed and cached
+        const cacheKey = `${alloc.locationId}:${alloc.quantity}`;
+        const rate = await rateCache.get(cacheKey)!;
 
-        const plan: FulfillmentPlan = {
-          allocations,
-          estimatedShippingCostCents: totalCost,
-          totalDistanceKm: totalDistance,
-          splitCount,
-          score: 0 // Will be computed by the strategy
-        };
+        totalDistance += dist;
+        totalCost += rate;
+      }
 
-        plan.score = strategy.score(plan);
-        return plan;
-      })
-    );
+      const splitCount = allocations.length - 1;
+
+      const plan: FulfillmentPlan = {
+        allocations,
+        estimatedShippingCostCents: totalCost,
+        totalDistanceKm: totalDistance,
+        splitCount,
+        score: 0 // Will be computed by the strategy
+      };
+
+      plan.score = strategy.score(plan);
+      plans.push(plan);
+    }
 
     // 3. Sort plans by score (lower score is better)
     plans.sort((a, b) => a.score - b.score);
