@@ -30,9 +30,20 @@ export class PurchaseOrder extends AggregateRoot {
     return [...this._items];
   }
 
-  public approve(): void {
+  public holdForApproval(): void {
     if (this._status !== PurchaseOrderStatus.Draft) {
-      throw new Error("Only draft purchase orders can be approved.");
+      throw new Error("Only draft purchase orders can be held for approval.");
+    }
+    this._status = PurchaseOrderStatus.PendingApproval;
+  }
+
+  public get totalCents(): number {
+    return this._items.reduce((total, item) => total + (item.quantity * item.unitCostCents), 0);
+  }
+
+  public approve(): void {
+    if (this._status !== PurchaseOrderStatus.Draft && this._status !== PurchaseOrderStatus.PendingApproval) {
+      throw new Error("Only draft or pending approval purchase orders can be approved.");
     }
     this._status = PurchaseOrderStatus.Approved;
   }

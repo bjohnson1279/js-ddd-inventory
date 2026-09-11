@@ -651,12 +651,18 @@ model ApprovalWorkflowModel {
 }
 
 model ApprovalRequestModel {
-  id          String   @id
-  tenantId    String   @map("tenant_id")
-  workflowId  String   @map("workflow_id")
-  status      String   @default("PENDING")
-  currentStep Int      @default(0) @map("current_step")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id            String   @id
+  tenantId      String   @map("tenant_id")
+  workflowId    String   @map("workflow_id")
+  referenceType String   @map("reference_type")
+  referenceId   String   @map("reference_id")
+  requesterId   String   @map("requester_id")
+  payload       String   @db.Text
+  status        String   @default("PENDING")
+  currentStep   Int      @default(0) @map("current_step")
+  expiresAt     DateTime? @map("expires_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   workflow  ApprovalWorkflowModel   @relation(fields: [workflowId], references: [id])
   decisions ApprovalDecisionModel[]

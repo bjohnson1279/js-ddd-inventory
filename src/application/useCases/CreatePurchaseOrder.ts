@@ -16,8 +16,13 @@ export interface CreatePurchaseOrderDTO {
   items: CreatePurchaseOrderItemDTO[];
 }
 
+import { ApprovalWorkflowService } from "../../domain/approval/ApprovalWorkflowService";
+
 export class CreatePurchaseOrder {
-  constructor(private readonly poRepository: IPurchaseOrderRepository) {}
+  constructor(
+    private readonly poRepository: IPurchaseOrderRepository,
+    private readonly workflowService?: ApprovalWorkflowService
+  ) {}
 
   async execute(dto: CreatePurchaseOrderDTO): Promise<PurchaseOrder> {
     const existing = await this.poRepository.findByNumber(dto.purchaseOrderNumber);
@@ -44,6 +49,21 @@ export class CreatePurchaseOrder {
       undefined,
       items
     );
+
+    if (this.workflowService) {
+      const result = await this.workflowService.evaluateAndIntercept(
+        dto.tenantId,
+        'PO_CREATED',
+        'PurchaseOrder',
+        po.id,
+        'system',
+        { totalValueCents: po.totalCents }
+      );
+
+      if (result.intercepted) {
+        po.holdForApproval();
+      }
+    }
 
     await this.poRepository.save(po);
     return po;

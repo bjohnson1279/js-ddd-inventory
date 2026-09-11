@@ -1,0 +1,3 @@
+receiveRma: (dto: ReceiveRMADTO) => void;
+items: ReceiveRMAItemDTO[];
+class RMAClassifier {

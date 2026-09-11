@@ -1,9 +1,15 @@
 import { Router } from "express";
 import { requirePermission } from "../middleware/auth";
 import { ManageApprovalWorkflowsUseCase } from "../../../application/useCases/ManageApprovalWorkflowsUseCase";
+import { ApprovalWorkflowService } from "../../../domain/approval/ApprovalWorkflowService";
+import { prisma } from "../../database/prisma";
+import { DomainEventDispatcher } from "../../../domain/events/DomainEventDispatcher";
 
 const router = Router();
-const useCase = new ManageApprovalWorkflowsUseCase();
+
+const dispatcher = new DomainEventDispatcher();
+const workflowService = new ApprovalWorkflowService(prisma as any, dispatcher);
+const useCase = new ManageApprovalWorkflowsUseCase(workflowService);
 
 // Workflow management (admin only) - routes
 router.get("/workflows", requirePermission('approval', 'view'), async (req, res) => {
