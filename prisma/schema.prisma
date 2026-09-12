@@ -853,3 +853,34 @@ model TaskPerformance {
 
   @@map("task_performances")
 }
+
+// ==========================================
+// Yield Management & Dynamic Pricing
+// ==========================================
+
+model LiquidationRule {
+  id                 String   @id @default(uuid()) @db.Uuid
+  tenantId           String   @map("tenant_id")
+  department         String?
+  sku                String?
+  daysToExpiration   Int      @map("days_to_expiration")
+  markdownPercentage Float    @map("markdown_percentage")
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("liquidation_rules")
+}
+
+model MarkdownEvent {
+  id                 String   @id @default(uuid()) @db.Uuid
+  tenantId           String   @map("tenant_id")
+  variantId          String   @map("variant_id") @db.Uuid
+  ruleId             String?  @map("rule_id") @db.Uuid
+  originalPriceCents Int      @map("original_price_cents")
+  newPriceCents      Int      @map("new_price_cents")
+  reason             String
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("markdown_events")
+}

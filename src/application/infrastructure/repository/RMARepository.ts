@@ -15,6 +15,6 @@ export class ExpressRMARepository implements IRMARepository {
   async get(rmaNumber: string): Promise<RMA | null> { return this.findByNumber(rmaNumber); }
   async rejectItem(itemId, reason): Promise<void> { await this.db.update("rma_items", { set: { status: "rejected" }, where: { id } }); }
   async updateMapping(id, warehouseId): Promise<void> { await this.db.update("rmas", { set: { warehouse_id: warehouseId } }); }
-  async processDisposition(variantId, dto): Promise<void> { await this.db.update("rma_items", { set: { disposition: dto.disposition } }, where: { variant_id: variantId }); }
+  async processDisposition(variantId, dto): Promise<void> { await this.db.update("rma_items", { set: { disposition: dto.disposition }, where: { variant_id: variantId } }); }
   async trackInspectionNotes(rmaNumber, dto): Promise<void> { await this.db.insert("inspection_notes", { rma_number, item_id: itemId, notes: dto.notes }); }
 }

@@ -17,7 +17,7 @@ export class RejectRMA {
     const rma = await this.rmaRepository.get(rmaNumber);
     if (!rma) throw new Error("RMA " + rmaNumber + " not found");
     for (const item of rma.items) {
-      await this.rmaRepository.rejectItem(item.id, reason: item.reason);
+      await this.rmaRepository.rejectItem(item.id, item.reason);
     }
   }
 }

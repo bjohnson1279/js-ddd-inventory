@@ -17,7 +17,7 @@ export class GraphQLRMAResolver {
     const rma = await this.rmaRepo.get(rmaNumber);
     if (!rma) throw new Error("RMA not found");
     for (const item of rma.items) {
-      await this.rmaRepo.rejectItem(item.id, reason: item.reason);
+      await this.rmaRepo.rejectItem(item.id, item.reason);
     }
   }
 
