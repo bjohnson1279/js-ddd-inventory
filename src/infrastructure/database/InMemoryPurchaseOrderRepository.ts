@@ -37,6 +37,18 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
     });
   }
 
+  async findReceivedByTenantAndVariant(tenantId: string, variantId: string, locationId?: string): Promise<PurchaseOrder[]> {
+    const allPos = Array.from(this.pos.values());
+    return allPos.filter(po => {
+      if (po.tenantId !== tenantId) return false;
+      if (locationId && po.locationId !== locationId) return false;
+      if (po.status === PurchaseOrderStatus.Received) {
+        return po.items.some(item => item.variantId === variantId);
+      }
+      return false;
+    });
+  }
+
   async save(po: PurchaseOrder): Promise<void> {
     this.pos.set(po.id, po);
   }

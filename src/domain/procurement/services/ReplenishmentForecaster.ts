@@ -79,24 +79,16 @@ export class ReorderPointForecaster {
       if (product) {
         const variant = product.variants.find((v) => v.sku.getValue() === skuStr);
         if (variant) {
-          const allPos = (await this.poRepository.findAll()).filter((po) => po.tenantId === tenantId);
           const getLocIdStr = (loc: any) => typeof loc === 'string' ? loc : (loc && typeof loc.value === 'string' ? loc.value : '');
           const ruleLocIdStr = getLocIdStr(locationId);
           const ruleVarId = variant.id;
 
-          // Filter received POs containing this variant at this location
-          let receivedPos = allPos.filter((po) =>
-            po.status === PurchaseOrderStatus.Received &&
-            getLocIdStr(po.locationId) === ruleLocIdStr &&
-            po.items.some((item) => item.variantId === ruleVarId)
-          );
+          // Filter received POs containing this variant at this location via database
+          let receivedPos = await this.poRepository.findReceivedByTenantAndVariant(tenantId, ruleVarId, ruleLocIdStr);
 
           // Fallback: search across all locations for this tenant if none at destination location
           if (receivedPos.length === 0) {
-            receivedPos = allPos.filter((po) =>
-              po.status === PurchaseOrderStatus.Received &&
-              po.items.some((item) => item.variantId === ruleVarId)
-            );
+            receivedPos = await this.poRepository.findReceivedByTenantAndVariant(tenantId, ruleVarId);
           }
 
           if (receivedPos.length > 0) {
