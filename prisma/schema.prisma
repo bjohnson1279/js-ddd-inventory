@@ -884,3 +884,23 @@ model MarkdownEvent {
 
   @@map("markdown_events")
 }
+
+// ==========================================
+// Computer Vision Receiving & QA
+// ==========================================
+
+model InboundScan {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id")
+  purchaseOrderId String?  @map("purchase_order_id") @db.Uuid
+  imageUrl        String   @map("image_url")
+  dimensions      Json
+  ocrText         String?  @map("ocr_text")
+  anomalyScore    Float    @map("anomaly_score")
+  hasDamage       Boolean  @map("has_damage")
+  status          String   @default("PENDING")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("inbound_scans")
+}
