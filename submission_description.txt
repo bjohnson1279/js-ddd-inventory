@@ -1,5 +1,0 @@
-- 🚨 Severity: CRITICAL
-- 💡 Vulnerability: The `AuthService` falls back to a hardcoded string ('production-jwt-secret-change-me') for `JWT_SECRET` if the environment variable is not set.
-- 🎯 Impact: If the environment variable is missing, anyone who knows the source code can forge valid JWT tokens, completely bypassing authentication.
-- 🔧 Fix: Removed the fallback and added an explicit check that throws an error if `JWT_SECRET` is missing.
-- ✅ Verification: The application will now fail to start (or throw an error) if `JWT_SECRET` is not provided in the environment, and tests have been executed to confirm this behavior.
