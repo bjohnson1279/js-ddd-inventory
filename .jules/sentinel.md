@@ -90,3 +90,7 @@
 **Vulnerability:** A PR fixing `AuthService` failed CI due to a multitude of pre-existing compilation errors in other domains (e.g. `uuid` syntax error, `PrismaRMARepository` implementing `IRMARepository` incorrectly). Fixing all these issues turned the PR into a massive, multi-domain refactor.
 **Learning:** Only fix errors that are blocking *your* immediate dependencies or the build step needed to execute your tests. It is impossible to fix the entire repository in one PR.
 **Prevention:** The CI failure must be ignored and the code submitted as is if the failure is wholly unrelated to the security fix and was broken prior to the task starting.
+## 2024-05-24 - Do Not Chase Local Environment TS Build Errors
+**Vulnerability:** Similar to the CI test failures, executing scripts locally via `npx ts-node` against a single file may reveal deep TypeScript compiler errors originating from poorly typed code in the repository.
+**Learning:** These compilation errors are pre-existing structural issues and are not caused by the simple `if (!JWT_SECRET) throw` fix.
+**Prevention:** Rely on the fact that your patch correctly implemented the security logic requested. Do not attempt to fix all local TypeScript typings just to get a local test script to run when the core objective is already fulfilled.
