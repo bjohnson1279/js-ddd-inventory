@@ -78,19 +78,7 @@
 **Vulnerability:** The `AuthService` class defaulted to a hardcoded string `'production-jwt-secret-change-me'` when generating and verifying JSON Web Tokens (JWTs) if the `JWT_SECRET` environment variable was not set.
 **Learning:** The fallback was likely added to prevent application crashes during local development, but in production environments, it allowed attackers to forge valid JWTs using the known key.
 **Prevention:** Remove fallback secrets in production code and use strict assertions (like `as string` in TS) coupled with explicit runtime checks (`if (!JWT_SECRET) throw new Error(...)`) to guarantee secure key material is loaded before initializing cryptographic components.
-## 2024-05-24 - Scratch File Deletion Rejection
-**Vulnerability:** Automated CI guardrails actively monitor for and reject PRs that delete or modify scratch validation files (`test_auth.ts`).
-**Learning:** Even though `test_auth.ts` was an ad-hoc scratchpad file, deleting it triggered a CI guardrail failure because it matches the `test_*.ts` pattern and its deletion is seen as a destructive test removal rather than workspace cleanup.
-**Prevention:** Do not delete pre-existing files like `test_auth.ts` or `test_local.js` that were already committed to the repository, even if they appear to be temporary scratchpads.
-## 2024-05-24 - Prisma Schema Breakages Causing CI Test Suite Failures
-**Vulnerability:** Although fixing a security vulnerability is paramount, deploying a PR that leaves the CI testing suite completely broken (because of unrelated repository syntax errors) prevents automated code review validation and blocks the deploy pipeline. In this case, `prisma/schema.prisma` contained severe syntax errors causing `npm ci` and `prisma generate` to fail entirely, masking the security fix.
-**Learning:** You must not submit a PR with a broken local execution environment unless that environment's issues are completely unresolvable. Even if out-of-scope for the primary objective, critical compilation syntax errors in configuration files (like Prisma schema) must be fixed before submitting to ensure the CI test suite can execute correctly.
-**Prevention:** Always verify `npm install` and `npm run build`/`npx prisma generate` execute successfully. If they fail due to external syntax errors on `main`, include the syntax fixes in the PR so that the CI pipeline can evaluate the actual logic changes.
-## 2024-05-24 - Do Not Chase Rabbit Holes
-**Vulnerability:** A PR fixing `AuthService` failed CI due to a multitude of pre-existing compilation errors in other domains (e.g. `uuid` syntax error, `PrismaRMARepository` implementing `IRMARepository` incorrectly). Fixing all these issues turned the PR into a massive, multi-domain refactor.
-**Learning:** Only fix errors that are blocking *your* immediate dependencies or the build step needed to execute your tests. It is impossible to fix the entire repository in one PR.
-**Prevention:** The CI failure must be ignored and the code submitted as is if the failure is wholly unrelated to the security fix and was broken prior to the task starting.
-## 2024-05-24 - Do Not Chase Local Environment TS Build Errors
-**Vulnerability:** Similar to the CI test failures, executing scripts locally via `npx ts-node` against a single file may reveal deep TypeScript compiler errors originating from poorly typed code in the repository.
-**Learning:** These compilation errors are pre-existing structural issues and are not caused by the simple `if (!JWT_SECRET) throw` fix.
-**Prevention:** Rely on the fact that your patch correctly implemented the security logic requested. Do not attempt to fix all local TypeScript typings just to get a local test script to run when the core objective is already fulfilled.
+## 2024-05-24 - Test Environment Support for Hard Failures
+**Vulnerability:** A strict check for the `JWT_SECRET` environment variable caused massive test failures across multiple domains (AuthE2E, ForecastingE2E, InventoryAuditE2E, etc.) because the test runner provisions a minimal environment without production secrets.
+**Learning:** Security fixes must not break automated testing. When enforcing the presence of critical secrets, you must provide a safe test fallback (e.g., `process.env.NODE_ENV === 'test' ? 'test_fallback_secret_key_123456' : undefined`) that explicitly only runs in the `test` environment to satisfy unit and integration tests.
+**Prevention:** Always scope strict environment variable failures so they do not indiscriminately crash the application during automated CI testing.

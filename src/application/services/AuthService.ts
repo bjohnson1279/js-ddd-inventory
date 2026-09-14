@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { IApiTokenEntity, ApiTokenPayload } from '../entities/ApiToken';
 import { IAuthService, TokenPayload } from '../ports/IAuthService';
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'test' ? 'test_fallback_secret_key_123456' : undefined) as string;
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is required for security.');
 }
