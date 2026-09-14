@@ -2,33 +2,17 @@ datasource db {
   provider = "postgresql"
 }
 
+generator client {
+  provider = "prisma-client-js"
+}
+
 model Tenant {
-  id          String   @id @default(uuid())
-  name        String
-  region      String?
-  createdAt   DateTime @default(now())
-}
-  id          String   @id @default(uuid())
-  name        String
-  region      String?
-  createdAt   DateTime @default(now())
-  
+  id        String   @id @default(uuid())
+  name      String
+  region    String?
+  createdAt DateTime @default(now())
+
   @@unique([id])
-}
-
-model InventoryModel {
-  id            String    @id
-  sku           String
-  locationId    String @default("default")
-  quantity      Int
-  allocated    Int       @default(0)
-  inTransit    Int       @default(0)
-  version       Int       @default(1)
-
-  @@unique([sku, locationId])
-}
-datasource db {
-  provider = "postgresql"
 }
 
 model InventoryModel {
@@ -69,33 +53,22 @@ model ProductVariantModel {
   product           ProductModel @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
-model SerializedItemModel {
-  id           String                  @id
-model ProductVariantModel {
-  id                String       @id
-  productId         String
-  sku               String       @unique
-  attributes        String // Serialized variant attributes JSON string (e.g. [{\"name\":\"size\",\"value\":\"M\"}])
-  weightGrams       Int?
-  volumeCubicMeters Float?
-  product           ProductModel @relation(fields: [productId], references: [id], onDelete: Cascade)
-}
-
 model ApiToken {
-  id                    String            @id @default(uuid())
-  tenantId              String            @unique // foreign key to Tenant entity
-  name                  String            // e.g. 'api-v1', 'admin-dashboard'
-  scopes                Jsonb             @default('["read:inventory"]')
-  expiresAt             DateTime?         = null
-  isActive              Boolean           @default(true)
+  id        String    @id @default(uuid())
+  tenantId  String    @unique // foreign key to Tenant entity
+  name      String // e.g. 'api-v1', 'admin-dashboard'
+  scopes    Json      @default("[\"read:inventory\"]")
+  expiresAt DateTime?
+  isActive  Boolean   @default(true)
 
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([id])
 }
 
 model SerializedItemModel {
+  id           String                  @id @default(uuid())
   serialNumber String
   sku          String
   status       String
@@ -700,18 +673,18 @@ model ApprovalWorkflowModel {
 }
 
 model ApprovalRequestModel {
-  id            String   @id
-  tenantId      String   @map("tenant_id")
-  workflowId    String   @map("workflow_id")
-  referenceType String   @map("reference_type")
-  referenceId   String   @map("reference_id")
-  requesterId   String   @map("requester_id")
-  payload       String   @db.Text
-  status        String   @default("PENDING")
-  currentStep   Int      @default(0) @map("current_step")
+  id            String    @id
+  tenantId      String    @map("tenant_id")
+  workflowId    String    @map("workflow_id")
+  referenceType String    @map("reference_type")
+  referenceId   String    @map("reference_id")
+  requesterId   String    @map("requester_id")
+  payload       String    @db.Text
+  status        String    @default("PENDING")
+  currentStep   Int       @default(0) @map("current_step")
   expiresAt     DateTime? @map("expires_at")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   workflow  ApprovalWorkflowModel   @relation(fields: [workflowId], references: [id])
   decisions ApprovalDecisionModel[]
@@ -759,40 +732,39 @@ model NotificationPreferenceModel {
   @@map("notification_preferences")
 }
 
-
 model LegalEntityModel {
-  id             String   @id @default(uuid())
-  tenantId       String   @map("tenant_id")
-  name           String
-  baseCurrency   String   @map("base_currency")
-  taxIdentifier  String?  @map("tax_identifier")
-  createdAt      DateTime @default(now()) @map("created_at")
+  id            String   @id @default(uuid())
+  tenantId      String   @map("tenant_id")
+  name          String
+  baseCurrency  String   @map("base_currency")
+  taxIdentifier String?  @map("tax_identifier")
+  createdAt     DateTime @default(now()) @map("created_at")
 
   @@map("legal_entities")
 }
 
 model IntercompanyTransferModel {
-  id               String   @id @default(uuid())
-  tenantId         String   @map("tenant_id")
-  fromEntityId     String   @map("from_entity_id")
-  toEntityId       String   @map("to_entity_id")
-  sku              String
-  quantity         Int
-  transferPrice    Int      @map("transfer_price") // in cents
-  dutyCents        Int      @default(0) @map("duty_cents")
-  status           String   @default("COMPLETED")
-  journalEntryId   String?  @map("journal_entry_id") // Reference to elimination journal entry
-  createdAt        DateTime @default(now()) @map("created_at")
+  id             String   @id @default(uuid())
+  tenantId       String   @map("tenant_id")
+  fromEntityId   String   @map("from_entity_id")
+  toEntityId     String   @map("to_entity_id")
+  sku            String
+  quantity       Int
+  transferPrice  Int      @map("transfer_price") // in cents
+  dutyCents      Int      @default(0) @map("duty_cents")
+  status         String   @default("COMPLETED")
+  journalEntryId String?  @map("journal_entry_id") // Reference to elimination journal entry
+  createdAt      DateTime @default(now()) @map("created_at")
 
   @@map("intercompany_transfers")
 }
 
 model ApiUsageMetricModel {
-  id        String   @id @default(uuid())
-  tenantId  String   @map("tenant_id")
-  date      DateTime @db.Date
-  metric    String   // e.g., 'API_REQUESTS', 'STORAGE'
-  value     Int      @default(0)
+  id       String   @id @default(uuid())
+  tenantId String   @map("tenant_id")
+  date     DateTime @db.Date
+  metric   String // e.g., 'API_REQUESTS', 'STORAGE'
+  value    Int      @default(0)
 
   @@unique([tenantId, date, metric])
   @@map("api_usage_metrics")
@@ -803,17 +775,17 @@ model ApiUsageMetricModel {
 // ==========================================
 
 model WarehouseOperator {
-  id                    String             @id @default(uuid()) @db.Uuid
-  userId                String             @unique @map("user_id")
-  tenantId              String             @map("tenant_id")
-  averagePicksPerHour   Float              @default(0.0) @map("average_picks_per_hour")
-  totalDistanceWalkedM  Float              @default(0.0) @map("total_distance_walked_m")
-  accuracyScore         Float              @default(100.0) @map("accuracy_score")
-  createdAt             DateTime           @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt             DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+  id                   String   @id @default(uuid()) @db.Uuid
+  userId               String   @unique @map("user_id")
+  tenantId             String   @map("tenant_id")
+  averagePicksPerHour  Float    @default(0.0) @map("average_picks_per_hour")
+  totalDistanceWalkedM Float    @default(0.0) @map("total_distance_walked_m")
+  accuracyScore        Float    @default(100.0) @map("accuracy_score")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  shifts                LaborShift[]
-  taskPerformances      TaskPerformance[]
+  shifts           LaborShift[]
+  taskPerformances TaskPerformance[]
 
   // Note: user relation skipped as User is defined differently or not at all in this bounded context schema 
   // depending on setup, but typically we reference userId as a string.
@@ -822,34 +794,34 @@ model WarehouseOperator {
 }
 
 model LaborShift {
-  id                String             @id @default(uuid()) @db.Uuid
-  operatorId        String             @map("operator_id") @db.Uuid
-  tenantId          String             @map("tenant_id")
-  startTime         DateTime           @map("start_time") @db.Timestamptz
-  endTime           DateTime           @map("end_time") @db.Timestamptz
-  status            String             @default("SCHEDULED") // SCHEDULED, IN_PROGRESS, COMPLETED
-  predictedDemand   Int                @map("predicted_demand")
-  actualCompleted   Int                @default(0) @map("actual_completed")
-  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+  id              String   @id @default(uuid()) @db.Uuid
+  operatorId      String   @map("operator_id") @db.Uuid
+  tenantId        String   @map("tenant_id")
+  startTime       DateTime @map("start_time") @db.Timestamptz
+  endTime         DateTime @map("end_time") @db.Timestamptz
+  status          String   @default("SCHEDULED") // SCHEDULED, IN_PROGRESS, COMPLETED
+  predictedDemand Int      @map("predicted_demand")
+  actualCompleted Int      @default(0) @map("actual_completed")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  operator          WarehouseOperator  @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  operator WarehouseOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
 
   @@map("labor_shifts")
 }
 
 model TaskPerformance {
-  id                      String             @id @default(uuid()) @db.Uuid
-  operatorId              String             @map("operator_id") @db.Uuid
-  tenantId                String             @map("tenant_id")
-  taskType                String             @map("task_type") // PICK, COUNT, PUTAWAY
-  locationId              String             @map("location_id")
-  traversalDistanceMeters Float              @default(0.0) @map("traversal_distance_meters")
-  durationSeconds         Int                @map("duration_seconds")
-  accuracyScore           Float              @default(100.0) @map("accuracy_score")
-  occurredAt              DateTime           @default(now()) @map("occurred_at") @db.Timestamptz
+  id                      String   @id @default(uuid()) @db.Uuid
+  operatorId              String   @map("operator_id") @db.Uuid
+  tenantId                String   @map("tenant_id")
+  taskType                String   @map("task_type") // PICK, COUNT, PUTAWAY
+  locationId              String   @map("location_id")
+  traversalDistanceMeters Float    @default(0.0) @map("traversal_distance_meters")
+  durationSeconds         Int      @map("duration_seconds")
+  accuracyScore           Float    @default(100.0) @map("accuracy_score")
+  occurredAt              DateTime @default(now()) @map("occurred_at") @db.Timestamptz
 
-  operator                WarehouseOperator  @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  operator WarehouseOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
 
   @@map("task_performances")
 }

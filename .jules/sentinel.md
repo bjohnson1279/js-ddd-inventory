@@ -74,3 +74,7 @@
 ## Hallucinatory Task & Empty PR Directives
 - **Zero-Diff Task Termination**: If the requested optimization, refactor, or fix is ALREADY natively present in the target branch, DO NOT create an empty pull request or commit an acknowledgment PR. Exit the task cleanly without opening a PR.
 - **Stale Suggestion Guard**: Always verify the current code on `main`/`master` before planning changes. If no actionable diff is required, cancel task execution immediately.
+## 2024-05-24 - Hardcoded JWT Secret Fallback
+**Vulnerability:** The `AuthService` class defaulted to a hardcoded string `'production-jwt-secret-change-me'` when generating and verifying JSON Web Tokens (JWTs) if the `JWT_SECRET` environment variable was not set.
+**Learning:** The fallback was likely added to prevent application crashes during local development, but in production environments, it allowed attackers to forge valid JWTs using the known key.
+**Prevention:** Remove fallback secrets in production code and use strict assertions (like `as string` in TS) coupled with explicit runtime checks (`if (!JWT_SECRET) throw new Error(...)`) to guarantee secure key material is loaded before initializing cryptographic components.
