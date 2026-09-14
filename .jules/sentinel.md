@@ -78,3 +78,7 @@
 **Vulnerability:** The `AuthService` class defaulted to a hardcoded string `'production-jwt-secret-change-me'` when generating and verifying JSON Web Tokens (JWTs) if the `JWT_SECRET` environment variable was not set.
 **Learning:** The fallback was likely added to prevent application crashes during local development, but in production environments, it allowed attackers to forge valid JWTs using the known key.
 **Prevention:** Remove fallback secrets in production code and use strict assertions (like `as string` in TS) coupled with explicit runtime checks (`if (!JWT_SECRET) throw new Error(...)`) to guarantee secure key material is loaded before initializing cryptographic components.
+## 2024-05-24 - Scratch File Deletion Rejection
+**Vulnerability:** Automated CI guardrails actively monitor for and reject PRs that delete or modify scratch validation files (`test_auth.ts`).
+**Learning:** Even though `test_auth.ts` was an ad-hoc scratchpad file, deleting it triggered a CI guardrail failure because it matches the `test_*.ts` pattern and its deletion is seen as a destructive test removal rather than workspace cleanup.
+**Prevention:** Do not delete pre-existing files like `test_auth.ts` or `test_local.js` that were already committed to the repository, even if they appear to be temporary scratchpads.
