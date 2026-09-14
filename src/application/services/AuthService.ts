@@ -3,7 +3,10 @@ import { PrismaClient } from '@prisma/client';
 import { IApiTokenEntity, ApiTokenPayload } from '../entities/ApiToken';
 import { IAuthService, TokenPayload } from '../ports/IAuthService';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'production-jwt-secret-change-me';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'test' ? 'test-jwt-secret' : undefined);
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required for security.');
+}
 const JWT_EXPIRY = 86400; // hours
 const DEFAULT_SCOPES: string[] = ['read:inventory'];
 
