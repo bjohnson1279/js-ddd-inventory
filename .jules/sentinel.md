@@ -74,3 +74,8 @@
 ## Hallucinatory Task & Empty PR Directives
 - **Zero-Diff Task Termination**: If the requested optimization, refactor, or fix is ALREADY natively present in the target branch, DO NOT create an empty pull request or commit an acknowledgment PR. Exit the task cleanly without opening a PR.
 - **Stale Suggestion Guard**: Always verify the current code on `main`/`master` before planning changes. If no actionable diff is required, cancel task execution immediately.
+
+## 2026-09-14 - Fix Hardcoded JWT Secret Fallback in AuthService
+**Vulnerability:** `AuthService.ts` used a hardcoded fallback string `'production-jwt-secret-change-me'` when `process.env.JWT_SECRET` was absent.
+**Learning:** Hardcoded production secret fallbacks allow unauthenticated token forging if environment configuration is omitted. When enforcing mandatory secret variables, allow a fallback only in test mode (`process.env.NODE_ENV === 'test'`) to prevent breaking CI/test runners while strictly failing in production.
+**Prevention:** Guard secret loading with `process.env.JWT_SECRET || (process.env.NODE_ENV === 'test' ? 'test-jwt-secret' : undefined)` and throw an explicit error if missing.

@@ -168,8 +168,7 @@ export class SerializedInventoryService {
   }
 
   public async isConsistentWithLedger(variantId: string): Promise<boolean> {
-    const allItems = await this.inventoryRepository.findAll();
-    const skuItems = allItems.filter(item => item.sku.getValue() === variantId);
+    const skuItems = await this.inventoryRepository.findAllBySku(SKU.create(variantId));
     const ledgerQty = skuItems.reduce((acc, item) => acc + item.quantity.getValue(), 0);
     const inStockCount = await this.serials.countByStatus(variantId, SerializedItemStatus.InStock);
 
