@@ -1,9 +1,15 @@
 import { CycleCount } from './CycleCount';
 
 export class ABCClassificationService {
-  public classifySku(sku: string, annualUsageValue: number): 'A' | 'B' | 'C' {
-    if (annualUsageValue > 10000) return 'A';
-    if (annualUsageValue > 1000) return 'B';
+  public classifySku(
+    totalUsageValue: number, 
+    totalOrgValue: number,
+    thresholds: { aThreshold: number; bThreshold: number } = { aThreshold: 0.90, bThreshold: 0.70 }
+  ): 'A' | 'B' | 'C' {
+    if (totalOrgValue === 0) return 'C';
+    const ratio = totalUsageValue / totalOrgValue;
+    if (ratio >= thresholds.aThreshold) return 'A';
+    if (ratio >= thresholds.bThreshold) return 'B';
     return 'C';
   }
 
@@ -15,3 +21,4 @@ export class ABCClassificationService {
     }
   }
 }
+

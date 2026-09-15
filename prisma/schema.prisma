@@ -8,13 +8,6 @@ model Tenant {
   region      String?
   createdAt   DateTime @default(now())
 }
-  id          String   @id @default(uuid())
-  name        String
-  region      String?
-  createdAt   DateTime @default(now())
-  
-  @@unique([id])
-}
 
 model InventoryModel {
   id            String    @id
@@ -27,21 +20,7 @@ model InventoryModel {
 
   @@unique([sku, locationId])
 }
-datasource db {
-  provider = "postgresql"
-}
 
-model InventoryModel {
-  id         String @id
-  sku        String
-  locationId String @default("default")
-  quantity   Int
-  allocated  Int    @default(0)
-  inTransit  Int    @default(0)
-  version    Int    @default(1)
-
-  @@unique([sku, locationId])
-}
 
 model BarcodeAssignmentModel {
   id           String   @id
@@ -71,22 +50,23 @@ model ProductVariantModel {
 
 model SerializedItemModel {
   id           String                  @id
-model ProductVariantModel {
-  id                String       @id
-  productId         String
-  sku               String       @unique
-  attributes        String // Serialized variant attributes JSON string (e.g. [{\"name\":\"size\",\"value\":\"M\"}])
-  weightGrams       Int?
-  volumeCubicMeters Float?
-  product           ProductModel @relation(fields: [productId], references: [id], onDelete: Cascade)
+  serialNumber String
+  sku          String
+  status       String
+  locationId   String
+  tenantId     String
+  registeredAt DateTime                @default(now())
+  transitions  StatusTransitionModel[]
+  
+  @@unique([serialNumber, tenantId])
 }
 
 model ApiToken {
   id                    String            @id @default(uuid())
   tenantId              String            @unique // foreign key to Tenant entity
   name                  String            // e.g. 'api-v1', 'admin-dashboard'
-  scopes                Jsonb             @default('["read:inventory"]')
-  expiresAt             DateTime?         = null
+  scopes                Json
+  expiresAt             DateTime?         
   isActive              Boolean           @default(true)
 
   createdAt     DateTime    @default(now())
@@ -95,17 +75,6 @@ model ApiToken {
   @@unique([id])
 }
 
-model SerializedItemModel {
-  serialNumber String
-  sku          String
-  status       String
-  locationId   String
-  tenantId     String
-  registeredAt DateTime                @default(now())
-  transitions  StatusTransitionModel[]
-
-  @@unique([serialNumber, tenantId])
-}
 
 model StatusTransitionModel {
   id               String              @id

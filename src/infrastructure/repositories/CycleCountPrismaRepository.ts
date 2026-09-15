@@ -33,4 +33,19 @@ export class CycleCountPrismaRepository {
       data: { isActive: false }
     });
   }
+
+  public async saveRecord(record: CycleCount): Promise<void> {
+    await this.prisma.cycleCountRecordModel.create({
+      data: {
+        id: record.id,
+        tenantId: record.tenantId,
+        name: record.name,
+        status: record.status,
+        abcClassification: record.abcClass || 'C',
+        zone: record.zone,
+        isBlindCount: record.isBlindCount,
+        createdAt: record.createdAt,
+      }
+    });
+  }
 }
