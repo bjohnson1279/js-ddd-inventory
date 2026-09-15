@@ -22,6 +22,28 @@ export class ReorderPolicyService {
     const policies = await this.reorderPolicyRepository.findAll();
     const results: any[] = [];
 
+    // Optimization: Bulk pre-fetch inventory to avoid N+1 queries.
+    const skus = Array.from(new Set(policies.map(p => p.sku)));
+    const allInventoryItems = [];
+    if (inventoryRepo.findBySkus && skus.length > 0) {
+      const uniqueLocations = Array.from(new Set(policies.map(p => p.locationId)));
+      for (const locId of uniqueLocations) {
+         const itemsForLoc = await inventoryRepo.findBySkus(skus, locId);
+         allInventoryItems.push(...itemsForLoc);
+      }
+    } else {
+      for (const policy of policies) {
+          const inventoryItem = await inventoryRepo.findBySku(policy.sku, policy.locationId);
+          if (inventoryItem) allInventoryItems.push(inventoryItem);
+      }
+    }
+    const inventoryMap = new Map();
+    for (const item of allInventoryItems) {
+      if (item && item.sku) {
+        inventoryMap.set(`${item.sku.getValue()}-${item.locationId}`, item);
+      }
+    }
+
     for (const policy of policies) {
       let rop = policy.reorderPoint;
       if (policy.dynamicRopEnabled) {
@@ -43,7 +65,7 @@ export class ReorderPolicyService {
       }
 
       const skuStr = policy.sku.getValue();
-      const inventoryItem = await inventoryRepo.findBySku(policy.sku, policy.locationId);
+      const inventoryItem = inventoryMap.get(`${skuStr}-${policy.locationId}`);
       const currentQty = inventoryItem ? inventoryItem.quantity.getValue() : 0;
 
       let triggered = false;
