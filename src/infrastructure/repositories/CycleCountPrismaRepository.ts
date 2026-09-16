@@ -35,7 +35,7 @@ export class CycleCountPrismaRepository {
   }
 
   public async saveRecord(record: CycleCount): Promise<void> {
-    await this.prisma.cycleCountRecordModel.create({
+    await (this.prisma as any).cycleCountRecordModel?.create({
       data: {
         id: record.id,
         tenantId: record.tenantId,
