@@ -4,7 +4,7 @@ import { ApprovalWorkflowService } from '../../domain/approval/ApprovalWorkflowS
 import { ApprovalRequestStatus } from '../../domain/approval/ApprovalRequest';
 
 export class ManageApprovalWorkflowsUseCase {
-  constructor(private readonly workflowService: ApprovalWorkflowService) {}
+  constructor(private readonly workflowService?: ApprovalWorkflowService) {}
   
   async listWorkflows(tenantId: string): Promise<any> {
     return await prisma.approvalWorkflowModel.findMany({
@@ -45,7 +45,17 @@ export class ManageApprovalWorkflowsUseCase {
   }
 
   async listPendingRequests(tenantId: string, deciderRoleIds?: string[]): Promise<any> {
-    return await this.workflowService.listPendingRequests(tenantId, deciderRoleIds);
+    if (this.workflowService) {
+      return await this.workflowService.listPendingRequests(tenantId, deciderRoleIds);
+    }
+    return await prisma.approvalRequestModel.findMany({
+      where: { tenantId, status: 'PENDING' },
+      include: {
+        workflow: true,
+        decisions: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
   }
 
   async getApprovalRequest(tenantId: string, requestId: string): Promise<any> {
@@ -60,16 +70,44 @@ export class ManageApprovalWorkflowsUseCase {
 
   async submitDecision(tenantId: string, requestId: string, deciderId: string, decision: string, notes?: string): Promise<any> {
     const req = await prisma.approvalRequestModel.findFirst({
-      where: { id: requestId, tenantId }
+      where: { id: requestId, tenantId },
+      include: { workflow: true, decisions: true }
     });
     if (!req) throw new Error("Approval request not found");
-    
-    let domainDecision: 'APPROVED' | 'REJECTED';
-    if (decision === 'APPROVE') domainDecision = 'APPROVED';
-    else if (decision === 'REJECT') domainDecision = 'REJECTED';
-    else domainDecision = decision as any;
+    if (req.status !== 'PENDING') throw new Error("Approval request is not pending");
 
-    const result = await this.workflowService.processDecision(requestId, deciderId, domainDecision, notes);
-    return result;
+    if (this.workflowService) {
+      let domainDecision: 'APPROVED' | 'REJECTED';
+      if (decision === 'APPROVE') domainDecision = 'APPROVED';
+      else if (decision === 'REJECT') domainDecision = 'REJECTED';
+      else domainDecision = decision as any;
+
+      return await this.workflowService.processDecision(requestId, deciderId, domainDecision, notes);
+    }
+
+    const newDecision = await prisma.approvalDecisionModel.create({
+      data: {
+        id: randomUUID(),
+        requestId,
+        stepIndex: req.currentStep,
+        deciderId,
+        decision,
+        notes: notes || null
+      }
+    });
+
+    if (decision === 'REJECT') {
+      await prisma.approvalRequestModel.update({
+        where: { id: requestId },
+        data: { status: 'REJECTED' }
+      });
+    } else if (decision === 'APPROVE') {
+      await prisma.approvalRequestModel.update({
+        where: { id: requestId },
+        data: { status: 'APPROVED' }
+      });
+    }
+
+    return newDecision;
   }
 }
