@@ -53,11 +53,12 @@ describe("Approval E2E Integration Test Suite", () => {
         id: requestId,
         tenantId: "tenant-1",
         workflowId: workflowId,
-
-
+        referenceType: "ORDER",
+        referenceId: "order-1",
+        requesterId: "user-1",
+        payload: JSON.stringify({ amount: 100 }),
         status: "PENDING",
         currentStep: 0,
-
       }
     });
 
