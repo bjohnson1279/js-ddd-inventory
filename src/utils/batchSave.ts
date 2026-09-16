@@ -6,3 +6,4 @@ export async function batchSave<T>(repository: any, items: T[]): Promise<void> {
     await Promise.all(items.map((item) => repository.save(item)));
   }
 }
+// Utility to batch save entities optimally

@@ -1,3 +1,4 @@
+import { batchSave } from "../../utils/batchSave";
 import { IPurchaseOrderRepository } from "../../domain/repositories/IPurchaseOrderRepository";
 import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
 import { ICostLayerRepository } from "../../domain/repositories/ICostLayerRepository";
@@ -79,11 +80,8 @@ export class ReceivePurchaseOrder {
 
     const savePromises: Promise<any>[] = [];
 
-    if (this.costLayerRepository.saveMany && costLayers.length > 0) {
-      savePromises.push(this.costLayerRepository.saveMany(costLayers));
-    } else {
-      savePromises.push(...costLayers.map(layer => this.costLayerRepository.save(layer)));
-    }
+    const p = batchSave(this.costLayerRepository, costLayers);
+    savePromises.push(p);
 
     // 4. Save updated PO concurrently with cost layers
     savePromises.push(this.poRepository.save(po));
