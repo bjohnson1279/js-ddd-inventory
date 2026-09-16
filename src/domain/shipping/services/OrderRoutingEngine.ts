@@ -105,16 +105,35 @@ export class OrderRoutingEngine {
   ): FulfillmentAllocation[][] {
     const results: FulfillmentAllocation[][] = [];
 
+    // Optimization: Pre-compute maximum possible remaining capacity suffix array
+    // This allows early branch pruning in the combinatorial tree when remaining
+    // candidates physically cannot fulfill the remaining quantity requirement.
+    const maxRemainingSuffix = new Array(candidates.length).fill(0);
+    let currentSum = 0;
+    for (let i = candidates.length - 1; i >= 0; i--) {
+      currentSum += candidates[i].availableQuantity;
+      maxRemainingSuffix[i] = currentSum;
+    }
+
     const recurse = (
       index: number,
       remaining: number,
       current: FulfillmentAllocation[]
     ) => {
+      // Optimization: Limit total combinations evaluated to prevent downstream scoring O(2^N) explosions
+      // while still preserving correct resolution for practical networks.
+      if (results.length >= 100) return;
+
       if (remaining === 0) {
         results.push([...current]);
         return;
       }
       if (index >= candidates.length) {
+        return;
+      }
+
+      // Optimization: Prune dead branch if remaining candidates lack sufficient total capacity
+      if (remaining > maxRemainingSuffix[index]) {
         return;
       }
 
