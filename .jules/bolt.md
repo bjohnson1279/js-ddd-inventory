@@ -15,3 +15,7 @@
 ## 2024-03-24 - Bulk Pre-fetch Inventory for Reorder Policies
 **Learning:** Evaluating reorder policies for a large number of SKUs with a sequential loop over `inventoryRepo.findBySku(policy.sku, policy.locationId)` causes severe N+1 query bottlenecks and extremely high database load.
 **Action:** Bulk pre-fetch all necessary inventory items upfront (e.g. `findAllByLocationIds` or `findAll`) before the loop and cache them in memory using a Map for O(1) lookups, changing an O(N) database load to O(1).
+
+## 2024-03-24 - Batching Sequential Database Writes in Use Cases
+**Learning:** Calling `repository.save()` inside sequential loops causes severe N+1 database queries, inflating latency proportionally to loop iterations (e.g., number of RMA lines).
+**Action:** Replace sequential loop writes with a deferred batch save logic. Crucially, when deferring saves, maintain an in-memory `Map` of the entities currently being modified in the loop, and fetch from this `Map` first on subsequent iterations to prevent stale reads from the database corrupting data for identical variants.
