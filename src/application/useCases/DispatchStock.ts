@@ -1,3 +1,4 @@
+import { batchSave } from "../../utils/batchSave";
 import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
 import { SKU } from "../../domain/valueObjects/SKU";
 import { Quantity } from "../../domain/valueObjects/Quantity";
@@ -66,11 +67,7 @@ export class DispatchStock {
           }
 
           const costRepo = this.costLayerRepository;
-          if (costRepo.saveMany) {
-            await costRepo.saveMany(activeLayers);
-          } else {
-            await Promise.all(activeLayers.map((l) => costRepo.save(l)));
-          }
+          await batchSave(costRepo, activeLayers);
         }
       }
     } else {
