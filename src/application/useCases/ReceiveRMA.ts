@@ -12,6 +12,7 @@ import { SKU } from "../../domain/valueObjects/SKU";
 import { Quantity } from "../../domain/valueObjects/Quantity";
 import { InventoryItem } from "../../domain/aggregates/InventoryItem";
 import { CostLayerService } from "../../domain/accounting/services/CostLayerService";
+import { batchSave } from "../../utils/batchSave";
 import { AccountingJournalService } from "../../domain/accounting/services/AccountingJournalService";
 import { AccountingMethod } from "../../domain/accounting/enums/AccountingMethod";
 import { SerialNumber } from "../../domain/serial/valueObjects/SerialNumber";
@@ -47,6 +48,10 @@ export class ReceiveRMA {
 
   async execute(dto: ReceiveRMADTO): Promise<void> {
     const rma = await this.rmaRepository.findById(dto.rmaId);
+    const inventoryItemsToSave = new Map<string, InventoryItem>();
+    const costLayersToSave: InventoryCostLayer[] = [];
+    const quarantineItemsToSave: QuarantineItem[] = [];
+    const serializedItemsToSave = new Map<string, any>();
     if (!rma) {
       throw new Error(`RMA with ID ${dto.rmaId} not found.`);
     }
@@ -72,7 +77,12 @@ export class ReceiveRMA {
 
       // 2. Increment stock level
       const sku = SKU.create(item.variantId);
-      let invItem = await this.inventoryRepository.findBySku(sku, targetLocationId);
+      // Fetch from accumulated map first, then DB
+      let invItem = inventoryItemsToSave.get(targetLocationId + '|' + sku.getValue()) || null;
+      if (!invItem) {
+        invItem = await this.inventoryRepository.findBySku(sku, targetLocationId);
+      }
+
       if (!invItem) {
         invItem = InventoryItem.create(
           Math.random().toString(36).substring(2, 11),
@@ -82,7 +92,7 @@ export class ReceiveRMA {
         );
       }
       invItem.receiveStock(Quantity.create(item.quantityReceived));
-      await this.inventoryRepository.save(invItem);
+      inventoryItemsToSave.set(targetLocationId + '|' + sku.getValue(), invItem);
 
       // 3. Create Cost Layer
       const layerId = Math.random().toString(36).substring(2, 11);
@@ -96,7 +106,7 @@ export class ReceiveRMA {
         `RMA-${rma.id}`,
         targetLocationId
       );
-      await this.costLayerRepository.save(layer);
+      costLayersToSave.push(layer);
 
       // 4. Create Quarantine record if quarantined
       if (item.disposition === RMADisposition.Quarantine) {
@@ -109,7 +119,7 @@ export class ReceiveRMA {
           rma.locationId,
           rma.tenantId
         );
-        await this.quarantineRepository.save(quarantineItem);
+        quarantineItemsToSave.push(quarantineItem);
       }
 
       // 5. Post return journal entries if Accrual
@@ -129,7 +139,15 @@ export class ReceiveRMA {
       if (item.disposition === RMADisposition.Scrap) {
         // Decrement stock level
         invItem.dispatchStock(Quantity.create(item.quantityReceived));
-        await this.inventoryRepository.save(invItem);
+        inventoryItemsToSave.set(targetLocationId + '|' + sku.getValue(), invItem);
+
+
+
+        // Save the cost layer so the service can find it
+        if (costLayersToSave.length > 0) {
+          await batchSave(this.costLayerRepository, costLayersToSave);
+          costLayersToSave.length = 0; // clear the array
+        }
 
         // Consume the cost layer
         await this.costLayerService.consumeFifoLayers(item.variantId, item.quantityReceived);
@@ -161,9 +179,16 @@ export class ReceiveRMA {
           } else if (item.disposition === RMADisposition.Scrap) {
             serialItem.writeOff(`RMA return: Scrapped`, "system", `RMA-${rma.id}`);
           }
-          await this.serializedItemRepository.save(serialItem);
+          serializedItemsToSave.set(serialItem.serialNumber.value, serialItem);
         }
       }
+    }
+
+    await batchSave(this.inventoryRepository, Array.from(inventoryItemsToSave.values()));
+    await batchSave(this.costLayerRepository, costLayersToSave);
+    await batchSave(this.quarantineRepository, quarantineItemsToSave);
+    if (this.serializedItemRepository && serializedItemsToSave.size > 0) {
+      await batchSave(this.serializedItemRepository, Array.from(serializedItemsToSave.values()));
     }
 
     await this.rmaRepository.save(rma);
