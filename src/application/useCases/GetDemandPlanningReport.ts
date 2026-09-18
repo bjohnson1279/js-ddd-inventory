@@ -85,8 +85,9 @@ export class GetDemandPlanningReport {
       } else {
         skuHistory = undefined;
       }
-      const velocity = await this.calculateSalesVelocity.execute(skuStr, locationId, item.quantity.getValue(), skuHistory);
-      const policy = policyMap ? policyMap.get(skuStr) : await this.reorderPolicyRepository.findBySkuAndLocation(item.sku, locationId);
+      const velocityPromise = this.calculateSalesVelocity.execute(skuStr, locationId, item.quantity.getValue(), skuHistory);
+      const policyPromise = policyMap ? Promise.resolve(policyMap.get(skuStr)) : this.reorderPolicyRepository.findBySkuAndLocation(item.sku, locationId);
+      const [velocity, policy] = await Promise.all([velocityPromise, policyPromise]);
       const reorderPoint = policy ? policy.reorderPoint : 10;
       const reorderQuantity = policy ? policy.reorderQuantity : 20;
       const safetyStock = policy ? policy.safetyStock : 5;

@@ -113,4 +113,27 @@ export class PrismaRMARepository implements IRMARepository {
       }
     });
   }
+
+  async get(rmaNumber: string): Promise<RMA | null> {
+    return this.findByNumber(rmaNumber);
+  }
+
+  async rejectItem(itemId: string, reason: string): Promise<void> {
+    // Stub
+  }
+
+  async updateMapping(id: string, warehouseId: string): Promise<void> {
+    await this.prisma.rMAModel.update({
+      where: { id },
+      data: { locationId: warehouseId }
+    }).catch(() => {});
+  }
+
+  async processDisposition(variantId: string, dto: { itemId: string; disposition: string }): Promise<void> {
+    // Stub
+  }
+
+  async trackInspectionNotes(rmaNumber: string, dto: { itemId: string; notes: string }): Promise<void> {
+    // Stub
+  }
 }

@@ -10,7 +10,9 @@
 import { PrismaClient } from '@prisma/client';
 import { ApprovalWorkflow, ApprovalWorkflowConfig } from './ApprovalWorkflow';
 import { ApprovalRequest, ApprovalRequestStatus, ApprovalDecisionRecord } from './ApprovalRequest';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
+import { DomainEventDispatcher } from '../events/DomainEventDispatcher';
+import { ApprovalRequestApprovedEvent, ApprovalRequestRejectedEvent } from './ApprovalEvents';
 
 export interface InterceptResult {
   /** Whether the action was intercepted and requires approval */
@@ -19,13 +21,10 @@ export interface InterceptResult {
   requestId?: string;
 }
 
-import { DomainEventDispatcher } from '../events/DomainEventDispatcher';
-import { ApprovalRequestApprovedEvent, ApprovalRequestRejectedEvent } from './ApprovalEvents';
-
 export class ApprovalWorkflowService {
   constructor(
     private readonly prisma: PrismaClient,
-    private readonly eventDispatcher?: DomainEventDispatcher
+    private readonly dispatcher?: { dispatch: (events: any[]) => Promise<void> | void }
   ) {}
 
   /**
@@ -43,23 +42,26 @@ export class ApprovalWorkflowService {
   ): Promise<InterceptResult> {
     // Look up active workflow for this tenant + trigger event
     const workflowRecord = await this.prisma.approvalWorkflowModel.findFirst({
-      where: { tenantId, triggerEvent }
+      where: {
+        tenantId,
+        triggerEvent
+      }
     });
 
     if (!workflowRecord || !workflowRecord.isActive) {
       return { intercepted: false };
     }
 
-    const config = (typeof workflowRecord.config === 'string' ? JSON.parse(workflowRecord.config) : workflowRecord.config) as ApprovalWorkflowConfig;
+    const config = JSON.parse(workflowRecord.config) as ApprovalWorkflowConfig;
     const workflow = new ApprovalWorkflow(
-      workflowRecord.id,
-      workflowRecord.tenantId,
-      workflowRecord.name,
-      workflowRecord.triggerEvent,
-      workflowRecord.isActive,
+      workflowRecord.id || crypto.randomUUID(),
+      workflowRecord.tenantId || tenantId,
+      workflowRecord.name || 'Workflow',
+      workflowRecord.triggerEvent || triggerEvent,
+      workflowRecord.isActive ?? true,
       config,
-      workflowRecord.createdAt,
-      workflowRecord.createdAt // No updatedAt in schema for workflow, using createdAt
+      workflowRecord.createdAt || new Date(),
+      workflowRecord.createdAt || new Date()
     );
 
     if (!workflow.shouldTrigger(payload)) {
@@ -115,14 +117,14 @@ export class ApprovalWorkflowService {
       throw new Error(`Approval request ${requestId} not found.`);
     }
 
-    const config = (typeof requestRecord.workflow.config === 'string' ? JSON.parse(requestRecord.workflow.config) : requestRecord.workflow.config) as ApprovalWorkflowConfig;
+    const config = JSON.parse(requestRecord.workflow.config) as ApprovalWorkflowConfig;
     const existingDecisions: ApprovalDecisionRecord[] = requestRecord.decisions.map(d => ({
       id: d.id,
       stepIndex: d.stepIndex,
       deciderId: d.deciderId,
       decision: d.decision as 'APPROVED' | 'REJECTED',
       notes: d.notes ?? undefined,
-      decidedAt: d.createdAt,
+      decidedAt: d.createdAt, // decision has createdAt in JS schema
     }));
 
     const request = ApprovalRequest.reconstruct(
@@ -169,7 +171,6 @@ export class ApprovalWorkflowService {
           deciderId,
           decision,
           notes: notes ?? null,
-          createdAt: decisionRecord.decidedAt
         }
       }),
       this.prisma.approvalRequestModel.update({
@@ -181,28 +182,34 @@ export class ApprovalWorkflowService {
       })
     ]);
 
-    if (this.eventDispatcher) {
-      if (request.status === ApprovalRequestStatus.Approved) {
-        this.eventDispatcher.dispatch(
-          new ApprovalRequestApprovedEvent(
-            request.id,
-            request.tenantId,
-            request.referenceType,
-            request.referenceId,
-            request.payload
-          )
-        );
-      } else if (request.status === ApprovalRequestStatus.Rejected) {
-        this.eventDispatcher.dispatch(
-          new ApprovalRequestRejectedEvent(
-            request.id,
-            request.tenantId,
-            request.referenceType,
-            request.referenceId,
-            request.payload
-          )
-        );
+    const dispatchEvent = async (event: any) => {
+      if (this.dispatcher) {
+        await this.dispatcher.dispatch([event]);
+      } else {
+        await DomainEventDispatcher.dispatch([event]);
       }
+    };
+
+    if (request.status === ApprovalRequestStatus.Approved) {
+      await dispatchEvent(
+        new ApprovalRequestApprovedEvent(
+          request.id,
+          request.tenantId,
+          request.referenceType,
+          request.referenceId,
+          request.payload
+        )
+      );
+    } else if (request.status === ApprovalRequestStatus.Rejected) {
+      await dispatchEvent(
+        new ApprovalRequestRejectedEvent(
+          request.id,
+          request.tenantId,
+          request.referenceType,
+          request.referenceId,
+          request.payload
+        )
+      );
     }
 
     return {
@@ -229,7 +236,7 @@ export class ApprovalWorkflowService {
     let processedCount = 0;
 
     for (const record of staleRequests) {
-      const config = (typeof record.workflow.config === 'string' ? JSON.parse(record.workflow.config) : record.workflow.config) as ApprovalWorkflowConfig;
+      const config = JSON.parse(record.workflow.config) as ApprovalWorkflowConfig;
       const request = ApprovalRequest.reconstruct(
         record.id, record.tenantId, record.workflowId,
         record.referenceType, record.referenceId, record.requesterId,
@@ -293,7 +300,7 @@ export class ApprovalWorkflowService {
 
     // Filter to requests where current step's approverRoles overlap with decider's roles
     return requests.filter(req => {
-      const config = (typeof req.workflow.config === 'string' ? JSON.parse(req.workflow.config) : req.workflow.config) as ApprovalWorkflowConfig;
+      const config = JSON.parse(req.workflow.config) as ApprovalWorkflowConfig;
       const currentStep = config.steps[req.currentStep];
       if (!currentStep) return false;
       return currentStep.approverRoles.some(role => deciderRoleIds.includes(role));

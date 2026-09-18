@@ -55,7 +55,7 @@ export class ApprovalWorkflow {
    */
   shouldTrigger(payload: Record<string, any>): boolean {
     if (!this.isActive) return false;
-    if (!this.config.thresholds || this.config.thresholds.length === 0) return true; // No thresholds = always trigger
+    if (this.config.thresholds.length === 0) return true; // No thresholds = always trigger
 
     return this.config.thresholds.every(threshold => {
       const value = payload[threshold.field];

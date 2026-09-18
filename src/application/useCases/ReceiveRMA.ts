@@ -56,75 +56,8 @@ export class ReceiveRMA {
       throw new Error(`Tenant config not found for tenant ${rma.tenantId}.`);
     }
 
-    // Optimization: Index RMA items by variantId to prevent O(N*M) nested lookups
-    const rmaItemsMap = new Map(rma.items.map((i) => [i.variantId, i]));
-
-    // Optimization: Pre-fetch all required inventory items in batches to avoid N+1 DB lookups
-    const skusByLocation = new Map<string, SKU[]>();
     for (const item of dto.items) {
-      const targetLoc = item.disposition === RMADisposition.Quarantine
-          ? `${rma.locationId}-quarantine`
-          : rma.locationId;
-      if (!skusByLocation.has(targetLoc)) skusByLocation.set(targetLoc, []);
-      skusByLocation.get(targetLoc)!.push(SKU.create(item.variantId));
-    }
-
-    const inventoryItemsMap = new Map<string, InventoryItem>();
-    if (this.inventoryRepository.findBySkus) {
-      for (const [loc, skus] of skusByLocation.entries()) {
-        const fetched = await this.inventoryRepository.findBySkus(skus, loc);
-        for (const item of fetched) {
-          inventoryItemsMap.set(`${item.sku.getValue()}__${loc}`, item);
-        }
-      }
-    } else {
-      // Fallback if findBySkus is not implemented
-      for (const [loc, skus] of skusByLocation.entries()) {
-        const fetchPromises = skus.map(async (sku) => {
-          const item = await this.inventoryRepository.findBySku(sku, loc);
-          if (item) inventoryItemsMap.set(`${item.sku.getValue()}__${loc}`, item);
-        });
-        await Promise.all(fetchPromises);
-      }
-    }
-
-    // Optimization: Pre-fetch all serialized items to avoid N+1 DB lookups inside the loop
-    const allSerialObjects: SerialNumber[] = [];
-    let expectedTotalSerials = 0;
-    for (const item of dto.items) {
-      if (item.serialNumbers) {
-        allSerialObjects.push(...item.serialNumbers.map(sn => new SerialNumber(sn)));
-        expectedTotalSerials += item.serialNumbers.length;
-      }
-    }
-
-    const serializedItemsMap = new Map<string, any>(); // Map<string, SerializedItem>
-    if (allSerialObjects.length > 0 && this.serializedItemRepository) {
-      let fetchedSerials = [];
-      if (this.serializedItemRepository.findBySerials) {
-        fetchedSerials = await this.serializedItemRepository.findBySerials(allSerialObjects, rma.tenantId);
-        if (fetchedSerials.length !== expectedTotalSerials) {
-          throw new Error(`Not all serial numbers found for RMA ${rma.rmaNumber}`);
-        }
-      } else {
-        fetchedSerials = await Promise.all(allSerialObjects.map(obj =>
-          this.serializedItemRepository!.findBySerialOrFail(obj, rma.tenantId)
-        ));
-      }
-      for (const serialItem of fetchedSerials) {
-        serializedItemsMap.set(serialItem.serialNumber.value, serialItem);
-      }
-    }
-
-    const modifiedInventoryItems = new Map<string, InventoryItem>();
-    const newCostLayers: InventoryCostLayer[] = [];
-    const modifiedSerialItems: any[] = [];
-    const journalPromises: Promise<any>[] = [];
-    const newQuarantineItems: any[] = []; // QuarantineItem[]
-
-    // Optimization: Replaced Promise.all map loop with sequential for-of loop to avoid DB concurrency exceptions on identical SKUs
-    for (const item of dto.items) {
-      const rmaItem = rmaItemsMap.get(item.variantId);
+      const rmaItem = rma.items.find((i) => i.variantId === item.variantId);
       if (!rmaItem) {
         throw new Error(`Item with variant ID ${item.variantId} not found in RMA ${rma.rmaNumber}.`);
       }
@@ -139,22 +72,20 @@ export class ReceiveRMA {
 
       // 2. Increment stock level
       const sku = SKU.create(item.variantId);
-      const cacheKey = `${item.variantId}__${targetLocationId}`;
-      let invItem = modifiedInventoryItems.get(cacheKey) || inventoryItemsMap.get(cacheKey);
-
+      let invItem = await this.inventoryRepository.findBySku(sku, targetLocationId);
       if (!invItem) {
         invItem = InventoryItem.create(
-          crypto.randomUUID(),
+          Math.random().toString(36).substring(2, 11),
           sku,
           targetLocationId,
           Quantity.create(0)
         );
       }
       invItem.receiveStock(Quantity.create(item.quantityReceived));
-      modifiedInventoryItems.set(cacheKey, invItem);
+      await this.inventoryRepository.save(invItem);
 
       // 3. Create Cost Layer
-      const layerId = crypto.randomUUID();
+      const layerId = Math.random().toString(36).substring(2, 11);
       const layer = new InventoryCostLayer(
         layerId,
         item.variantId,
@@ -165,11 +96,11 @@ export class ReceiveRMA {
         `RMA-${rma.id}`,
         targetLocationId
       );
-      newCostLayers.push(layer);
+      await this.costLayerRepository.save(layer);
 
       // 4. Create Quarantine record if quarantined
       if (item.disposition === RMADisposition.Quarantine) {
-        const qId = crypto.randomUUID();
+        const qId = Math.random().toString(36).substring(2, 11);
         const quarantineItem = new QuarantineItem(
           qId,
           item.variantId,
@@ -178,42 +109,49 @@ export class ReceiveRMA {
           rma.locationId,
           rma.tenantId
         );
-        newQuarantineItems.push(quarantineItem);
+        await this.quarantineRepository.save(quarantineItem);
       }
 
       // 5. Post return journal entries if Accrual
       if (config.accountingMethod === AccountingMethod.Accrual) {
         const totalCostCents = rmaItem.unitCostCents * item.quantityReceived;
-        journalPromises.push(
-          this.journalService.onStockReturned(
-            item.variantId,
-            totalCostCents,
-            rma.id,
-            new Date(),
-            config,
-            rma.tenantId
-          )
+        await this.journalService.onStockReturned(
+          item.variantId,
+          totalCostCents,
+          rma.id,
+          new Date(),
+          config,
+          rma.tenantId
         );
       }
 
-      // 6. Handle immediate scrap write-off (stock only)
+      // 6. Handle immediate scrap write-off
       if (item.disposition === RMADisposition.Scrap) {
+        // Decrement stock level
         invItem.dispatchStock(Quantity.create(item.quantityReceived));
-        modifiedInventoryItems.set(cacheKey, invItem);
+        await this.inventoryRepository.save(invItem);
+
+        // Consume the cost layer
+        await this.costLayerService.consumeFifoLayers(item.variantId, item.quantityReceived);
+
+        // Post write-off journal entry if Accrual
+        if (config.accountingMethod === AccountingMethod.Accrual) {
+          const totalCostCents = rmaItem.unitCostCents * item.quantityReceived;
+          await this.journalService.onInventoryWriteOff(
+            rma.id,
+            totalCostCents,
+            new Date(),
+            config,
+            rma.tenantId
+          );
+        }
       }
 
       // 7. Handle Serialized items transitions
       if (item.serialNumbers && this.serializedItemRepository) {
-        const serialItems = item.serialNumbers.map(sn => {
+        for (const sn of item.serialNumbers) {
           const serialObj = new SerialNumber(sn);
-          const found = serializedItemsMap.get(serialObj.value);
-          if (!found) {
-             throw new Error(`Not all serial numbers found for RMA ${rma.rmaNumber}`);
-          }
-          return found;
-        });
-
-        for (const serialItem of serialItems) {
+          const serialItem = await this.serializedItemRepository.findBySerialOrFail(serialObj, rma.tenantId);
           serialItem.acceptReturn(`RMA-${rma.id}`, "system");
 
           if (item.disposition === RMADisposition.Restock) {
@@ -223,93 +161,8 @@ export class ReceiveRMA {
           } else if (item.disposition === RMADisposition.Scrap) {
             serialItem.writeOff(`RMA return: Scrapped`, "system", `RMA-${rma.id}`);
           }
-          modifiedSerialItems.push(serialItem);
+          await this.serializedItemRepository.save(serialItem);
         }
-      }
-    }
-
-    if (journalPromises.length > 0) {
-      await Promise.all(journalPromises);
-    }
-
-    if (modifiedSerialItems.length > 0 && this.serializedItemRepository) {
-      if (this.serializedItemRepository.saveMany) {
-        await this.serializedItemRepository.saveMany(modifiedSerialItems);
-      } else {
-        // Optimization: Execute chunked Promise.all for sequential DB saves instead of concurrent batch
-        for (let i = 0; i < modifiedSerialItems.length; i += 50) {
-          const chunk = modifiedSerialItems.slice(i, i + 50);
-          await Promise.all(chunk.map(item => this.serializedItemRepository!.save(item)));
-        }
-      }
-    }
-
-    // Save batch inventory items
-    if (modifiedInventoryItems.size > 0) {
-      if (this.inventoryRepository.saveMany) {
-        await this.inventoryRepository.saveMany(Array.from(modifiedInventoryItems.values()));
-      } else {
-        // Optimization: Execute chunked Promise.all for sequential DB saves instead of concurrent batch
-        const items = Array.from(modifiedInventoryItems.values());
-        for (let i = 0; i < items.length; i += 50) {
-          const chunk = items.slice(i, i + 50);
-          await Promise.all(chunk.map(item => this.inventoryRepository.save(item)));
-        }
-      }
-    }
-
-    // Save batch cost layers
-    if (newCostLayers.length > 0) {
-      if (this.costLayerRepository.saveMany) {
-        await this.costLayerRepository.saveMany(newCostLayers);
-      } else {
-        // Optimization: Execute chunked Promise.all for sequential DB saves instead of concurrent batch
-        for (let i = 0; i < newCostLayers.length; i += 50) {
-          const chunk = newCostLayers.slice(i, i + 50);
-          await Promise.all(chunk.map(layer => this.costLayerRepository.save(layer)));
-        }
-      }
-    }
-
-    // Save batch quarantine items
-    if (newQuarantineItems.length > 0) {
-      if (this.quarantineRepository.saveMany) {
-        await this.quarantineRepository.saveMany(newQuarantineItems);
-      } else {
-        // Optimization: Execute chunked Promise.all for sequential DB saves instead of concurrent batch
-        for (let i = 0; i < newQuarantineItems.length; i += 50) {
-          const chunk = newQuarantineItems.slice(i, i + 50);
-          await Promise.all(chunk.map(item => this.quarantineRepository.save(item)));
-        }
-      }
-    }
-
-    // Process immediate scrap write-offs (cost consumption & journal) AFTER cost layers have been persisted
-    const scrapItems = dto.items.filter(item => item.disposition === RMADisposition.Scrap);
-
-    if (scrapItems.length > 0) {
-      // Optimization: Batch consume FIFO layers to avoid N+1 DB lookups
-      const componentsToConsume = scrapItems.map(item => ({
-        variantId: item.variantId,
-        quantity: item.quantityReceived
-      }));
-      await this.costLayerService.consumeFifoLayersBatch(componentsToConsume);
-
-      if (config.accountingMethod === AccountingMethod.Accrual) {
-        // Optimization: Execute journal entries concurrently to prevent N+1 I/O latency
-        const date = new Date();
-        const writeOffPromises = scrapItems.map(item => {
-          const rmaItem = rmaItemsMap.get(item.variantId);
-          const totalCostCents = (rmaItem?.unitCostCents || 0) * item.quantityReceived;
-          return this.journalService.onInventoryWriteOff(
-            rma.id,
-            totalCostCents,
-            date,
-            config,
-            rma.tenantId
-          );
-        });
-        await Promise.all(writeOffPromises);
       }
     }
 

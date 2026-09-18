@@ -74,3 +74,12 @@
 ## Hallucinatory Task & Empty PR Directives
 - **Zero-Diff Task Termination**: If the requested optimization, refactor, or fix is ALREADY natively present in the target branch, DO NOT create an empty pull request or commit an acknowledgment PR. Exit the task cleanly without opening a PR.
 - **Stale Suggestion Guard**: Always verify the current code on `main`/`master` before planning changes. If no actionable diff is required, cancel task execution immediately.
+
+## 2026-09-14 - Fix Hardcoded JWT Secret Fallback in AuthService
+**Vulnerability:** `AuthService.ts` used a hardcoded fallback string `'production-jwt-secret-change-me'` when `process.env.JWT_SECRET` was absent.
+**Learning:** Hardcoded production secret fallbacks allow unauthenticated token forging if environment configuration is omitted. When enforcing mandatory secret variables, allow a fallback only in test mode (`process.env.NODE_ENV === 'test'`) to prevent breaking CI/test runners while strictly failing in production.
+**Prevention:** Guard secret loading with `process.env.JWT_SECRET || (process.env.NODE_ENV === 'test' ? 'test-jwt-secret' : undefined)` and throw an explicit error if missing.
+## 2024-05-18 - Fix Critical JWT Verification API Misuse
+**Vulnerability:** A critical authentication bypass where `jwt.verify` was incorrectly invoked with a stubbed function `() => true` in the `options` argument position, followed by the intended options object in the `callback` position.
+**Learning:** `jsonwebtoken`'s `verify` signature allows the third argument to be either `options` or `callback`. If a function is passed as the third argument, it aggressively assumes it's a callback modifier, which completely misaligns subsequent arguments (causing the actual options to be executed as a callback). This resulted in an unhandled `TypeError: done is not a function`, crashing the service on authentication attempts, and fundamentally breaking signature and issuer validations.
+**Prevention:** Strictly type-check the arguments passed to loosely-typed Node.js crypto/auth libraries. Never pass functions as optional arguments to overloaded library methods unless explicitly matching the documented asynchronous callback signature.

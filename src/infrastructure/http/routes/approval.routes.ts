@@ -8,7 +8,7 @@ import { DomainEventDispatcher } from "../../../domain/events/DomainEventDispatc
 const router = Router();
 
 const dispatcher = new DomainEventDispatcher();
-const workflowService = new ApprovalWorkflowService(prisma as any, dispatcher);
+const workflowService = new ApprovalWorkflowService(prisma as any);
 const useCase = new ManageApprovalWorkflowsUseCase(workflowService);
 
 // Workflow management (admin only) - routes

@@ -13,6 +13,7 @@ export interface CreatePurchaseOrderDTO {
   vendorId: string;
   tenantId: string;
   locationId: string;
+  requesterId?: string;
   items: CreatePurchaseOrderItemDTO[];
 }
 
@@ -53,10 +54,10 @@ export class CreatePurchaseOrder {
     if (this.workflowService) {
       const result = await this.workflowService.evaluateAndIntercept(
         dto.tenantId,
-        'PO_CREATED',
+        'purchase_order.place',
         'PurchaseOrder',
         po.id,
-        'system',
+        dto.requesterId || 'system',
         { totalValueCents: po.totalCents }
       );
 
