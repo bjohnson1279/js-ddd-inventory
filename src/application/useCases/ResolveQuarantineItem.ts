@@ -1,3 +1,4 @@
+import { batchSave } from "../../utils/batchSave";
 import { IQuarantineRepository } from "../../domain/repositories/IQuarantineRepository";
 import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
 import { ICostLayerRepository } from "../../domain/repositories/ICostLayerRepository";
@@ -73,11 +74,7 @@ export class ResolveQuarantineItem {
         );
       }
 
-      if (this.costLayerRepository.saveMany) {
-        await this.costLayerRepository.saveMany(qLayers);
-      } else {
-        await Promise.all(qLayers.map((l) => this.costLayerRepository.save(l)));
-      }
+      await batchSave(this.costLayerRepository, qLayers);
 
       return costCents;
     };
@@ -110,11 +107,7 @@ export class ResolveQuarantineItem {
         remainingToMove -= toMove;
       }
 
-      if (this.costLayerRepository.saveMany) {
-        await this.costLayerRepository.saveMany(qLayers);
-      } else {
-        await Promise.all(qLayers.map((l) => this.costLayerRepository.save(l)));
-      }
+      await batchSave(this.costLayerRepository, qLayers);
     } else if (dto.resolution === "SCRAP") {
       qItem.resolveScrap();
 

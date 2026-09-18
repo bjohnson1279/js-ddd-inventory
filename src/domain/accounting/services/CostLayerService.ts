@@ -1,3 +1,4 @@
+import { batchSave } from "../../../utils/batchSave";
 import { ICostLayerRepository } from "../../repositories/ICostLayerRepository";
 import { CostBreakdown } from "../valueObjects/CostBreakdown";
 import { InventoryCostLayer } from "../entities/InventoryCostLayer";
@@ -26,13 +27,7 @@ export class CostLayerService {
     const strategy = CostingStrategyRegistry.get(method);
     const breakdown = strategy.consumeLayers(activeLayers, quantity, variantId);
 
-    if (this.layers.saveMany) {
-      await this.layers.saveMany(activeLayers);
-    } else {
-      await Promise.all(
-        activeLayers.map((layer) => this.layers.save(layer))
-      );
-    }
+    await batchSave(this.layers, activeLayers);
 
     return breakdown;
   }
@@ -101,11 +96,7 @@ export class CostLayerService {
     // 4. Batch save all modified layers at once
     const layersToSave = Array.from(modifiedLayers);
     if (layersToSave.length > 0) {
-      if (this.layers.saveMany) {
-        await this.layers.saveMany(layersToSave);
-      } else {
-        await Promise.all(layersToSave.map((layer) => this.layers.save(layer)));
-      }
+      await batchSave(this.layers, layersToSave);
     }
 
     return breakdowns;

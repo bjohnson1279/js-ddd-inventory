@@ -1,3 +1,4 @@
+import { batchSave } from "../../utils/batchSave";
 import { IInventoryAuditRepository } from "../../domain/repositories/IInventoryAuditRepository";
 import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
 import { ICostLayerRepository } from "../../domain/repositories/ICostLayerRepository";
@@ -214,29 +215,12 @@ export class ReconcileInventoryAudit {
 
     // Save batched inventory items
     if (modifiedInventoryItems.size > 0) {
-      if ('saveMany' in this.inventoryRepository && typeof (this.inventoryRepository as any).saveMany === 'function') {
-        await (this.inventoryRepository as any).saveMany(Array.from(modifiedInventoryItems.values()));
-      } else {
-        // Optimization: Execute chunked Promise.all for sequential DB saves instead of concurrent batch
-        const items = Array.from(modifiedInventoryItems.values());
-        for (let i = 0; i < items.length; i += 50) {
-          const chunk = items.slice(i, i + 50);
-          await Promise.all(chunk.map(item => this.inventoryRepository.save(item)));
-        }
-      }
+      await batchSave(this.inventoryRepository, Array.from(modifiedInventoryItems.values()));
     }
 
     // Save batched cost layers
     if (newCostLayers.length > 0) {
-      if ('saveMany' in this.costLayerRepository && typeof (this.costLayerRepository as any).saveMany === 'function') {
-        await (this.costLayerRepository as any).saveMany(newCostLayers);
-      } else {
-        // Optimization: Execute chunked Promise.all for sequential DB saves instead of concurrent batch
-        for (let i = 0; i < newCostLayers.length; i += 50) {
-          const chunk = newCostLayers.slice(i, i + 50);
-          await Promise.all(chunk.map(layer => this.costLayerRepository.save(layer)));
-        }
-      }
+      await batchSave(this.costLayerRepository, newCostLayers);
     }
 
     // Save the reconciled audit

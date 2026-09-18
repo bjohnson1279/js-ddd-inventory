@@ -1,3 +1,4 @@
+import { batchSave } from "../../../utils/batchSave";
 import { StockOnboarding } from "../aggregates/StockOnboarding";
 import { IInventoryRepository } from "../../repositories/IInventoryRepository";
 import { SKU } from "../../valueObjects/SKU";
@@ -91,12 +92,6 @@ export class OpeningBalanceService {
 
     const itemsToSaveArray = Array.from(itemsToSave.values());
 
-    if (this.inventoryRepository.saveMany) {
-      await this.inventoryRepository.saveMany(itemsToSaveArray);
-    } else {
-      // Opt: Fallback to concurrent batched execution instead of sequential awaits
-      // Expected impact: ~50-80% reduction in DB wait time for this loop
-      await Promise.all(itemsToSaveArray.map(item => this.inventoryRepository.save(item)));
-    }
+    await batchSave(this.inventoryRepository, itemsToSaveArray);
   }
 }

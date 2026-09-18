@@ -1,3 +1,4 @@
+import { batchSave } from "../../utils/batchSave";
 import { prisma } from "../../infrastructure/database/prisma";
 import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
 import { ICostLayerRepository } from "../../domain/repositories/ICostLayerRepository";
@@ -104,11 +105,7 @@ export class AssembleKit {
       itemsToSave.push(invItem);
     }
 
-    if ('saveMany' in this.inventoryRepository && typeof (this.inventoryRepository as any).saveMany === 'function') {
-      await (this.inventoryRepository as any).saveMany(itemsToSave);
-    } else {
-      await Promise.all(itemsToSave.map(item => this.inventoryRepository.save(item)));
-    }
+    await batchSave(this.inventoryRepository, itemsToSave);
 
     // 5. Calculate assembled unit cost
     const unitCostCents = Math.round(totalCostCents / quantity);

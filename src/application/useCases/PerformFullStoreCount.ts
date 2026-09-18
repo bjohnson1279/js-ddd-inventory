@@ -1,3 +1,4 @@
+import { batchSave } from "../../utils/batchSave";
 import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
 import { SKU } from "../../domain/valueObjects/SKU";
 import { Quantity } from "../../domain/valueObjects/Quantity";
@@ -47,10 +48,6 @@ export class PerformFullStoreCount {
       itemsToSave.push(newItem);
     }
 
-    if (this.inventoryRepository.saveMany) {
-      await this.inventoryRepository.saveMany(itemsToSave);
-    } else {
-      await Promise.all(itemsToSave.map(item => this.inventoryRepository.save(item)));
-    }
+    await batchSave(this.inventoryRepository, itemsToSave);
   }
 }
