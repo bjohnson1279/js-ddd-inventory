@@ -12,6 +12,7 @@
 ## 2024-03-24 - Serialized Inventory Ledger Consistency Optimization
 **Learning:** Fetching all inventory records into memory (`findAll()`) to filter by a single SKU causes extremely high database load and memory usage (O(N) iteration time), degrading performance as the inventory grows.
 **Action:** Push filtering logic down to the database using `findAllBySku(sku)` instead of fetching everything in memory, which changes an O(N) operation to an efficient DB lookup.
+
 ## 2024-03-24 - Bulk Pre-fetch Inventory for Reorder Policies
 **Learning:** Evaluating reorder policies for a large number of SKUs with a sequential loop over `inventoryRepo.findBySku(policy.sku, policy.locationId)` causes severe N+1 query bottlenecks and extremely high database load.
 **Action:** Bulk pre-fetch all necessary inventory items upfront (e.g. `findAllByLocationIds` or `findAll`) before the loop and cache them in memory using a Map for O(1) lookups, changing an O(N) database load to O(1).
@@ -19,3 +20,7 @@
 ## 2024-03-24 - Batching Sequential Database Writes in Use Cases
 **Learning:** Calling `repository.save()` inside sequential loops causes severe N+1 database queries, inflating latency proportionally to loop iterations (e.g., number of RMA lines).
 **Action:** Replace sequential loop writes with a deferred batch save logic. Crucially, when deferring saves, maintain an in-memory `Map` of the entities currently being modified in the loop, and fetch from this `Map` first on subsequent iterations to prevent stale reads from the database corrupting data for identical variants.
+
+## 2026-09-16 - Combinatorial Explosion in Routing
+**Learning:** Unconstrained combinatorial generation (like recursively picking combinations of warehouses) scales at O(2^N), causing memory crashes for larger networks.
+**Action:** Always pre-compute a capacity suffix array to enable aggressive branch pruning in backtracking algorithms before evaluating results.
