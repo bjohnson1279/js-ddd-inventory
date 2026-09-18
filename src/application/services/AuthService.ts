@@ -3,7 +3,10 @@ import { PrismaClient } from '@prisma/client';
 import { IApiTokenEntity, ApiTokenPayload } from '../entities/ApiToken';
 import { IAuthService, TokenPayload } from '../ports/IAuthService';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'production-jwt-secret-change-me';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'test' ? 'test-jwt-secret' : undefined);
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required for security.');
+}
 const JWT_EXPIRY = 86400; // hours
 const DEFAULT_SCOPES: string[] = ['read:inventory'];
 
@@ -11,7 +14,6 @@ export class AuthService implements IAuthService {
   private prisma: PrismaClient;
   private tokenIssuer: jwt.SignatureProvider = (payload) =>
     jwt.sign(payload, JWT_SECRET);
-  private tokenVerifier: jwt.VerifyOptions['verify'] = () => true; // TODO: add JWKS support
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma;
@@ -30,12 +32,11 @@ export class AuthService implements IAuthService {
 
   async verifyToken(token: string): TokenPayload | null {
     try {
-      const payload = await jwt.verify(
+      const payload = jwt.verify(
         token,
         JWT_SECRET,
-        this.tokenVerifier,
-        { issuer: 'https://inventory.example.com' }, // TODO: add JWKS support
-      );
+        { issuer: 'https://inventory.example.com' } // TODO: add JWKS support
+      ) as jwt.JwtPayload;
 
       return { tenantId: payload.tenantId, iat: payload.iat as number, exp: payload.exp as number } as TokenPayload;
     } catch (err) {

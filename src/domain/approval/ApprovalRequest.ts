@@ -115,7 +115,7 @@ export class ApprovalRequest {
    * If already at the last step, transitions to EXPIRED.
    */
   escalate(): void {
-    if (this._status !== ApprovalRequestStatus.Pending) {
+    if (this._status !== ApprovalRequestStatus.Pending && this._status !== ApprovalRequestStatus.Escalated) {
       throw new Error(`Cannot escalate request in status: ${this._status}`);
     }
 

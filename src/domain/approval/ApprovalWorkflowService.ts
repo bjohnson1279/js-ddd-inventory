@@ -23,7 +23,8 @@ export interface InterceptResult {
 
 export class ApprovalWorkflowService {
   constructor(
-    private readonly prisma: PrismaClient
+    private readonly prisma: PrismaClient,
+    private readonly dispatcher?: { dispatch: (events: any[]) => Promise<void> | void }
   ) {}
 
   /**
@@ -53,14 +54,14 @@ export class ApprovalWorkflowService {
 
     const config = JSON.parse(workflowRecord.config) as ApprovalWorkflowConfig;
     const workflow = new ApprovalWorkflow(
-      workflowRecord.id,
-      workflowRecord.tenantId,
-      workflowRecord.name,
-      workflowRecord.triggerEvent,
-      workflowRecord.isActive,
+      workflowRecord.id || crypto.randomUUID(),
+      workflowRecord.tenantId || tenantId,
+      workflowRecord.name || 'Workflow',
+      workflowRecord.triggerEvent || triggerEvent,
+      workflowRecord.isActive ?? true,
       config,
-      workflowRecord.createdAt,
-      workflowRecord.createdAt // There's no updatedAt in ApprovalWorkflowModel in JS Express schema, use createdAt
+      workflowRecord.createdAt || new Date(),
+      workflowRecord.createdAt || new Date()
     );
 
     if (!workflow.shouldTrigger(payload)) {
@@ -181,8 +182,16 @@ export class ApprovalWorkflowService {
       })
     ]);
 
+    const dispatchEvent = async (event: any) => {
+      if (this.dispatcher) {
+        await this.dispatcher.dispatch([event]);
+      } else {
+        await DomainEventDispatcher.dispatch([event]);
+      }
+    };
+
     if (request.status === ApprovalRequestStatus.Approved) {
-      await DomainEventDispatcher.dispatch([
+      await dispatchEvent(
         new ApprovalRequestApprovedEvent(
           request.id,
           request.tenantId,
@@ -190,9 +199,9 @@ export class ApprovalWorkflowService {
           request.referenceId,
           request.payload
         )
-      ]);
+      );
     } else if (request.status === ApprovalRequestStatus.Rejected) {
-      await DomainEventDispatcher.dispatch([
+      await dispatchEvent(
         new ApprovalRequestRejectedEvent(
           request.id,
           request.tenantId,
@@ -200,7 +209,7 @@ export class ApprovalWorkflowService {
           request.referenceId,
           request.payload
         )
-      ]);
+      );
     }
 
     return {
