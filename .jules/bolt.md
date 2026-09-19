@@ -24,3 +24,7 @@
 ## 2026-09-16 - Combinatorial Explosion in Routing
 **Learning:** Unconstrained combinatorial generation (like recursively picking combinations of warehouses) scales at O(2^N), causing memory crashes for larger networks.
 **Action:** Always pre-compute a capacity suffix array to enable aggressive branch pruning in backtracking algorithms before evaluating results.
+
+## 2024-03-24 - Bulk Inserts over Concurrent Promise.all
+**Learning:** Using `Promise.all` inside nested chunked loops for database inserts creates unnecessary latency and hits the database multiple times unnecessarily.
+**Action:** Filter the items to be inserted first and use `createMany` for bulk insertion. This significantly reduces database roundtrips.
