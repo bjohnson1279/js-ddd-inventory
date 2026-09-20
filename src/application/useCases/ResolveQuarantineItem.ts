@@ -9,6 +9,7 @@ import { InventoryItem } from "../../domain/aggregates/InventoryItem";
 import { CostLayerService } from "../../domain/accounting/services/CostLayerService";
 import { AccountingJournalService } from "../../domain/accounting/services/AccountingJournalService";
 import { AccountingMethod } from "../../domain/accounting/enums/AccountingMethod";
+import { batchSave } from "../../utils/batchSave";
 
 export interface ResolveQuarantineItemDTO {
   quarantineItemId: string;
@@ -73,11 +74,7 @@ export class ResolveQuarantineItem {
         );
       }
 
-      if (this.costLayerRepository.saveMany) {
-        await this.costLayerRepository.saveMany(qLayers);
-      } else {
-        await Promise.all(qLayers.map((l) => this.costLayerRepository.save(l)));
-      }
+      await batchSave(this.costLayerRepository, qLayers);
 
       return costCents;
     };
@@ -110,11 +107,7 @@ export class ResolveQuarantineItem {
         remainingToMove -= toMove;
       }
 
-      if (this.costLayerRepository.saveMany) {
-        await this.costLayerRepository.saveMany(qLayers);
-      } else {
-        await Promise.all(qLayers.map((l) => this.costLayerRepository.save(l)));
-      }
+      await batchSave(this.costLayerRepository, qLayers);
     } else if (dto.resolution === "SCRAP") {
       qItem.resolveScrap();
 

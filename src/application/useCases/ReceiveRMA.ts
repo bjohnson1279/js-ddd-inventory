@@ -15,6 +15,7 @@ import { CostLayerService } from "../../domain/accounting/services/CostLayerServ
 import { AccountingJournalService } from "../../domain/accounting/services/AccountingJournalService";
 import { AccountingMethod } from "../../domain/accounting/enums/AccountingMethod";
 import { SerialNumber } from "../../domain/serial/valueObjects/SerialNumber";
+import { batchSave } from "../../utils/batchSave";
 
 export interface ReceiveRMAItemDTO {
   variantId: string;
@@ -233,55 +234,22 @@ export class ReceiveRMA {
     }
 
     if (modifiedSerialItems.length > 0 && this.serializedItemRepository) {
-      if (this.serializedItemRepository.saveMany) {
-        await this.serializedItemRepository.saveMany(modifiedSerialItems);
-      } else {
-        // Optimization: Execute chunked Promise.all for sequential DB saves instead of concurrent batch
-        for (let i = 0; i < modifiedSerialItems.length; i += 50) {
-          const chunk = modifiedSerialItems.slice(i, i + 50);
-          await Promise.all(chunk.map(item => this.serializedItemRepository!.save(item)));
-        }
-      }
+      await batchSave(this.serializedItemRepository, modifiedSerialItems);
     }
 
     // Save batch inventory items
     if (modifiedInventoryItems.size > 0) {
-      if (this.inventoryRepository.saveMany) {
-        await this.inventoryRepository.saveMany(Array.from(modifiedInventoryItems.values()));
-      } else {
-        // Optimization: Execute chunked Promise.all for sequential DB saves instead of concurrent batch
-        const items = Array.from(modifiedInventoryItems.values());
-        for (let i = 0; i < items.length; i += 50) {
-          const chunk = items.slice(i, i + 50);
-          await Promise.all(chunk.map(item => this.inventoryRepository.save(item)));
-        }
-      }
+      await batchSave(this.inventoryRepository, Array.from(modifiedInventoryItems.values()));
     }
 
     // Save batch cost layers
     if (newCostLayers.length > 0) {
-      if (this.costLayerRepository.saveMany) {
-        await this.costLayerRepository.saveMany(newCostLayers);
-      } else {
-        // Optimization: Execute chunked Promise.all for sequential DB saves instead of concurrent batch
-        for (let i = 0; i < newCostLayers.length; i += 50) {
-          const chunk = newCostLayers.slice(i, i + 50);
-          await Promise.all(chunk.map(layer => this.costLayerRepository.save(layer)));
-        }
-      }
+      await batchSave(this.costLayerRepository, newCostLayers);
     }
 
     // Save batch quarantine items
     if (newQuarantineItems.length > 0) {
-      if (this.quarantineRepository.saveMany) {
-        await this.quarantineRepository.saveMany(newQuarantineItems);
-      } else {
-        // Optimization: Execute chunked Promise.all for sequential DB saves instead of concurrent batch
-        for (let i = 0; i < newQuarantineItems.length; i += 50) {
-          const chunk = newQuarantineItems.slice(i, i + 50);
-          await Promise.all(chunk.map(item => this.quarantineRepository.save(item)));
-        }
-      }
+      await batchSave(this.quarantineRepository, newQuarantineItems);
     }
 
     // Process immediate scrap write-offs (cost consumption & journal) AFTER cost layers have been persisted
