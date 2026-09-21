@@ -38,6 +38,16 @@ export class InMemoryOutboxRepository implements IOutboxRepository {
     }
   }
 
+  async markProcessedMany(ids: string[]): Promise<void> {
+    const now = new Date();
+    for (const id of ids) {
+      const entry = this.entries.find((e) => e.id === id);
+      if (entry) {
+        entry.processedAt = now;
+      }
+    }
+  }
+
   async markFailed(id: string, error: string): Promise<void> {
     const entry = this.entries.find((e) => e.id === id);
     if (entry) {

@@ -48,6 +48,14 @@ export class PrismaOutboxRepository implements IOutboxRepository {
     });
   }
 
+  async markProcessedMany(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    await this.prisma.outboxEventModel.updateMany({
+      where: { id: { in: ids } },
+      data: { processedAt: new Date() }
+    });
+  }
+
   async markFailed(id: string, error: string): Promise<void> {
     const record = await this.prisma.outboxEventModel.findUnique({
       where: { id }

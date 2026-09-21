@@ -112,11 +112,18 @@ export class OutboxProcessor {
         }
       }
 
-      // Execute database updates concurrently
-      await Promise.all([
-        ...processedIds.map(id => this.outboxRepository.markProcessed(id)),
-        ...failedUpdates.map(f => this.outboxRepository.markFailed(f.id, f.error))
-      ]);
+      // Execute database updates optimally
+      const promises = [];
+      if (processedIds.length > 0) {
+        if (this.outboxRepository.markProcessedMany) {
+          promises.push(this.outboxRepository.markProcessedMany(processedIds));
+        } else {
+          promises.push(...processedIds.map(id => this.outboxRepository.markProcessed(id)));
+        }
+      }
+      promises.push(...failedUpdates.map(f => this.outboxRepository.markFailed(f.id, f.error)));
+
+      await Promise.all(promises);
     } catch (error) {
       Logger.error({ context: "OutboxProcessor", message: "Failed to fetch pending outbox events:", error: error });
     } finally {

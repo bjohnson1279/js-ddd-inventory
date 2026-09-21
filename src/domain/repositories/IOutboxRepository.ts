@@ -4,6 +4,7 @@ export interface IOutboxRepository {
   save(event: IDomainEvent, tx?: any): Promise<void>;
   fetchPending(limit: number, maxAttempts?: number): Promise<any[]>;
   markProcessed(id: string): Promise<void>;
+  markProcessedMany?(ids: string[]): Promise<void>;
   markFailed(id: string, error: string): Promise<void>;
   fetchDeadLettered(limit: number, maxAttempts?: number): Promise<any[]>;
   retryEvent(id: string): Promise<void>;

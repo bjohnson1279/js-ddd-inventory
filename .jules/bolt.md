@@ -28,3 +28,7 @@
 ## 2024-03-24 - Bulk Inserts over Concurrent Promise.all
 **Learning:** Using `Promise.all` inside nested chunked loops for database inserts creates unnecessary latency and hits the database multiple times unnecessarily.
 **Action:** Filter the items to be inserted first and use `createMany` for bulk insertion. This significantly reduces database roundtrips.
+
+## 2024-03-24 - Avoiding Concurrent Array Maps for DB I/O (Outbox Processor)
+**Learning:** Using `Promise.all` wrapped over an array to fire numerous single-record database updates (e.g. `Promise.all(processedIds.map(id => outboxRepository.markProcessed(id)))`) causes N connection pool acquisitions, query latencies, and high RDBMS contention.
+**Action:** Always prefer pushing updates down to the database using bulk operations like `updateMany` combined with the `in` operator (e.g. `markProcessedMany(ids)` -> `where: { id: { in: ids } }`). This changes latency from O(N) to O(1).
