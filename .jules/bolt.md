@@ -51,3 +51,12 @@
 ## 2024-05-18 - Picking Route Optimizer N+1 query optimization
 **Learning:** In the `PickingRouteOptimizer`, looking up warehouse locations for routing input generated an N+1 database query scenario because locations were retrieved one-by-one inside a `Promise.all` block. Adding a batch fetching capability (`findByIds`) to `IWarehouseLocationRepository` and preferring it when available eliminates the need for repeated roundtrips, reducing the fetching latency from O(N) to O(1).
 **Action:** When mapping multiple items to their dependencies (such as warehouse locations), look for opportunities to pre-fetch the dependencies in a single query by extending repository interfaces with batch retrieval methods like `findByIds` and falling back gracefully when the underlying infrastructure doesn't yet support it.
+
+## 2024-03-24 - Avoiding Concurrent Database Queries in Use Cases
+**Learning:** Using `Promise.all` wrapped over an array to fire numerous single-record database lookups (e.g., `Promise.all(skus.map(sku => repo.findBySku(sku)))`) inside Use Cases like `ReconcileInventoryAudit`, `AssembleKit`, `DisassembleKit`, `CreateInventoryAudit`, and `GetDemandPlanningReport` causes N+1 query latencies, massive connection pool acquisitions, and high RDBMS contention.
+**Action:** Always prefer iterating sequentially or executing database lookups using bulk operations where possible instead of using `Promise.all`. This significantly reduces database roundtrips and connection pool exhaustion.
+
+## 2024-03-24 - Serialized Inventory Ledger Consistency Optimization (Fix)
+**Learning:** Fetching all inventory records into memory (`findAll()`) to filter by a single location causes extremely high database load and memory usage (O(N) iteration time), degrading performance as the inventory grows. Replacing concurrent database queries with sequential database queries does not make things faster; true optimizations require replacing many queries with a single database level filter, such as adding query string arguments.
+**Action:** Push filtering logic down to the database level using `findAllByLocation(locationId)` instead of fetching everything in memory without filters.
+
