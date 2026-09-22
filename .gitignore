@@ -47,3 +47,10 @@ fix_*.php
 update_*.php
 scratch_*
 *.scratch
+
+# Bot scratch verification files
+test.js
+test_*.ts
+test_*.js
+*.scratch
+plan.md

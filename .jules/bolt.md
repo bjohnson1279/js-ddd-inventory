@@ -39,3 +39,11 @@
 ## 2024-10-26 - Optional Methods on Interfaces in TypeScript
 **Learning:** If a repository interface defines a method as optional (e.g. `findBySkus?`), we shouldn't dynamically cast with `as any` and do property checks just to bypass the compiler when implementing an optimization, as that causes type fragility.
 **Action:** Remove the optional `?` from the interface to enforce the method contract universally across all classes that implement the interface, enabling safe standard calls like `await this.inventoryRepository.findBySkus()`.
+
+
+## Prevention Directives for Automated Refactoring
+- **Never Overwrite Complete Files**: Always use range-scoped replacement chunks (`StartLine`/`EndLine`).
+- **No Scratch Files**: Never stage or commit `test_*.ts`, `test_*.js`, `test.js`, or `plan.md` files to git.
+- **No Unresolved Conflict Markers**: Never stage or commit files containing Git merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`). Always resolve conflicts cleanly before committing.
+- **Path Normalization Compatibility**: When passing paths to subprocesses or external APIs, use absolute normalized paths (e.g., `os.path.abspath`) so tests pass on both Linux and Windows.
+- **Zero-Diff Task Termination**: If the requested optimization, refactor, or fix is ALREADY natively present in the target branch, DO NOT create an empty pull request or commit an acknowledgment PR. Exit the task cleanly without opening a PR.
