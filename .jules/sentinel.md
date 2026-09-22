@@ -83,3 +83,8 @@
 **Vulnerability:** A critical authentication bypass where `jwt.verify` was incorrectly invoked with a stubbed function `() => true` in the `options` argument position, followed by the intended options object in the `callback` position.
 **Learning:** `jsonwebtoken`'s `verify` signature allows the third argument to be either `options` or `callback`. If a function is passed as the third argument, it aggressively assumes it's a callback modifier, which completely misaligns subsequent arguments (causing the actual options to be executed as a callback). This resulted in an unhandled `TypeError: done is not a function`, crashing the service on authentication attempts, and fundamentally breaking signature and issuer validations.
 **Prevention:** Strictly type-check the arguments passed to loosely-typed Node.js crypto/auth libraries. Never pass functions as optional arguments to overloaded library methods unless explicitly matching the documented asynchronous callback signature.
+
+## 2024-05-18 - Insecure ID Generation
+**Vulnerability:** Weak random number generation using `Math.random()` to generate entity IDs.
+**Learning:** `Math.random()` is not cryptographically secure, and generated IDs are predictable and prone to collisions, which can lead to insecurity in multi-tenant environments.
+**Prevention:** Always use cryptographically secure random number generators like `crypto.randomUUID()` for unique identifiers.
