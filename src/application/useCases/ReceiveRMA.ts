@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { IRMARepository } from "../../domain/repositories/IRMARepository";
 import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
 import { ICostLayerRepository } from "../../domain/repositories/ICostLayerRepository";
@@ -106,7 +107,7 @@ export class ReceiveRMA {
 
       if (!invItem) {
         invItem = InventoryItem.create(
-          Math.random().toString(36).substring(2, 11),
+          crypto.randomUUID(),
           sku,
           targetLocationId,
           Quantity.create(0)
@@ -116,7 +117,7 @@ export class ReceiveRMA {
       inventoryItemsToSave.set(targetLocationId + '|' + sku.getValue(), invItem);
 
       // 3. Create Cost Layer
-      const layerId = Math.random().toString(36).substring(2, 11);
+      const layerId = crypto.randomUUID();
       const layer = new InventoryCostLayer(
         layerId,
         item.variantId,
@@ -131,7 +132,7 @@ export class ReceiveRMA {
 
       // 4. Create Quarantine record if quarantined
       if (item.disposition === RMADisposition.Quarantine) {
-        const qId = Math.random().toString(36).substring(2, 11);
+        const qId = crypto.randomUUID();
         const quarantineItem = new QuarantineItem(
           qId,
           item.variantId,
