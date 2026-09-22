@@ -61,6 +61,27 @@ export class ReceiveRMA {
       throw new Error(`Tenant config not found for tenant ${rma.tenantId}.`);
     }
 
+    // Pre-fetch all required inventory items to avoid N+1 queries during update
+    const skusByLocation = new Map<string, Set<string>>();
+    for (const item of dto.items) {
+      const targetLoc = item.disposition === RMADisposition.Quarantine ? `${rma.locationId}-quarantine` : rma.locationId;
+      if (!skusByLocation.has(targetLoc)) skusByLocation.set(targetLoc, new Set());
+      skusByLocation.get(targetLoc)!.add(item.variantId);
+    }
+
+    const preFetchedItems = new Map<string, InventoryItem>();
+    if (this.inventoryRepository.findBySkus) {
+      for (const [locId, skus] of skusByLocation.entries()) {
+         const skuObjs = Array.from(skus).map(s => SKU.create(s));
+         if (skuObjs.length > 0) {
+             const items = await this.inventoryRepository.findBySkus(skuObjs, locId);
+             for (const item of items) {
+                 preFetchedItems.set(`${locId}|${item.sku.getValue()}`, item);
+             }
+         }
+      }
+    }
+
     for (const item of dto.items) {
       const rmaItem = rma.items.find((i) => i.variantId === item.variantId);
       if (!rmaItem) {
@@ -78,7 +99,7 @@ export class ReceiveRMA {
       // 2. Increment stock level
       const sku = SKU.create(item.variantId);
       // Fetch from accumulated map first, then DB
-      let invItem = inventoryItemsToSave.get(targetLocationId + '|' + sku.getValue()) || null;
+      let invItem = inventoryItemsToSave.get(targetLocationId + '|' + sku.getValue()) || preFetchedItems.get(targetLocationId + '|' + sku.getValue()) || null;
       if (!invItem) {
         invItem = await this.inventoryRepository.findBySku(sku, targetLocationId);
       }
