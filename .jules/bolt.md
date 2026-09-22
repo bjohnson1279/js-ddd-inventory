@@ -32,3 +32,10 @@
 ## 2024-03-24 - Avoiding Concurrent Array Maps for DB I/O (Outbox Processor)
 **Learning:** Using `Promise.all` wrapped over an array to fire numerous single-record database updates (e.g. `Promise.all(processedIds.map(id => outboxRepository.markProcessed(id)))`) causes N connection pool acquisitions, query latencies, and high RDBMS contention.
 **Action:** Always prefer pushing updates down to the database using bulk operations like `updateMany` combined with the `in` operator (e.g. `markProcessedMany(ids)` -> `where: { id: { in: ids } }`). This changes latency from O(N) to O(1).
+## 2024-10-26 - Bulk Pre-fetch Inventory for RMAs
+**Learning:** Sequential loops in RMA receiving that perform `findBySku` for each returned item cause severe N+1 query bottlenecks and extremely high database load when an RMA has many lines.
+**Action:** Bulk pre-fetch all necessary inventory items upfront (e.g., using `findBySkus`) grouped by their target location (normal vs. quarantine) before the loop and cache them in an in-memory Map for O(1) lookups.
+
+## 2024-10-26 - Optional Methods on Interfaces in TypeScript
+**Learning:** If a repository interface defines a method as optional (e.g. `findBySkus?`), we shouldn't dynamically cast with `as any` and do property checks just to bypass the compiler when implementing an optimization, as that causes type fragility.
+**Action:** Remove the optional `?` from the interface to enforce the method contract universally across all classes that implement the interface, enabling safe standard calls like `await this.inventoryRepository.findBySkus()`.
