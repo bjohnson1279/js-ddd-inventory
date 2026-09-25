@@ -88,3 +88,7 @@
 **Vulnerability:** Weak random number generation using `Math.random()` to generate entity IDs.
 **Learning:** `Math.random()` is not cryptographically secure, and generated IDs are predictable and prone to collisions, which can lead to insecurity in multi-tenant environments.
 **Prevention:** Always use cryptographically secure random number generators like `crypto.randomUUID()` for unique identifiers.
+## 2025-02-24 - Fix Insecure Decryption Fallback in Security Utils
+**Vulnerability:** The `decryptSymmetric` function inside `src/infrastructure/utils/security.ts` contained an insecure fallback mechanism where it returned the raw `ciphertext` as plaintext if decryption failed (e.g. invalid key, corrupted data).
+**Learning:** Returning un-decrypted sensitive data (like database passwords in `TenantRegistry.ts`) on error is a critical security vulnerability that can leak ciphertext. If a key is rotated, the application may unintentionally process or expose raw ciphertext as plaintext.
+**Prevention:** Always fail securely by throwing an error (`throw new Error('Decryption failed');`) instead of returning raw un-decrypted payload.

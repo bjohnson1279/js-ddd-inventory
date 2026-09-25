@@ -90,7 +90,14 @@ export class TenantRegistry {
       dbPort: row.db_port,
       dbName: row.db_name,
       dbUser: row.db_user,
-      dbPassword: row.db_password ? decryptSymmetric(row.db_password) : undefined,
+      dbPassword: (() => {
+        try {
+          return row.db_password ? decryptSymmetric(row.db_password) : undefined;
+        } catch (e) {
+          console.warn(`Failed to decrypt database password for tenant ${row.tenant_id}`);
+          return undefined;
+        }
+      })(),
       status: row.status,
       provisionedAt: new Date(row.provisioned_at),
       migratedVersion: row.migrated_version,
@@ -120,7 +127,14 @@ export class TenantRegistry {
       dbPort: row.db_port,
       dbName: row.db_name,
       dbUser: row.db_user,
-      dbPassword: row.db_password ? decryptSymmetric(row.db_password) : undefined,
+      dbPassword: (() => {
+        try {
+          return row.db_password ? decryptSymmetric(row.db_password) : undefined;
+        } catch (e) {
+          console.warn(`Failed to decrypt database password for tenant ${row.tenant_id}`);
+          return undefined;
+        }
+      })(),
       status: row.status,
       provisionedAt: new Date(row.provisioned_at),
       migratedVersion: row.migrated_version,
