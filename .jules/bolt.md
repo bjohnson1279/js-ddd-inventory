@@ -47,3 +47,7 @@
 - **No Unresolved Conflict Markers**: Never stage or commit files containing Git merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`). Always resolve conflicts cleanly before committing.
 - **Path Normalization Compatibility**: When passing paths to subprocesses or external APIs, use absolute normalized paths (e.g., `os.path.abspath`) so tests pass on both Linux and Windows.
 - **Zero-Diff Task Termination**: If the requested optimization, refactor, or fix is ALREADY natively present in the target branch, DO NOT create an empty pull request or commit an acknowledgment PR. Exit the task cleanly without opening a PR.
+
+## 2024-05-18 - Picking Route Optimizer N+1 query optimization
+**Learning:** In the `PickingRouteOptimizer`, looking up warehouse locations for routing input generated an N+1 database query scenario because locations were retrieved one-by-one inside a `Promise.all` block. Adding a batch fetching capability (`findByIds`) to `IWarehouseLocationRepository` and preferring it when available eliminates the need for repeated roundtrips, reducing the fetching latency from O(N) to O(1).
+**Action:** When mapping multiple items to their dependencies (such as warehouse locations), look for opportunities to pre-fetch the dependencies in a single query by extending repository interfaces with batch retrieval methods like `findByIds` and falling back gracefully when the underlying infrastructure doesn't yet support it.
