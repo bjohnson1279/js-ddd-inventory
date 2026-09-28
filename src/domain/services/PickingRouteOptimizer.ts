@@ -33,14 +33,27 @@ export class PickingRouteOptimizer {
     }
 
     const uniqueLocationIds = Array.from(new Set(items.map(i => i.locationId)));
-    const locationsResult = await Promise.all(
-      uniqueLocationIds.map(async id => {
-        const loc = await this.locationRepo.findById(new LocationId(id));
-        return { id, loc };
-      })
-    );
 
-    const locationMap = new Map(locationsResult.map(({ id, loc }) => [id, loc]));
+    const locationMap = new Map<string, any>(); // Using any to avoid importing WarehouseLocation which creates circular dependencies
+
+    // Optimization: Bulk fetch locations to prevent N+1 queries if repository supports it
+    if (this.locationRepo.findByIds) {
+      const locationIds = uniqueLocationIds.map(id => new LocationId(id));
+      const locs = await this.locationRepo.findByIds(locationIds);
+      for (const loc of locs) {
+        locationMap.set(loc.id.value, loc);
+      }
+    } else {
+      const locationsResult = await Promise.all(
+        uniqueLocationIds.map(async id => {
+          const loc = await this.locationRepo.findById(new LocationId(id));
+          return { id, loc };
+        })
+      );
+      for (const { id, loc } of locationsResult) {
+        locationMap.set(id, loc);
+      }
+    }
 
     const routeItems: PickRouteItem[] = [];
     for (const item of items) {
