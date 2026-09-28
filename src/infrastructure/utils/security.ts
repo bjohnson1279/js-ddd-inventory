@@ -53,8 +53,6 @@ export function decryptSymmetric(ciphertext: string): string {
     const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
     return decrypted.toString('utf8');
   } catch (err) {
-    // If decryption fails (e.g. invalid key or corrupted data), fallback to returning it as plaintext
-    // This provides robustness during secret rotation or if a plaintext string happens to contain two colons
-    return ciphertext;
+    throw new Error('Decryption failed');
   }
 }

@@ -90,4 +90,11 @@ describe('Security Utilities', () => {
       expect(verifyPassword('notempty', hash)).toBe(false);
     });
   });
+
+  describe('decryptSymmetric', () => {
+    it('should throw an error for malformed or invalid ciphertext instead of returning it', () => {
+      const { decryptSymmetric } = require('../../../src/infrastructure/utils/security');
+      expect(() => decryptSymmetric('invalid:ciphertext:format')).toThrow('Decryption failed');
+    });
+  });
 });
