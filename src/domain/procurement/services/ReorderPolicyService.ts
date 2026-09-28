@@ -17,9 +17,13 @@ export class ReorderPolicyService {
     tenantId: string,
     forecaster: any,
     inventoryRepo: any,
-    windowDays: number = 30
+    windowDays: number = 30,
+    locationId?: string
   ): Promise<{ sku: string; locationId: string; reorderPoint: number; triggered: boolean; reason?: string }[]> {
-    const policies = await this.reorderPolicyRepository.findAll();
+    // ⚡ Bolt: Push filtering logic down to the database using findAllByLocation instead of fetching everything in memory
+    const policies = locationId && this.reorderPolicyRepository.findAllByLocation
+      ? await this.reorderPolicyRepository.findAllByLocation(locationId)
+      : await this.reorderPolicyRepository.findAll();
     const results: any[] = [];
 
     // Optimization: Bulk pre-fetch inventory to avoid N+1 queries.

@@ -85,7 +85,8 @@ export class ReorderPolicyController {
       const forecaster = new ReorderPointForecaster(velocityCalculator, productRepository, poRepository);
       const tenantId = (req as any).tenantId || "tenant-1";
 
-      const results = await service.evaluatePolicies(tenantId, forecaster, inventoryRepository);
+      const locationId = req.query.locationId as string | undefined;
+      const results = await service.evaluatePolicies(tenantId, forecaster, inventoryRepository, 30, locationId);
 
       res.status(200).json({ results });
     } catch (error: any) {
