@@ -286,7 +286,8 @@ export class PrismaInventoryRepository implements IInventoryRepository {
           }
 
           if (itemsToUpdate.length > 0) {
-            await Promise.all(itemsToUpdate.map(async (item) => {
+            for (const item of itemsToUpdate) {
+
               const result = await tx.inventoryModel.updateMany({
                 where: {
                   id: item.id,
@@ -303,13 +304,12 @@ export class PrismaInventoryRepository implements IInventoryRepository {
               if (result.count === 0) {
                 throw new ConcurrencyException(item.sku.getValue(), item.locationId);
               }
-
               const events = item.getDomainEvents();
               for (const event of events) {
                 await this.outboxRepository!.save(event, tx);
               }
               item.clearDomainEvents();
-            }));
+            }
           }
         }
       });
@@ -342,7 +342,8 @@ export class PrismaInventoryRepository implements IInventoryRepository {
           }
 
           if (itemsToUpdate.length > 0) {
-            await Promise.all(itemsToUpdate.map(async (item) => {
+            for (const item of itemsToUpdate) {
+
               const result = await tx.inventoryModel.updateMany({
                 where: {
                   id: item.id,
@@ -359,7 +360,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
               if (result.count === 0) {
                 throw new ConcurrencyException(item.sku.getValue(), item.locationId);
               }
-            }));
+            }
           }
         }
       });
