@@ -60,3 +60,7 @@
 **Learning:** Fetching all inventory records into memory (`findAll()`) to filter by a single location causes extremely high database load and memory usage (O(N) iteration time), degrading performance as the inventory grows. Replacing concurrent database queries with sequential database queries does not make things faster; true optimizations require replacing many queries with a single database level filter, such as adding query string arguments.
 **Action:** Push filtering logic down to the database level using `findAllByLocation(locationId)` instead of fetching everything in memory without filters.
 
+
+## 2024-05-15 - Prisma Promise.all() Transactions
+**Learning:** In Prisma interactive transactions (`$transaction`), firing multiple database operations using `Promise.all` (like `Promise.all(items.map(...))`) causes connection contention and deadlocks because Prisma queues these queries on the single shared transaction connection.
+**Action:** Always refactor sequential updates/inserts within a Prisma transaction from `Promise.all` mapping to a simple synchronous `for...of` loop, unless you can use `updateMany`/`createMany`. This avoids deadlocks and unpredictable behavior while improving reliability.
