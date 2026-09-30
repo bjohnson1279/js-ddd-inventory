@@ -1,25 +1,9 @@
-import { Request, Response } from "express";
-import { AuthController } from "./src/infrastructure/http/controllers/AuthController";
+import { decryptSymmetric } from "./src/infrastructure/utils/security";
 
-async function main() {
-  const req = {
-    body: {
-      tenantId: "tenant-1",
-      email: "test@example.com",
-      password: "password123"
-    }
-  } as Request;
-
-  const res = {
-    status: (code: number) => {
-      console.log(`Status: ${code}`);
-      return {
-        json: (data: any) => console.log(`Data:`, data)
-      };
-    }
-  } as Response;
-
-  // Assuming Prisma is mocked or not connecting to DB, this will probably throw an error.
-  await AuthController.login(req, res);
+const badCipher = "foo";
+try {
+  const dec = decryptSymmetric(badCipher);
+  console.log("Decrypted bad cipher:", dec);
+} catch (e) {
+  console.log("Caught:", e);
 }
-main().catch(console.error);
