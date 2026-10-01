@@ -122,3 +122,8 @@
 **Vulnerability:** The `decrypt` and `decryptSymmetric` functions inside `src/infrastructure/utils/encryption.ts` and `src/infrastructure/utils/security.ts` contained an insecure fallback mechanism where they returned the raw `ciphertext` as plaintext if decryption failed (e.g. invalid key, corrupted data, or missing parts).
 **Learning:** Returning un-decrypted sensitive data on error is a critical security vulnerability that can leak ciphertext. If a key is rotated, the application may unintentionally process or expose raw ciphertext as plaintext. This is a common flaw when developers try to handle legacy plaintext or gracefully degrade, but it fundamentally breaks confidentiality guarantees.
 **Prevention:** Always fail securely by throwing an error (`throw new Error('Decryption failed');`) instead of returning raw un-decrypted payload. Never return the input when a cryptographic operation fails.
+
+## Scope Quarantine, Journaling & Security Test Invariants
+- **Strictly Append-Only Journaling**: When adding learnings to `.jules/*.md`, append strictly at the end of the file. Do not rewrite, deduplicate, or remove lines beginning with `## YYYY-MM-DD`.
+- **Surgical Scope Quarantine**: Modify only the files directly involved in the issue and their corresponding test fixtures. Do not delete, rename, or perform drive-by cleanups of unrelated root-level scripts or legacy files.
+- **Coupled Test Fixture Awareness for Security Invariants**: When changing fail-open fallback behavior (such as hardening decryption to fail closed), always update upstream test mocks that rely on plaintext credentials or mock values.
