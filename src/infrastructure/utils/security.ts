@@ -41,7 +41,7 @@ export function decryptSymmetric(ciphertext: string): string {
   const [ivHex, authTagHex, encryptedHex] = ciphertext.split(':');
   // Fallback for legacy plaintext passwords
   if (!ivHex || !authTagHex || !encryptedHex) {
-    return ciphertext;
+    throw new Error('Decryption failed');
   }
 
   try {
