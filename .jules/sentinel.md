@@ -117,3 +117,8 @@
 - **Strictly Additive Journal Updates**: When updating `.jules/*.md`, strictly append new dated entries (`## YYYY-MM-DD - Title`). NEVER delete, truncate, or overwrite historical learnings or previous entries.
 - **Substantive Code Diff Requirement**: Pull requests must include substantive code changes in `src/`, `app/`, `lib/`, or `tests/`. Never open PRs that modify only `.jules/*.md` journals or root scratch scripts.
 - **Zero Scratch File Commits**: Never commit `*.diff`, `*.patch`, `test_*.ts`, `test_*.js`, `test.cjs`, `fix_*.php`, or `patch_*.py` files. Always remove temporary debugging or verification scripts prior to committing.
+
+## 2024-05-20 - Fix Insecure Decryption Fallback in Security Utils
+**Vulnerability:** The `decrypt` and `decryptSymmetric` functions inside `src/infrastructure/utils/encryption.ts` and `src/infrastructure/utils/security.ts` contained an insecure fallback mechanism where they returned the raw `ciphertext` as plaintext if decryption failed (e.g. invalid key, corrupted data, or missing parts).
+**Learning:** Returning un-decrypted sensitive data on error is a critical security vulnerability that can leak ciphertext. If a key is rotated, the application may unintentionally process or expose raw ciphertext as plaintext. This is a common flaw when developers try to handle legacy plaintext or gracefully degrade, but it fundamentally breaks confidentiality guarantees.
+**Prevention:** Always fail securely by throwing an error (`throw new Error('Decryption failed');`) instead of returning raw un-decrypted payload. Never return the input when a cryptographic operation fails.
