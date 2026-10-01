@@ -12,6 +12,7 @@ import { InventoryItem } from "../../domain/aggregates/InventoryItem";
 import { InventoryCostLayer } from "../../domain/accounting/entities/InventoryCostLayer";
 import { AccountingMethod } from "../../domain/accounting/enums/AccountingMethod";
 import crypto from "crypto";
+import { getInMemoryKit } from "../../infrastructure/http/controllers/KitController";
 
 export interface AssembleKitDTO {
   tenantId: string;
@@ -57,7 +58,6 @@ export class AssembleKit {
     }
 
     if (!kitRecord) {
-      const { getInMemoryKit } = require("../../infrastructure/http/controllers/KitController");
       kitRecord = getInMemoryKit ? getInMemoryKit(kitSku) : null;
     }
 

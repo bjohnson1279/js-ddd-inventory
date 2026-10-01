@@ -11,86 +11,94 @@ model Tenant {
   id          String   @id @default(uuid())
   name        String
   region      String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime @default(now()) @map("created_at")
+  @@map("tenants_legacy")
 }
 
 model InventoryModel {
   id            String    @id
   sku           String
-  locationId    String @default("default")
+  locationId    String @default("default") @map("location_id")
   quantity      Int
   allocated    Int       @default(0)
-  inTransit    Int       @default(0)
+  inTransit    Int       @default(0) @map("in_transit")
   version       Int       @default(1)
 
   @@unique([sku, locationId])
+  @@map("inventories")
 }
 
 
 model BarcodeAssignmentModel {
   id           String   @id
-  variantId    String
-  barcodeValue String   @unique
+  variantId    String @map("variant_id")
+  barcodeValue String   @unique @map("barcode_value")
   symbology    String
   source       String
-  isPrimary    Boolean  @default(false)
-  assignedAt   DateTime @default(now())
+  isPrimary    Boolean  @default(false) @map("is_primary")
+  assignedAt   DateTime @default(now()) @map("assigned_at")
+  @@map("barcode_assignments")
 }
 
 model ProductModel {
   id       String                @id
   name     String
   variants ProductVariantModel[]
+  @@map("products")
 }
 
 model ProductVariantModel {
   id                String       @id
-  productId         String
+  productId         String @map("product_id")
   sku               String       @unique
   attributes        String // Serialized variant attributes JSON string (e.g. [{"name":"size","value":"M"}])
-  weightGrams       Int?
-  volumeCubicMeters Float?
+  weightGrams       Int? @map("weight_grams")
+  volumeCubicMeters Float? @map("volume_cubic_meters")
   product           ProductModel @relation(fields: [productId], references: [id], onDelete: Cascade)
+  @@map("product_variants")
 }
 
 model SerializedItemModel {
   id           String                  @id
-  serialNumber String
+  serialNumber String @map("serial_number")
   sku          String
   status       String
-  locationId   String
-  tenantId     String
-  registeredAt DateTime                @default(now())
+  locationId   String @map("location_id")
+  tenantId     String @map("tenant_id")
+  registeredAt DateTime                @default(now()) @map("registered_at")
   transitions  StatusTransitionModel[]
   
   @@unique([serialNumber, tenantId])
+  @@map("serialized_items")
 }
 
 model ApiToken {
   id                    String            @id @default(uuid())
-  tenantId              String            @unique // foreign key to Tenant entity
+  tenantId              String            @unique @map("tenant_id") // foreign key to Tenant entity
   name                  String            // e.g. 'api-v1', 'admin-dashboard'
   scopes                Json
-  expiresAt             DateTime?         
-  isActive              Boolean           @default(true)
+  expiresAt             DateTime? @map("expires_at")
+  isActive              Boolean           @default(true) @map("is_active")
 
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
 
   @@unique([id])
+  @@map("api_tokens_legacy")
 }
 
 
 model StatusTransitionModel {
   id               String              @id
-  serializedItemId String
-  fromStatus       String
-  toStatus         String
+  serializedItemId String @map("serialized_item_id")
+  fromStatus       String @map("from_status")
+  toStatus         String @map("to_status")
   reason           String?
-  transitionedAt   DateTime
-  actorId          String
-  referenceId      String?
+  transitionedAt   DateTime @map("transitioned_at")
+  actorId          String @map("actor_id")
+  referenceId      String? @map("reference_id")
   serializedItem   SerializedItemModel @relation(fields: [serializedItemId], references: [id], onDelete: Cascade)
+  @@map("status_transitions")
 }
 
 model KitModel {
@@ -98,75 +106,83 @@ model KitModel {
   sku        String              @unique
   name       String
   components KitComponentModel[]
+  @@map("kits")
 }
 
 model KitComponentModel {
   id        String   @id
-  kitId     String
-  variantId String
+  kitId     String @map("kit_id")
+  variantId String @map("variant_id")
   quantity  Int
   kit       KitModel @relation(fields: [kitId], references: [id], onDelete: Cascade)
+  @@map("kit_components")
 }
 
 model InventoryCostLayerModel {
   id                String    @id
-  variantId         String
-  locationId        String?
-  tenantId          String
-  originalQuantity  Int
-  remainingQuantity Int
-  unitCostCents     Int
-  receivedAt        DateTime
-  purchaseOrderId   String
-  isConsumed        Boolean   @default(false)
-  lotNumber         String?
-  expirationDate    DateTime?
+  variantId         String @map("variant_id")
+  locationId        String? @map("location_id")
+  tenantId          String @map("tenant_id")
+  originalQuantity  Int @map("original_quantity")
+  remainingQuantity Int @map("remaining_quantity")
+  unitCostCents     Int @map("unit_cost_cents")
+  receivedAt        DateTime @map("received_at")
+  purchaseOrderId   String @map("purchase_order_id")
+  isConsumed        Boolean   @default(false) @map("is_consumed")
+  lotNumber         String? @map("lot_number")
+  expirationDate    DateTime? @map("expiration_date")
+  @@map("inventory_cost_layers")
 }
 
 model JournalEntryModel {
   id               String             @id
-  tenantId         String
-  entryDate        DateTime
+  tenantId         String @map("tenant_id")
+  entryDate        DateTime @map("entry_date")
   description      String
-  referenceId      String?
-  accountingMethod String
+  referenceId      String? @map("reference_id")
+  accountingMethod String @map("accounting_method")
   lines            JournalLineModel[]
+  @@map("journal_entries")
 }
 
 model JournalLineModel {
   id              String            @id
-  journalEntryId  String
-  accountCode     String
-  accountName     String
-  accountCategory String
-  debitOrCredit   String
-  amountCents     Int
+  journalEntryId  String @map("journal_entry_id")
+  accountCode     String @map("account_code")
+  accountName     String @map("account_name")
+  accountCategory String @map("account_category")
+  debitOrCredit   String @map("debit_or_credit")
+  amountCents     Int @map("amount_cents")
   memo            String?
   journalEntry    JournalEntryModel @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  @@map("journal_lines")
 }
 
 model TenantConfigModel {
-  tenantId         String @id
-  accountingMethod String
-  costingMethod    String
-  currencyCode     String
-  fiscalYearStart  String
+  tenantId         String @id @map("tenant_id")
+  accountingMethod String @map("accounting_method")
+  costingMethod    String @map("costing_method")
+  currencyCode     String @map("currency_code")
+  fiscalYearStart  String @map("fiscal_year_start")
+  @@map("tenant_configs")
 }
 
 model ProcessedWebhookModel {
   id          String   @id
-  processedAt DateTime @default(now())
+  processedAt DateTime @default(now()) @map("processed_at")
+  @@map("processed_webhooks")
 }
 
 model OutboxEventModel {
   id            String    @id @default(uuid())
-  eventName     String
+  eventName     String @map("event_name")
   payload       String
-  occurredOn    DateTime
-  processedAt   DateTime?
+  occurredOn    DateTime @map("occurred_on")
+  processedAt   DateTime? @map("processed_at")
   attempts      Int       @default(0)
-  lastError     String?
-  nextAttemptAt DateTime  @default(now())
+  lastError     String? @map("last_error")
+  nextAttemptAt DateTime  @default(now()) @map("next_attempt_at")
+  @@map("outbox_events")
 }
 
 model WebhookSubscriptionModel {
@@ -174,7 +190,7 @@ model WebhookSubscriptionModel {
   tenantId   String   @map("tenant_id")
   targetUrl  String   @map("target_url")
   secret     String
-  eventTypes String[] @map("event_types")
+  eventTypes String[]
   isActive   Boolean  @default(true) @map("is_active")
   createdAt  DateTime @default(now()) @map("created_at")
 
@@ -199,104 +215,112 @@ model WebhookDeliveryModel {
 
 model PurchaseOrderModel {
   id                  String                   @id
-  purchaseOrderNumber String                   @unique
-  vendorId            String
-  tenantId            String
+  purchaseOrderNumber String                   @unique @map("purchase_order_number")
+  vendorId            String @map("vendor_id")
+  tenantId            String @map("tenant_id")
   status              String
-  locationId          String
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
+  locationId          String @map("location_id")
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
   items               PurchaseOrderItemModel[]
+  @@map("purchase_orders")
 }
 
 model PurchaseOrderItemModel {
   id               String             @id
-  purchaseOrderId  String
-  variantId        String
+  purchaseOrderId  String @map("purchase_order_id")
+  variantId        String @map("variant_id")
   quantity         Int
-  receivedQuantity Int                @default(0)
-  unitCostCents    Int
+  receivedQuantity Int                @default(0) @map("received_quantity")
+  unitCostCents    Int @map("unit_cost_cents")
   purchaseOrder    PurchaseOrderModel @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  @@map("purchase_order_items")
 }
 
 model ReorderPolicyModel {
   id                String   @id
   sku               String
-  locationId        String
-  reorderPoint      Int
-  reorderQuantity   Int
-  safetyStock       Int
+  locationId        String @map("location_id")
+  reorderPoint      Int @map("reorder_point")
+  reorderQuantity   Int @map("reorder_quantity")
+  safetyStock       Int @map("safety_stock")
   dynamicRopEnabled Boolean  @default(false) @map("dynamic_rop_enabled")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@unique([sku, locationId])
+  @@map("reorder_policies")
 }
 
 model InventoryAuditModel {
   id          String                    @id
-  auditNumber String                    @unique
-  tenantId    String
-  locationId  String
+  auditNumber String                    @unique @map("audit_number")
+  tenantId    String @map("tenant_id")
+  locationId  String @map("location_id")
   status      String
-  createdAt   DateTime                  @default(now())
-  updatedAt   DateTime                  @updatedAt
+  createdAt   DateTime                  @default(now()) @map("created_at")
+  updatedAt   DateTime                  @updatedAt @map("updated_at")
   items       InventoryAuditItemModel[]
+  @@map("inventory_audits")
 }
 
 model InventoryAuditItemModel {
   id               String              @id
-  inventoryAuditId String
-  variantId        String
-  expectedQuantity Int
-  countedQuantity  Int?
-  isCounted        Boolean             @default(false)
+  inventoryAuditId String @map("inventory_audit_id")
+  variantId        String @map("variant_id")
+  expectedQuantity Int @map("expected_quantity")
+  countedQuantity  Int? @map("counted_quantity")
+  isCounted        Boolean             @default(false) @map("is_counted")
   inventoryAudit   InventoryAuditModel @relation(fields: [inventoryAuditId], references: [id], onDelete: Cascade)
+  @@map("inventory_audit_items")
 }
 
 model RMAModel {
   id         String         @id
-  rmaNumber  String         @unique
-  tenantId   String
-  customerId String
-  locationId String
+  rmaNumber  String         @unique @map("rma_number")
+  tenantId   String @map("tenant_id")
+  customerId String @map("customer_id")
+  locationId String @map("location_id")
   status     String
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
   items      RMAItemModel[]
+  @@map("rmas")
 }
 
 model RMAItemModel {
   id               String   @id
-  rmaId            String
-  variantId        String
+  rmaId            String @map("rma_id")
+  variantId        String @map("variant_id")
   quantity         Int
-  receivedQuantity Int      @default(0)
-  unitCostCents    Int
+  receivedQuantity Int      @default(0) @map("received_quantity")
+  unitCostCents    Int @map("unit_cost_cents")
   status           String
   disposition      String?
   rma              RMAModel @relation(fields: [rmaId], references: [id], onDelete: Cascade)
+  @@map("rma_items")
 }
 
 model QuarantineItemModel {
   id         String    @id
-  variantId  String
+  variantId  String @map("variant_id")
   quantity   Int
   reason     String
   status     String
-  locationId String
-  tenantId   String
-  createdAt  DateTime  @default(now())
-  resolvedAt DateTime?
+  locationId String @map("location_id")
+  tenantId   String @map("tenant_id")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  resolvedAt DateTime? @map("resolved_at")
+  @@map("quarantine_items")
 }
 
 model DispatchRecordModel {
   id           String   @default(uuid())
   sku          String
-  locationId   String
+  locationId   String @map("location_id")
   quantity     Int
   dispatchedAt DateTime @default(now()) @map("dispatched_at")
-  lotNumber    String?
+  lotNumber    String? @map("lot_number")
 
   @@id([id, dispatchedAt])
   @@map("dispatch_records")
@@ -305,52 +329,56 @@ model DispatchRecordModel {
 model DemandForecastModel {
   id                 String   @id @default(uuid())
   sku                String
-  locationId         String
-  forecastedQuantity Int
-  periodStart        DateTime
-  periodEnd          DateTime
-  confidenceLevel    Float
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  locationId         String @map("location_id")
+  forecastedQuantity Int @map("forecasted_quantity")
+  periodStart        DateTime @map("period_start")
+  periodEnd          DateTime @map("period_end")
+  confidenceLevel    Float @map("confidence_level")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@unique([sku, locationId, periodStart, periodEnd])
+  @@map("demand_forecasts")
 }
 
 model ShipmentModel {
   id                 String   @id @default(uuid())
   sku                String
   quantity           Int
-  destinationAddress String
+  destinationAddress String @map("destination_address")
   carrier            String
-  trackingNumber     String?
-  labelUrl           String?
-  shippingRateCents  Int
+  trackingNumber     String? @map("tracking_number")
+  labelUrl           String? @map("label_url")
+  shippingRateCents  Int @map("shipping_rate_cents")
   status             String
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  @@map("shipments")
 }
 
 model TenantModel {
   id          String      @id
   name        String
-  createdAt   DateTime    @default(now())
+  createdAt   DateTime    @default(now()) @map("created_at")
   users       UserModel[]
   customRoles RoleModel[]
+  @@map("tenants")
 }
 
 model UserModel {
   id           String          @id
-  tenantId     String
+  tenantId     String @map("tenant_id")
   email        String
-  passwordHash String
+  passwordHash String @map("password_hash")
   name         String
   active       Boolean         @default(true)
-  createdAt    DateTime        @default(now())
+  createdAt    DateTime        @default(now()) @map("created_at")
   tenant       TenantModel     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userRoles    UserRoleModel[]
   apiTokens    ApiTokenModel[]
 
   @@unique([tenantId, email])
+  @@map("users")
 }
 
 model RoleModel {
@@ -362,6 +390,7 @@ model RoleModel {
   userRoles       UserRoleModel[]
   rolePermissions RolePermissionModel[]
   tenant          TenantModel?          @relation(fields: [tenantId], references: [id])
+  @@map("roles")
 }
 
 model PermissionModel {
@@ -376,81 +405,89 @@ model PermissionModel {
 }
 
 model UserRoleModel {
-  userId String
-  roleId String
+  userId String @map("user_id")
+  roleId String @map("role_id")
   user   UserModel @relation(fields: [userId], references: [id], onDelete: Cascade)
   role   RoleModel @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([userId, roleId])
+  @@map("user_roles")
 }
 
 model RolePermissionModel {
-  roleId       String
-  permissionId String
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
   role         RoleModel       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission   PermissionModel @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
+  @@map("role_permissions")
 }
 
 model ApiTokenModel {
   id        String    @id
-  userId    String
-  tenantId  String
-  tokenHash String    @unique
-  expiresAt DateTime
-  createdAt DateTime  @default(now())
+  userId    String @map("user_id")
+  tenantId  String @map("tenant_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
   user      UserModel @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("api_tokens")
 }
 
 model WarehouseLocationModel {
   id                   String   @id // e.g. "WH1-ZONEA-A03-R02-S01-B10"
-  warehouseId          String
+  warehouseId          String @map("warehouse_id")
   zone                 String
   aisle                String
   rack                 String
   shelf                String
   bin                  String
-  maxWeightGrams       Int
-  maxVolumeCubicMeters Float
-  gridX                Int      @default(0)
-  gridY                Int      @default(0)
+  maxWeightGrams       Int @map("max_weight_grams")
+  maxVolumeCubicMeters Float @map("max_volume_cubic_meters")
+  gridX                Int      @default(0) @map("grid_x")
+  gridY                Int      @default(0) @map("grid_y")
   width                Int      @default(1)
   height               Int      @default(1)
-  createdAt            DateTime @default(now())
+  createdAt            DateTime @default(now()) @map("created_at")
 
   @@unique([warehouseId, zone, aisle, rack, shelf, bin])
+  @@map("warehouse_locations")
 }
 
 model NotificationModel {
   id        String   @id @default(uuid())
-  tenantId  String
+  tenantId  String @map("tenant_id")
   title     String
   message   String
   type      String   @default("info")
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("notifications")
 }
 
 model NetsuiteJournalMappingModel {
   id                String   @id @default(uuid())
-  journalEntryId    String   @unique
-  netsuiteJournalId String   @unique
-  createdAt         DateTime @default(now())
+  journalEntryId    String   @unique @map("journal_entry_id")
+  netsuiteJournalId String   @unique @map("netsuite_journal_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  @@map("netsuite_journal_mappings")
 }
 
 model XeroJournalMappingModel {
   id             String   @id @default(uuid())
-  journalEntryId String   @unique
-  xeroJournalId  String   @unique
-  createdAt      DateTime @default(now())
+  journalEntryId String   @unique @map("journal_entry_id")
+  xeroJournalId  String   @unique @map("xero_journal_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  @@map("xero_journal_mappings")
 }
 
 model QuickbooksJournalMappingModel {
   id                  String   @id @default(uuid())
-  journalEntryId      String   @unique
-  quickbooksJournalId String   @unique
-  createdAt           DateTime @default(now())
+  journalEntryId      String   @unique @map("journal_entry_id")
+  quickbooksJournalId String   @unique @map("quickbooks_journal_id")
+  createdAt           DateTime @default(now()) @map("created_at")
+  @@map("quickbooks_journal_mappings")
 }
 
 model AuditDiscrepancyModel {
@@ -470,14 +507,15 @@ model AuditDiscrepancyModel {
 
 model ComplianceLedgerModel {
   id             String   @id @default(uuid())
-  sequenceNumber Int      @unique
-  tenantId       String
-  eventType      String
+  sequenceNumber Int      @unique @map("sequence_number")
+  tenantId       String @map("tenant_id")
+  eventType      String @map("event_type")
   payload        String   @db.Text
   timestamp      DateTime @default(now())
-  previousHash   String
+  previousHash   String @map("previous_hash")
   hash           String
   signature      String
+  @@map("compliance_ledgers")
 }
 
 model RfidTagModel {
@@ -546,7 +584,7 @@ model RmaItem {
   inspectedAt DateTime?                      @map("inspected_at")
   rma         ReturnMerchandiseAuthorization @relation(fields: [rmaId], references: [id], onDelete: Cascade)
 
-  @@map("rma_items")
+  @@map("rma_items_legacy")
 }
 
 model SupplierASN {
