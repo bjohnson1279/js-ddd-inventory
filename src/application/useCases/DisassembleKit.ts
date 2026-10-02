@@ -91,14 +91,14 @@ export class DisassembleKit {
       activeLayersMap = await this.costLayerRepository.getActiveLayersByVariantIds(variantIds, "asc");
     } else {
       activeLayersMap = new Map();
-      await Promise.all(kitRecord.components.map(async (component: any) => {
+      for (const component of kitRecord.components) {
         try {
           const layers = await this.costLayerRepository.getActiveLayers(component.variantId, "asc");
           activeLayersMap.set(component.variantId, layers);
         } catch (err) {
           activeLayersMap.set(component.variantId, []);
         }
-      }));
+      }
     }
 
     const componentEstimates = kitRecord.components.map((component: any) => {
@@ -144,7 +144,11 @@ export class DisassembleKit {
     if ('findBySkus' in this.inventoryRepository && typeof (this.inventoryRepository as any).findBySkus === 'function') {
       inventoryItems = await (this.inventoryRepository as any).findBySkus(skusToFetch, locationId);
     } else {
-      const results = await Promise.all(skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, locationId)));
+      const results = [];
+      for (const sku of skusToFetch) {
+        const item = await this.inventoryRepository.findBySku(sku, locationId);
+        results.push(item);
+      }
       inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
     }
     const inventoryItemsMap = new Map(
