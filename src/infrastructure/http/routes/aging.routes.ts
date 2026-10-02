@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../../database/prisma';
 class AgingAnalysisService {
-  generateAgingReport(layers: any[]) { return []; }
+  generateAgingReport(layers: any[]) { return { buckets: [], totalValueCents: 0 }; }
 }
 class DeadStockDetector {
   identifyDeadStock(skus: string[], dispatches: any[]) { return []; }
@@ -50,7 +50,7 @@ agingRouter.get('/dead-stock/:tenantId', async (req: Request, res: Response) => 
       where: { tenantId, remainingQuantity: { gt: 0 } },
     });
     
-    const inventorySkus = inventory.map(i => i.variantId);
+    const inventorySkus = inventory.map((i: any) => i.variantId);
 
     const dispatches = await prisma.dispatchRecordModel.findMany({
       where: {

@@ -112,3 +112,7 @@
 - **Strictly Append-Only Journaling**: When adding learnings to `.jules/*.md`, append strictly at the end of the file. Do not rewrite, deduplicate, or remove lines beginning with `## YYYY-MM-DD`.
 - **Surgical Scope Quarantine**: Modify only the files directly involved in the issue and their corresponding test fixtures. Do not delete, rename, or perform drive-by cleanups of unrelated root-level scripts or legacy files.
 - **Coupled Test Fixture Awareness for Security Invariants**: When changing fail-open fallback behavior (such as hardening decryption to fail closed), always update upstream test mocks that rely on plaintext credentials or mock values.
+
+## 2024-03-24 - Avoiding Promise.all map for Demand Planning
+**Learning:** Using `Promise.all` wrapped over an array to fire numerous single-record database lookups inside `GetDemandPlanningReport` causes N+1 query latencies, massive connection pool acquisitions, and high RDBMS contention, leading to database timeouts.
+**Action:** Always prefer iterating sequentially or executing database lookups using bulk operations where possible instead of using `Promise.all` to query database row by row in parallel. This significantly reduces database connection pool exhaustion and deadlocks.
