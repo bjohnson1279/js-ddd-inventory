@@ -74,7 +74,11 @@ export class GetDemandPlanningReport {
       }
     }
 
-    const reportItemsPromises = inventoryItems.map(async (item) => {
+    // Optimization: Iterate sequentially rather than concurrently via Promise.all.
+    // This prevents database connection pool exhaustion and high RDBMS contention
+    // when processing hundreds of inventory items at once.
+    const reportItems = [];
+    for (const item of inventoryItems) {
       const skuStr = item.sku.getValue();
 
       // Calculate Sales Velocity and Fetch Reorder Policy concurrently
@@ -101,7 +105,7 @@ export class GetDemandPlanningReport {
       const actionRequired = item.quantity.getValue() <= reorderPoint;
       const recommendedOrderQuantity = actionRequired ? reorderQuantity : 0;
 
-      return {
+      reportItems.push({
         sku: skuStr,
         locationId,
         currentStock: item.quantity.getValue(),
@@ -120,9 +124,9 @@ export class GetDemandPlanningReport {
 
         actionRequired,
         recommendedOrderQuantity
-      };
-    });
+      });
+    }
 
-    return Promise.all(reportItemsPromises);
+    return reportItems;
   }
 }

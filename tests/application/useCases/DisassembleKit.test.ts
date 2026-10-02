@@ -14,8 +14,10 @@ jest.mock("../../../src/infrastructure/database/prisma", () => ({
 }));
 
 jest.mock("../../../src/infrastructure/http/controllers/KitController", () => ({
+  __esModule: true,
   getInMemoryKit: jest.fn(),
-}), { virtual: true });
+  KitController: class KitController {},
+}));
 
 describe("DisassembleKit Use Case", () => {
   let disassembleKit: DisassembleKit;
