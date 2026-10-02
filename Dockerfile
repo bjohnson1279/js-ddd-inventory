@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
-RUN npm ci
+RUN npm install
 
 COPY . .
 RUN npx prisma generate
@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt
 COPY package*.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
-RUN npm ci
+RUN npm install
 
 COPY --from=builder /app/dist ./dist
 RUN npx prisma generate
