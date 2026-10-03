@@ -14,6 +14,7 @@ export class InMemoryWarehouseLocationRepository implements IWarehouseLocationRe
   }
 
   async findByIds(ids: LocationId[]): Promise<WarehouseLocation[]> {
+    // Bolt Optimization: Batch fetch locations memory implementation
     return ids
       .map(id => this.locations.get(id.value))
       .filter((loc): loc is WarehouseLocation => loc !== undefined);

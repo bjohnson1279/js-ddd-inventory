@@ -11,9 +11,19 @@ describe("PickingRouteOptimizer", () => {
     mockLocationRepo = {
       save: jest.fn(),
       findById: jest.fn(),
+      findByIds: jest.fn(),
       delete: jest.fn(),
       findAll: jest.fn(),
     };
+        (mockLocationRepo.findByIds as jest.Mock).mockImplementation(async (ids: LocationId[]) => {
+      const results: WarehouseLocation[] = [];
+      for (const id of ids) {
+         // evaluate the CURRENT findById mock implementation
+         const res = await mockLocationRepo.findById(id);
+         if (res) results.push(res);
+      }
+      return results;
+    });
     optimizer = new PickingRouteOptimizer(mockLocationRepo);
   });
 
@@ -24,6 +34,7 @@ describe("PickingRouteOptimizer", () => {
 
   it("should throw an error if a location is not found", async () => {
     mockLocationRepo.findById.mockResolvedValue(null);
+    (mockLocationRepo.findByIds as jest.Mock).mockResolvedValue([]);
     const input: PickItemInput[] = [{ sku: "SKU1", quantity: 1, locationId: "WH1-A1" }];
     await expect(optimizer.optimizeRoute(input)).rejects.toThrow("Warehouse location with ID WH1-A1 not found.");
   });
