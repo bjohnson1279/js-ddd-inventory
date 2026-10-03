@@ -44,7 +44,7 @@ describe("WebhookDeliveryWorker (Express)", () => {
       id: "sub-1",
       isActive: true,
       targetUrl: "https://example.com/express-webhook",
-      secret: "express-secret"
+      secret: "1f5f625be6896038494e8bfe:58fdf91158acc8285621537087ea98cf:3b70477a5c057ea32cde9fb8dd97"
     };
 
     (prisma.webhookDeliveryModel.findMany as jest.Mock).mockResolvedValue([mockDelivery]);
