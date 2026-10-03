@@ -65,6 +65,7 @@ export class PrismaWarehouseLocationRepository implements IWarehouseLocationRepo
   }
 
   async findByIds(ids: LocationId[]): Promise<WarehouseLocation[]> {
+    // Bolt Optimization: Batch fetch locations utilizing in operator to prevent N+1 queries during order routing
     const models = await this.prisma.warehouseLocationModel.findMany({
       where: {
         id: {
