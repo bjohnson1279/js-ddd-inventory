@@ -1,6 +1,7 @@
 import { DisassembleKit } from "../../../src/application/useCases/DisassembleKit";
 import { prisma } from "../../../src/infrastructure/database/prisma";
 import { SKU } from "../../../src/domain/valueObjects/SKU";
+import { getInMemoryKit } from "../../../src/infrastructure/http/controllers/KitController";
 import { Quantity } from "../../../src/domain/valueObjects/Quantity";
 import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
 
@@ -64,8 +65,7 @@ describe("DisassembleKit Use Case", () => {
     // Arrange
     (prisma.kitModel.findUnique as jest.Mock).mockRejectedValue(Object.assign(new Error(), { code: 'ECONNREFUSED' }));
 
-    const { getInMemoryKit } = require("../../../src/infrastructure/http/controllers/KitController");
-    (getInMemoryKit as jest.Mock).mockReturnValue(null);
+        (getInMemoryKit as jest.Mock).mockReturnValue(null);
 
     const dto = {
       tenantId: "tenant-1",
@@ -90,8 +90,7 @@ describe("DisassembleKit Use Case", () => {
     // Arrange
     (prisma.kitModel.findUnique as jest.Mock).mockRejectedValue(Object.assign(new Error(), { code: 'ECONNREFUSED' }));
 
-    const { getInMemoryKit } = require("../../../src/infrastructure/http/controllers/KitController");
-    (getInMemoryKit as jest.Mock).mockReturnValue({
+        (getInMemoryKit as jest.Mock).mockReturnValue({
       sku: "KIT-123",
       components: [
         { variantId: "COMP-1", quantity: 2 }
@@ -130,8 +129,7 @@ describe("DisassembleKit Use Case", () => {
     // Arrange
     (prisma.kitModel.findUnique as jest.Mock).mockRejectedValue(Object.assign(new Error("Explicit retrieval failure"), { name: 'PrismaClientKnownRequestError' }));
 
-    const { getInMemoryKit } = require("../../../src/infrastructure/http/controllers/KitController");
-    (getInMemoryKit as jest.Mock).mockReturnValue({
+        (getInMemoryKit as jest.Mock).mockReturnValue({
       sku: "KIT-999",
       components: [
         { variantId: "COMP-2", quantity: 1 }

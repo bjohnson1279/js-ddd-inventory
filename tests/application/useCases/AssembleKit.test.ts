@@ -3,6 +3,7 @@ import { prisma } from "../../../src/infrastructure/database/prisma";
 import { Quantity } from "../../../src/domain/valueObjects/Quantity";
 import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
 import { SKU } from "../../../src/domain/valueObjects/SKU";
+import { getInMemoryKit } from "../../../src/infrastructure/http/controllers/KitController";
 import { AccountingMethod } from "../../../src/domain/accounting/enums/AccountingMethod";
 import { InventoryCostLayer } from "../../../src/domain/accounting/entities/InventoryCostLayer";
 import crypto from "crypto";
@@ -77,8 +78,7 @@ describe("AssembleKit Use Case", () => {
   it("should throw an error if kit is not found in prisma or memory", async () => {
     (prisma.kitModel.findUnique as jest.Mock).mockResolvedValue(null);
 
-    const { getInMemoryKit } = require("../../../src/infrastructure/http/controllers/KitController");
-    (getInMemoryKit as jest.Mock).mockReturnValue(null);
+        (getInMemoryKit as jest.Mock).mockReturnValue(null);
 
     const dto = {
       tenantId: "tenant-1",
@@ -141,8 +141,7 @@ describe("AssembleKit Use Case", () => {
   it("should assemble kit successfully when kit is found via in-memory fallback", async () => {
     (prisma.kitModel.findUnique as jest.Mock).mockRejectedValue(Object.assign(new Error("Database offline"), { code: 'P1001' }));
 
-    const { getInMemoryKit } = require("../../../src/infrastructure/http/controllers/KitController");
-    (getInMemoryKit as jest.Mock).mockReturnValue({
+        (getInMemoryKit as jest.Mock).mockReturnValue({
       sku: "KIT-123",
       components: [
         { variantId: "COMP-1", quantity: 2 }
@@ -191,8 +190,7 @@ describe("AssembleKit Use Case", () => {
   it("should throw an error if there is insufficient stock for a component", async () => {
     (prisma.kitModel.findUnique as jest.Mock).mockRejectedValue(Object.assign(new Error(), { code: 'ECONNREFUSED' }));
 
-    const { getInMemoryKit } = require("../../../src/infrastructure/http/controllers/KitController");
-    (getInMemoryKit as jest.Mock).mockReturnValue({
+        (getInMemoryKit as jest.Mock).mockReturnValue({
       sku: "KIT-123",
       components: [
         { variantId: "COMP-1", quantity: 2 }
