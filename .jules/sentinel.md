@@ -127,3 +127,8 @@
 - **Strictly Append-Only Journaling**: When adding learnings to `.jules/*.md`, append strictly at the end of the file. Do not rewrite, deduplicate, or remove lines beginning with `## YYYY-MM-DD`.
 - **Surgical Scope Quarantine**: Modify only the files directly involved in the issue and their corresponding test fixtures. Do not delete, rename, or perform drive-by cleanups of unrelated root-level scripts or legacy files.
 - **Coupled Test Fixture Awareness for Security Invariants**: When changing fail-open fallback behavior (such as hardening decryption to fail closed), always update upstream test mocks that rely on plaintext credentials or mock values.
+
+## 2024-10-03 - SQL Injection in Identifier Formatting Fallback
+**Vulnerability:** A custom fallback `format` function used for generating raw PostgreSQL queries in `TenantProvisioner.ts` was vulnerable to SQL Injection. It replaced `%I` with `"${val}"` without escaping double quotes inside `val`, allowing an attacker to inject arbitrary SQL by embedding double quotes in user input (like a database name).
+**Learning:** When implementing custom formatters or interpolators for raw SQL queries, simply wrapping user input in quotes is insufficient and highly dangerous.
+**Prevention:** Always use established, battle-tested libraries (like `pg-format`) for parameterized queries and identifier formatting. If a custom fallback is absolutely necessary, ensure proper escaping of all relevant characters (e.g., replacing `"` with `""` and `'` with `''`).
