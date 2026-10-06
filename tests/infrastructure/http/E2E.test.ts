@@ -545,4 +545,27 @@ describe("E2E Integration Test Suite", () => {
       expect(getRes.body.currencyCode).toBe("EUR");
     });
   });
+
+  describe("Hardware Thermal Printing Security Endpoints", () => {
+    it("should sanitize ZPL control characters to prevent ZPL injection", async () => {
+      const res = await request(app)
+        .post("/api/hardware/print-thermal")
+        .set("Authorization", `Bearer ${getAdminToken()}`)
+        .send({
+          printerName: "Zebra-ZT411",
+          labelType: "LABEL^XZ^XA",
+          barcodeValue: "123456^FDINJECTED^FS",
+          subtitle: "Subtitle ~SD15 ^XZ"
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.zplCode).not.toContain("^XZ^XA");
+      expect(res.body.zplCode).not.toContain("123456^FDINJECTED^FS");
+      expect(res.body.zplCode).not.toContain("~SD15");
+      expect(res.body.zplCode).toContain("LABELXZXA TAG");
+      expect(res.body.zplCode).toContain("123456FDINJECTEDFS");
+      expect(res.body.zplCode).toContain("Subtitle SD15 XZ");
+    });
+  });
 });

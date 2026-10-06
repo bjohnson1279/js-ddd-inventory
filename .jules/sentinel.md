@@ -132,3 +132,7 @@
 **Vulnerability:** A custom fallback `format` function used for generating raw PostgreSQL queries in `TenantProvisioner.ts` was vulnerable to SQL Injection. It replaced `%I` with `"${val}"` without escaping double quotes inside `val`, allowing an attacker to inject arbitrary SQL by embedding double quotes in user input (like a database name).
 **Learning:** When implementing custom formatters or interpolators for raw SQL queries, simply wrapping user input in quotes is insufficient and highly dangerous.
 **Prevention:** Always use established, battle-tested libraries (like `pg-format`) for parameterized queries and identifier formatting. If a custom fallback is absolutely necessary, ensure proper escaping of all relevant characters (e.g., replacing `"` with `""` and `'` with `''`).
+
+## Security Mitigation (ZPL Injection)
+* **Vulnerability**: Unsanitized user inputs in ZPL label templates allow ZPL command injection (`^` and `~`), enabling attackers to escape string fields (`^FD...^FS`), inject arbitrary printer commands (such as `^XZ` to terminate fields early or immediate printer commands like `~SD`), or alter printed label content.
+* **Fix**: Pass all untrusted inputs through a ZPL sanitizer function (`escapeZpl`) that strips or escapes `^` and `~` control characters prior to template interpolation.
