@@ -1,7 +1,7 @@
 import crypto from "crypto";
 
 const algorithm = 'aes-256-gcm';
-const envKey = process.env.ENCRYPTION_KEY || (process.env.NODE_ENV === 'test' ? 'test_fallback_secret_key_123456' : undefined);
+const envKey = process.env.ENCRYPTION_KEY;
 if (!envKey) {
   throw new Error("ENCRYPTION_KEY environment variable is required for security.");
 }
