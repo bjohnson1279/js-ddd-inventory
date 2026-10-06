@@ -4,7 +4,6 @@ import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
 import { format as formatCsv } from "fast-csv";
 import fs from "fs";
-import crypto from "crypto";
 
 export class ReportGeneratorService {
   private fileStorage = new FileStorageService();
