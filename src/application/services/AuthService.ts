@@ -1,45 +1,93 @@
 import jwt from 'jsonwebtoken';
+import * as crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
-import { IApiTokenEntity, ApiTokenPayload } from '../entities/ApiToken';
+import { ApiTokenPayload } from '../entities/ApiToken';
 import { IAuthService, TokenPayload } from '../ports/IAuthService';
 
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'test' ? 'test-jwt-secret' : undefined);
-if (!JWT_SECRET) {
+export interface JWK {
+  kty: string;
+  kid?: string;
+  use?: string;
+  alg?: string;
+  n?: string;
+  e?: string;
+  [key: string]: unknown;
+}
+
+export interface JWKS {
+  keys: JWK[];
+}
+
+const envSecret = process.env.JWT_SECRET || (process.env.NODE_ENV === 'test' ? 'test-jwt-secret' : undefined);
+if (!envSecret) {
   throw new Error('JWT_SECRET environment variable is required for security.');
 }
+const JWT_SECRET: string = envSecret;
 const JWT_EXPIRY = 86400; // hours
 const DEFAULT_SCOPES: string[] = ['read:inventory'];
 
 export class AuthService implements IAuthService {
   private prisma: PrismaClient;
-  private tokenIssuer: jwt.SignatureProvider = (payload) =>
-    jwt.sign(payload, JWT_SECRET);
+  private jwks?: JWKS;
 
-  constructor(prisma: PrismaClient) {
+  constructor(prisma: PrismaClient, jwks?: JWKS) {
     this.prisma = prisma;
+    this.jwks = jwks;
   }
 
-  async createToken(claims: Omit<TokenPayload, 'iat' | 'exp'>): string {
+  setJWKS(jwks: JWKS) {
+    this.jwks = jwks;
+  }
+
+  async createToken(claims: Omit<TokenPayload, 'iat' | 'exp'>): Promise<string> {
     const payload: ApiTokenPayload = {
-      tenantId: claims.tenantId,
+      tenantId: claims.tenantId as string,
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor((Date.now() + JWT_EXPIRY * 3600) / 1000),
-      scopes: claims.scopes ?? DEFAULT_SCOPES,
+      scopes: (claims.scopes as string[]) ?? DEFAULT_SCOPES,
     };
 
-    return this.tokenIssuer(payload);
+    return jwt.sign(payload, JWT_SECRET, { issuer: 'https://inventory.example.com' });
   }
 
-  async verifyToken(token: string): TokenPayload | null {
+  private getKeyFromJWKS(kid?: string): string | null {
+    if (!this.jwks || !this.jwks.keys || this.jwks.keys.length === 0) {
+      return null;
+    }
+    const matchingKey = kid
+      ? this.jwks.keys.find((k) => k.kid === kid)
+      : this.jwks.keys[0];
+
+    if (!matchingKey) return null;
+
     try {
+      const keyObj = crypto.createPublicKey({ key: matchingKey as any, format: 'jwk' });
+      return keyObj.export({ type: 'spki', format: 'pem' }) as string;
+    } catch {
+      return null;
+    }
+  }
+
+  async verifyToken(token: string): Promise<TokenPayload | null> {
+    try {
+      let secretOrKey: string = JWT_SECRET;
+
+      if (this.jwks) {
+        const decodedHeader = jwt.decode(token, { complete: true })?.header;
+        const pemKey = this.getKeyFromJWKS(decodedHeader?.kid);
+        if (pemKey) {
+          secretOrKey = pemKey;
+        }
+      }
+
       const payload = jwt.verify(
         token,
-        JWT_SECRET,
-        { issuer: 'https://inventory.example.com' } // TODO: add JWKS support
+        secretOrKey,
+        { issuer: 'https://inventory.example.com' }
       ) as jwt.JwtPayload;
 
       return { tenantId: payload.tenantId, iat: payload.iat as number, exp: payload.exp as number } as TokenPayload;
-    } catch (err) {
+    } catch (err: any) {
       if (err.name === 'JsonWebTokenError') {
         throw new Error('TOKEN_INVALID');
       }
@@ -52,43 +100,30 @@ export class AuthService implements IAuthService {
       const payload = await this.verifyToken(token);
       if (!payload) return false;
 
-      const result = await this.prisma.apiTokens.update({
+      const result = await this.prisma.apiToken.update({
         where: { id: token },
-        data: { isActive: false, deletedAt: new Date() },
+        data: { isActive: false },
       });
 
-      return result.updated === true;
-    } catch (err) {
+      return Boolean(result);
+    } catch (err: any) {
       if (err.name === 'PrismaClientError') {
         throw err;
       }
       return false;
     }
   }
-}
 
-export const authenticateRequestMiddleware = async (req: Express.Request): Promise<{ tenantId?: string }> => {
-  try {
-    // Check for Authorization header (Bearer token) or Query parameter (?token=...)
-    let authHeaderValue = req.headers['authorization']?.replace(/^Bearer /, '');
-
-    if (!authHeaderValue && !req.query.token) {
+  async validateRequest(requestHeaders: Record<string, string>): Promise<{ tenantId?: string }> {
+    const authHeader = requestHeaders['authorization'] || requestHeaders['Authorization'];
+    if (!authHeader) {
       throw new Error('TOKEN_NOT_FOUND');
     }
-
-    const token = authHeaderValue || String(req.query.token);
-
-    // Verify the token and extract tenantId
-    try {
-      await this.authService.verifyToken(token)!; // throws error if invalid/expired
-      return { tenantId: (await this.authService.verifyToken(token))!.tenantId };
-    } catch (err) {
-      if (err.name === 'JsonWebTokenError' || err.message.includes('TOKEN_')) {
-        throw new Error(err as string); // re-throw with auth error code
-      }
+    const token = authHeader.replace(/^Bearer /, '');
+    const payload = await this.verifyToken(token);
+    if (!payload) {
       throw new Error('TOKEN_INVALID');
     }
-  } catch (err) {
-    return Promise.reject({ name: 'AUTH_ERROR', message: `${err.name}: ${err.message}` });
+    return { tenantId: payload.tenantId };
   }
-};
+}
