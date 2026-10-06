@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { IApiTokenEntity, ApiTokenPayload } from '../entities/ApiToken';
@@ -10,13 +11,32 @@ if (!JWT_SECRET) {
 const JWT_EXPIRY = 86400; // hours
 const DEFAULT_SCOPES: string[] = ['read:inventory'];
 
+export interface JwksKey {
+  kty: string;
+  kid?: string;
+  use?: string;
+  alg?: string;
+  n?: string;
+  e?: string;
+  [key: string]: unknown;
+}
+
+export interface AuthServiceOptions {
+  jwksKeys?: JwksKey[];
+  jwksUri?: string;
+}
+
 export class AuthService implements IAuthService {
   private prisma: PrismaClient;
+  private jwksKeys: JwksKey[];
+  private jwksUri?: string;
   private tokenIssuer: jwt.SignatureProvider = (payload) =>
     jwt.sign(payload, JWT_SECRET);
 
-  constructor(prisma: PrismaClient) {
+  constructor(prisma: PrismaClient, options?: AuthServiceOptions) {
     this.prisma = prisma;
+    this.jwksKeys = options?.jwksKeys || [];
+    this.jwksUri = options?.jwksUri;
   }
 
   async createToken(claims: Omit<TokenPayload, 'iat' | 'exp'>): string {
@@ -32,15 +52,28 @@ export class AuthService implements IAuthService {
 
   async verifyToken(token: string): TokenPayload | null {
     try {
+      const decodedHeader = jwt.decode(token, { complete: true }) as { header?: { kid?: string; alg?: string } } | null;
+      let verificationSecretOrKey: string = JWT_SECRET;
+
+      if (decodedHeader?.header?.kid) {
+        const matchingKey = this.jwksKeys.find((key) => key.kid === decodedHeader.header?.kid);
+        if (matchingKey) {
+          const publicKey = crypto.createPublicKey({ key: matchingKey as crypto.JsonWebKey, format: 'jwk' });
+          verificationSecretOrKey = publicKey.export({ format: 'pem', type: 'spki' }).toString();
+        } else if (this.jwksKeys.length > 0) {
+          throw new Error('TOKEN_INVALID');
+        }
+      }
+
       const payload = jwt.verify(
         token,
-        JWT_SECRET,
-        { issuer: 'https://inventory.example.com' } // TODO: add JWKS support
+        verificationSecretOrKey,
+        { issuer: 'https://inventory.example.com' }
       ) as jwt.JwtPayload;
 
       return { tenantId: payload.tenantId, iat: payload.iat as number, exp: payload.exp as number } as TokenPayload;
-    } catch (err) {
-      if (err.name === 'JsonWebTokenError') {
+    } catch (err: any) {
+      if (err.name === 'JsonWebTokenError' || err.message === 'TOKEN_INVALID') {
         throw new Error('TOKEN_INVALID');
       }
       return null;
@@ -58,7 +91,7 @@ export class AuthService implements IAuthService {
       });
 
       return result.updated === true;
-    } catch (err) {
+    } catch (err: any) {
       if (err.name === 'PrismaClientError') {
         throw err;
       }
@@ -82,13 +115,13 @@ export const authenticateRequestMiddleware = async (req: Express.Request): Promi
     try {
       await this.authService.verifyToken(token)!; // throws error if invalid/expired
       return { tenantId: (await this.authService.verifyToken(token))!.tenantId };
-    } catch (err) {
+    } catch (err: any) {
       if (err.name === 'JsonWebTokenError' || err.message.includes('TOKEN_')) {
         throw new Error(err as string); // re-throw with auth error code
       }
       throw new Error('TOKEN_INVALID');
     }
-  } catch (err) {
+  } catch (err: any) {
     return Promise.reject({ name: 'AUTH_ERROR', message: `${err.name}: ${err.message}` });
   }
 };
