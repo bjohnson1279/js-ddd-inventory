@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
-import { IApiTokenEntity, ApiTokenPayload } from '../entities/ApiToken';
+import { ApiTokenPayload } from '../entities/ApiToken';
 import { IAuthService, TokenPayload } from '../ports/IAuthService';
 
 const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'test' ? 'test-jwt-secret' : undefined);
