@@ -132,3 +132,7 @@
 **Vulnerability:** A custom fallback `format` function used for generating raw PostgreSQL queries in `TenantProvisioner.ts` was vulnerable to SQL Injection. It replaced `%I` with `"${val}"` without escaping double quotes inside `val`, allowing an attacker to inject arbitrary SQL by embedding double quotes in user input (like a database name).
 **Learning:** When implementing custom formatters or interpolators for raw SQL queries, simply wrapping user input in quotes is insufficient and highly dangerous.
 **Prevention:** Always use established, battle-tested libraries (like `pg-format`) for parameterized queries and identifier formatting. If a custom fallback is absolutely necessary, ensure proper escaping of all relevant characters (e.g., replacing `"` with `""` and `'` with `''`).
+
+## Security Mitigation (Environment-Specific JWT Secret Fallback)
+* When configuring cryptographic secrets such as `JWT_SECRET`, do not allow weak fallback values to be evaluated in production or staging environments via logical fallback chains (e.g. `process.env.JWT_SECRET || 'fallback'`).
+* Isolate fallback defaults strictly to test environments by checking `process.env.NODE_ENV === 'test'` explicitly or throwing an error when `JWT_SECRET` is unset in non-test environments.
