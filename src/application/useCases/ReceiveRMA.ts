@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import { IRMARepository } from "../../domain/repositories/IRMARepository";
 import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
 import { ICostLayerRepository } from "../../domain/repositories/ICostLayerRepository";
@@ -17,6 +17,7 @@ import { batchSave } from "../../utils/batchSave";
 import { AccountingJournalService } from "../../domain/accounting/services/AccountingJournalService";
 import { AccountingMethod } from "../../domain/accounting/enums/AccountingMethod";
 import { SerialNumber } from "../../domain/serial/valueObjects/SerialNumber";
+import { SerializedItem } from "../../domain/serial/aggregates/SerializedItem";
 
 export interface ReceiveRMAItemDTO {
   variantId: string;
@@ -73,13 +74,32 @@ export class ReceiveRMA {
     const preFetchedItems = new Map<string, InventoryItem>();
     if (this.inventoryRepository.findBySkus) {
       for (const [locId, skus] of skusByLocation.entries()) {
-         const skuObjs = Array.from(skus).map(s => SKU.create(s));
+         const skuObjs = Array.from(skus).map(s => SKU.create(s as string));
          if (skuObjs.length > 0) {
              const items = await this.inventoryRepository.findBySkus(skuObjs, locId);
              for (const item of items) {
                  preFetchedItems.set(`${locId}|${item.sku.getValue()}`, item);
              }
          }
+      }
+    }
+
+    // Pre-fetch serialized items to avoid N+1 queries
+    const preFetchedSerials = new Map<string, SerializedItem>();
+    if (this.serializedItemRepository && this.serializedItemRepository.findBySerials) {
+      const allSerialsToFetch: SerialNumber[] = [];
+      for (const item of dto.items) {
+        if (item.serialNumbers) {
+          for (const sn of item.serialNumbers) {
+            allSerialsToFetch.push(new SerialNumber(sn));
+          }
+        }
+      }
+      if (allSerialsToFetch.length > 0) {
+        const fetchedSerials = await this.serializedItemRepository.findBySerials(allSerialsToFetch, rma.tenantId);
+        for (const serialItem of fetchedSerials) {
+          preFetchedSerials.set(serialItem.serialNumber.value, serialItem);
+        }
       }
     }
 
@@ -191,7 +211,10 @@ export class ReceiveRMA {
       if (item.serialNumbers && this.serializedItemRepository) {
         for (const sn of item.serialNumbers) {
           const serialObj = new SerialNumber(sn);
-          const serialItem = await this.serializedItemRepository.findBySerialOrFail(serialObj, rma.tenantId);
+          let serialItem = preFetchedSerials.get(sn);
+          if (!serialItem) {
+            serialItem = await this.serializedItemRepository.findBySerialOrFail(serialObj, rma.tenantId);
+          }
           serialItem.acceptReturn(`RMA-${rma.id}`, "system");
 
           if (item.disposition === RMADisposition.Restock) {

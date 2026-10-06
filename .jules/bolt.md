@@ -116,3 +116,6 @@
 ## 2024-03-24 - Avoiding Promise.all map for Demand Planning
 **Learning:** Using `Promise.all` wrapped over an array to fire numerous single-record database lookups inside `GetDemandPlanningReport` causes N+1 query latencies, massive connection pool acquisitions, and high RDBMS contention, leading to database timeouts.
 **Action:** Always prefer iterating sequentially or executing database lookups using bulk operations where possible instead of using `Promise.all` to query database row by row in parallel. This significantly reduces database connection pool exhaustion and deadlocks.
+## 2024-10-06 - Pre-fetching Serialized Items Array Mapping
+**Learning:** When attempting an N+1 optimization by resolving a `Set` of objects using `Array.from(set).map(x => new Type(x))` within a TS codebase, verify that `x` meets the constructor's strict typing requirements. The compiler will reject implicit `unknown` types from generic sets. Additionally, avoid `any` entirely when declaring new caching Maps to pass strict code reviews.
+**Action:** Always cast extracted generic variables explicitly (e.g. `s as string`) if runtime validation is already guaranteed, and import the proper Aggregate types for new data structures.
