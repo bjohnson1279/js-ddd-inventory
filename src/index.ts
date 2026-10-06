@@ -121,13 +121,36 @@ import { WMSCapacityService } from "./domain/services/WMSCapacityService";
 import { traceMiddleware } from "./infrastructure/http/middleware/traceMiddleware";
 import { platformThrottlingMiddleware } from "./infrastructure/http/middleware/platformThrottling";
 
+export const parseAllowedOrigins = (frontendUrl?: string): string[] => {
+  if (!frontendUrl) {
+    return ["http://localhost:3080"];
+  }
+
+  const validOrigins = frontendUrl
+    .split(",")
+    .map(url => url.trim())
+    .filter(Boolean)
+    .map(url => {
+      try {
+        const urlObj = new URL(url);
+        if (urlObj.protocol === "http:" || urlObj.protocol === "https:") {
+          return `${urlObj.protocol}//${urlObj.host}`;
+        }
+      } catch {
+        // Invalid URL format
+      }
+      return null;
+    })
+    .filter((origin): origin is string => origin !== null);
+
+  return validOrigins.length > 0 ? validOrigins : ["http://localhost:3080"];
+};
+
 const app = express();
 app.disable("x-powered-by");
 const port = process.env.PORT || 5000;
 
-const allowedOrigins = process.env.FRONTEND_URL
-  ? process.env.FRONTEND_URL.split(",").map(url => url.trim().replace(/\/$/, ""))
-  : ["http://localhost:3080"];
+const allowedOrigins = parseAllowedOrigins(process.env.FRONTEND_URL);
 
 const limiter = rateLimit({
   windowMs: process.env.RATE_LIMIT_WINDOW_MS ? parseInt(process.env.RATE_LIMIT_WINDOW_MS) : 15 * 60 * 1000, // 15 minutes default
