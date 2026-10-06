@@ -115,14 +115,25 @@ describe('Security Utilities', () => {
       expect(() => decryptSymmetric('invalid:ciphertext:format')).toThrow('Decryption failed');
     });
 
-    it('should throw error when ENCRYPTION_KEY is unset', () => {
+    it('should throw error when ENCRYPTION_KEY is unset in non-test environment', () => {
       delete process.env.ENCRYPTION_KEY;
+      process.env.NODE_ENV = 'production';
 
       expect(() => encryptSymmetric('test')).toThrow('ENCRYPTION_KEY environment variable is required for security.');
     });
 
-    it('should succeed when ENCRYPTION_KEY is provided', () => {
-      process.env.ENCRYPTION_KEY = 'custom_encryption_key_12345';
+    it('should succeed when ENCRYPTION_KEY is provided in non-test environment', () => {
+      process.env.ENCRYPTION_KEY = 'custom_production_key_12345';
+      process.env.NODE_ENV = 'production';
+
+      const encrypted = encryptSymmetric('test_data');
+      const decrypted = decryptSymmetric(encrypted);
+      expect(decrypted).toBe('test_data');
+    });
+
+    it('should use fallback secret key when NODE_ENV is test and ENCRYPTION_KEY is unset', () => {
+      delete process.env.ENCRYPTION_KEY;
+      process.env.NODE_ENV = 'test';
 
       const encrypted = encryptSymmetric('test_data');
       const decrypted = decryptSymmetric(encrypted);
