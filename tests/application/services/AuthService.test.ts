@@ -8,12 +8,12 @@ describe('AuthService', () => {
   beforeEach(() => {
     mockPrisma = {
       apiToken: {
-        update: jest.fn().mockResolvedValue({ id: 'token-id' }),
+        update: jest.fn().mockResolvedValue({ updated: true }),
       },
     };
   });
 
-  it('should verify token signed with symmetric secret', () => {
+  it('should verify token signed with symmetric secret', async () => {
     const authService = new AuthService(mockPrisma);
     const token = jwt.sign(
       { tenantId: 'tenant-123' },
@@ -21,12 +21,12 @@ describe('AuthService', () => {
       { issuer: 'https://inventory.example.com' }
     );
 
-    const payload = authService.verifyToken(token);
+    const payload = await authService.verifyToken(token);
     expect(payload).not.toBeNull();
     expect(payload?.tenantId).toBe('tenant-123');
   });
 
-  it('should verify token signed with asymmetric private key matching JWKS kid', () => {
+  it('should verify token signed with asymmetric private key matching JWKS kid', async () => {
     const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
       modulusLength: 2048,
     });
@@ -49,12 +49,12 @@ describe('AuthService', () => {
       }
     );
 
-    const payload = authService.verifyToken(token);
+    const payload = await authService.verifyToken(token);
     expect(payload).not.toBeNull();
     expect(payload?.tenantId).toBe('tenant-jwks-456');
   });
 
-  it('should fail token verification when JWKS key is missing or invalid', () => {
+  it('should fail token verification when JWKS key is missing or invalid', async () => {
     const { privateKey } = crypto.generateKeyPairSync('rsa', {
       modulusLength: 2048,
     });
@@ -70,6 +70,6 @@ describe('AuthService', () => {
     );
 
     const authService = new AuthService(mockPrisma, { jwksKeys: [] });
-    expect(() => authService.verifyToken(token)).toThrow('TOKEN_INVALID');
+    await expect(authService.verifyToken(token)).rejects.toThrow('TOKEN_INVALID');
   });
 });
