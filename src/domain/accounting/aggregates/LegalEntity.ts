@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 export class LegalEntity {
   constructor(
@@ -17,7 +17,7 @@ export class LegalEntity {
     taxIdentifier: string | null = null
   ): LegalEntity {
     return new LegalEntity(
-      uuidv4(),
+      randomUUID(),
       tenantId,
       name,
       baseCurrency,
