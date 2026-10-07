@@ -1,7 +1,6 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { prisma } from "../../database/prisma";
-import crypto from "crypto";
 
 export class ReportController {
   static async createReport(req: AuthenticatedRequest, res: Response) {
