@@ -6,6 +6,7 @@ import { InMemoryCostLayerRepository } from "../../../src/infrastructure/databas
 import { InMemoryQuarantineRepository } from "../../../src/infrastructure/database/InMemoryQuarantineRepository";
 import { InMemoryTenantConfigRepository } from "../../../src/infrastructure/database/InMemoryTenantConfigRepository";
 import { InMemoryJournalRepository } from "../../../src/infrastructure/database/InMemoryJournalRepository";
+import { InMemorySerializedItemRepository } from "../../../src/infrastructure/database/InMemorySerializedItemRepository";
 import { TenantAccountingConfig } from "../../../src/domain/accounting/valueObjects/TenantAccountingConfig";
 import { AccountingMethod } from "../../../src/domain/accounting/enums/AccountingMethod";
 import { CostingMethod } from "../../../src/domain/accounting/enums/CostingMethod";
@@ -13,6 +14,9 @@ import { RMADisposition } from "../../../src/domain/returns/enums/RMADisposition
 import { QuarantineStatus } from "../../../src/domain/returns/enums/QuarantineStatus";
 import { SKU } from "../../../src/domain/valueObjects/SKU";
 import { DebitCredit } from "../../../src/domain/accounting/enums/DebitCredit";
+import { SerializedItem } from "../../../src/domain/serial/aggregates/SerializedItem";
+import { SerialNumber } from "../../../src/domain/serial/valueObjects/SerialNumber";
+import { SerializedItemStatus } from "../../../src/domain/serial/enums/SerializedItemStatus";
 
 describe("ReceiveRMA Use Case", () => {
   let rmaRepository: InMemoryRMARepository;
@@ -21,6 +25,7 @@ describe("ReceiveRMA Use Case", () => {
   let quarantineRepository: InMemoryQuarantineRepository;
   let tenantConfigRepository: InMemoryTenantConfigRepository;
   let journalRepository: InMemoryJournalRepository;
+  let serializedItemRepository: InMemorySerializedItemRepository;
 
   let createRmaUseCase: CreateRMA;
   let receiveRmaUseCase: ReceiveRMA;
@@ -35,6 +40,7 @@ describe("ReceiveRMA Use Case", () => {
     quarantineRepository = new InMemoryQuarantineRepository();
     tenantConfigRepository = new InMemoryTenantConfigRepository();
     journalRepository = new InMemoryJournalRepository();
+    serializedItemRepository = new InMemorySerializedItemRepository();
 
     createRmaUseCase = new CreateRMA(rmaRepository);
     receiveRmaUseCase = new ReceiveRMA(
@@ -43,7 +49,8 @@ describe("ReceiveRMA Use Case", () => {
       costLayerRepository,
       quarantineRepository,
       tenantConfigRepository,
-      journalRepository
+      journalRepository,
+      serializedItemRepository
     );
 
     // Setup Accrual + FIFO config
@@ -162,5 +169,46 @@ describe("ReceiveRMA Use Case", () => {
     expect(entries[1].lines[1].account.code).toBe("1200"); // Inventory asset reduction
     expect(entries[1].lines[1].type).toBe(DebitCredit.Credit);
     expect(entries[1].lines[1].amountCents).toBe(4000);
+  });
+
+  it("should process serialized items transitions correctly when receiving RMA", async () => {
+    // 1. Register serialized item
+    const sn1 = new SerialNumber("SN-1001");
+    const serialItem1 = new SerializedItem(
+      "ser-1",
+      "VAR-SERIAL",
+      sn1,
+      tenantId,
+      locationId,
+      SerializedItemStatus.Sold,
+      []
+    );
+    await serializedItemRepository.save(serialItem1);
+
+    // 2. Create & authorize RMA
+    const rma = await createRmaUseCase.execute({
+      rmaNumber: "RMA-SERIAL-1",
+      tenantId,
+      customerId: "CUST-1",
+      locationId,
+      items: [{ variantId: "VAR-SERIAL", quantity: 1, unitCostCents: 5000 }],
+    });
+    rma.authorize();
+    await rmaRepository.save(rma);
+
+    // 3. Receive RMA with serial number
+    await receiveRmaUseCase.execute({
+      rmaId: rma.id,
+      items: [{
+        variantId: "VAR-SERIAL",
+        quantityReceived: 1,
+        disposition: RMADisposition.Restock,
+        serialNumbers: ["SN-1001"]
+      }],
+    });
+
+    // 4. Verify serialized item status transitioned to InStock (after acceptReturn -> Returned and restock -> InStock)
+    const updatedSerial = await serializedItemRepository.findBySerialOrFail(sn1, tenantId);
+    expect(updatedSerial.status).toBe(SerializedItemStatus.InStock);
   });
 });
