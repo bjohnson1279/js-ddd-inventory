@@ -1,5 +1,3 @@
-import { DomainException } from "../../../domain/exceptions/DomainException";
-
 import { Request, Response } from "express";
 import { ResolveQuarantineItem } from "../../../application/useCases/ResolveQuarantineItem";
 import { IQuarantineRepository } from "../../../domain/repositories/IQuarantineRepository";
