@@ -1,5 +1,3 @@
-import { IRMARepository } from "../../domain/repositories/IRMARepository";
-
 interface RejectRMAItemDTO {
   itemId: string; // RMA item id, not variant id
   reason: string;

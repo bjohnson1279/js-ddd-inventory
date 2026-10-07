@@ -140,4 +140,33 @@ describe('Security Utilities', () => {
       expect(decrypted).toBe('test_data');
     });
   });
+
+  describe('parseAllowedOrigins', () => {
+    it('should return default origin if process.env.FRONTEND_URL is undefined or empty', () => {
+      const { parseAllowedOrigins } = require('../../../src/index');
+      expect(parseAllowedOrigins(undefined)).toEqual(['http://localhost:3080']);
+      expect(parseAllowedOrigins('')).toEqual(['http://localhost:3080']);
+    });
+
+    it('should parse valid origins and strip paths, trailing slashes, and query parameters', () => {
+      const { parseAllowedOrigins } = require('../../../src/index');
+      const input = 'https://example.com/path/to/page?query=1, http://app.domain.org:8080/dashboard/';
+      expect(parseAllowedOrigins(input)).toEqual([
+        'https://example.com',
+        'http://app.domain.org:8080'
+      ]);
+    });
+
+    it('should filter out invalid URLs and non-http/https protocols', () => {
+      const { parseAllowedOrigins } = require('../../../src/index');
+      const input = 'ftp://invalid.com, javascript:alert(1), not-a-url, https://valid.com';
+      expect(parseAllowedOrigins(input)).toEqual(['https://valid.com']);
+    });
+
+    it('should fallback to default if all provided URLs are invalid', () => {
+      const { parseAllowedOrigins } = require('../../../src/index');
+      const input = 'invalid1, ftp://invalid2.com, file:///path';
+      expect(parseAllowedOrigins(input)).toEqual(['http://localhost:3080']);
+    });
+  });
 });

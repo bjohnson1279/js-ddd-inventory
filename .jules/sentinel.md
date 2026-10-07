@@ -136,6 +136,10 @@
 ## Security Mitigation (ZPL Injection)
 * **Vulnerability**: Unsanitized user inputs in ZPL label templates allow ZPL command injection (`^` and `~`), enabling attackers to escape string fields (`^FD...^FS`), inject arbitrary printer commands (such as `^XZ` to terminate fields early or immediate printer commands like `~SD`), or alter printed label content.
 * **Fix**: Pass all untrusted inputs through a ZPL sanitizer function (`escapeZpl`) that strips or escapes `^` and `~` control characters prior to template interpolation.
+## 2026-10-15 - [Sentinel: CORS Allowed Origins Validation]
+**Vulnerability:** The application parsed `FRONTEND_URL` by splitting on commas and stripping trailing slashes without validating URL structure or protocol. This could allow non-HTTP protocols or malformed origin strings into the CORS allowedOrigins list.
+**Learning:** Using simple string operations like `replace(/\/$/, "")` to sanitize origins retains paths, queries, or invalid protocols (such as `ftp://` or `javascript:`).
+**Prevention:** Parse configured origins using standard `new URL()`, enforce `http:` or `https:` protocols, extract `${urlObj.protocol}//${urlObj.host}`, and fallback safely to default trusted origins if no valid origins remain.
 ## 2026-10-15 - Remove Hardcoded Encryption Key Fallback in Security Utils
 **Vulnerability:** `src/infrastructure/utils/security.ts` and `src/infrastructure/utils/encryption.ts` contained a hardcoded secret key fallback (`'test_fallback_secret_key_123456'`).
 **Learning:** Hardcoded key fallbacks can allow insecure operations or accidental secret exposure if the `ENCRYPTION_KEY` environment variable is omitted in deployment. Requiring `ENCRYPTION_KEY` strictly without hardcoded fallback strings ensures missing configuration fails fast with an explicit error.
