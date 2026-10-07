@@ -3,7 +3,6 @@ import { IPurchaseOrderRepository } from "../../repositories/IPurchaseOrderRepos
 import { CreatePurchaseOrder } from "../../../application/useCases/CreatePurchaseOrder";
 import { DomainEventDispatcher } from "../../events/DomainEventDispatcher";
 import { ReorderPointReachedEvent } from "../../events/ReorderPointReachedEvent";
-import { PurchaseOrderStatus } from "../enums/PurchaseOrderStatus";
 import { SKU } from "../../valueObjects/SKU";
 import { Logger } from "../../../infrastructure/logging/logger";
 
