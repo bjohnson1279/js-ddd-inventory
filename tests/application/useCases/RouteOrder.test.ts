@@ -65,4 +65,78 @@ describe("RouteOrder Use Case", () => {
     expect(plan.allocations[0].quantity).toBe(5);
     expect(plan.estimatedShippingCostCents).toBe(600);
   });
+
+  it("should fall back to default high cost when carrier service throws an error for one location", async () => {
+    const sku = SKU.create("SKU-FAILOVER");
+
+    const itemEast = InventoryItem.create("item-1", sku, "WH-EAST", Quantity.create(10));
+    const itemWest = InventoryItem.create("item-2", sku, "WH-WEST", Quantity.create(10));
+    mockInventoryRepo.findAllBySku.mockResolvedValue([itemEast, itemWest]);
+
+    mockCarrierService.fetchRates.mockImplementation(async (productSku, qty, dest, origin) => {
+      if (origin === "WH-EAST") {
+        throw new Error("Carrier API connection error");
+      } else {
+        return [{ carrier: "FedEx Express", rateCents: 1200, estimatedDays: 3 }];
+      }
+    });
+
+    const plan = await useCase.execute({
+      sku: "SKU-FAILOVER",
+      quantity: 5,
+      destinationAddress: "123 Main St, New York, NY 10001",
+      strategyName: "MINIMIZE_COST"
+    });
+
+    expect(plan.allocations).toHaveLength(1);
+    expect(plan.allocations[0].locationId).toBe("WH-WEST");
+    expect(plan.estimatedShippingCostCents).toBe(1200);
+  });
+
+  it("should fall back to default high cost when carrier service returns empty rates array", async () => {
+    const sku = SKU.create("SKU-EMPTY-RATES");
+
+    const itemEast = InventoryItem.create("item-1", sku, "WH-EAST", Quantity.create(10));
+    const itemWest = InventoryItem.create("item-2", sku, "WH-WEST", Quantity.create(10));
+    mockInventoryRepo.findAllBySku.mockResolvedValue([itemEast, itemWest]);
+
+    mockCarrierService.fetchRates.mockImplementation(async (productSku, qty, dest, origin) => {
+      if (origin === "WH-EAST") {
+        return [];
+      } else {
+        return [{ carrier: "FedEx Express", rateCents: 1500, estimatedDays: 3 }];
+      }
+    });
+
+    const plan = await useCase.execute({
+      sku: "SKU-EMPTY-RATES",
+      quantity: 5,
+      destinationAddress: "123 Main St, New York, NY 10001",
+      strategyName: "MINIMIZE_COST"
+    });
+
+    expect(plan.allocations).toHaveLength(1);
+    expect(plan.allocations[0].locationId).toBe("WH-WEST");
+    expect(plan.estimatedShippingCostCents).toBe(1500);
+  });
+
+  it("should fall back to cost 999999 when carrier service throws for the only available location", async () => {
+    const sku = SKU.create("SKU-ALL-FAIL");
+
+    const itemEast = InventoryItem.create("item-1", sku, "WH-EAST", Quantity.create(10));
+    mockInventoryRepo.findAllBySku.mockResolvedValue([itemEast]);
+
+    mockCarrierService.fetchRates.mockRejectedValue(new Error("Carrier service completely offline"));
+
+    const plan = await useCase.execute({
+      sku: "SKU-ALL-FAIL",
+      quantity: 5,
+      destinationAddress: "123 Main St, New York, NY 10001",
+      strategyName: "MINIMIZE_COST"
+    });
+
+    expect(plan.allocations).toHaveLength(1);
+    expect(plan.allocations[0].locationId).toBe("WH-EAST");
+    expect(plan.estimatedShippingCostCents).toBe(999999);
+  });
 });
