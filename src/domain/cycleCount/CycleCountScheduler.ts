@@ -1,5 +1,4 @@
 import { CycleCountPlanModel } from '@prisma/client';
-import { v4 as uuidv4 } from 'uuid';
 import { CycleCount } from './CycleCount';
 
 export class CycleCountScheduler {
@@ -17,7 +16,7 @@ export class CycleCountScheduler {
 
       if (daysSinceLastCount >= plan.frequencyDays) {
         generated.push({
-          id: uuidv4(),
+          id: crypto.randomUUID(),
           tenantId: plan.tenantId,
           name: `Audit based on ${plan.name}`,
           status: 'PENDING',

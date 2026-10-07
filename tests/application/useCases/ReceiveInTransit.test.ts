@@ -53,4 +53,14 @@ describe("ReceiveInTransit Use Case", () => {
     expect(item.inTransit.getValue()).toBe(0);
     expect(mockRepo.save).toHaveBeenCalledWith(item);
   });
+
+  it("should throw an error when attempting to receive a negative quantity", async () => {
+    const sku = SKU.create("SKU-123");
+    const item = InventoryItem.create("item-1", sku, "default", Quantity.create(10), Quantity.create(0), Quantity.create(5));
+
+    mockRepo.findBySku.mockResolvedValue(item);
+
+    await expect(useCase.execute("SKU-123", -5)).rejects.toThrow();
+    expect(mockRepo.save).not.toHaveBeenCalled();
+  });
 });
