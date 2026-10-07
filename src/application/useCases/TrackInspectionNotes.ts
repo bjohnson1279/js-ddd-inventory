@@ -7,7 +7,7 @@ export interface TrackInspectionNotesDTO {
 }
 
 export class TrackInspectionNotes {
-  constructor(private readonly rmaRepository) {}
+  constructor(private readonly rmaRepository: IRMARepository) {}
 
   async execute(dto: TrackInspectionNotesDTO): Promise<void> {
     const rma = await this.rmaRepository.get(dto.rmaNumber);
