@@ -1,92 +1,93 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { requirePermission } from "../middleware/auth";
 import { ManageApprovalWorkflowsUseCase } from "../../../application/useCases/ManageApprovalWorkflowsUseCase";
 import { ApprovalWorkflowService } from "../../../domain/approval/ApprovalWorkflowService";
 import { prisma } from "../../database/prisma";
 import { DomainEventDispatcher } from "../../../domain/events/DomainEventDispatcher";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
 const dispatcher = new DomainEventDispatcher();
 const workflowService = new ApprovalWorkflowService(prisma as any);
 const useCase = new ManageApprovalWorkflowsUseCase(workflowService);
 
 // Workflow management (admin only) - routes
-router.get("/workflows", requirePermission('approval', 'view'), async (req, res) => {
+fastify.get("/workflows", requirePermission('approval', 'view'), async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const tenantId = (req as any).user?.tenantId || (req as any).tenantId || "default-tenant";
     const result = await useCase.listWorkflows(tenantId);
-    res.json(result);
+    reply.send(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    reply.status(500).send({ error: error.message });
   }
 });
 
-router.post("/workflows", requirePermission('approval', 'manage'), async (req, res) => {
+fastify.post("/workflows", requirePermission('approval', 'manage'), async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const tenantId = (req as any).user?.tenantId || (req as any).tenantId || "default-tenant";
-    const result = await useCase.createWorkflow(tenantId, req.body);
-    res.status(201).json(result);
+    const result = await useCase.createWorkflow(tenantId, request.body);
+    reply.status(201).send(result);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    reply.status(400).send({ error: error.message });
   }
 });
 
-router.put("/workflows/:id", requirePermission('approval', 'manage'), async (req, res) => {
+fastify.put("/workflows/:id", requirePermission('approval', 'manage'), async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const tenantId = (req as any).user?.tenantId || (req as any).tenantId || "default-tenant";
-    const result = await useCase.updateWorkflow(tenantId, req.params.id, req.body.config);
-    res.json(result);
+    const result = await useCase.updateWorkflow(tenantId, request.params.id, request.body.config);
+    reply.send(result);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    reply.status(400).send({ error: error.message });
   }
 });
 
-router.post("/workflows/:id/toggle", requirePermission('approval', 'manage'), async (req, res) => {
+fastify.post("/workflows/:id/toggle", requirePermission('approval', 'manage'), async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const tenantId = (req as any).user?.tenantId || (req as any).tenantId || "default-tenant";
-    const result = await useCase.toggleWorkflow(tenantId, req.params.id);
-    res.json(result);
+    const result = await useCase.toggleWorkflow(tenantId, request.params.id);
+    reply.send(result);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    reply.status(400).send({ error: error.message });
   }
 });
 
 // Approval request management
-router.get("/pending", requirePermission('approval', 'view'), async (req, res) => {
+fastify.get("/pending", requirePermission('approval', 'view'), async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const tenantId = (req as any).user?.tenantId || (req as any).tenantId || "default-tenant";
     const result = await useCase.listPendingRequests(tenantId);
-    res.json(result);
+    reply.send(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    reply.status(500).send({ error: error.message });
   }
 });
 
 // Retrieve an approval request by ID
-router.get("/:id", requirePermission('approval', 'view'), async (req, res) => {
+fastify.get("/:id", requirePermission('approval', 'view'), async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const tenantId = (req as any).user?.tenantId || (req as any).tenantId || "default-tenant";
-    const result = await useCase.getApprovalRequest(tenantId, req.params.id);
+    const result = await useCase.getApprovalRequest(tenantId, request.params.id);
     if (!result) {
-      return res.status(404).json({ error: "Not found" });
+      return reply.status(404).send({ error: "Not found" });
     }
-    res.json(result);
+    reply.send(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    reply.status(500).send({ error: error.message });
   }
 });
 
-router.post("/:id/decide", requirePermission('approval', 'manage'), async (req, res) => {
+fastify.post("/:id/decide", requirePermission('approval', 'manage'), async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const tenantId = (req as any).user?.tenantId || (req as any).tenantId || "default-tenant";
     const deciderId = (req as any).userId || "system"; // Get from auth ideally
-    const { decision, notes } = req.body;
-    const result = await useCase.submitDecision(tenantId, req.params.id, deciderId, decision, notes);
-    res.json(result);
+    const { decision, notes } = request.body;
+    const result = await useCase.submitDecision(tenantId, request.params.id, deciderId, decision, notes);
+    reply.send(result);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    reply.status(400).send({ error: error.message });
   }
 });
 
+};
 export default router;

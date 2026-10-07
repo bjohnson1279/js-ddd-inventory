@@ -1,10 +1,11 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { RfidController } from "../controllers/RfidController";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.get("/tags", RfidController.list);
-router.post("/assign", RfidController.assign);
-router.post("/simulate-scan", RfidController.simulateScan);
+fastify.get("/tags", RfidController.list);
+fastify.post("/assign", RfidController.assign);
+fastify.post("/simulate-scan", RfidController.simulateScan);
 
+};
 export default router;

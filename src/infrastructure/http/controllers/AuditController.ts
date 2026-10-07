@@ -1,66 +1,66 @@
-import { Request, Response } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { AuditProcessorService } from "../../../domain/services/AuditProcessorService";
 import { PrismaAuditDiscrepancyRepository } from "../../database/PrismaAuditDiscrepancyRepository";
 import { Logger } from "../../../infrastructure/logging/logger";
 
 export class AuditController {
-  static async runAudit(req: Request, res: Response) {
+  static async runAudit(request: FastifyRequest, reply: FastifyReply) {
     try {
       const tenantId = (req as any).tenantId;
       if (!tenantId) {
-        return res.status(400).json({ error: "Tenant ID is required." });
+        return reply.status(400).send({ error: "Tenant ID is required." });
       }
 
       const service = new AuditProcessorService();
       const summary = await service.runAudit(tenantId);
 
-      return res.status(200).json(summary);
+      return reply.status(200).send(summary);
     } catch (error: any) {
       Logger.error({ context: "AuditController", message: "An error occurred", error: error });
-      return res.status(500).json({ error: "Internal server error" });
+      return reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async listDiscrepancies(req: Request, res: Response) {
+  static async listDiscrepancies(request: FastifyRequest, reply: FastifyReply) {
     try {
       const tenantId = (req as any).tenantId;
-      const { status } = req.query;
+      const { status } = request.query;
 
       if (status !== undefined && typeof status !== "string") {
-        return res.status(400).json({ error: "Invalid status parameter" });
+        return reply.status(400).send({ error: "Invalid status parameter" });
       }
 
       const repo = new PrismaAuditDiscrepancyRepository();
       const discrepancies = await repo.findAll(tenantId, status as string || undefined);
 
-      return res.status(200).json({ discrepancies });
+      return reply.status(200).send({ discrepancies });
     } catch (error: any) {
       Logger.error({ context: "AuditController", message: "An error occurred", error: error });
-      return res.status(500).json({ error: "Internal server error" });
+      return reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async resolveDiscrepancy(req: Request, res: Response) {
+  static async resolveDiscrepancy(request: FastifyRequest, reply: FastifyReply) {
     try {
       const tenantId = (req as any).tenantId;
-      const { id } = req.params;
-      const { notes } = req.body;
+      const { id } = request.params;
+      const { notes } = request.body;
 
       if (!notes) {
-        return res.status(400).json({ error: "Notes are required for resolution." });
+        return reply.status(400).send({ error: "Notes are required for resolution." });
       }
 
       const service = new AuditProcessorService();
       const success = await service.resolveDiscrepancy(tenantId, id, notes);
 
       if (!success) {
-        return res.status(404).json({ error: "Discrepancy not found or already resolved." });
+        return reply.status(404).send({ error: "Discrepancy not found or already resolved." });
       }
 
-      return res.status(200).json({ success: true });
+      return reply.status(200).send({ success: true });
     } catch (error: any) {
       Logger.error({ context: "AuditController", message: "An error occurred", error: error });
-      return res.status(500).json({ error: "Internal server error" });
+      return reply.status(500).send({ error: "Internal server error" });
     }
   }
 }

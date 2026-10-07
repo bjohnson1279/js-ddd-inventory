@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { prisma } from "../../database/prisma";
 import { IBarcodeRepository } from "../../../domain/repositories/IBarcodeRepository";
 import { BarcodeRegistry } from "../../../domain/barcode/services/BarcodeRegistry";
@@ -16,18 +16,18 @@ import { Logger } from "../../../infrastructure/logging/logger";
 
 
 export class BarcodeController {
-  static async assign(req: Request, res: Response) {
+  static async assign(request: FastifyRequest, reply: FastifyReply) {
     try {
       const barcodeRepo = req.app.get(
         "barcodeRepository",
       ) as IBarcodeRepository;
       const { variantId, symbology, barcodeValue, source, isPrimary } =
-        req.body;
+        request.body;
 
       if (!variantId || !symbology || !barcodeValue || !source) {
         return res
           .status(400)
-          .json({ error: "Missing required assignment fields." });
+          .send({ error: "Missing required assignment fields." });
       }
 
       const set = await barcodeRepo.findSetForVariant(variantId);
@@ -38,7 +38,7 @@ export class BarcodeController {
 
       res
         .status(200)
-        .json({
+        .send({
           message: "Barcode assigned successfully.",
           variantId,
           barcodeValue,
@@ -46,23 +46,23 @@ export class BarcodeController {
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "BarcodeController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+        reply.status(400).send({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         Logger.error({ context: "BarcodeController", message: "An error occurred", error: error });
-        res.status(500).json({ error: "Internal server error" });
+        reply.status(500).send({ error: "Internal server error" });
       }
     }
   }
 
-  static async generate(req: Request, res: Response) {
+  static async generate(request: FastifyRequest, reply: FastifyReply) {
     try {
       const barcodeRepo = req.app.get(
         "barcodeRepository",
       ) as IBarcodeRepository;
-      const { variantId, tenantId } = req.body;
+      const { variantId, tenantId } = request.body;
 
       if (!variantId) {
-        return res.status(400).json({ error: "Missing variantId parameter." });
+        return reply.status(400).send({ error: "Missing variantId parameter." });
       }
 
       const registry = new BarcodeRegistry(barcodeRepo);
@@ -72,24 +72,24 @@ export class BarcodeController {
         tenantId || "DEFAULT",
       );
 
-      res.status(200).json({ barcodeValue: barcode.value });
+      reply.status(200).send({ barcodeValue: barcode.value });
     } catch (error: any) {
       Logger.error({ context: "BarcodeController", message: "An error occurred", error: error });
-      res.status(500).json({ error: "Internal server error" });
+      reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async scan(req: Request, res: Response) {
+  static async scan(request: FastifyRequest, reply: FastifyReply) {
     try {
       const barcodeRepo = req.app.get(
         "barcodeRepository",
       ) as IBarcodeRepository;
-      const { rawScan, context, payload } = req.body;
+      const { rawScan, context, payload } = request.body;
 
       if (!rawScan || !context) {
         return res
           .status(400)
-          .json({ error: "Missing rawScan or scan context." });
+          .send({ error: "Missing rawScan or scan context." });
       }
 
       const registry = new BarcodeRegistry(barcodeRepo);
@@ -127,7 +127,7 @@ export class BarcodeController {
         time: new Date().toISOString()
       });
 
-      res.status(200).json({
+      reply.status(200).send({
         message: "Scan processed.",
         variantId,
         context,
@@ -139,21 +139,21 @@ export class BarcodeController {
         (typeof error?.message === "string" && error.message.includes("not registered"))
       ) {
         Logger.error({ context: "BarcodeController", message: error instanceof DomainException ? error.message : error });
-        res.status(404).json({ error: "Not registered" });
+        reply.status(404).send({ error: "Not registered" });
       } else {
         Logger.error({ context: "BarcodeController", message: "An error occurred", error: error });
-        res.status(500).json({ error: "Internal server error" });
+        reply.status(500).send({ error: "Internal server error" });
       }
     }
   }
 
-  static async list(req: Request, res: Response) {
+  static async list(request: FastifyRequest, reply: FastifyReply) {
     try {
       const records = await prisma.barcodeAssignmentModel.findMany();
-      res.status(200).json(records);
+      reply.status(200).send(records);
     } catch (error: any) {
       Logger.error({ context: "BarcodeController", message: "An error occurred", error: error });
-      res.status(500).json({ error: "Internal server error" });
+      reply.status(500).send({ error: "Internal server error" });
     }
   }
 }

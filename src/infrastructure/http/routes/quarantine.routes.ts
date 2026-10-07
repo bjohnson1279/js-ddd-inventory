@@ -1,11 +1,12 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { QuarantineController } from "../controllers/QuarantineController";
 import { requireRole } from "../middleware/auth";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.get("/", QuarantineController.list);
-router.get("/:id", QuarantineController.get);
-router.post("/:id/resolve", requireRole(["admin", "warehouse_operator"]), QuarantineController.resolve);
+fastify.get("/", QuarantineController.list);
+fastify.get("/:id", QuarantineController.get);
+fastify.post("/:id/resolve", { preHandler: [requireRole(["admin", "warehouse_operator"])] }, QuarantineController.resolve);
 
+};
 export default router;

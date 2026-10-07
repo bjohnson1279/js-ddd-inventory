@@ -1,11 +1,12 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { BarcodeController } from "../controllers/BarcodeController";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.get("/", BarcodeController.list);
-router.post("/assign", BarcodeController.assign);
-router.post("/generate", BarcodeController.generate);
-router.post("/scan", BarcodeController.scan);
+fastify.get("/", BarcodeController.list);
+fastify.post("/assign", BarcodeController.assign);
+fastify.post("/generate", BarcodeController.generate);
+fastify.post("/scan", BarcodeController.scan);
 
+};
 export default router;

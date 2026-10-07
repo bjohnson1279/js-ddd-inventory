@@ -1,13 +1,13 @@
-import { Response } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { prisma } from "../../database/prisma";
 
 export class ReportController {
-  static async createReport(req: AuthenticatedRequest, res: Response) {
+  static async createReport(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const tenantId = req.tenantId || req.user?.tenantId || "tenant-1";
-      const { name, description, type, filters, grouping } = req.body;
-      const actorId = req.user?.id || "system";
+      const tenantId = request.tenantId || request.user?.tenantId || "tenant-1";
+      const { name, description, type, filters, grouping } = request.body;
+      const actorId = request.user?.id || "system";
 
       const report = await prisma.reportDefinitionModel.create({
         data: {
@@ -21,28 +21,28 @@ export class ReportController {
         }
       });
 
-      return res.status(201).json({ success: true, report });
+      return reply.status(201).send({ success: true, report });
     } catch (error: any) {
-      return res.status(500).json({ error: "Internal server error" });
+      return reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async listReports(req: AuthenticatedRequest, res: Response) {
+  static async listReports(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const tenantId = req.tenantId || "tenant-1";
+      const tenantId = request.tenantId || "tenant-1";
       const reports = await prisma.reportDefinitionModel.findMany({
         where: { tenantId }
       });
-      return res.status(200).json({ reports });
+      return reply.status(200).send({ reports });
     } catch (error: any) {
-      return res.status(500).json({ error: "Internal server error" });
+      return reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async scheduleReport(req: AuthenticatedRequest, res: Response) {
+  static async scheduleReport(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { id } = req.params;
-      const { cronExpression, deliveryMethod } = req.body;
+      const { id } = request.params;
+      const { cronExpression, deliveryMethod } = request.body;
 
       // In real code, parse cron string to calculate nextRunAt. We use a mock date for scaffolding.
       const nextRunAt = new Date(Date.now() + 60 * 60 * 1000); 
@@ -56,16 +56,16 @@ export class ReportController {
         }
       });
 
-      return res.status(201).json({ success: true, schedule });
+      return reply.status(201).send({ success: true, schedule });
     } catch (error: any) {
-      return res.status(500).json({ error: "Internal server error" });
+      return reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async executeReport(req: AuthenticatedRequest, res: Response) {
+  static async executeReport(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { id } = req.params;
-      const { format } = req.body; // csv, pdf, xlsx
+      const { id } = request.params;
+      const { format } = request.body; // csv, pdf, xlsx
       
       const execution = await prisma.reportExecutionModel.create({
         data: {
@@ -84,33 +84,33 @@ export class ReportController {
         }
       });
 
-      return res.status(202).json({ success: true, message: "Report execution queued", executionId: execution.id });
+      return reply.status(202).send({ success: true, message: "Report execution queued", executionId: execution.id });
     } catch (error: any) {
-      return res.status(500).json({ error: "Internal server error" });
+      return reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async getSharedLink(req: AuthenticatedRequest, res: Response) {
+  static async getSharedLink(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { token } = req.params;
+      const { token } = request.params;
       const link = await prisma.sharedReportLinkModel.findUnique({
         where: { token },
         include: { reportExecution: true }
       });
 
       if (!link) {
-        return res.status(404).json({ error: "Link not found" });
+        return reply.status(404).send({ error: "Link not found" });
       }
       if (link.expiresAt < new Date()) {
-        return res.status(403).json({ error: "Link expired" });
+        return reply.status(403).send({ error: "Link expired" });
       }
 
-      return res.status(200).json({ 
+      return reply.status(200).send({ 
         success: true, 
         fileUrl: link.reportExecution.fileUrl 
       });
     } catch (error: any) {
-      return res.status(500).json({ error: "Internal server error" });
+      return reply.status(500).send({ error: "Internal server error" });
     }
   }
 }

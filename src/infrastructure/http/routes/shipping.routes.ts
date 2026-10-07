@@ -1,14 +1,15 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { ShippingController } from "../controllers/ShippingController";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.get("/rates", ShippingController.getRates);
-router.post("/labels", ShippingController.purchaseLabel);
-router.get("/shipments", ShippingController.getShipments);
-router.post("/shipments/:id/track", ShippingController.trackShipment);
-router.post("/route", ShippingController.routeOrder);
-router.post("/quote", ShippingController.calculateCarrierRates);
-router.post("/label", ShippingController.generateShippingLabel);
+fastify.get("/rates", ShippingController.getRates);
+fastify.post("/labels", ShippingController.purchaseLabel);
+fastify.get("/shipments", ShippingController.getShipments);
+fastify.post("/shipments/:id/track", ShippingController.trackShipment);
+fastify.post("/route", ShippingController.routeOrder);
+fastify.post("/quote", ShippingController.calculateCarrierRates);
+fastify.post("/label", ShippingController.generateShippingLabel);
 
+};
 export default router;

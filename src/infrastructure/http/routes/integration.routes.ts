@@ -1,20 +1,21 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.post("/amazon/connect", (req, res) => {
+fastify.post("/amazon/connect", (request: FastifyRequest, reply: FastifyReply) => {
     // Scaffold connection logic
-    res.status(200).json({ status: "success", message: "Amazon connected" });
+    reply.status(200).send({ status: "success", message: "Amazon connected" });
 });
 
-router.post("/woocommerce/connect", (req, res) => {
+fastify.post("/woocommerce/connect", (request: FastifyRequest, reply: FastifyReply) => {
     // Scaffold connection logic
-    res.status(200).json({ status: "success", message: "WooCommerce connected" });
+    reply.status(200).send({ status: "success", message: "WooCommerce connected" });
 });
 
-router.get("/connections", (req, res) => {
+fastify.get("/connections", (request: FastifyRequest, reply: FastifyReply) => {
     // Scaffold fetching connections
-    res.status(200).json({ amazon: [], woocommerce: [] });
+    reply.status(200).send({ amazon: [], woocommerce: [] });
 });
 
+};
 export default router;

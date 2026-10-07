@@ -1,12 +1,13 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { ComplianceController } from "../controllers/ComplianceController";
 import { requireRole } from "../middleware/auth";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.get("/ledger", requireRole(["admin"]), ComplianceController.list);
-router.post("/verify", requireRole(["admin"]), ComplianceController.verify);
-router.get("/reconstruct", requireRole(["admin"]), ComplianceController.reconstruct);
-router.get("/replay", requireRole(["admin"]), ComplianceController.replay);
+fastify.get("/ledger", { preHandler: [requireRole(["admin"])] }, ComplianceController.list);
+fastify.post("/verify", { preHandler: [requireRole(["admin"])] }, ComplianceController.verify);
+fastify.get("/reconstruct", { preHandler: [requireRole(["admin"])] }, ComplianceController.reconstruct);
+fastify.get("/replay", { preHandler: [requireRole(["admin"])] }, ComplianceController.replay);
 
+};
 export default router;

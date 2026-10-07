@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import jwt from "jsonwebtoken";
 import { tenantLocalStorage } from "../../database/tenantContext";
 
@@ -7,7 +7,7 @@ if (!JWT_SECRET) {
   throw new Error("JWT_SECRET environment variable is required for security.");
 }
 
-export interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest extends FastifyRequest {
   user?: {
     id: string;
     role: string;
@@ -18,17 +18,18 @@ export interface AuthenticatedRequest extends Request {
   tenantId?: string;
 }
 
-export function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
+export function authMiddleware(request: AuthenticatedRequest, reply: FastifyReply, next: () => void) {
+  const authHeader = request.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
 
-    return res.status(401).json({ error: "Unauthorized: Access token is missing or invalid." });
+    reply.status().send();
+    return;
   }
 
   const token = authHeader.split(" ")[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    req.user = {
+    request.user = {
       id: decoded.actorId || decoded.userId,
       role: decoded.role || "viewer",
       permissions: decoded.permissions || [],
@@ -36,20 +37,21 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
       tenantId: decoded.tenantId || "tenant-1"
     };
     const tenantId = decoded.tenantId || "tenant-1";
-    req.tenantId = tenantId;
+    request.tenantId = tenantId;
     tenantLocalStorage.run(tenantId, () => next());
   } catch (err) {
-    return res.status(401).json({ error: "Unauthorized: Access token is missing or invalid." });
+    reply.status().send();
+    return;
   }
 }
 
 export function requireRole(allowedRoles: string[]) {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({
+  return (request: AuthenticatedRequest, reply: FastifyReply, next: () => void) => {
+    if (!request.user || !allowedRoles.includes(request.user.role)) {
+      reply.status(403).send({
         error: `Forbidden: You do not have permission to perform this action. Required role: one of [${allowedRoles.join(
           ", "
-        )}]. Current role: ${req.user?.role || "none"}`
+        )}]. Current role: ${request.user?.role || "none"}`
       });
     }
     next();
@@ -57,24 +59,25 @@ export function requireRole(allowedRoles: string[]) {
 }
 
 export function requirePermission(resource: string, action: string) {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    if (!req.user || !req.user.permissions) {
-      return res.status(403).json({ error: "Forbidden: No permissions associated with user." });
+  return (request: AuthenticatedRequest, reply: FastifyReply, next: () => void) => {
+    if (!request.user || !request.user.permissions) {
+      reply.status().send();
+    return;
     }
     
     const reqRes = resource.toLowerCase();
     const reqAct = action.toLowerCase();
     const required = `${reqRes}:${reqAct}`;
     
-    const permissions = req.user.permissions.map(p => p.toLowerCase());
+    const permissions = request.user.permissions.map(p => p.toLowerCase());
     
     const hasPermission = 
       permissions.includes(required) || 
       permissions.includes('*:*') || 
       permissions.includes(`${reqRes}:*`);
     
-    if (!hasPermission && req.user.role !== "admin") {
-      return res.status(403).json({
+    if (!hasPermission && request.user.role !== "admin") {
+      reply.status(403).send({
         error: `Forbidden: You do not have permission to perform this action. Required permission: ${required}.`
       });
     }

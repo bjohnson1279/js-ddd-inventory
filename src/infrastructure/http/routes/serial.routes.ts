@@ -1,14 +1,15 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { SerialController } from "../controllers/SerialController";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.get("/", SerialController.list);
-router.post("/register", SerialController.register);
-router.post("/receive", SerialController.receive);
-router.post("/sell", SerialController.sell);
-router.post("/return", SerialController.acceptReturn);
-router.post("/restock", SerialController.restock);
-router.get("/:serialNumber/history", SerialController.getHistory);
+fastify.get("/", SerialController.list);
+fastify.post("/register", SerialController.register);
+fastify.post("/receive", SerialController.receive);
+fastify.post("/sell", SerialController.sell);
+fastify.post("/return", SerialController.acceptReturn);
+fastify.post("/restock", SerialController.restock);
+fastify.get("/:serialNumber/history", SerialController.getHistory);
 
+};
 export default router;

@@ -79,7 +79,7 @@ export class AnomalyDetectionService {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      return await response.json();
+      return await response.send();
     } catch (error: any) {
       Logger.error({ context: "AnomalyDetectionService", message: error.message });
       throw new Error("Failed to detect anomalies");

@@ -1,26 +1,26 @@
-import { Request, Response } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { IOutboxRepository } from "../../../domain/repositories/IOutboxRepository";
 import { DomainException } from "../../../domain/exceptions/DomainException";
 import { Logger } from "../../../infrastructure/logging/logger";
 
 
 export class OutboxController {
-  static async listDeadLettered(req: Request, res: Response) {
+  static async listDeadLettered(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const outboxRepository = req.app.get("outboxRepository") as IOutboxRepository;
-      if ((req.query.limit !== undefined && typeof req.query.limit !== "string") ||
-          (req.query.maxAttempts !== undefined && typeof req.query.maxAttempts !== "string")) {
-        return res.status(400).json({ error: "Invalid query parameters" });
+      const outboxRepository = request.server["outboxRepository"] as IOutboxRepository;
+      if ((request.query.limit !== undefined && typeof request.query.limit !== "string") ||
+          (request.query.maxAttempts !== undefined && typeof request.query.maxAttempts !== "string")) {
+        return reply.status(400).send({ error: "Invalid query parameters" });
       }
-      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
-      const maxAttempts = req.query.maxAttempts ? parseInt(req.query.maxAttempts as string, 10) : 5;
+      const limit = request.query.limit ? parseInt(request.query.limit as string, 10) : 50;
+      const maxAttempts = request.query.maxAttempts ? parseInt(request.query.maxAttempts as string, 10) : 5;
       if (isNaN(limit) || isNaN(maxAttempts)) {
-        return res.status(400).json({ error: "Invalid query parameters" });
+        return reply.status(400).send({ error: "Invalid query parameters" });
       }
 
       const events = await outboxRepository.fetchDeadLettered(limit, maxAttempts);
 
-      res.status(200).json(
+      reply.status(200).send(
         events.map((event) => ({
           id: event.id,
           eventName: event.eventName,
@@ -35,47 +35,47 @@ export class OutboxController {
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "OutboxController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+        reply.status(400).send({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         Logger.error({ context: "OutboxController", message: "Failed to list dead lettered outbox events:", error: error });
-        res.status(500).json({ error: "Internal server error" });
+        reply.status(500).send({ error: "Internal server error" });
       }
     }
   }
 
-  static async retry(req: Request, res: Response) {
+  static async retry(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const outboxRepository = req.app.get("outboxRepository") as IOutboxRepository;
-      const { id } = req.params;
+      const outboxRepository = request.server["outboxRepository"] as IOutboxRepository;
+      const { id } = request.params;
 
       await outboxRepository.retryEvent(id);
 
-      res.status(200).json({ message: "Event successfully scheduled for retry" });
+      reply.status(200).send({ message: "Event successfully scheduled for retry" });
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "OutboxController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+        reply.status(400).send({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        Logger.error({ context: "OutboxController", message: `Failed to retry outbox event ${req.params.id}:`, error: error });
-        res.status(500).json({ error: "Failed to retry event" });
+        Logger.error({ context: "OutboxController", message: `Failed to retry outbox event ${request.params.id}:`, error: error });
+        reply.status(500).send({ error: "Failed to retry event" });
       }
     }
   }
 
-  static async getStats(req: Request, res: Response) {
+  static async getStats(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const outboxRepository = req.app.get("outboxRepository") as IOutboxRepository;
-      if (req.query.maxAttempts !== undefined && typeof req.query.maxAttempts !== "string") {
-        return res.status(400).json({ error: "Invalid maxAttempts parameter" });
+      const outboxRepository = request.server["outboxRepository"] as IOutboxRepository;
+      if (request.query.maxAttempts !== undefined && typeof request.query.maxAttempts !== "string") {
+        return reply.status(400).send({ error: "Invalid maxAttempts parameter" });
       }
-      const maxAttempts = req.query.maxAttempts ? parseInt(req.query.maxAttempts as string, 10) : 5;
+      const maxAttempts = request.query.maxAttempts ? parseInt(request.query.maxAttempts as string, 10) : 5;
       if (isNaN(maxAttempts)) {
-        return res.status(400).json({ error: "Invalid maxAttempts parameter" });
+        return reply.status(400).send({ error: "Invalid maxAttempts parameter" });
       }
 
       const stats = await outboxRepository.fetchStats(maxAttempts);
 
-      res.status(200).json({
+      reply.status(200).send({
         totalPending: stats.totalPending,
         totalProcessed: stats.totalProcessed,
         totalDeadLettered: stats.totalDeadLettered,
@@ -93,10 +93,10 @@ export class OutboxController {
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "OutboxController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+        reply.status(400).send({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         Logger.error({ context: "OutboxController", message: "Failed to get outbox metrics:", error: error });
-        res.status(500).json({ error: "Internal server error" });
+        reply.status(500).send({ error: "Internal server error" });
       }
     }
   }

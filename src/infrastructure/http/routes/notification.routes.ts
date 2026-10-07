@@ -1,41 +1,44 @@
-import { Router, Request, Response } from 'express';
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from 'fastify';
 import { prisma } from '../../database/prisma';
 import { NotificationPrismaRepository } from '../../repositories/NotificationPrismaRepository';
 
-export const notificationRouter = Router();
+export const notificationRouter: FastifyPluginAsync = async (fastify) => {
+
 const repo = new NotificationPrismaRepository(prisma as any);
 
-notificationRouter.get('/:tenantId', async (req: Request, res: Response) => {
+notificationRouter.get('/:tenantId', async (request: FastifyRequest, reply: FastifyReply) => {
   try {
-    const notifications = await repo.getUnread(req.params.tenantId);
-    res.status(200).json(notifications);
+    const notifications = await repo.getUnread(request.params.tenantId);
+    reply.status(200).send(notifications);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch notifications' });
+    reply.status(500).send({ error: 'Failed to fetch notifications' });
   }
 });
 
-notificationRouter.patch('/:id/read', async (req: Request, res: Response) => {
+notificationRouter.patch('/:id/read', async (request: FastifyRequest, reply: FastifyReply) => {
   try {
-    await repo.markAsRead(req.params.id);
-    res.status(200).send();
+    await repo.markAsRead(request.params.id);
+    reply.status(200).send();
   } catch (error) {
-    res.status(500).json({ error: 'Failed to mark notification as read' });
+    reply.status(500).send({ error: 'Failed to mark notification as read' });
   }
 });
 
-notificationRouter.post('/preferences', async (req: Request, res: Response) => {
+notificationRouter.post('/preferences', async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const prefs = await repo.savePreferences({
-      userId: req.body.userId,
-      tenantId: req.body.tenantId,
-      channel: req.body.channel,
-      eventType: req.body.eventType,
-      isEnabled: req.body.isEnabled
+      userId: request.body.userId,
+      tenantId: request.body.tenantId,
+      channel: request.body.channel,
+      eventType: request.body.eventType,
+      isEnabled: request.body.isEnabled
     });
-    res.status(201).json(prefs);
+    reply.status(201).send(prefs);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to save preferences' });
+    reply.status(500).send({ error: 'Failed to save preferences' });
   }
 });
 
 export default notificationRouter;
+
+};

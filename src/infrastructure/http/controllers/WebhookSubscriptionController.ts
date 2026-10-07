@@ -1,4 +1,4 @@
-import { Response } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { prisma } from "../../database/prisma";
 import crypto from "crypto";
@@ -6,13 +6,13 @@ import { Logger } from "../../../infrastructure/logging/logger";
 import { encrypt } from "../../utils/encryption";
 
 export class WebhookSubscriptionController {
-  static async create(req: AuthenticatedRequest, res: Response) {
+  static async create(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { targetUrl, secret, eventTypes } = req.body;
+      const { targetUrl, secret, eventTypes } = request.body;
       if (!targetUrl || !secret || !eventTypes || !Array.isArray(eventTypes)) {
-        return res.status(400).json({ error: "Missing or invalid parameters" });
+        return reply.status(400).send({ error: "Missing or invalid parameters" });
       }
-      const tenantId = req.tenantId || "tenant-1";
+      const tenantId = request.tenantId || "tenant-1";
       const subscription = await prisma.webhookSubscriptionModel.create({
         data: {
           id: crypto.randomUUID(),
@@ -23,35 +23,35 @@ export class WebhookSubscriptionController {
           isActive: true
         }
       });
-      res.status(201).json(subscription);
+      reply.status(201).send(subscription);
     } catch (err: any) {
       Logger.error({ context: "WebhookSubscriptionController", message: err.message });
-      res.status(500).json({ error: "Internal server error" });
+      reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async list(req: AuthenticatedRequest, res: Response) {
+  static async list(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const tenantId = req.tenantId || "tenant-1";
+      const tenantId = request.tenantId || "tenant-1";
       const subscriptions = await prisma.webhookSubscriptionModel.findMany({
         where: { tenantId }
       });
-      res.status(200).json(subscriptions);
+      reply.status(200).send(subscriptions);
     } catch (err: any) {
       Logger.error({ context: "WebhookSubscriptionController", message: err.message });
-      res.status(500).json({ error: "Internal server error" });
+      reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async update(req: AuthenticatedRequest, res: Response) {
+  static async update(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { id } = req.params;
-      const { targetUrl, secret, eventTypes, isActive } = req.body;
-      const tenantId = req.tenantId || "tenant-1";
+      const { id } = request.params;
+      const { targetUrl, secret, eventTypes, isActive } = request.body;
+      const tenantId = request.tenantId || "tenant-1";
 
       const sub = await prisma.webhookSubscriptionModel.findUnique({ where: { id } });
       if (!sub || sub.tenantId !== tenantId) {
-        return res.status(404).json({ error: "Webhook subscription not found" });
+        return reply.status(404).send({ error: "Webhook subscription not found" });
       }
 
       const updated = await prisma.webhookSubscriptionModel.update({
@@ -63,28 +63,28 @@ export class WebhookSubscriptionController {
           isActive: isActive !== undefined ? isActive : undefined
         }
       });
-      res.status(200).json(updated);
+      reply.status(200).send(updated);
     } catch (err: any) {
       Logger.error({ context: "WebhookSubscriptionController", message: err.message });
-      res.status(500).json({ error: "Internal server error" });
+      reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async delete(req: AuthenticatedRequest, res: Response) {
+  static async delete(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { id } = req.params;
-      const tenantId = req.tenantId || "tenant-1";
+      const { id } = request.params;
+      const tenantId = request.tenantId || "tenant-1";
 
       const sub = await prisma.webhookSubscriptionModel.findUnique({ where: { id } });
       if (!sub || sub.tenantId !== tenantId) {
-        return res.status(404).json({ error: "Webhook subscription not found" });
+        return reply.status(404).send({ error: "Webhook subscription not found" });
       }
 
       await prisma.webhookSubscriptionModel.delete({ where: { id } });
-      res.status(204).send();
+      reply.status(204).send();
     } catch (err: any) {
       Logger.error({ context: "WebhookSubscriptionController", message: err.message });
-      res.status(500).json({ error: "Internal server error" });
+      reply.status(500).send({ error: "Internal server error" });
     }
   }
 }

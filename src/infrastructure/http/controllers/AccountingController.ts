@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { IJournalRepository } from "../../../domain/repositories/IJournalRepository";
 import { ICostLayerRepository } from "../../../domain/repositories/ICostLayerRepository";
 import { ITenantConfigRepository } from "../../../domain/repositories/ITenantConfigRepository";
@@ -12,21 +12,21 @@ import { Logger } from "../../../infrastructure/logging/logger";
 import crypto from "crypto";
 
 export class AccountingController {
-  static async getLedger(req: Request, res: Response) {
+  static async getLedger(request: FastifyRequest, reply: FastifyReply) {
     try {
       const journalRepo = req.app.get(
         "journalRepository",
       ) as IJournalRepository;
-      if (req.query.tenantId !== undefined && typeof req.query.tenantId !== "string") {
-        return res.status(400).json({ error: "Invalid tenantId parameter." });
+      if (request.query.tenantId !== undefined && typeof request.query.tenantId !== "string") {
+        return reply.status(400).send({ error: "Invalid tenantId parameter." });
       }
-      if (req.query.tenantId !== undefined && typeof req.query.tenantId !== "string") {
-        return res.status(400).json({ error: "Invalid tenantId parameter." });
+      if (request.query.tenantId !== undefined && typeof request.query.tenantId !== "string") {
+        return reply.status(400).send({ error: "Invalid tenantId parameter." });
       }
-      const tenantId = req.query.tenantId ? (req.query.tenantId as string).trim() || undefined : undefined;
+      const tenantId = request.query.tenantId ? (request.query.tenantId as string).trim() || undefined : undefined;
       const entries = await journalRepo.findAll(tenantId);
 
-      res.status(200).json(
+      reply.status(200).send(
         entries.map((entry) => ({
           id: entry.id,
           tenantId: entry.tenantId,
@@ -49,11 +49,11 @@ export class AccountingController {
       );
     } catch (error: any) {
       Logger.error({ context: "AccountingController", message: "An error occurred", error: error });
-      res.status(500).json({ error: "Internal server error" });
+      reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async recordStockReceived(req: Request, res: Response) {
+  static async recordStockReceived(request: FastifyRequest, reply: FastifyReply) {
     try {
       const journalRepo = req.app.get(
         "journalRepository",
@@ -74,12 +74,12 @@ export class AccountingController {
         accountingMethod,
         costingMethod,
         tenantId,
-      } = req.body;
+      } = request.body;
 
       if (!variantId || !totalCostCents || !purchaseOrderId || !supplierName) {
         return res
           .status(400)
-          .json({ error: "Missing stock received parameters." });
+          .send({ error: "Missing stock received parameters." });
       }
 
       const costLayerService = new CostLayerService(costLayerRepo);
@@ -110,22 +110,22 @@ export class AccountingController {
         tenantId || "DEFAULT",
       );
 
-      res.status(200).json({
+      reply.status(200).send({
         message: "Stock receipt recorded.",
         journalEntryId: entry ? entry.id : null,
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "AccountingController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "Invalid accounting operation" });
+        reply.status(400).send({ error: "Invalid accounting operation" });
       } else {
         Logger.error({ context: "AccountingController", message: "An error occurred", error: error });
-        res.status(500).json({ error: "Internal server error" });
+        reply.status(500).send({ error: "Internal server error" });
       }
     }
   }
 
-  static async recordStockSold(req: Request, res: Response) {
+  static async recordStockSold(request: FastifyRequest, reply: FastifyReply) {
     try {
       const journalRepo = req.app.get(
         "journalRepository",
@@ -148,12 +148,12 @@ export class AccountingController {
         accountingMethod,
         costingMethod,
         tenantId,
-      } = req.body;
+      } = request.body;
 
       if (!variantId || !quantity || !salePriceCents || !saleId) {
         return res
           .status(400)
-          .json({ error: "Missing stock sold parameters." });
+          .send({ error: "Missing stock sold parameters." });
       }
 
       const costLayerService = new CostLayerService(costLayerRepo);
@@ -186,7 +186,7 @@ export class AccountingController {
         tenantId || "DEFAULT",
       );
 
-      res.status(200).json({
+      reply.status(200).send({
         message: "Stock sale recorded.",
         journalEntryId: entry ? entry.id : null,
       });
@@ -196,15 +196,15 @@ export class AccountingController {
         (typeof error?.message === "string" && error.message.includes("Insufficient"))
       ) {
         Logger.error({ context: "AccountingController", message: error instanceof DomainException ? error.message : error });
-        res.status(400).json({ error: "Insufficient stock" });
+        reply.status(400).send({ error: "Insufficient stock" });
       } else {
         Logger.error({ context: "AccountingController", message: "An error occurred", error: error });
-        res.status(500).json({ error: "Internal server error" });
+        reply.status(500).send({ error: "Internal server error" });
       }
     }
   }
 
-  static async calculateValuation(req: Request, res: Response) {
+  static async calculateValuation(request: FastifyRequest, reply: FastifyReply) {
     try {
       const costLayerRepo = req.app.get(
         "costLayerRepository",
@@ -212,34 +212,34 @@ export class AccountingController {
       const tenantConfigRepo = req.app.get(
         "tenantConfigRepository",
       ) as ITenantConfigRepository;
-      const { variantId } = req.params;
-      if (req.query.quantity !== undefined && typeof req.query.quantity !== "string") {
-        return res.status(400).json({ error: "Invalid quantity parameter." });
+      const { variantId } = request.params;
+      if (request.query.quantity !== undefined && typeof request.query.quantity !== "string") {
+        return reply.status(400).send({ error: "Invalid quantity parameter." });
       }
-      if (req.query.quantity !== undefined && typeof req.query.quantity !== "string") {
-        return res.status(400).json({ error: "Invalid quantity parameter." });
+      if (request.query.quantity !== undefined && typeof request.query.quantity !== "string") {
+        return reply.status(400).send({ error: "Invalid quantity parameter." });
       }
-      const parsedQuantity = req.query.quantity !== undefined ? parseInt(req.query.quantity as string, 10) : NaN;
+      const parsedQuantity = request.query.quantity !== undefined ? parseInt(request.query.quantity as string, 10) : NaN;
       const quantity = isNaN(parsedQuantity) || parsedQuantity <= 0 ? 1 : parsedQuantity;
 
-      if (req.query.tenantId !== undefined && typeof req.query.tenantId !== "string") {
-        return res.status(400).json({ error: "Invalid tenantId parameter." });
+      if (request.query.tenantId !== undefined && typeof request.query.tenantId !== "string") {
+        return reply.status(400).send({ error: "Invalid tenantId parameter." });
       }
-      if (req.query.tenantId !== undefined && typeof req.query.tenantId !== "string") {
-        return res.status(400).json({ error: "Invalid tenantId parameter." });
+      if (request.query.tenantId !== undefined && typeof request.query.tenantId !== "string") {
+        return reply.status(400).send({ error: "Invalid tenantId parameter." });
       }
-      let tenantId = req.query.tenantId ? (req.query.tenantId as string).trim() : "";
+      let tenantId = request.query.tenantId ? (request.query.tenantId as string).trim() : "";
       if (!tenantId) {
         tenantId = "DEFAULT";
       }
 
-      if (req.query.method !== undefined && typeof req.query.method !== "string") {
-        return res.status(400).json({ error: "Invalid method parameter." });
+      if (request.query.method !== undefined && typeof request.query.method !== "string") {
+        return reply.status(400).send({ error: "Invalid method parameter." });
       }
-      if (req.query.method !== undefined && typeof req.query.method !== "string") {
-        return res.status(400).json({ error: "Invalid method parameter." });
+      if (request.query.method !== undefined && typeof request.query.method !== "string") {
+        return reply.status(400).send({ error: "Invalid method parameter." });
       }
-      let method = req.query.method ? (req.query.method as string).trim() : "";
+      let method = request.query.method ? (request.query.method as string).trim() : "";
       if (!method) {
         const config = await tenantConfigRepo.findByTenantId(tenantId);
         if (config) {
@@ -254,7 +254,7 @@ export class AccountingController {
       method = method.toLowerCase();
 
       if (!variantId) {
-        return res.status(400).json({ error: "Missing variantId parameter." });
+        return reply.status(400).send({ error: "Missing variantId parameter." });
       }
 
       const service = new CostLayerService(costLayerRepo);
@@ -273,7 +273,7 @@ export class AccountingController {
         breakdown = await service.calculateFifoCost(variantId, quantity);
       }
 
-      res.status(200).json({
+      reply.status(200).send({
         variantId,
         quantity: breakdown.units,
         totalCostCents: breakdown.totalCostCents,
@@ -286,20 +286,20 @@ export class AccountingController {
         (typeof error?.message === "string" && error.message.includes("Insufficient"))
       ) {
         Logger.error({ context: "AccountingController", message: error instanceof DomainException ? error.message : error });
-        res.status(400).json({ error: "Insufficient stock" });
+        reply.status(400).send({ error: "Insufficient stock" });
       } else {
         Logger.error({ context: "AccountingController", message: "An error occurred", error: error });
-        res.status(500).json({ error: "Internal server error" });
+        reply.status(500).send({ error: "Internal server error" });
       }
     }
   }
 
-  static async getTenantConfig(req: Request, res: Response) {
+  static async getTenantConfig(request: FastifyRequest, reply: FastifyReply) {
     try {
       const tenantConfigRepo = req.app.get(
         "tenantConfigRepository",
       ) as ITenantConfigRepository;
-      const { tenantId } = req.params;
+      const { tenantId } = request.params;
       let config = await tenantConfigRepo.findByTenantId(tenantId);
       if (!config) {
         config = new TenantAccountingConfig(
@@ -310,7 +310,7 @@ export class AccountingController {
         );
         await tenantConfigRepo.save(tenantId, config);
       }
-      res.status(200).json({
+      reply.status(200).send({
         tenantId,
         accountingMethod: config.accountingMethod,
         costingMethod: config.costingMethod,
@@ -319,11 +319,11 @@ export class AccountingController {
       });
     } catch (error: any) {
       Logger.error({ context: "AccountingController", message: "An error occurred", error: error });
-      res.status(500).json({ error: "Internal server error" });
+      reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async saveTenantConfig(req: Request, res: Response) {
+  static async saveTenantConfig(request: FastifyRequest, reply: FastifyReply) {
     try {
       const tenantConfigRepo = req.app.get(
         "tenantConfigRepository",
@@ -334,10 +334,10 @@ export class AccountingController {
         costingMethod,
         currencyCode,
         fiscalYearStart,
-      } = req.body;
+      } = request.body;
 
       if (!tenantId || !accountingMethod || !costingMethod) {
-        return res.status(400).json({ error: "Missing config fields." });
+        return reply.status(400).send({ error: "Missing config fields." });
       }
 
       const config = new TenantAccountingConfig(
@@ -349,7 +349,7 @@ export class AccountingController {
 
       await tenantConfigRepo.save(tenantId, config);
 
-      res.status(200).json({
+      reply.status(200).send({
         message: "Tenant configuration saved successfully.",
         tenantId,
         accountingMethod: config.accountingMethod,
@@ -358,19 +358,19 @@ export class AccountingController {
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "AccountingController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "Invalid accounting operation" });
+        reply.status(400).send({ error: "Invalid accounting operation" });
       } else {
         Logger.error({ context: "AccountingController", message: "An error occurred", error: error });
-        res.status(500).json({ error: "Internal server error" });
+        reply.status(500).send({ error: "Internal server error" });
       }
     }
   }
 
-  static async syncJournal(req: Request, res: Response) {
+  static async syncJournal(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { provider, referenceId, memo, lines, apiKey } = req.body;
+      const { provider, referenceId, memo, lines, apiKey } = request.body;
       if (!provider || !referenceId || !lines || !Array.isArray(lines)) {
-        return res.status(400).json({ error: "Missing required fields: provider, referenceId, lines." });
+        return reply.status(400).send({ error: "Missing required fields: provider, referenceId, lines." });
       }
 
       const isMock = !apiKey || String(apiKey).toLowerCase().includes("mock") || apiKey === "";
@@ -378,7 +378,7 @@ export class AccountingController {
       const prefix = provider.substring(0, 3).toLowerCase();
       const mockId = `${prefix}-jrnl-${crypto.randomInt(100000, 1000000)}`;
 
-      res.status(200).json({
+      reply.status(200).send({
         success: true,
         provider,
         externalJournalId: isMock ? `mock-${mockId}` : mockId,
@@ -391,7 +391,7 @@ export class AccountingController {
       });
     } catch (error: any) {
       Logger.error({ context: "AccountingController", message: "Failed to sync ERP journal:", error: error });
-      res.status(500).json({ error: "Failed to sync journal entry to ERP." });
+      reply.status(500).send({ error: "Failed to sync journal entry to ERP." });
     }
   }
 }

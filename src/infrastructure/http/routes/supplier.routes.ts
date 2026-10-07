@@ -1,32 +1,33 @@
-import { Router, Request, Response } from 'express';
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from 'fastify';
 import { prisma } from '../../database/prisma';
 import { SupplierPrismaRepository } from '../../repositories/SupplierPrismaRepository';
 import { SupplierOTIFCalculator } from '../../../domain/supplier/SupplierOTIFCalculator';
 import { ASN } from '../../../domain/supplier/ASN';
 
-export const supplierRouter = Router();
+export const supplierRouter: FastifyPluginAsync = async (fastify) => {
+
 const repo = new SupplierPrismaRepository(prisma as any);
 const calculator = new SupplierOTIFCalculator();
 
-supplierRouter.post('/asn', async (req: Request, res: Response) => {
+supplierRouter.post('/asn', async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const asn = await repo.saveASN({
-      asnNumber: req.body.asnNumber,
-      supplierId: req.body.supplierId,
-      expectedDelivery: new Date(req.body.expectedDelivery),
-      actualDelivery: req.body.actualDelivery ? new Date(req.body.actualDelivery) : null,
-      status: req.body.status || 'IN_TRANSIT',
+      asnNumber: request.body.asnNumber,
+      supplierId: request.body.supplierId,
+      expectedDelivery: new Date(request.body.expectedDelivery),
+      actualDelivery: request.body.actualDelivery ? new Date(request.body.actualDelivery) : null,
+      status: request.body.status || 'IN_TRANSIT',
     });
-    res.status(201).json(asn);
+    reply.status(201).send(asn);
   } catch (error) {
     console.error('Supplier route error:', error);
-    res.status(500).json({ error: 'Failed to create ASN' });
+    reply.status(500).send({ error: 'Failed to create ASN' });
   }
 });
 
-supplierRouter.get('/scorecard/:supplierId', async (req: Request, res: Response) => {
+supplierRouter.get('/scorecard/:supplierId', async (request: FastifyRequest, reply: FastifyReply) => {
   try {
-    const { supplierId } = req.params;
+    const { supplierId } = request.params;
     const dbAsns = await repo.getASNsForSupplier(supplierId);
     
     // Map to domain entity
@@ -43,8 +44,10 @@ supplierRouter.get('/scorecard/:supplierId', async (req: Request, res: Response)
     const { onTimeRate, otifScore } = calculator.calculateOTIF(domainAsns);
     const scorecard = await repo.saveScorecard(supplierId, onTimeRate, onTimeRate, 0, otifScore); // simplified
     
-    res.status(200).json(scorecard);
+    reply.status(200).send(scorecard);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to generate scorecard' });
+    reply.status(500).send({ error: 'Failed to generate scorecard' });
   }
 });
+
+};

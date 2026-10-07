@@ -1,11 +1,14 @@
-import { Router } from 'express';
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from 'fastify';
 
-export const supplierPortalRouter = Router();
+export const supplierPortalRouter: FastifyPluginAsync = async (fastify) => {
 
-supplierPortalRouter.post('/asn', (req, res) => {
-  res.json({ id: 'asn-123', status: 'SUBMITTED' });
+
+supplierPortalRouter.post('/asn', (request: FastifyRequest, reply: FastifyReply) => {
+  reply.send({ id: 'asn-123', status: 'SUBMITTED' });
 });
 
-supplierPortalRouter.get('/asn', (req, res) => {
-  res.json([]);
+supplierPortalRouter.get('/asn', (request: FastifyRequest, reply: FastifyReply) => {
+  reply.send([]);
 });
+
+};

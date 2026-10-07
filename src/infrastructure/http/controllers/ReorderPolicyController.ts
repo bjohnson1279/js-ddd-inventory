@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { IReorderPolicyRepository } from "../../../domain/repositories/IReorderPolicyRepository";
 import { ReorderPolicy } from "../../../domain/procurement/aggregates/ReorderPolicy";
 import { SKU } from "../../../domain/valueObjects/SKU";
@@ -11,10 +11,10 @@ import { IDispatchRecordRepository } from "../../../domain/repositories/IDispatc
 import { Logger } from "../../../infrastructure/logging/logger";
 
 export class ReorderPolicyController {
-  static async createOrUpdate(req: Request, res: Response) {
+  static async createOrUpdate(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const repo = req.app.get("reorderPolicyRepository") as IReorderPolicyRepository;
-      const { sku, locationId, reorderPoint, reorderQuantity, safetyStock, dynamicRopEnabled } = req.body;
+      const repo = request.server["reorderPolicyRepository"] as IReorderPolicyRepository;
+      const { sku, locationId, reorderPoint, reorderQuantity, safetyStock, dynamicRopEnabled } = request.body;
 
       const id = crypto.randomUUID();
       const policy = new ReorderPolicy(
@@ -28,7 +28,7 @@ export class ReorderPolicyController {
       );
 
       await repo.save(policy);
-      res.status(200).json({
+      reply.status(200).send({
         id: policy.id,
         sku: policy.sku.getValue(),
         locationId: policy.locationId,
@@ -40,25 +40,25 @@ export class ReorderPolicyController {
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "ReorderPolicyController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+        reply.status(400).send({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         Logger.error({ context: "ReorderPolicyController", message: "An error occurred", error: error });
-        res.status(500).json({ error: "Internal server error" });
+        reply.status(500).send({ error: "Internal server error" });
       }
     }
   }
 
-  static async get(req: Request, res: Response) {
+  static async get(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const repo = req.app.get("reorderPolicyRepository") as IReorderPolicyRepository;
-      const { sku, locationId } = req.params;
+      const repo = request.server["reorderPolicyRepository"] as IReorderPolicyRepository;
+      const { sku, locationId } = request.params;
 
       const policy = await repo.findBySkuAndLocation(SKU.create(sku), locationId);
       if (!policy) {
-        return res.status(404).json({ error: "Reorder policy not found" });
+        return reply.status(404).send({ error: "Reorder policy not found" });
       }
 
-      res.status(200).json({
+      reply.status(200).send({
         id: policy.id,
         sku: policy.sku.getValue(),
         locationId: policy.locationId,
@@ -69,29 +69,29 @@ export class ReorderPolicyController {
       });
     } catch (error: any) {
       Logger.error({ context: "ReorderPolicyController", message: "An error occurred", error: error });
-      res.status(500).json({ error: "Internal server error" });
+      reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async evaluate(req: Request, res: Response) {
+  static async evaluate(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const service = req.app.get("reorderPolicyService") as ReorderPolicyService;
-      const productRepository = req.app.get("productRepository") as IProductRepository;
-      const poRepository = req.app.get("purchaseOrderRepository") as any;
-      const inventoryRepository = req.app.get("inventoryRepository") as IInventoryRepository;
-      const dispatchRecordRepository = req.app.get("dispatchRecordRepository") as IDispatchRecordRepository;
+      const service = request.server["reorderPolicyService"] as ReorderPolicyService;
+      const productRepository = request.server["productRepository"] as IProductRepository;
+      const poRepository = request.server["purchaseOrderRepository"] as any;
+      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
+      const dispatchRecordRepository = request.server["dispatchRecordRepository"] as IDispatchRecordRepository;
 
       const velocityCalculator = new DemandVelocityCalculator(dispatchRecordRepository, productRepository);
       const forecaster = new ReorderPointForecaster(velocityCalculator, productRepository, poRepository);
       const tenantId = (req as any).tenantId || "tenant-1";
 
-      const locationId = req.query.locationId as string | undefined;
+      const locationId = request.query.locationId as string | undefined;
       const results = await service.evaluatePolicies(tenantId, forecaster, inventoryRepository, 30, locationId);
 
-      res.status(200).json({ results });
+      reply.status(200).send({ results });
     } catch (error: any) {
       Logger.error({ context: "ReorderPolicyController", message: "An error occurred", error: error });
-      res.status(500).json({ error: "Internal server error" });
+      reply.status(500).send({ error: "Internal server error" });
     }
   }
 }

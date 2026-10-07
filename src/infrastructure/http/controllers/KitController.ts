@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import crypto from "crypto";
 import { prisma } from "../../database/prisma";
 import { Kit } from "../../../domain/kit/aggregates/Kit";
@@ -15,9 +15,9 @@ const inMemoryKits = new Map<string, any>();
 export function getInMemoryKit(sku: string) { return inMemoryKits.get(sku); }
 
 export class KitController {
-  static async create(req: Request, res: Response) {
+  static async create(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { sku, name, components } = req.body;
+      const { sku, name, components } = request.body;
 
       if (
         !sku ||
@@ -27,7 +27,7 @@ export class KitController {
       ) {
         return res
           .status(400)
-          .json({
+          .send({
             error: "Missing required fields (sku, name, components array).",
           });
       }
@@ -69,21 +69,21 @@ export class KitController {
 
       res
         .status(201)
-        .json({ message: "Kit formula created successfully.", kitId: id, sku });
+        .send({ message: "Kit formula created successfully.", kitId: id, sku });
     } catch (error: any) {
       Logger.error({ context: "KitController", message: "An error occurred", error: error });
-      res.status(500).json({ error: "Internal server error" });
+      reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async dispatchSale(req: Request, res: Response) {
+  static async dispatchSale(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { kitSku, quantity, saleId, actorId } = req.body;
+      const { kitSku, quantity, saleId, actorId } = request.body;
 
       if (!kitSku || !quantity || !saleId || !actorId) {
         return res
           .status(400)
-          .json({ error: "Missing required dispatch fields." });
+          .send({ error: "Missing required dispatch fields." });
       }
 
       // Query database or in-memory fallback for kit composition
@@ -106,7 +106,7 @@ export class KitController {
       if (!kitRecord) {
         return res
           .status(404)
-          .json({ error: `Kit with SKU ${kitSku} not found.` });
+          .send({ error: `Kit with SKU ${kitSku} not found.` });
       }
 
       // Reconstitute Kit aggregate
@@ -123,14 +123,14 @@ export class KitController {
       const inventoryRepo = req.app.get(
         "inventoryRepository",
       ) as IInventoryRepository;
-      const reorderPolicyService = req.app.get("reorderPolicyService");
+      const reorderPolicyService = request.server["reorderPolicyService"];
       const service = new InventoryService(inventoryRepo, reorderPolicyService);
 
       await service.decrementForKitSale(kit, quantity, saleId, actorId);
 
       res
         .status(200)
-        .json({
+        .send({
           message: "Kit sale dispatched successfully.",
           kitSku,
           quantity,
@@ -141,15 +141,15 @@ export class KitController {
         (typeof error?.message === "string" && error.message.includes("Insufficient"))
       ) {
         Logger.error({ context: "KitController", message: error instanceof DomainException ? error.message : error });
-      res.status(400).json({ error: "Insufficient stock" });
+      reply.status(400).send({ error: "Insufficient stock" });
       } else {
         Logger.error({ context: "KitController", message: "An error occurred", error: error });
-        res.status(500).json({ error: "Internal server error" });
+        reply.status(500).send({ error: "Internal server error" });
       }
     }
   }
 
-  static async list(req: Request, res: Response) {
+  static async list(request: FastifyRequest, reply: FastifyReply) {
     try {
       let records: any[] = Array.from(inMemoryKits.values());
       try {
@@ -158,27 +158,27 @@ export class KitController {
         });
         if (dbRecords.length > 0) records = dbRecords;
       } catch (e) {}
-      res.status(200).json(records);
+      reply.status(200).send(records);
     } catch (error: any) {
       Logger.error({ context: "KitController", message: "An error occurred", error: error });
-      res.status(500).json({ error: "Internal server error" });
+      reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async assemble(req: Request, res: Response) {
+  static async assemble(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { kitSku, quantity, locationId, referenceId } = req.body;
+      const { kitSku, quantity, locationId, referenceId } = request.body;
       const tenantId = (req as any).tenantId || "tenant-1";
       const actorId = (req as any).user?.id || "system";
 
       if (!kitSku || !quantity || !locationId || !referenceId) {
-        return res.status(400).json({ error: "Missing required fields (kitSku, quantity, locationId, referenceId)." });
+        return reply.status(400).send({ error: "Missing required fields (kitSku, quantity, locationId, referenceId)." });
       }
 
-      const inventoryRepository = req.app.get("inventoryRepository");
-      const costLayerRepository = req.app.get("costLayerRepository");
-      const tenantConfigRepository = req.app.get("tenantConfigRepository");
-      const journalRepository = req.app.get("journalRepository");
+      const inventoryRepository = request.server["inventoryRepository"];
+      const costLayerRepository = request.server["costLayerRepository"];
+      const tenantConfigRepository = request.server["tenantConfigRepository"];
+      const journalRepository = request.server["journalRepository"];
 
       const useCase = AutoRetryDecorator.wrap(new AssembleKit(
         inventoryRepository,
@@ -196,27 +196,27 @@ export class KitController {
         referenceId
       });
 
-      res.status(200).json({ message: `Successfully assembled ${quantity} units of Kit ${kitSku}.` });
+      reply.status(200).send({ message: `Successfully assembled ${quantity} units of Kit ${kitSku}.` });
     } catch (error: any) {
       Logger.error({ context: "KitController", message: "An error occurred", error: error });
-      res.status(400).json({ error: "Failed to assemble kit" });
+      reply.status(400).send({ error: "Failed to assemble kit" });
     }
   }
 
-  static async disassemble(req: Request, res: Response) {
+  static async disassemble(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { kitSku, quantity, locationId, referenceId } = req.body;
+      const { kitSku, quantity, locationId, referenceId } = request.body;
       const tenantId = (req as any).tenantId || "tenant-1";
       const actorId = (req as any).user?.id || "system";
 
       if (!kitSku || !quantity || !locationId || !referenceId) {
-        return res.status(400).json({ error: "Missing required fields (kitSku, quantity, locationId, referenceId)." });
+        return reply.status(400).send({ error: "Missing required fields (kitSku, quantity, locationId, referenceId)." });
       }
 
-      const inventoryRepository = req.app.get("inventoryRepository");
-      const costLayerRepository = req.app.get("costLayerRepository");
-      const tenantConfigRepository = req.app.get("tenantConfigRepository");
-      const journalRepository = req.app.get("journalRepository");
+      const inventoryRepository = request.server["inventoryRepository"];
+      const costLayerRepository = request.server["costLayerRepository"];
+      const tenantConfigRepository = request.server["tenantConfigRepository"];
+      const journalRepository = request.server["journalRepository"];
 
       const useCase = AutoRetryDecorator.wrap(new DisassembleKit(
         inventoryRepository,
@@ -234,11 +234,11 @@ export class KitController {
         referenceId
       });
 
-      res.status(200).json({ message: `Successfully disassembled ${quantity} units of Kit ${kitSku}.` });
+      reply.status(200).send({ message: `Successfully disassembled ${quantity} units of Kit ${kitSku}.` });
     } catch (error: any) {
       Logger.error({ context: "KitController", message: "An error occurred", error: error });
       Logger.error({ context: "KitController", message: error instanceof DomainException ? error.message : error });
-      res.status(400).json({ error: "Failed to disassemble kit" });
+      reply.status(400).send({ error: "Failed to disassemble kit" });
     }
   }
 }

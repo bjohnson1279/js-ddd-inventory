@@ -62,7 +62,7 @@ export class AuthService implements IAuthService {
         if (!response.ok) {
           throw new Error(`Failed to fetch JWKS: ${response.statusText}`);
         }
-        const json: any = await response.json();
+        const json: any = await response.send();
         const keys = json.keys || [];
         this.cachedKeys = keys;
         this.cacheExpiry = Date.now() + this.cacheTtlMs;
@@ -195,13 +195,13 @@ export class AuthService implements IAuthService {
 
 export const authenticateRequestMiddleware = async (req: any): Promise<{ tenantId?: string }> => {
   try {
-    let authHeaderValue = req.headers?.['authorization']?.replace(/^Bearer /, '');
+    let authHeaderValue = request.headers?.['authorization']?.replace(/^Bearer /, '');
 
-    if (!authHeaderValue && !req.query?.token) {
+    if (!authHeaderValue && !request.query?.token) {
       throw new Error('TOKEN_NOT_FOUND');
     }
 
-    const token = authHeaderValue || String(req.query.token);
+    const token = authHeaderValue || String(request.query.token);
 
     try {
       const authService = new AuthService(req.prisma);

@@ -1,16 +1,16 @@
-import { Request, Response } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { prisma } from "../../database/prisma";
 import { DomainException } from "../../../domain/exceptions/DomainException";
 import { Logger } from "../../../infrastructure/logging/logger";
 
 
-// Store active SSE clients: tenantId -> Response[]
-const sseClients = new Map<string, Response[]>();
+// Store active SSE clients: tenantId -> FastifyReply[]
+const sseClients = new Map<string, FastifyReply[]>();
 
 const inMemoryNotifications = new Map<string, any>();
 
 export class NotificationController {
-  static async list(req: Request, res: Response) {
+  static async list(request: FastifyRequest, reply: FastifyReply) {
     try {
       const tenantId = (req as any).tenantId || "tenant-1";
       let notifications: any[] = [];
@@ -24,21 +24,21 @@ export class NotificationController {
           .filter(n => n.tenantId === tenantId)
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
       }
-      res.status(200).json(notifications);
+      reply.status(200).send(notifications);
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "NotificationController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+        reply.status(400).send({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         Logger.error({ context: "NotificationController", message: "An error occurred", error: error });
-        res.status(500).json({ error: "Internal server error" });
+        reply.status(500).send({ error: "Internal server error" });
       }
     }
   }
 
-  static async read(req: Request, res: Response) {
+  static async read(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { id } = req.params;
+      const { id } = request.params;
       const tenantId = (req as any).tenantId || "tenant-1";
 
       let notification: any = inMemoryNotifications.get(id);
@@ -59,22 +59,22 @@ export class NotificationController {
       } catch (e) {}
 
       if (!notification || notification.tenantId !== tenantId) {
-        return res.status(404).json({ error: "Notification not found" });
+        return reply.status(404).send({ error: "Notification not found" });
       }
 
-      res.status(200).json(notification);
+      reply.status(200).send(notification);
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "NotificationController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+        reply.status(400).send({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         Logger.error({ context: "NotificationController", message: "An error occurred", error: error });
-        res.status(500).json({ error: "Internal server error" });
+        reply.status(500).send({ error: "Internal server error" });
       }
     }
   }
 
-  static async readAll(req: Request, res: Response) {
+  static async readAll(request: FastifyRequest, reply: FastifyReply) {
     try {
       const tenantId = (req as any).tenantId || "tenant-1";
 
@@ -91,19 +91,19 @@ export class NotificationController {
         });
       } catch (e) {}
 
-      res.status(200).json({ message: "All notifications marked as read" });
+      reply.status(200).send({ message: "All notifications marked as read" });
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "NotificationController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+        reply.status(400).send({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         Logger.error({ context: "NotificationController", message: "An error occurred", error: error });
-        res.status(500).json({ error: "Internal server error" });
+        reply.status(500).send({ error: "Internal server error" });
       }
     }
   }
 
-  static async subscribe(req: Request, res: Response) {
+  static async subscribe(request: FastifyRequest, reply: FastifyReply) {
     const tenantId = (req as any).tenantId || "tenant-1";
 
     res.setHeader("Content-Type", "text/event-stream");
@@ -126,13 +126,13 @@ export class NotificationController {
   }
 
   // Create notification and broadcast it to connected clients
-  static async create(req: Request, res: Response) {
+  static async create(request: FastifyRequest, reply: FastifyReply) {
     try {
       const tenantId = (req as any).tenantId || "tenant-1";
-      const { title, message, type } = req.body;
+      const { title, message, type } = request.body;
 
       if (!title || !message) {
-        return res.status(400).json({ error: "Title and message are required" });
+        return reply.status(400).send({ error: "Title and message are required" });
       }
 
       const id = crypto.randomUUID();
@@ -163,14 +163,14 @@ export class NotificationController {
       // Broadcast to SSE clients
       NotificationController.broadcastToTenant(tenantId, notification);
 
-      res.status(201).json(notification);
+      reply.status(201).send(notification);
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "NotificationController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+        reply.status(400).send({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         Logger.error({ context: "NotificationController", message: "An error occurred", error: error });
-        res.status(500).json({ error: "Internal server error" });
+        reply.status(500).send({ error: "Internal server error" });
       }
     }
   }

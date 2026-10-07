@@ -1,13 +1,14 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { InventoryAuditController } from "../controllers/InventoryAuditController";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.post("/", InventoryAuditController.create);
-router.get("/:id", InventoryAuditController.get);
-router.post("/:id/start", InventoryAuditController.start);
-router.post("/:id/count", InventoryAuditController.recordCount);
-router.post("/:id/complete", InventoryAuditController.complete);
-router.post("/:id/reconcile", InventoryAuditController.reconcile);
+fastify.post("/", InventoryAuditController.create);
+fastify.get("/:id", InventoryAuditController.get);
+fastify.post("/:id/start", InventoryAuditController.start);
+fastify.post("/:id/count", InventoryAuditController.recordCount);
+fastify.post("/:id/complete", InventoryAuditController.complete);
+fastify.post("/:id/reconcile", InventoryAuditController.reconcile);
 
+};
 export default router;

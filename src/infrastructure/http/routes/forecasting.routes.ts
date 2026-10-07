@@ -1,10 +1,11 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { ForecastingController } from "../controllers/ForecastingController";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.get("/report", ForecastingController.getReport);
-router.post("/forecast", ForecastingController.generateForecast);
-router.get("/dispatch-summary", ForecastingController.getDispatchSummary);
+fastify.get("/report", ForecastingController.getReport);
+fastify.post("/forecast", ForecastingController.generateForecast);
+fastify.get("/dispatch-summary", ForecastingController.getDispatchSummary);
 
+};
 export default router;

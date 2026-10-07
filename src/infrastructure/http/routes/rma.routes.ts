@@ -1,12 +1,13 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { RMAController } from "../controllers/RMAController";
 import { requireRole } from "../middleware/auth";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.post("/", requireRole(["admin", "warehouse_operator"]), RMAController.create);
-router.get("/:id", RMAController.get);
-router.post("/:id/authorize", requireRole(["admin", "warehouse_operator"]), RMAController.authorize);
-router.post("/:id/receive", requireRole(["admin", "warehouse_operator"]), RMAController.receive);
+fastify.post("/", { preHandler: [requireRole(["admin", "warehouse_operator"])] }, RMAController.create);
+fastify.get("/:id", RMAController.get);
+fastify.post("/:id/authorize", { preHandler: [requireRole(["admin", "warehouse_operator"])] }, RMAController.authorize);
+fastify.post("/:id/receive", { preHandler: [requireRole(["admin", "warehouse_operator"])] }, RMAController.receive);
 
+};
 export default router;

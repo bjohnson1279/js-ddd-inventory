@@ -1,92 +1,79 @@
-import { Router, Request, Response } from 'express';
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from 'fastify';
 import { TenantRegistry } from '../../database/TenantRegistry';
 import { TenantConnectionPool } from '../../database/TenantConnectionPool';
 import { TenantProvisioner } from '../../database/TenantProvisioner';
 
-/**
- * REST routes for tenant administration (Roadmap 6.1).
- *
- * POST   /admin/tenants          — Provision a new tenant
- * GET    /admin/tenants          — List all tenants
- * GET    /admin/tenants/:id      — Get tenant details
- * DELETE /admin/tenants/:id      — Deprovision a tenant
- * GET    /admin/tenants/pool     — Get connection pool stats
- */
 export function createTenantAdminRoutes(
   registry: TenantRegistry,
   pool: TenantConnectionPool,
   provisioner: TenantProvisioner
-): Router {
-  const router = Router();
+): FastifyPluginAsync {
+  return async (fastify) => {
 
-  // Provision a new tenant
-  router.post('/', async (req: Request, res: Response) => {
-    try {
-      const { tenantId } = req.body;
-      if (!tenantId) {
-        return res.status(400).json({ error: 'tenantId is required' });
+    fastify.post('/', async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = request.body as { tenantId?: string };
+        const tenantId = body?.tenantId;
+        if (!tenantId) {
+          return reply.status(400).send({ error: 'tenantId is required' });
+        }
+
+        const schemaName = await provisioner.provisionTenant(tenantId);
+
+        return reply.status(201).send({
+          tenantId,
+          schemaName,
+          status: 'ACTIVE',
+          message: `Tenant "${tenantId}" provisioned successfully.`,
+        });
+      } catch (err: any) {
+        return reply.status(409).send({ error: err.message });
       }
+    });
 
-      const schemaName = await provisioner.provisionTenant(tenantId);
-
-      res.status(201).json({
-        tenantId,
-        schemaName,
-        status: 'ACTIVE',
-        message: `Tenant "${tenantId}" provisioned successfully.`,
-      });
-    } catch (err: any) {
-      res.status(409).json({ error: err.message });
-    }
-  });
-
-  // List all tenants
-  router.get('/', async (req: Request, res: Response) => {
-    try {
-      const status = req.query.status as string | undefined;
-      const tenants = await registry.listTenants(status);
-      res.json({ tenants });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  // Get connection pool stats
-  router.get('/pool', async (_req: Request, res: Response) => {
-    try {
-      const stats = pool.getStats();
-      res.json(stats);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  // Get tenant details
-  router.get('/:id', async (req: Request, res: Response) => {
-    try {
-      const tenant = await registry.lookupTenant(req.params.id);
-      if (!tenant) {
-        return res.status(404).json({ error: `Tenant "${req.params.id}" not found.` });
+    fastify.get('/', async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const query = request.query as { status?: string };
+        const status = query.status;
+        const tenants = await registry.listTenants(status);
+        return reply.send({ tenants });
+      } catch (err: any) {
+        return reply.status(500).send({ error: err.message });
       }
-      res.json(tenant);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
+    });
 
-  // Deprovision a tenant
-  router.delete('/:id', async (req: Request, res: Response) => {
-    try {
-      // Evict from connection pool first
-      await pool.evict(req.params.id);
-      // Then deprovision
-      await provisioner.deprovisionTenant(req.params.id);
+    fastify.get('/pool', async (_request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const stats = pool.getStats();
+        return reply.send(stats);
+      } catch (err: any) {
+        return reply.status(500).send({ error: err.message });
+      }
+    });
 
-      res.json({ message: `Tenant "${req.params.id}" deprovisioned.` });
-    } catch (err: any) {
-      res.status(404).json({ error: err.message });
-    }
-  });
+    fastify.get('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const params = request.params as { id: string };
+        const tenant = await registry.lookupTenant(params.id);
+        if (!tenant) {
+          return reply.status(404).send({ error: `Tenant "${params.id}" not found.` });
+        }
+        return reply.send(tenant);
+      } catch (err: any) {
+        return reply.status(500).send({ error: err.message });
+      }
+    });
 
-  return router;
+    fastify.delete('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const params = request.params as { id: string };
+        await pool.evict(params.id);
+        await provisioner.deprovisionTenant(params.id);
+        return reply.send({ message: `Tenant "${params.id}" deprovisioned.` });
+      } catch (err: any) {
+        return reply.status(404).send({ error: err.message });
+      }
+    });
+
+  };
 }

@@ -1,8 +1,9 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { OnboardingController } from "../controllers/OnboardingController";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.post("/submit", OnboardingController.submit);
+fastify.post("/submit", OnboardingController.submit);
 
+};
 export default router;

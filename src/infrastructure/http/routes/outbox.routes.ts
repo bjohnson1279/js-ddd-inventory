@@ -1,10 +1,11 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { OutboxController } from "../controllers/OutboxController";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.get("/stats", OutboxController.getStats);
-router.get("/dead-letter", OutboxController.listDeadLettered);
-router.post("/:id/retry", OutboxController.retry);
+fastify.get("/stats", OutboxController.getStats);
+fastify.get("/dead-letter", OutboxController.listDeadLettered);
+fastify.post("/:id/retry", OutboxController.retry);
 
+};
 export default router;

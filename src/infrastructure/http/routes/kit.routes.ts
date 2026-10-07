@@ -1,13 +1,14 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { KitController } from "../controllers/KitController";
 import { requireRole } from "../middleware/auth";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.get("/", KitController.list);
-router.post("/create", KitController.create);
-router.post("/dispatch", KitController.dispatchSale);
-router.post("/assemble", requireRole(["admin", "warehouse_operator"]), KitController.assemble);
-router.post("/disassemble", requireRole(["admin", "warehouse_operator"]), KitController.disassemble);
+fastify.get("/", KitController.list);
+fastify.post("/create", KitController.create);
+fastify.post("/dispatch", KitController.dispatchSale);
+fastify.post("/assemble", { preHandler: [requireRole(["admin", "warehouse_operator"])] }, KitController.assemble);
+fastify.post("/disassemble", { preHandler: [requireRole(["admin", "warehouse_operator"])] }, KitController.disassemble);
 
+};
 export default router;

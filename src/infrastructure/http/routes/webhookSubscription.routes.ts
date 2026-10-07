@@ -1,12 +1,13 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { WebhookSubscriptionController } from "../controllers/WebhookSubscriptionController";
 import { requireRole } from "../middleware/auth";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.post("/", requireRole(["admin"]), WebhookSubscriptionController.create);
-router.get("/", requireRole(["admin"]), WebhookSubscriptionController.list);
-router.put("/:id", requireRole(["admin"]), WebhookSubscriptionController.update);
-router.delete("/:id", requireRole(["admin"]), WebhookSubscriptionController.delete);
+fastify.post("/", { preHandler: [requireRole(["admin"])] }, WebhookSubscriptionController.create);
+fastify.get("/", { preHandler: [requireRole(["admin"])] }, WebhookSubscriptionController.list);
+fastify.put("/:id", { preHandler: [requireRole(["admin"])] }, WebhookSubscriptionController.update);
+fastify.delete("/:id", { preHandler: [requireRole(["admin"])] }, WebhookSubscriptionController.delete);
 
+};
 export default router;

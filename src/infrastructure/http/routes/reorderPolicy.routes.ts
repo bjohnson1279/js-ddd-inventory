@@ -1,10 +1,11 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { ReorderPolicyController } from "../controllers/ReorderPolicyController";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.post("/", ReorderPolicyController.createOrUpdate);
-router.post("/evaluate", ReorderPolicyController.evaluate);
-router.get("/:sku/:locationId", ReorderPolicyController.get);
+fastify.post("/", ReorderPolicyController.createOrUpdate);
+fastify.post("/evaluate", ReorderPolicyController.evaluate);
+fastify.get("/:sku/:locationId", ReorderPolicyController.get);
 
+};
 export default router;

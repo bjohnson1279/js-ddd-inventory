@@ -1,5 +1,5 @@
 import { DomainException } from "../../../domain/exceptions/DomainException";
-import { Request, Response } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { WarehouseLocation } from "../../../domain/product/entities/WarehouseLocation";
 import { LocationId } from "../../../domain/valueObjects/LocationId";
 import { SKU } from "../../../domain/valueObjects/SKU";
@@ -9,10 +9,10 @@ import { prisma } from "../../database/prisma";
 import { Logger } from "../../../infrastructure/logging/logger";
 
 export class WarehouseLocationController {
-  static async save(req: Request, res: Response) {
+  static async save(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { path, warehouseId, zone, aisle, rack, shelf, bin, maxWeightGrams, maxVolumeCubicMeters, gridX, gridY, width, height } = req.body;
-      const repo = req.app.get("warehouseLocationRepository");
+      const { path, warehouseId, zone, aisle, rack, shelf, bin, maxWeightGrams, maxVolumeCubicMeters, gridX, gridY, width, height } = request.body;
+      const repo = request.server["warehouseLocationRepository"];
 
       let location: WarehouseLocation;
       if (path) {
@@ -54,7 +54,7 @@ export class WarehouseLocationController {
 
       await repo.save(location);
 
-      res.status(200).json({
+      reply.status(200).send({
         message: "Warehouse location saved successfully.",
         location: {
           id: location.id.value,
@@ -74,16 +74,16 @@ export class WarehouseLocationController {
       });
     } catch (error: any) {
       Logger.error({ context: "WarehouseLocationController", message: "An error occurred", error: error });
-      res.status(400).json({ error: "Failed to save location." });
+      reply.status(400).send({ error: "Failed to save location." });
     }
   }
 
-  static async list(req: Request, res: Response) {
+  static async list(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const repo = req.app.get("warehouseLocationRepository");
+      const repo = request.server["warehouseLocationRepository"];
       const locations = await repo.findAll();
 
-      res.status(200).json(
+      reply.status(200).send(
         locations.map((loc: WarehouseLocation) => ({
           id: loc.id.value,
           warehouseId: loc.warehouseId,
@@ -102,50 +102,50 @@ export class WarehouseLocationController {
       );
     } catch (error: any) {
       Logger.error({ context: "WarehouseLocationController", message: "An error occurred", error: error });
-      res.status(500).json({ error: "Failed to list locations." });
+      reply.status(500).send({ error: "Failed to list locations." });
     }
   }
 
-  static async delete(req: Request, res: Response) {
+  static async delete(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { id } = req.params;
-      const repo = req.app.get("warehouseLocationRepository");
+      const { id } = request.params;
+      const repo = request.server["warehouseLocationRepository"];
 
       await repo.delete(new LocationId(id));
 
-      res.status(200).json({ message: "Warehouse location deleted successfully." });
+      reply.status(200).send({ message: "Warehouse location deleted successfully." });
     } catch (error: any) {
       Logger.error({ context: "WarehouseLocationController", message: "An error occurred", error: error });
       Logger.error({ context: "WarehouseLocationController", message: error instanceof DomainException ? error.message : error });
-      res.status(400).json({ error: "Failed to delete location." });
+      reply.status(400).send({ error: "Failed to delete location." });
     }
   }
 
-  static async suggestPutaway(req: Request, res: Response) {
+  static async suggestPutaway(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { sku, quantity } = req.body;
+      const { sku, quantity } = request.body;
       if (!sku || quantity === undefined) {
-        return res.status(400).json({ error: "SKU and quantity are required." });
+        return reply.status(400).send({ error: "SKU and quantity are required." });
       }
 
-      const inventoryRepo = req.app.get("inventoryRepository");
-      const productRepo = req.app.get("productRepository");
-      const locationRepo = req.app.get("warehouseLocationRepository");
+      const inventoryRepo = request.server["inventoryRepository"];
+      const productRepo = request.server["productRepository"];
+      const locationRepo = request.server["warehouseLocationRepository"];
 
       const suggester = new PutawaySuggester(inventoryRepo, productRepo, locationRepo);
       const suggestions = await suggester.suggestPutaway(SKU.create(sku), Number(quantity));
 
-      res.status(200).json(suggestions);
+      reply.status(200).send(suggestions);
     } catch (error: any) {
       Logger.error({ context: "WarehouseLocationController", message: "An error occurred", error: error });
       Logger.error({ context: "WarehouseLocationController", message: error instanceof DomainException ? error.message : error });
-      res.status(400).json({ error: "Failed to generate putaway suggestions." });
+      reply.status(400).send({ error: "Failed to generate putaway suggestions." });
     }
   }
 
-  static async optimizePickRoute(req: Request, res: Response) {
+  static async optimizePickRoute(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { items, skus } = req.body;
+      const { items, skus } = request.body;
       let pickItems = items;
 
       if (!pickItems && Array.isArray(skus)) {
@@ -172,31 +172,31 @@ export class WarehouseLocationController {
       }
 
       if (!Array.isArray(pickItems)) {
-        return res.status(400).json({ error: "Items array or SKUs array is required." });
+        return reply.status(400).send({ error: "Items array or SKUs array is required." });
       }
 
-      const locationRepo = req.app.get("warehouseLocationRepository");
+      const locationRepo = request.server["warehouseLocationRepository"];
       const optimizer = new PickingRouteOptimizer(locationRepo);
 
       const optimized = await optimizer.optimizeRoute(pickItems);
 
-      res.status(200).json(optimized);
+      reply.status(200).send(optimized);
     } catch (error: any) {
       Logger.error({ context: "WarehouseLocationController", message: "An error occurred", error: error });
       Logger.error({ context: "WarehouseLocationController", message: error instanceof DomainException ? error.message : error });
-      res.status(400).json({ error: "Failed to optimize picking route." });
+      reply.status(400).send({ error: "Failed to optimize picking route." });
     }
   }
 
-  static async suggestSlotting(req: Request, res: Response) {
+  static async suggestSlotting(request: FastifyRequest, reply: FastifyReply) {
     try {
       const { SlottingOptimizer } = await import("../../../domain/services/SlottingOptimizer");
       const optimizer = new SlottingOptimizer(prisma);
       const suggestions = await optimizer.generateSuggestions();
-      res.status(200).json(suggestions);
+      reply.status(200).send(suggestions);
     } catch (error: any) {
       Logger.error({ context: "WarehouseLocationController", message: "An error occurred", error: error });
-      res.status(400).json({ error: "Failed to generate slotting suggestions." });
+      reply.status(400).send({ error: "Failed to generate slotting suggestions." });
     }
   }
 }

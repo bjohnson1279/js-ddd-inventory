@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { prisma } from "../../database/prisma";
@@ -21,13 +21,13 @@ export function addInMemoryUser(user: any) {
 }
 
 export class AuthController {
-  static async setup(req: Request, res: Response) {
+  static async setup(request: FastifyRequest, reply: FastifyReply) {
     try {
       const isTestMode = process.env.NODE_ENV === "test";
-      const { orgName, tenantId, adminName, adminEmail, adminPassword } = req.body;
+      const { orgName, tenantId, adminName, adminEmail, adminPassword } = request.body;
 
       if (!orgName || !tenantId || !adminName || !adminEmail || !adminPassword) {
-        return res.status(400).json({ error: "Missing required fields" });
+        return reply.status(400).send({ error: "Missing required fields" });
       }
 
       if (
@@ -37,7 +37,7 @@ export class AuthController {
         typeof adminEmail !== "string" ||
         typeof adminPassword !== "string"
       ) {
-        return res.status(400).json({ error: "Invalid field types" });
+        return reply.status(400).send({ error: "Invalid field types" });
       }
 
       const email = adminEmail.toLowerCase().trim();
@@ -45,7 +45,7 @@ export class AuthController {
 
       let existingInMemory = inMemoryUsers.get(key);
       if (existingInMemory) {
-        return res.status(400).json({ error: `Admin user with email ${email} already exists for tenant.` });
+        return reply.status(400).send({ error: `Admin user with email ${email} already exists for tenant.` });
       }
 
       if (!isTestMode) {
@@ -206,23 +206,23 @@ export class AuthController {
         } catch (e) {}
       }
 
-      return res.status(200).json({ success: true, message: "Organization and admin user created successfully." });
+      return reply.status(200).send({ success: true, message: "Organization and admin user created successfully." });
     } catch (error: any) {
       Logger.error({ context: "AuthController", message: "An error occurred", error: error });
-      return res.status(500).json({ error: "Internal server error" });
+      return reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async login(req: Request, res: Response) {
+  static async login(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { tenantId, email, password } = req.body;
+      const { tenantId, email, password } = request.body;
 
       if (!tenantId || !email || !password) {
-        return res.status(400).json({ error: "Missing required fields" });
+        return reply.status(400).send({ error: "Missing required fields" });
       }
 
       if (typeof tenantId !== "string" || typeof email !== "string" || typeof password !== "string") {
-        return res.status(400).json({ error: "Invalid field types" });
+        return reply.status(400).send({ error: "Invalid field types" });
       }
 
       const normalizedEmail = email.toLowerCase().trim();
@@ -247,15 +247,15 @@ export class AuthController {
       }
 
       if (!user) {
-        return res.status(401).json({ error: "Invalid credentials." });
+        return reply.status(401).send({ error: "Invalid credentials." });
       }
 
       if (!user.active) {
-        return res.status(403).json({ error: "Account deactivated." });
+        return reply.status(403).send({ error: "Account deactivated." });
       }
 
       if (!verifyPassword(password, user.passwordHash)) {
-        return res.status(401).json({ error: "Invalid credentials." });
+        return reply.status(401).send({ error: "Invalid credentials." });
       }
 
       const userRole = user.userRoles && user.userRoles.length > 0 ? user.userRoles[0].role.id : "staff";
@@ -269,14 +269,14 @@ export class AuthController {
         { expiresIn: "24h" }
       );
 
-      return res.status(200).json({ token });
+      return reply.status(200).send({ token });
     } catch (error: any) {
       Logger.error({ context: "AuthController", message: "An error occurred", error: error });
-      return res.status(500).json({ error: "Internal server error" });
+      return reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async listUsers(req: Request, res: Response) {
+  static async listUsers(request: FastifyRequest, reply: FastifyReply) {
     try {
       const tenantId = (req as any).tenantId;
 
@@ -312,30 +312,30 @@ export class AuthController {
         }
       }
 
-      return res.status(200).json({ users });
+      return reply.status(200).send({ users });
     } catch (error: any) {
       Logger.error({ context: "AuthController", message: "An error occurred", error: error });
-      return res.status(500).json({ error: "Internal server error" });
+      return reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async inviteUser(req: Request, res: Response) {
+  static async inviteUser(request: FastifyRequest, reply: FastifyReply) {
     try {
       const tenantId = (req as any).tenantId;
-      const { email, role } = req.body;
+      const { email, role } = request.body;
 
       if (!email || !role) {
-        return res.status(400).json({ error: "Missing required fields" });
+        return reply.status(400).send({ error: "Missing required fields" });
       }
 
       if (typeof email !== "string" || typeof role !== "string") {
-        return res.status(400).json({ error: "Invalid field types" });
+        return reply.status(400).send({ error: "Invalid field types" });
       }
 
       const normalizedEmail = email.toLowerCase().trim();
       const key = `${tenantId}:${normalizedEmail}`;
       if (inMemoryUsers.has(key)) {
-        return res.status(400).json({ error: "User already exists." });
+        return reply.status(400).send({ error: "User already exists." });
       }
 
       const userId = crypto.randomUUID();
@@ -381,7 +381,7 @@ export class AuthController {
         });
       } catch (e) {}
 
-      const emailService = req.app.get("emailService") as IEmailService;
+      const emailService = request.server["emailService"] as IEmailService;
       if (emailService) {
         await emailService.sendEmail(
           normalizedEmail,
@@ -390,28 +390,28 @@ export class AuthController {
         );
       }
 
-      return res.status(201).json({
+      return reply.status(201).send({
         message: "User invited successfully.",
         userId
       });
     } catch (error: any) {
       Logger.error({ context: "AuthController", message: "An error occurred", error: error });
-      return res.status(500).json({ error: "Internal server error" });
+      return reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async updateUserRole(req: Request, res: Response) {
+  static async updateUserRole(request: FastifyRequest, reply: FastifyReply) {
     try {
       const tenantId = (req as any).tenantId;
-      const { userId } = req.params;
-      const { role } = req.body;
+      const { userId } = request.params;
+      const { role } = request.body;
 
       if (!role) {
-        return res.status(400).json({ error: "Role is required" });
+        return reply.status(400).send({ error: "Role is required" });
       }
 
       if (typeof role !== "string") {
-        return res.status(400).json({ error: "Invalid field types" });
+        return reply.status(400).send({ error: "Invalid field types" });
       }
 
       let user = inMemoryUsers.get(userId);
@@ -444,10 +444,10 @@ export class AuthController {
         }
       } catch (e) {}
 
-      return res.status(200).json({ success: true });
+      return reply.status(200).send({ success: true });
     } catch (error: any) {
       Logger.error({ context: "AuthController", message: "An error occurred", error: error });
-      return res.status(500).json({ error: "Internal server error" });
+      return reply.status(500).send({ error: "Internal server error" });
     }
   }
 }

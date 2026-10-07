@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { AuthController } from "../controllers/AuthController";
 import { rateLimit } from "express-rate-limit";
 
@@ -25,9 +25,10 @@ const setupLimiter = rateLimit({
   message: { error: "Too many setup attempts, please try again later." }
 });
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.post("/setup", setupLimiter, AuthController.setup);
-router.post("/login", authLimiter, AuthController.login);
+fastify.post("/setup", setupLimiter, AuthController.setup);
+fastify.post("/login", authLimiter, AuthController.login);
 
+};
 export default router;

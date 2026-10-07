@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from 'fastify';
 import { prisma } from '../../database/prisma';
 class AgingAnalysisService {
   generateAgingReport(layers: any[]) { return { buckets: [], totalValueCents: 0 }; }
@@ -7,13 +7,14 @@ class DeadStockDetector {
   identifyDeadStock(skus: string[], dispatches: any[]) { return []; }
 }
 
-export const agingRouter = Router();
+export const agingRouter: FastifyPluginAsync = async (fastify) => {
+
 const agingService = new AgingAnalysisService();
 const deadStockDetector = new DeadStockDetector();
 
-agingRouter.get('/report/:tenantId', async (req: Request, res: Response) => {
+agingRouter.get('/report/:tenantId', async (request: FastifyRequest, reply: FastifyReply) => {
   try {
-    const { tenantId } = req.params;
+    const { tenantId } = request.params;
     const layers = await prisma.inventoryCostLayerModel.findMany({
       where: {
         tenantId,
@@ -28,16 +29,16 @@ agingRouter.get('/report/:tenantId', async (req: Request, res: Response) => {
     });
 
     const report = agingService.generateAgingReport(layers);
-    res.status(200).json(report);
+    reply.status(200).send(report);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to generate aging report' });
+    reply.status(500).send({ error: 'Failed to generate aging report' });
   }
 });
 
-agingRouter.get('/dead-stock/:tenantId', async (req: Request, res: Response) => {
+agingRouter.get('/dead-stock/:tenantId', async (request: FastifyRequest, reply: FastifyReply) => {
   try {
-    const { tenantId } = req.params;
-    const days = parseInt(req.query.days as string) || 180;
+    const { tenantId } = request.params;
+    const days = parseInt(request.query.days as string) || 180;
     
     // Find dispatches in the last N days
     const sinceDate = new Date();
@@ -61,8 +62,10 @@ agingRouter.get('/dead-stock/:tenantId', async (req: Request, res: Response) => 
     });
 
     const deadStockSkus = deadStockDetector.identifyDeadStock(inventorySkus, dispatches);
-    res.status(200).json({ periodDays: days, deadStockSkus });
+    reply.status(200).send({ periodDays: days, deadStockSkus });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to detect dead stock' });
+    reply.status(500).send({ error: 'Failed to detect dead stock' });
   }
 });
+
+};

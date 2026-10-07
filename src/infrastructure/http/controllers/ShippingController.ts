@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { CalculateShippingRates } from "../../../application/useCases/CalculateShippingRates";
 import { PurchaseShippingLabel } from "../../../application/useCases/PurchaseShippingLabel";
 import { UpdateShipmentStatus } from "../../../application/useCases/UpdateShipmentStatus";
@@ -17,24 +17,24 @@ import { Logger } from "../../../infrastructure/logging/logger";
 import crypto from "crypto";
 
 export class ShippingController {
-  static async getRates(req: Request, res: Response) {
+  static async getRates(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const carrierService = req.app.get("carrierService") as ICarrierService;
+      const carrierService = request.server["carrierService"] as ICarrierService;
       const useCase = new CalculateShippingRates(carrierService);
 
-      const { sku, quantity, address } = req.query;
+      const { sku, quantity, address } = request.query;
 
       if (!sku || !address) {
-        return res.status(400).json({ error: "Missing required parameters: sku, address." });
+        return reply.status(400).send({ error: "Missing required parameters: sku, address." });
       }
 
       if (typeof sku !== "string" || typeof address !== "string" || (quantity !== undefined && typeof quantity !== "string")) {
-        return res.status(400).json({ error: "Invalid query parameters" });
+        return reply.status(400).send({ error: "Invalid query parameters" });
       }
 
       const parsedQuantity = quantity ? parseInt((quantity as string).trim(), 10) : 1;
       if (isNaN(parsedQuantity) || parsedQuantity <= 0) {
-        return res.status(400).json({ error: "Invalid quantity parameter" });
+        return reply.status(400).send({ error: "Invalid quantity parameter" });
       }
 
       const rates = await useCase.execute({
@@ -43,27 +43,27 @@ export class ShippingController {
         destinationAddress: (address as string).trim()
       });
 
-      res.status(200).json(rates);
+      reply.status(200).send(rates);
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "ShippingController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+        reply.status(400).send({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         Logger.error({ context: "ShippingController", message: "Failed to estimate shipping rates:", error: error });
-        res.status(500).json({ error: "Failed to fetch rates." });
+        reply.status(500).send({ error: "Failed to fetch rates." });
       }
     }
   }
 
-  static async purchaseLabel(req: Request, res: Response) {
+  static async purchaseLabel(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const shipmentRepository = req.app.get("shipmentRepository") as IShipmentRepository;
-      const carrierService = req.app.get("carrierService") as ICarrierService;
-      const inventoryRepository = req.app.get("inventoryRepository") as IInventoryRepository;
-      const dispatchRecordRepository = req.app.get("dispatchRecordRepository") as IDispatchRecordRepository;
-      const tenantConfigRepository = req.app.get("tenantConfigRepository") as ITenantConfigRepository;
-      const journalRepository = req.app.get("journalRepository") as IJournalRepository;
-      const outboxRepository = req.app.get("outboxRepository") as IOutboxRepository;
+      const shipmentRepository = request.server["shipmentRepository"] as IShipmentRepository;
+      const carrierService = request.server["carrierService"] as ICarrierService;
+      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
+      const dispatchRecordRepository = request.server["dispatchRecordRepository"] as IDispatchRecordRepository;
+      const tenantConfigRepository = request.server["tenantConfigRepository"] as ITenantConfigRepository;
+      const journalRepository = request.server["journalRepository"] as IJournalRepository;
+      const outboxRepository = request.server["outboxRepository"] as IOutboxRepository;
 
       const useCase = new PurchaseShippingLabel(
         shipmentRepository,
@@ -75,7 +75,7 @@ export class ShippingController {
         outboxRepository
       );
 
-      const { sku, quantity, destinationAddress, carrier, locationId, tenantId } = req.body;
+      const { sku, quantity, destinationAddress, carrier, locationId, tenantId } = request.body;
 
       const result = await useCase.execute({
         sku,
@@ -86,27 +86,27 @@ export class ShippingController {
         tenantId: tenantId || "DEFAULT"
       });
 
-      res.status(201).json({
+      reply.status(201).send({
         message: "Shipping label purchased successfully.",
         ...result
       });
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "ShippingController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+        reply.status(400).send({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         Logger.error({ context: "ShippingController", message: "Failed to purchase shipping label:", error: error });
-        res.status(500).json({ error: "Label purchase failed." });
+        reply.status(500).send({ error: "Label purchase failed." });
       }
     }
   }
 
-  static async getShipments(req: Request, res: Response) {
+  static async getShipments(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const shipmentRepository = req.app.get("shipmentRepository") as IShipmentRepository;
+      const shipmentRepository = request.server["shipmentRepository"] as IShipmentRepository;
       const shipments = await shipmentRepository.findAll();
 
-      res.status(200).json(
+      reply.status(200).send(
         shipments.map(s => ({
           id: s.id,
           sku: s.sku,
@@ -124,52 +124,52 @@ export class ShippingController {
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "ShippingController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+        reply.status(400).send({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         Logger.error({ context: "ShippingController", message: "Failed to list shipments:", error: error });
-        res.status(500).json({ error: "Failed to list shipments." });
+        reply.status(500).send({ error: "Failed to list shipments." });
       }
     }
   }
 
-  static async trackShipment(req: Request, res: Response) {
+  static async trackShipment(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const shipmentRepository = req.app.get("shipmentRepository") as IShipmentRepository;
-      const outboxRepository = req.app.get("outboxRepository") as IOutboxRepository;
+      const shipmentRepository = request.server["shipmentRepository"] as IShipmentRepository;
+      const outboxRepository = request.server["outboxRepository"] as IOutboxRepository;
       const useCase = new UpdateShipmentStatus(shipmentRepository, outboxRepository);
 
-      const { id } = req.params;
-      const { status } = req.body;
+      const { id } = request.params;
+      const { status } = request.body;
 
       await useCase.execute({
         shipmentId: id,
         status: status as ShipmentStatus
       });
 
-      res.status(200).json({ message: "Shipment status updated successfully.", status });
+      reply.status(200).send({ message: "Shipment status updated successfully.", status });
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "ShippingController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+        reply.status(400).send({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         Logger.error({ context: "ShippingController", message: "Failed to update tracking status:", error: error });
-        res.status(500).json({ error: "Failed to update tracking." });
+        reply.status(500).send({ error: "Failed to update tracking." });
       }
     }
   }
 
-  static async routeOrder(req: Request, res: Response) {
+  static async routeOrder(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const inventoryRepository = req.app.get("inventoryRepository") as IInventoryRepository;
-      const carrierService = req.app.get("carrierService") as ICarrierService;
-      const geocoderService = req.app.get("geocoderService") || new MockGeocoderService();
+      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
+      const carrierService = request.server["carrierService"] as ICarrierService;
+      const geocoderService = request.server["geocoderService"] || new MockGeocoderService();
 
       const useCase = new RouteOrder(inventoryRepository, carrierService, geocoderService);
 
-      const { sku, quantity, destinationAddress, strategyName } = req.body;
+      const { sku, quantity, destinationAddress, strategyName } = request.body;
 
       if (!sku || !quantity || !destinationAddress) {
-        return res.status(400).json({ error: "Missing required body fields: sku, quantity, and destinationAddress." });
+        return reply.status(400).send({ error: "Missing required body fields: sku, quantity, and destinationAddress." });
       }
 
       const plan = await useCase.execute({
@@ -179,23 +179,23 @@ export class ShippingController {
         strategyName
       });
 
-      res.status(200).json(plan);
+      reply.status(200).send(plan);
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "ShippingController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "A domain error occurred while routing the order.", type: error.name });
+        reply.status(400).send({ error: "A domain error occurred while routing the order.", type: error.name });
       } else {
         Logger.error({ context: "ShippingController", message: "Failed to route order:", error: error });
-        res.status(500).json({ error: "Failed to route order." });
+        reply.status(500).send({ error: "Failed to route order." });
       }
     }
   }
 
-  static async calculateCarrierRates(req: Request, res: Response) {
+  static async calculateCarrierRates(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { carrier, originPostalCode, destinationPostalCode, weightKg, serviceLevel } = req.body;
+      const { carrier, originPostalCode, destinationPostalCode, weightKg, serviceLevel } = request.body;
       if (!carrier || !originPostalCode || !destinationPostalCode || weightKg === undefined) {
-        return res.status(400).json({ error: "Missing required fields: carrier, originPostalCode, destinationPostalCode, weightKg." });
+        return reply.status(400).send({ error: "Missing required fields: carrier, originPostalCode, destinationPostalCode, weightKg." });
       }
 
       const weight = parseFloat(weightKg);
@@ -215,7 +215,7 @@ export class ShippingController {
       else if (carrier === 'DHL') { service = serviceLevel || 'EXPRESS_WORLDWIDE'; days = 1; }
       else if (carrier === 'GENERIC_LTL') { service = serviceLevel || 'FREIGHT_LTL_STANDARD'; days = 5; }
 
-      res.status(200).json({
+      reply.status(200).send({
         carrier,
         serviceLevel: service,
         baseRateCents: baseCents,
@@ -226,15 +226,15 @@ export class ShippingController {
       });
     } catch (error: any) {
       Logger.error({ context: "ShippingController", message: "Failed to calculate carrier rates:", error });
-      res.status(500).json({ error: "Failed to calculate carrier rates." });
+      reply.status(500).send({ error: "Failed to calculate carrier rates." });
     }
   }
 
-  static async generateShippingLabel(req: Request, res: Response) {
+  static async generateShippingLabel(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { carrier, recipientName, shippingAddress, weightKg, serviceLevel, format } = req.body;
+      const { carrier, recipientName, shippingAddress, weightKg, serviceLevel, format } = request.body;
       if (!carrier || !recipientName || !shippingAddress) {
-        return res.status(400).json({ error: "Missing required fields: carrier, recipientName, shippingAddress." });
+        return reply.status(400).send({ error: "Missing required fields: carrier, recipientName, shippingAddress." });
       }
 
       const labelFormat = format || 'BOTH';
@@ -251,7 +251,7 @@ export class ShippingController {
         ? Buffer.from(`PDF-MOCK-LABEL-${carrier}-${trackingNumber}-${recipientName}`).toString('base64')
         : undefined;
 
-      res.status(200).json({
+      reply.status(200).send({
         carrier,
         trackingNumber,
         serviceLevel: serviceLevel || 'STANDARD_GROUND',
@@ -263,7 +263,7 @@ export class ShippingController {
       });
     } catch (error: any) {
       Logger.error({ context: "ShippingController", message: "Failed to generate shipping label:", error });
-      res.status(500).json({ error: "Failed to generate shipping label." });
+      reply.status(500).send({ error: "Failed to generate shipping label." });
     }
   }
 }

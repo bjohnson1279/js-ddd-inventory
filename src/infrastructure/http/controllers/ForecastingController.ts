@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { Prisma } from "@prisma/client";
 import { GetDemandPlanningReport } from "../../../application/useCases/GetDemandPlanningReport";
 import { GenerateDemandForecast } from "../../../application/useCases/GenerateDemandForecast";
@@ -12,12 +12,12 @@ import { Logger } from "../../../infrastructure/logging/logger";
 
 
 export class ForecastingController {
-  static async getReport(req: Request, res: Response) {
+  static async getReport(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const inventoryRepository = req.app.get("inventoryRepository") as IInventoryRepository;
-      const reorderPolicyRepository = req.app.get("reorderPolicyRepository") as IReorderPolicyRepository;
-      const demandForecastRepository = req.app.get("demandForecastRepository") as IDemandForecastRepository;
-      const dispatchRecordRepository = req.app.get("dispatchRecordRepository") as IDispatchRecordRepository;
+      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
+      const reorderPolicyRepository = request.server["reorderPolicyRepository"] as IReorderPolicyRepository;
+      const demandForecastRepository = request.server["demandForecastRepository"] as IDemandForecastRepository;
+      const dispatchRecordRepository = request.server["dispatchRecordRepository"] as IDispatchRecordRepository;
 
       const salesVelocityService = new CalculateSalesVelocity(dispatchRecordRepository, inventoryRepository);
       const useCase = new GetDemandPlanningReport(
@@ -28,36 +28,36 @@ export class ForecastingController {
         salesVelocityService
       );
 
-      if (req.query.locationId !== undefined && typeof req.query.locationId !== "string") {
-        return res.status(400).json({ error: "Invalid locationId parameter" });
+      if (request.query.locationId !== undefined && typeof request.query.locationId !== "string") {
+        return reply.status(400).send({ error: "Invalid locationId parameter" });
       }
-      const locationId = req.query.locationId ? (req.query.locationId as string).trim() : "default";
+      const locationId = request.query.locationId ? (request.query.locationId as string).trim() : "default";
       const report = await useCase.execute(locationId);
 
-      res.status(200).json(report);
+      reply.status(200).send(report);
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "ForecastingController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+        reply.status(400).send({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         Logger.error({ context: "ForecastingController", message: "Failed to fetch demand planning report:", error: error });
-        res.status(500).json({ error: "Internal server error" });
+        reply.status(500).send({ error: "Internal server error" });
       }
     }
   }
 
-  static async generateForecast(req: Request, res: Response) {
+  static async generateForecast(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const inventoryRepository = req.app.get("inventoryRepository") as IInventoryRepository;
-      const demandForecastRepository = req.app.get("demandForecastRepository") as IDemandForecastRepository;
-      const dispatchRecordRepository = req.app.get("dispatchRecordRepository") as IDispatchRecordRepository;
+      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
+      const demandForecastRepository = request.server["demandForecastRepository"] as IDemandForecastRepository;
+      const dispatchRecordRepository = request.server["dispatchRecordRepository"] as IDispatchRecordRepository;
 
       const salesVelocityService = new CalculateSalesVelocity(dispatchRecordRepository, inventoryRepository);
       const useCase = new GenerateDemandForecast(demandForecastRepository, salesVelocityService, dispatchRecordRepository);
 
-      const { sku, locationId, forecastDays, trendMultiplier } = req.body;
+      const { sku, locationId, forecastDays, trendMultiplier } = request.body;
       if (!sku) {
-        return res.status(400).json({ error: "Missing required parameter: sku" });
+        return reply.status(400).send({ error: "Missing required parameter: sku" });
       }
 
       const forecast = await useCase.execute({
@@ -67,7 +67,7 @@ export class ForecastingController {
         trendMultiplier: trendMultiplier ? parseFloat(trendMultiplier) : 1.0
       });
 
-      res.status(200).json({
+      reply.status(200).send({
         message: "Demand forecast generated successfully",
         forecast: {
           id: forecast.id,
@@ -83,21 +83,21 @@ export class ForecastingController {
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "ForecastingController", message: "An error occurred", error: error.message });
-        res.status(400).json({ error: "A domain error occurred while processing the request.", type: error.name });
+        reply.status(400).send({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
         Logger.error({ context: "ForecastingController", message: "Failed to generate demand forecast:", error: error });
-        res.status(500).json({ error: "Failed to generate demand forecast" });
+        reply.status(500).send({ error: "Failed to generate demand forecast" });
       }
     }
   }
 
-  static async getDispatchSummary(req: Request, res: Response) {
+  static async getDispatchSummary(request: FastifyRequest, reply: FastifyReply) {
     try {
       const { prisma } = require("../../database/prisma");
-      const sku = req.query.sku as string;
+      const sku = request.query.sku as string;
       
       if (sku !== undefined && typeof sku !== "string") {
-        return res.status(400).json({ error: "Invalid sku parameter" });
+        return reply.status(400).send({ error: "Invalid sku parameter" });
       }
 
       let results;
@@ -112,10 +112,10 @@ export class ForecastingController {
            ORDER BY bucket DESC`);
       }
       
-      res.status(200).json(results);
+      reply.status(200).send(results);
     } catch (error: any) {
       Logger.error({ context: "ForecastingController", message: "Failed to fetch dispatch summary from continuous aggregate:", error: error });
-      res.status(500).json({ error: "Internal server error" });
+      reply.status(500).send({ error: "Internal server error" });
     }
   }
 }

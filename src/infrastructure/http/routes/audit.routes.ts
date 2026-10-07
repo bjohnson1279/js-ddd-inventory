@@ -1,11 +1,12 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { AuditController } from "../controllers/AuditController";
 import { requireRole } from "../middleware/auth";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.post("/run", requireRole(["admin"]), AuditController.runAudit);
-router.get("/discrepancies", requireRole(["admin", "accountant", "viewer"]), AuditController.listDiscrepancies);
-router.post("/discrepancies/:id/resolve", requireRole(["admin"]), AuditController.resolveDiscrepancy);
+fastify.post("/run", { preHandler: [requireRole(["admin"])] }, AuditController.runAudit);
+fastify.get("/discrepancies", { preHandler: [requireRole(["admin", "accountant", "viewer"])] }, AuditController.listDiscrepancies);
+fastify.post("/discrepancies/:id/resolve", { preHandler: [requireRole(["admin"])] }, AuditController.resolveDiscrepancy);
 
+};
 export default router;

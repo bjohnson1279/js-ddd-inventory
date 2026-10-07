@@ -1,6 +1,6 @@
 import { DomainException } from "../../../domain/exceptions/DomainException";
 
-import { Request, Response } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { CreateInventoryAudit } from "../../../application/useCases/CreateInventoryAudit";
 import { StartInventoryAudit } from "../../../application/useCases/StartInventoryAudit";
 import { RecordAuditCount } from "../../../application/useCases/RecordAuditCount";
@@ -14,14 +14,14 @@ import { IJournalRepository } from "../../../domain/repositories/IJournalReposit
 import { Logger } from "../../../infrastructure/logging/logger";
 
 export class InventoryAuditController {
-  static async create(req: Request, res: Response) {
+  static async create(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const auditRepository = req.app.get("inventoryAuditRepository") as IInventoryAuditRepository;
-      const inventoryRepository = req.app.get("inventoryRepository") as IInventoryRepository;
+      const auditRepository = request.server["inventoryAuditRepository"] as IInventoryAuditRepository;
+      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
       const useCase = new CreateInventoryAudit(auditRepository, inventoryRepository);
 
-      const audit = await useCase.execute(req.body);
-      res.status(201).json({
+      const audit = await useCase.execute(request.body);
+      reply.status(201).send({
         id: audit.id,
         auditNumber: audit.auditNumber,
         tenantId: audit.tenantId,
@@ -40,60 +40,60 @@ export class InventoryAuditController {
       });
     } catch (error: any) {
       Logger.error({ context: "InventoryAuditController", message: "An error occurred", error: error });
-      res.status(400).json({ error: "Bad request" });
+      reply.status(400).send({ error: "Bad request" });
     }
   }
 
-  static async start(req: Request, res: Response) {
+  static async start(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const auditRepository = req.app.get("inventoryAuditRepository") as IInventoryAuditRepository;
+      const auditRepository = request.server["inventoryAuditRepository"] as IInventoryAuditRepository;
       const useCase = new StartInventoryAudit(auditRepository);
-      await useCase.execute(req.params.id);
-      res.status(200).json({ message: "Inventory audit started successfully" });
+      await useCase.execute(request.params.id);
+      reply.status(200).send({ message: "Inventory audit started successfully" });
     } catch (error: any) {
       Logger.error({ context: "InventoryAuditController", message: "An error occurred", error: error });
       Logger.error({ context: "InventoryAuditController", message: error instanceof DomainException ? error.message : error });
-      res.status(400).json({ error: "Bad request" });
+      reply.status(400).send({ error: "Bad request" });
     }
   }
 
-  static async recordCount(req: Request, res: Response) {
+  static async recordCount(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const auditRepository = req.app.get("inventoryAuditRepository") as IInventoryAuditRepository;
+      const auditRepository = request.server["inventoryAuditRepository"] as IInventoryAuditRepository;
       const useCase = new RecordAuditCount(auditRepository);
       await useCase.execute({
-        auditId: req.params.id,
-        variantId: req.body.variantId,
-        countedQuantity: req.body.countedQuantity
+        auditId: request.params.id,
+        variantId: request.body.variantId,
+        countedQuantity: request.body.countedQuantity
       });
-      res.status(200).json({ message: "Count recorded successfully" });
+      reply.status(200).send({ message: "Count recorded successfully" });
     } catch (error: any) {
       Logger.error({ context: "InventoryAuditController", message: "An error occurred", error: error });
       Logger.error({ context: "InventoryAuditController", message: error instanceof DomainException ? error.message : error });
-      res.status(400).json({ error: "Bad request" });
+      reply.status(400).send({ error: "Bad request" });
     }
   }
 
-  static async complete(req: Request, res: Response) {
+  static async complete(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const auditRepository = req.app.get("inventoryAuditRepository") as IInventoryAuditRepository;
+      const auditRepository = request.server["inventoryAuditRepository"] as IInventoryAuditRepository;
       const useCase = new CompleteInventoryAudit(auditRepository);
-      await useCase.execute(req.params.id);
-      res.status(200).json({ message: "Inventory audit completed successfully" });
+      await useCase.execute(request.params.id);
+      reply.status(200).send({ message: "Inventory audit completed successfully" });
     } catch (error: any) {
       Logger.error({ context: "InventoryAuditController", message: "An error occurred", error: error });
       Logger.error({ context: "InventoryAuditController", message: error instanceof DomainException ? error.message : error });
-      res.status(400).json({ error: "Bad request" });
+      reply.status(400).send({ error: "Bad request" });
     }
   }
 
-  static async reconcile(req: Request, res: Response) {
+  static async reconcile(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const auditRepository = req.app.get("inventoryAuditRepository") as IInventoryAuditRepository;
-      const inventoryRepository = req.app.get("inventoryRepository") as IInventoryRepository;
-      const costLayerRepository = req.app.get("costLayerRepository") as ICostLayerRepository;
-      const tenantConfigRepository = req.app.get("tenantConfigRepository") as ITenantConfigRepository;
-      const journalRepository = req.app.get("journalRepository") as IJournalRepository;
+      const auditRepository = request.server["inventoryAuditRepository"] as IInventoryAuditRepository;
+      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
+      const costLayerRepository = request.server["costLayerRepository"] as ICostLayerRepository;
+      const tenantConfigRepository = request.server["tenantConfigRepository"] as ITenantConfigRepository;
+      const journalRepository = request.server["journalRepository"] as IJournalRepository;
 
       const useCase = new ReconcileInventoryAudit(
         auditRepository,
@@ -103,23 +103,23 @@ export class InventoryAuditController {
         journalRepository
       );
 
-      await useCase.execute(req.params.id);
-      res.status(200).json({ message: "Inventory audit reconciled successfully" });
+      await useCase.execute(request.params.id);
+      reply.status(200).send({ message: "Inventory audit reconciled successfully" });
     } catch (error: any) {
       Logger.error({ context: "InventoryAuditController", message: "An error occurred", error: error });
       Logger.error({ context: "InventoryAuditController", message: error instanceof DomainException ? error.message : error });
-      res.status(400).json({ error: "Bad request" });
+      reply.status(400).send({ error: "Bad request" });
     }
   }
 
-  static async get(req: Request, res: Response) {
+  static async get(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const auditRepository = req.app.get("inventoryAuditRepository") as IInventoryAuditRepository;
-      const audit = await auditRepository.findById(req.params.id);
+      const auditRepository = request.server["inventoryAuditRepository"] as IInventoryAuditRepository;
+      const audit = await auditRepository.findById(request.params.id);
       if (!audit) {
-        return res.status(404).json({ error: "Inventory audit not found" });
+        return reply.status(404).send({ error: "Inventory audit not found" });
       }
-      res.status(200).json({
+      reply.status(200).send({
         id: audit.id,
         auditNumber: audit.auditNumber,
         tenantId: audit.tenantId,
@@ -138,7 +138,7 @@ export class InventoryAuditController {
       });
     } catch (error: any) {
       Logger.error({ context: "InventoryAuditController", message: "An error occurred", error: error });
-      res.status(500).json({ error: "Internal server error" });
+      reply.status(500).send({ error: "Internal server error" });
     }
   }
 }

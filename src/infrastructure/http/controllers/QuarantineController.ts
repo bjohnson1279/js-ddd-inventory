@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { ResolveQuarantineItem } from "../../../application/useCases/ResolveQuarantineItem";
 import { IQuarantineRepository } from "../../../domain/repositories/IQuarantineRepository";
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
@@ -8,13 +8,13 @@ import { IJournalRepository } from "../../../domain/repositories/IJournalReposit
 import { Logger } from "../../../infrastructure/logging/logger";
 
 export class QuarantineController {
-  static async resolve(req: Request, res: Response) {
+  static async resolve(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const quarantineRepository = req.app.get("quarantineRepository") as IQuarantineRepository;
-      const inventoryRepository = req.app.get("inventoryRepository") as IInventoryRepository;
-      const costLayerRepository = req.app.get("costLayerRepository") as ICostLayerRepository;
-      const tenantConfigRepository = req.app.get("tenantConfigRepository") as ITenantConfigRepository;
-      const journalRepository = req.app.get("journalRepository") as IJournalRepository;
+      const quarantineRepository = request.server["quarantineRepository"] as IQuarantineRepository;
+      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
+      const costLayerRepository = request.server["costLayerRepository"] as ICostLayerRepository;
+      const tenantConfigRepository = request.server["tenantConfigRepository"] as ITenantConfigRepository;
+      const journalRepository = request.server["journalRepository"] as IJournalRepository;
 
       const useCase = new ResolveQuarantineItem(
         quarantineRepository,
@@ -25,26 +25,26 @@ export class QuarantineController {
       );
 
       await useCase.execute({
-        quarantineItemId: req.params.id,
-        resolution: req.body.resolution,
+        quarantineItemId: request.params.id,
+        resolution: request.body.resolution,
       });
 
-      res.status(200).json({ message: "Quarantine item resolved successfully" });
+      reply.status(200).send({ message: "Quarantine item resolved successfully" });
     } catch (error: any) {
       Logger.error({ context: "QuarantineController", message: "An error occurred", error: error });
-      res.status(400).json({ error: "Bad request" });
+      reply.status(400).send({ error: "Bad request" });
     }
   }
 
-  static async get(req: Request, res: Response) {
+  static async get(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const quarantineRepository = req.app.get("quarantineRepository") as IQuarantineRepository;
-      const item = await quarantineRepository.findById(req.params.id);
+      const quarantineRepository = request.server["quarantineRepository"] as IQuarantineRepository;
+      const item = await quarantineRepository.findById(request.params.id);
       if (!item) {
-        return res.status(404).json({ error: "Quarantine item not found" });
+        return reply.status(404).send({ error: "Quarantine item not found" });
       }
 
-      res.status(200).json({
+      reply.status(200).send({
         id: item.id,
         variantId: item.variantId,
         quantity: item.quantity,
@@ -57,16 +57,16 @@ export class QuarantineController {
       });
     } catch (error: any) {
       Logger.error({ context: "QuarantineController", message: "An error occurred", error: error });
-      res.status(500).json({ error: "Internal server error" });
+      reply.status(500).send({ error: "Internal server error" });
     }
   }
 
-  static async list(req: Request, res: Response) {
+  static async list(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const quarantineRepository = req.app.get("quarantineRepository") as IQuarantineRepository;
+      const quarantineRepository = request.server["quarantineRepository"] as IQuarantineRepository;
       const items = await quarantineRepository.findAll();
 
-      res.status(200).json(
+      reply.status(200).send(
         items.map((item) => ({
           id: item.id,
           variantId: item.variantId,
@@ -81,7 +81,7 @@ export class QuarantineController {
       );
     } catch (error: any) {
       Logger.error({ context: "QuarantineController", message: "An error occurred", error: error });
-      res.status(500).json({ error: "Internal server error" });
+      reply.status(500).send({ error: "Internal server error" });
     }
   }
 }

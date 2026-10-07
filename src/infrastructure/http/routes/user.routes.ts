@@ -1,11 +1,12 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { AuthController } from "../controllers/AuthController";
 import { requireRole } from "../middleware/auth";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.get("/", requireRole(["admin"]), AuthController.listUsers);
-router.post("/", requireRole(["admin"]), AuthController.inviteUser);
-router.patch("/:userId/role", requireRole(["admin"]), AuthController.updateUserRole);
+fastify.get("/", { preHandler: [requireRole(["admin"])] }, AuthController.listUsers);
+fastify.post("/", { preHandler: [requireRole(["admin"])] }, AuthController.inviteUser);
+fastify.patch("/:userId/role", { preHandler: [requireRole(["admin"])] }, AuthController.updateUserRole);
 
+};
 export default router;

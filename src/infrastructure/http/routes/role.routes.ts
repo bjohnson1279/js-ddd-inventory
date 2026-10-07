@@ -1,44 +1,45 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { RoleController } from "../controllers/RoleController";
 import { requireRole, requirePermission } from "../middleware/auth";
 import { ManageRolesUseCase } from "../../../application/useCases/ManageRolesUseCase";
 import { Logger } from "../../../infrastructure/logging/logger";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
 // Only tenant admins can manage roles and permissions
-router.use(requireRole(["admin"]));
+fastify.use(requireRole(["admin"]));
 
-router.get("/permissions", requirePermission('user', 'edit_role'), RoleController.listPermissions);
+fastify.get("/permissions", { preHandler: [requirePermission('user', 'edit_role')] }, RoleController.listPermissions);
 
-router.get("/", requirePermission('user', 'edit_role'), async (req: any, res: any) => {
+fastify.get("/", requirePermission('user', 'edit_role'), async (req: any, res: any) => {
   try {
-    const tenantId = req.tenantId || "tenant-1";
+    const tenantId = request.tenantId || "tenant-1";
     const roles = await ManageRolesUseCase.listRoles(tenantId);
-    return res.status(200).json(roles);
+    return reply.status(200).send(roles);
   } catch (error) {
-    return res.status(500).json({ error: "Internal server error" });
+    return reply.status(500).send({ error: "Internal server error" });
   }
 });
 
-router.post("/", requirePermission('user', 'edit_role'), async (req: any, res: any) => {
+fastify.post("/", requirePermission('user', 'edit_role'), async (req: any, res: any) => {
   try {
-    const tenantId = req.tenantId || "tenant-1";
-    const { name, description, permissionIds } = req.body;
+    const tenantId = request.tenantId || "tenant-1";
+    const { name, description, permissionIds } = request.body;
 
     const result = await ManageRolesUseCase.createCustomRole(tenantId, name, description, permissionIds);
 
-    return res.status(201).json({ success: true, message: "Role created successfully.", id: result.id });
+    return reply.status(201).send({ success: true, message: "Role created successfully.", id: result.id });
   } catch (error: any) {
     if (error.message && (error.message.includes("name is required") || error.message.includes("Invalid permission IDs"))) {
-      return res.status(400).json({ error: error.message });
+      return reply.status(400).send({ error: error.message });
     }
     Logger.error({ context: "RoleRoute", message: "Failed to create role", error: error });
-    return res.status(500).json({ error: "Internal server error" });
+    return reply.status(500).send({ error: "Internal server error" });
   }
 });
 
-router.put("/:roleId/permissions", RoleController.updateRolePermissions);
-router.delete("/:roleId", RoleController.deleteRole);
+fastify.put("/:roleId/permissions", RoleController.updateRolePermissions);
+fastify.delete("/:roleId", RoleController.deleteRole);
 
+};
 export default router;

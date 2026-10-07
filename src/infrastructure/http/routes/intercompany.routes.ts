@@ -1,23 +1,24 @@
-import { Router, Request, Response } from 'express';
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from 'fastify';
 import { prisma } from '../../database/prisma';
 import { IntercompanyTransferService } from '../../../domain/accounting/services/IntercompanyTransferService';
 import { PrismaIntercompanyRepository } from '../../database/PrismaIntercompanyRepository';
 import { LegalEntity } from '../../../domain/accounting/aggregates/LegalEntity';
 
-export const intercompanyRouter = Router();
+export const intercompanyRouter: FastifyPluginAsync = async (fastify) => {
+
 const transferService = new IntercompanyTransferService();
 const transferRepo = new PrismaIntercompanyRepository();
 
-intercompanyRouter.post('/entities', async (req: Request, res: Response) => {
+intercompanyRouter.post('/entities', async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const entity = LegalEntity.create(
-      req.body.tenantId,
-      req.body.name,
-      req.body.baseCurrency,
-      req.body.taxIdentifier
+      request.body.tenantId,
+      request.body.name,
+      request.body.baseCurrency,
+      request.body.taxIdentifier
     );
     if (!(prisma as any).legalEntityModel) {
-      return res.status(201).json(entity);
+      return reply.status(201).send(entity);
     }
 
     await (prisma as any).legalEntityModel.create({
@@ -31,28 +32,28 @@ intercompanyRouter.post('/entities', async (req: Request, res: Response) => {
       }
     });
 
-    res.status(201).json(entity);
+    reply.status(201).send(entity);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    reply.status(400).send({ error: error.message });
   }
 });
 
-intercompanyRouter.get('/entities/:tenantId', async (req: Request, res: Response) => {
+intercompanyRouter.get('/entities/:tenantId', async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     if (!(prisma as any).legalEntityModel) {
-      return res.json([]);
+      return reply.send([]);
     }
 
     const entities = await (prisma as any).legalEntityModel.findMany({
-      where: { tenantId: req.params.tenantId }
+      where: { tenantId: request.params.tenantId }
     });
-    res.json(entities);
+    reply.send(entities);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    reply.status(400).send({ error: error.message });
   }
 });
 
-intercompanyRouter.post('/transfers', async (req: Request, res: Response) => {
+intercompanyRouter.post('/transfers', async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const {
       tenantId,
@@ -63,7 +64,7 @@ intercompanyRouter.post('/transfers', async (req: Request, res: Response) => {
       unitCostCents,
       markupPercentage,
       dutyCents
-    } = req.body;
+    } = request.body;
 
     const result = transferService.executeTransfer(
       tenantId,
@@ -82,21 +83,23 @@ intercompanyRouter.post('/transfers', async (req: Request, res: Response) => {
       result.eliminationJournal
     );
 
-    res.status(201).json({
+    reply.status(201).send({
       transferId: result.transfer.id,
       standardJournalId: result.standardJournal.id,
       eliminationJournalId: result.eliminationJournal.id
     });
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    reply.status(400).send({ error: error.message });
   }
 });
 
-intercompanyRouter.get('/transfers/:tenantId', async (req: Request, res: Response) => {
+intercompanyRouter.get('/transfers/:tenantId', async (request: FastifyRequest, reply: FastifyReply) => {
   try {
-    const transfers = await transferRepo.getTransfersByTenant(req.params.tenantId);
-    res.json(transfers);
+    const transfers = await transferRepo.getTransfersByTenant(request.params.tenantId);
+    reply.send(transfers);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    reply.status(400).send({ error: error.message });
   }
 });
+
+};

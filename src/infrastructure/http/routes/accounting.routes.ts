@@ -1,14 +1,15 @@
-import { Router } from "express";
+import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { AccountingController } from "../controllers/AccountingController";
 
-const router = Router();
+const router: FastifyPluginAsync = async (fastify) => {
 
-router.get("/ledger", AccountingController.getLedger);
-router.post("/stock-received", AccountingController.recordStockReceived);
-router.post("/stock-sold", AccountingController.recordStockSold);
-router.get("/valuation/:variantId", AccountingController.calculateValuation);
-router.get("/tenant-config/:tenantId", AccountingController.getTenantConfig);
-router.post("/tenant-config", AccountingController.saveTenantConfig);
-router.post("/sync-journal", AccountingController.syncJournal);
+fastify.get("/ledger", AccountingController.getLedger);
+fastify.post("/stock-received", AccountingController.recordStockReceived);
+fastify.post("/stock-sold", AccountingController.recordStockSold);
+fastify.get("/valuation/:variantId", AccountingController.calculateValuation);
+fastify.get("/tenant-config/:tenantId", AccountingController.getTenantConfig);
+fastify.post("/tenant-config", AccountingController.saveTenantConfig);
+fastify.post("/sync-journal", AccountingController.syncJournal);
 
+};
 export default router;
