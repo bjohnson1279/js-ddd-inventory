@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 export class IntercompanyTransfer {
   constructor(
@@ -25,7 +25,7 @@ export class IntercompanyTransfer {
     dutyCents: number = 0
   ): IntercompanyTransfer {
     return new IntercompanyTransfer(
-      uuidv4(),
+      randomUUID(),
       tenantId,
       fromEntityId,
       toEntityId,
