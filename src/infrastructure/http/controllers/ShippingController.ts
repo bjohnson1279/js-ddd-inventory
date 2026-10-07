@@ -241,8 +241,10 @@ export class ShippingController {
       const trackingPrefix = carrier === 'FEDEX' ? 'FX' : carrier === 'UPS' ? '1Z' : carrier === 'DHL' ? 'DHL' : 'LTL';
       const trackingNumber = `${trackingPrefix}${crypto.randomInt(1000000000, 10000000000)}`;
 
+      const safeRecipient = String(recipientName || '').replace(/[\^~]/g, '');
+      const safeAddress = String(shippingAddress || '').replace(/[\^~]/g, '');
       const zplString = (labelFormat === 'ZPL' || labelFormat === 'BOTH')
-        ? `^XA^FO50,50^A0N,50,50^FD${carrier} SHIPPING LABEL^FS^FO50,120^A0N,30,30^FDTo: ${recipientName}^FS^FO50,160^A0N,25,25^FDAddr: ${shippingAddress}^FS^FO50,210^BY3^BCN,100,Y,N,N^FD${trackingNumber}^FS^XZ`
+        ? `^XA^FO50,50^A0N,50,50^FD${carrier} SHIPPING LABEL^FS^FO50,120^A0N,30,30^FDTo: ${safeRecipient}^FS^FO50,160^A0N,25,25^FDAddr: ${safeAddress}^FS^FO50,210^BY3^BCN,100,Y,N,N^FD${trackingNumber}^FS^XZ`
         : undefined;
 
       const pdfBase64 = (labelFormat === 'PDF' || labelFormat === 'BOTH')

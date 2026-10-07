@@ -133,6 +133,9 @@
 **Learning:** When implementing custom formatters or interpolators for raw SQL queries, simply wrapping user input in quotes is insufficient and highly dangerous.
 **Prevention:** Always use established, battle-tested libraries (like `pg-format`) for parameterized queries and identifier formatting. If a custom fallback is absolutely necessary, ensure proper escaping of all relevant characters (e.g., replacing `"` with `""` and `'` with `''`).
 
+## Security Mitigation (ZPL Injection)
+* **Vulnerability**: Unsanitized user inputs in ZPL label templates allow ZPL command injection (`^` and `~`), enabling attackers to escape string fields (`^FD...^FS`), inject arbitrary printer commands (such as `^XZ` to terminate fields early or immediate printer commands like `~SD`), or alter printed label content.
+* **Fix**: Pass all untrusted inputs through a ZPL sanitizer function (`escapeZpl`) that strips or escapes `^` and `~` control characters prior to template interpolation.
 ## 2026-10-15 - [Sentinel: CORS Allowed Origins Validation]
 **Vulnerability:** The application parsed `FRONTEND_URL` by splitting on commas and stripping trailing slashes without validating URL structure or protocol. This could allow non-HTTP protocols or malformed origin strings into the CORS allowedOrigins list.
 **Learning:** Using simple string operations like `replace(/\/$/, "")` to sanitize origins retains paths, queries, or invalid protocols (such as `ftp://` or `javascript:`).

@@ -118,6 +118,11 @@ import { PrismaWarehouseLocationRepository } from "./infrastructure/database/Pri
 import { PrismaProductRepository } from "./infrastructure/database/PrismaProductRepository";
 import { WMSCapacityService } from "./domain/services/WMSCapacityService";
 
+export const escapeZpl = (value: string | undefined | null): string => {
+  if (!value) return "";
+  return String(value).replace(/[\^~]/g, "");
+};
+
 import { traceMiddleware } from "./infrastructure/http/middleware/traceMiddleware";
 import { platformThrottlingMiddleware } from "./infrastructure/http/middleware/platformThrottling";
 
@@ -472,12 +477,13 @@ export const setupApp = (
   app.post("/api/shipping/label", (req, res) => {
     const { carrier, recipientName, shippingAddress, weightKg, format } = req.body;
     const trackingNumber = `${carrier || 'CARRIER'}-${crypto.randomInt(100000000, 1000000000)}`;
+    const safeRecipient = escapeZpl(recipientName);
     res.json({
       carrier: carrier || "FEDEX",
       trackingNumber,
       serviceLevel: "EXPRESS",
       labelFormat: format || "BOTH",
-      zplString: `^XA^FO50,50^A0N,36,36^FDSHIP TO: ${recipientName}^FS^FO50,100^BCN,100,Y,N,N^FD${trackingNumber}^FS^XZ`,
+      zplString: `^XA^FO50,50^A0N,36,36^FDSHIP TO: ${safeRecipient}^FS^FO50,100^BCN,100,Y,N,N^FD${trackingNumber}^FS^XZ`,
       pdfBase64: Buffer.from(`SHIPPING LABEL\nCarrier: ${carrier}\nTracking: ${trackingNumber}`).toString("base64"),
       createdAt: new Date().toISOString()
     });
@@ -555,7 +561,10 @@ export const setupApp = (
 
   app.post("/api/hardware/print-thermal", (req, res) => {
     const { printerName, labelType, barcodeValue, subtitle } = req.body;
-    const zplCode = `^XA\n^FO50,50^A0N,36,36^FD${(labelType || 'LABEL').toUpperCase()} TAG^FS\n^FO50,100^BCN,100,Y,N,N^FD${barcodeValue || 'BARCODE'}^FS\n^FO50,220^A0N,24,24^FD${subtitle || ''}^FS\n^XZ`;
+    const safeLabelType = escapeZpl(labelType || 'LABEL').toUpperCase();
+    const safeBarcodeValue = escapeZpl(barcodeValue || 'BARCODE');
+    const safeSubtitle = escapeZpl(subtitle || '');
+    const zplCode = `^XA\n^FO50,50^A0N,36,36^FD${safeLabelType} TAG^FS\n^FO50,100^BCN,100,Y,N,N^FD${safeBarcodeValue}^FS\n^FO50,220^A0N,24,24^FD${safeSubtitle}^FS\n^XZ`;
     res.json({
       success: true,
       jobId: `PRINT-JOB-${crypto.randomInt(1000, 10000)}`,
