@@ -1,5 +1,4 @@
 import { Logger } from "./infrastructure/logging/logger";
-import { prisma } from "./infrastructure/database/prisma";
 import { PrismaOutboxRepository } from "./infrastructure/database/PrismaOutboxRepository";
 import { OutboxProcessor } from "./infrastructure/outbox/OutboxProcessor";
 import { KafkaMessageBroker } from "./infrastructure/messaging/KafkaMessageBroker";
