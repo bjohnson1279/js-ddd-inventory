@@ -1,6 +1,16 @@
-import { hashPassword, verifyPassword } from '../../../src/infrastructure/utils/security';
+import { hashPassword, verifyPassword, encryptSymmetric, decryptSymmetric } from '../../../src/infrastructure/utils/security';
 
 describe('Security Utilities', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
+  });
+
   describe('hashPassword', () => {
     it('should generate a hash in the format salt:hash', () => {
       const password = 'mySuperSecretPassword123!';
@@ -91,10 +101,43 @@ describe('Security Utilities', () => {
     });
   });
 
-  describe('decryptSymmetric', () => {
+  describe('encryptSymmetric and decryptSymmetric', () => {
+    it('should encrypt and decrypt a string successfully', () => {
+      const plaintext = 'sensitive_db_password_123';
+      const encrypted = encryptSymmetric(plaintext);
+      expect(encrypted).not.toBe(plaintext);
+
+      const decrypted = decryptSymmetric(encrypted);
+      expect(decrypted).toBe(plaintext);
+    });
+
     it('should throw an error for malformed or invalid ciphertext instead of returning it', () => {
-      const { decryptSymmetric } = require('../../../src/infrastructure/utils/security');
       expect(() => decryptSymmetric('invalid:ciphertext:format')).toThrow('Decryption failed');
+    });
+
+    it('should throw error when ENCRYPTION_KEY is unset in non-test environment', () => {
+      delete process.env.ENCRYPTION_KEY;
+      process.env.NODE_ENV = 'production';
+
+      expect(() => encryptSymmetric('test')).toThrow('ENCRYPTION_KEY environment variable is required for security.');
+    });
+
+    it('should succeed when ENCRYPTION_KEY is provided in non-test environment', () => {
+      process.env.ENCRYPTION_KEY = 'custom_production_key_12345';
+      process.env.NODE_ENV = 'production';
+
+      const encrypted = encryptSymmetric('test_data');
+      const decrypted = decryptSymmetric(encrypted);
+      expect(decrypted).toBe('test_data');
+    });
+
+    it('should use fallback secret key when NODE_ENV is test and ENCRYPTION_KEY is unset', () => {
+      delete process.env.ENCRYPTION_KEY;
+      process.env.NODE_ENV = 'test';
+
+      const encrypted = encryptSymmetric('test_data');
+      const decrypted = decryptSymmetric(encrypted);
+      expect(decrypted).toBe('test_data');
     });
   });
 
