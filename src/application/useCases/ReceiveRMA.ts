@@ -17,6 +17,7 @@ import { batchSave } from "../../utils/batchSave";
 import { AccountingJournalService } from "../../domain/accounting/services/AccountingJournalService";
 import { AccountingMethod } from "../../domain/accounting/enums/AccountingMethod";
 import { SerialNumber } from "../../domain/serial/valueObjects/SerialNumber";
+import { SerializedItem } from "../../domain/serial/aggregates/SerializedItem";
 
 export interface ReceiveRMAItemDTO {
   variantId: string;
@@ -71,15 +72,50 @@ export class ReceiveRMA {
     }
 
     const preFetchedItems = new Map<string, InventoryItem>();
-    if (this.inventoryRepository.findBySkus) {
-      for (const [locId, skus] of skusByLocation.entries()) {
-         const skuObjs = Array.from(skus).map(s => SKU.create(s));
-         if (skuObjs.length > 0) {
-             const items = await this.inventoryRepository.findBySkus(skuObjs, locId);
-             for (const item of items) {
-                 preFetchedItems.set(`${locId}|${item.sku.getValue()}`, item);
-             }
-         }
+    const preFetchedKeys = new Set<string>();
+
+    for (const [locId, skus] of skusByLocation.entries()) {
+      const skuObjs = Array.from(skus).map((s) => SKU.create(s));
+      if (skuObjs.length === 0) continue;
+
+      for (const skuStr of skus) {
+        preFetchedKeys.add(`${locId}|${skuStr}`);
+      }
+
+      if (this.inventoryRepository.findBySkus) {
+        const items = await this.inventoryRepository.findBySkus(skuObjs, locId);
+        for (const item of items) {
+          preFetchedItems.set(`${locId}|${item.sku.getValue()}`, item);
+        }
+      } else {
+        const items = await Promise.all(
+          skuObjs.map((skuObj) => this.inventoryRepository.findBySku(skuObj, locId))
+        );
+        for (const item of items) {
+          if (item) {
+            preFetchedItems.set(`${locId}|${item.sku.getValue()}`, item);
+          }
+        }
+      }
+    }
+
+    // Pre-fetch serialized items in batch to avoid N+1 queries
+    const preFetchedSerials = new Map<string, SerializedItem>();
+    if (this.serializedItemRepository) {
+      const allSerials: SerialNumber[] = [];
+      for (const item of dto.items) {
+        if (item.serialNumbers) {
+          for (const sn of item.serialNumbers) {
+            allSerials.push(new SerialNumber(sn));
+          }
+        }
+      }
+
+      if (allSerials.length > 0 && this.serializedItemRepository.findBySerials) {
+        const foundItems = await this.serializedItemRepository.findBySerials(allSerials, rma.tenantId);
+        for (const serialItem of foundItems) {
+          preFetchedSerials.set(serialItem.serialNumber.value, serialItem);
+        }
       }
     }
 
@@ -99,9 +135,10 @@ export class ReceiveRMA {
 
       // 2. Increment stock level
       const sku = SKU.create(item.variantId);
-      // Fetch from accumulated map first, then DB
-      let invItem = inventoryItemsToSave.get(targetLocationId + '|' + sku.getValue()) || preFetchedItems.get(targetLocationId + '|' + sku.getValue()) || null;
-      if (!invItem) {
+      const key = targetLocationId + '|' + sku.getValue();
+      // Fetch from accumulated map first, then DB (if not already pre-fetched)
+      let invItem = inventoryItemsToSave.get(key) || preFetchedItems.get(key) || null;
+      if (!invItem && !preFetchedKeys.has(key)) {
         invItem = await this.inventoryRepository.findBySku(sku, targetLocationId);
       }
 
@@ -163,8 +200,6 @@ export class ReceiveRMA {
         invItem.dispatchStock(Quantity.create(item.quantityReceived));
         inventoryItemsToSave.set(targetLocationId + '|' + sku.getValue(), invItem);
 
-
-
         // Save the cost layer so the service can find it
         if (costLayersToSave.length > 0) {
           await batchSave(this.costLayerRepository, costLayersToSave);
@@ -191,7 +226,10 @@ export class ReceiveRMA {
       if (item.serialNumbers && this.serializedItemRepository) {
         for (const sn of item.serialNumbers) {
           const serialObj = new SerialNumber(sn);
-          const serialItem = await this.serializedItemRepository.findBySerialOrFail(serialObj, rma.tenantId);
+          let serialItem = preFetchedSerials.get(sn);
+          if (!serialItem) {
+            serialItem = await this.serializedItemRepository.findBySerialOrFail(serialObj, rma.tenantId);
+          }
           serialItem.acceptReturn(`RMA-${rma.id}`, "system");
 
           if (item.disposition === RMADisposition.Restock) {

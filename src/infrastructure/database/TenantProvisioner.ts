@@ -35,7 +35,6 @@ export class TenantProvisioner {
       await this.registry.updateStatus(tenantId, 'ACTIVE');
       await this.registry.updateMigratedVersion(tenantId, '1');
 
-      console.log(`[TenantProvisioner] Tenant "${tenantId}" provisioned and ACTIVE (database: ${dbName}).`);
       return dbName;
 
     } catch (err: any) {

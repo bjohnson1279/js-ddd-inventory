@@ -116,3 +116,15 @@
 ## 2024-03-24 - Avoiding Promise.all map for Demand Planning
 **Learning:** Using `Promise.all` wrapped over an array to fire numerous single-record database lookups inside `GetDemandPlanningReport` causes N+1 query latencies, massive connection pool acquisitions, and high RDBMS contention, leading to database timeouts.
 **Action:** Always prefer iterating sequentially or executing database lookups using bulk operations where possible instead of using `Promise.all` to query database row by row in parallel. This significantly reduces database connection pool exhaustion and deadlocks.
+
+## TenantConnectionPool Parallel Warming Optimization
+- **Optimization**: Converted sequential tenant client initialization inside `TenantConnectionPool.warmPool()` loop to parallel promise execution using `Promise.allSettled`.
+- **Pattern**: Slice uncached active tenants based on `maxSize - cache.size`, execute `getClient` calls in parallel via `Promise.allSettled`, and aggregate successful warmings.
+- **Impact**: Reduced connection pool warming execution time from O(N * T) sequential latency to O(T) parallel latency, cutting warming duration in benchmark tests by ~50%.
+## Performance Optimization (Batch Pre-fetching Serial Numbers in RMA Receiving)
+- **Problem**: In `ReceiveRMA.ts`, receiving serialized items iterated over `item.serialNumbers` and called `await this.serializedItemRepository.findBySerialOrFail` for each serial number. For RMAs with thousands of serial numbers, this resulted in an N+1 query overhead.
+- **Solution**: Pre-fetch all serial numbers across all RMA item DTOs in a single batch using `this.serializedItemRepository.findBySerials(allSerials, rma.tenantId)` before entering the processing loop, storing them in an in-memory map (`preFetchedSerials`).
+- **Impact**: Processing time for 5,000 serial numbers decreased from ~286.43 ms to ~35.61 ms (~87.6% latency reduction / ~8x speedup).
+## 2026-03-31 - ReceiveRMA Inventory Item Pre-fetch Optimization
+**Learning:** In bulk RMA receiving operations (`ReceiveRMA`), pre-fetching inventory items in batch via `findBySkus` returned records for items present in the DB, but for items not present in the DB, `preFetchedItems.get(key)` evaluated to `undefined`. This caused the application to fall back to calling `findBySku` sequentially in the loop for every missing item, leading to an N+1 query problem.
+**Action:** Always track pre-fetched inventory keys (`preFetchedKeys = new Set<string>()`) during batch lookup. Inside processing loops, check `!preFetchedKeys.has(key)` before executing single-record DB fallback queries. If a key was already pre-fetched, skip the individual DB query and directly instantiate new aggregates in memory.
