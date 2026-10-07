@@ -1,5 +1,3 @@
-import { CycleCount } from './CycleCount';
-
 export class ABCClassificationService {
   public classifySku(sku: string, annualUsageValue: number): 'A' | 'B' | 'C';
   public classifySku(

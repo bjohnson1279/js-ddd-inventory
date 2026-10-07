@@ -66,18 +66,23 @@ export class TenantConnectionPool {
 
   async warmPool(): Promise<number> {
     const activeTenants = await this.registry.listTenants('ACTIVE');
-    let warmed = 0;
-    for (const tenant of activeTenants) {
-      if (!this.cache.has(tenant.tenantId) && this.cache.size < this.maxSize) {
+    const uncachedTenants = activeTenants.filter((tenant) => !this.cache.has(tenant.tenantId));
+    const availableSlots = Math.max(0, this.maxSize - this.cache.size);
+    const tenantsToWarm = uncachedTenants.slice(0, availableSlots);
+
+    const results = await Promise.allSettled(
+      tenantsToWarm.map(async (tenant) => {
         try {
           await this.getClient(tenant.tenantId);
-          warmed++;
+          return true;
         } catch (err: any) {
           console.error(`[TenantConnectionPool] Failed to warm tenant "${tenant.tenantId}":`, err.message);
+          return false;
         }
-      }
-    }
-    return warmed;
+      })
+    );
+
+    return results.reduce((acc, res) => (res.status === 'fulfilled' && res.value ? acc + 1 : acc), 0);
   }
 
   getStats(): { size: number; maxSize: number; tenantIds: string[] } {
