@@ -71,15 +71,30 @@ export class ReceiveRMA {
     }
 
     const preFetchedItems = new Map<string, InventoryItem>();
-    if (this.inventoryRepository.findBySkus) {
-      for (const [locId, skus] of skusByLocation.entries()) {
-         const skuObjs = Array.from(skus).map(s => SKU.create(s));
-         if (skuObjs.length > 0) {
-             const items = await this.inventoryRepository.findBySkus(skuObjs, locId);
-             for (const item of items) {
-                 preFetchedItems.set(`${locId}|${item.sku.getValue()}`, item);
-             }
-         }
+    const preFetchedKeys = new Set<string>();
+
+    for (const [locId, skus] of skusByLocation.entries()) {
+      const skuObjs = Array.from(skus).map((s) => SKU.create(s));
+      if (skuObjs.length === 0) continue;
+
+      for (const skuStr of skus) {
+        preFetchedKeys.add(`${locId}|${skuStr}`);
+      }
+
+      if (this.inventoryRepository.findBySkus) {
+        const items = await this.inventoryRepository.findBySkus(skuObjs, locId);
+        for (const item of items) {
+          preFetchedItems.set(`${locId}|${item.sku.getValue()}`, item);
+        }
+      } else {
+        const items = await Promise.all(
+          skuObjs.map((skuObj) => this.inventoryRepository.findBySku(skuObj, locId))
+        );
+        for (const item of items) {
+          if (item) {
+            preFetchedItems.set(`${locId}|${item.sku.getValue()}`, item);
+          }
+        }
       }
     }
 
@@ -99,9 +114,10 @@ export class ReceiveRMA {
 
       // 2. Increment stock level
       const sku = SKU.create(item.variantId);
-      // Fetch from accumulated map first, then DB
-      let invItem = inventoryItemsToSave.get(targetLocationId + '|' + sku.getValue()) || preFetchedItems.get(targetLocationId + '|' + sku.getValue()) || null;
-      if (!invItem) {
+      const key = targetLocationId + '|' + sku.getValue();
+      // Fetch from accumulated map first, then DB (if not already pre-fetched)
+      let invItem = inventoryItemsToSave.get(key) || preFetchedItems.get(key) || null;
+      if (!invItem && !preFetchedKeys.has(key)) {
         invItem = await this.inventoryRepository.findBySku(sku, targetLocationId);
       }
 
