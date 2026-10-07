@@ -2,7 +2,6 @@ import { IDispatchRecordRepository } from "../../repositories/IDispatchRecordRep
 import { IProductRepository } from "../../repositories/IProductRepository";
 import { IPurchaseOrderRepository } from "../../repositories/IPurchaseOrderRepository";
 import { SKU } from "../../valueObjects/SKU";
-import { PurchaseOrderStatus } from "../enums/PurchaseOrderStatus";
 
 export class DemandVelocityCalculator {
   constructor(

@@ -3,7 +3,7 @@ import { JournalEntry } from '../aggregates/JournalEntry';
 import { AccountCode } from '../valueObjects/AccountCode';
 import { DebitCredit } from '../enums/DebitCredit';
 import { AccountingMethod } from '../enums/AccountingMethod';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 export class IntercompanyTransferService {
   /**
@@ -45,7 +45,7 @@ export class IntercompanyTransferService {
 
     // Standard Entry (recorded at the Tenant consolidated level, or could be per entity)
     const standardJournal = new JournalEntry(
-      uuidv4(),
+      randomUUID(),
       tenantId,
       new Date(),
       `Intercompany transfer of ${quantity}x ${sku} from ${fromEntityId} to ${toEntityId}`,
@@ -78,7 +78,7 @@ export class IntercompanyTransferService {
 
     // Elimination Entry for Consolidation
     const eliminationJournal = new JournalEntry(
-      uuidv4(),
+      randomUUID(),
       tenantId,
       new Date(),
       `Intercompany elimination for transfer ${transfer.id}`,

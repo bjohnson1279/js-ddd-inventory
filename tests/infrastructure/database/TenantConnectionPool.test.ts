@@ -72,6 +72,75 @@ describe('TenantConnectionPool', () => {
       expect(warmed).toBe(0);
       expect(mockRegistry.listTenants).toHaveBeenCalledWith('ACTIVE');
     });
+
+    it('should warm eligible uncached active tenants concurrently up to maxSize', async () => {
+      const activeTenants = Array.from({ length: 5 }, (_, i) => ({
+        tenantId: `tenant-${i}`,
+        dbHost: '127.0.0.1',
+        dbPort: 5432,
+        dbName: `inventory_tenant_${i}`,
+        dbUser: 'postgres',
+        dbPassword: 'password',
+        status: 'ACTIVE' as const,
+        provisionedAt: new Date(),
+        migratedVersion: '1',
+      }));
+
+      mockRegistry.listTenants.mockResolvedValue(activeTenants);
+      mockRegistry.lookupTenant.mockImplementation(async (tenantId: string) => {
+        // simulate async lookup latency
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return activeTenants.find((t) => t.tenantId === tenantId) || null;
+      });
+
+      const start = Date.now();
+      const warmed = await pool.warmPool();
+      const duration = Date.now() - start;
+
+      // pool maxSize is 3, so only 3 tenants should be warmed
+      expect(warmed).toBe(3);
+      // Serial execution for 3 items with 100ms delay each would take >= 300ms.
+      // Parallel execution should take roughly ~100-150ms.
+      expect(duration).toBeLessThan(250);
+    });
+
+    it('should handle errors gracefully when warming individual tenants', async () => {
+      const activeTenants = [
+        {
+          tenantId: 'valid-tenant-1',
+          dbHost: '127.0.0.1',
+          dbPort: 5432,
+          dbName: 'inventory_tenant_1',
+          dbUser: 'postgres',
+          dbPassword: 'password',
+          status: 'ACTIVE' as const,
+          provisionedAt: new Date(),
+          migratedVersion: '1',
+        },
+        {
+          tenantId: 'failing-tenant-2',
+          dbHost: '127.0.0.1',
+          dbPort: 5432,
+          dbName: 'inventory_tenant_2',
+          dbUser: 'postgres',
+          dbPassword: 'password',
+          status: 'ACTIVE' as const,
+          provisionedAt: new Date(),
+          migratedVersion: '1',
+        },
+      ];
+
+      mockRegistry.listTenants.mockResolvedValue(activeTenants);
+      mockRegistry.lookupTenant.mockImplementation(async (tenantId: string) => {
+        if (tenantId === 'failing-tenant-2') {
+          throw new Error('Database connection failed');
+        }
+        return activeTenants.find((t) => t.tenantId === tenantId) || null;
+      });
+
+      const warmed = await pool.warmPool();
+      expect(warmed).toBe(1);
+    });
   });
 
   describe('evict', () => {
