@@ -6,7 +6,7 @@ export interface UpdateRMAMappingDTO {
 }
 
 export class UpdateRMAMapping {
-  constructor(private readonly rmaRepository) {}
+  constructor(private readonly rmaRepository: IRMARepository) {}
 
   async execute(dto: UpdateRMAMappingDTO): Promise<void> {
     const rma = await this.rmaRepository.get(dto.rmaNumber);

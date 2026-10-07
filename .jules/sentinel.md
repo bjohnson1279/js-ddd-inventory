@@ -132,3 +132,8 @@
 **Vulnerability:** A custom fallback `format` function used for generating raw PostgreSQL queries in `TenantProvisioner.ts` was vulnerable to SQL Injection. It replaced `%I` with `"${val}"` without escaping double quotes inside `val`, allowing an attacker to inject arbitrary SQL by embedding double quotes in user input (like a database name).
 **Learning:** When implementing custom formatters or interpolators for raw SQL queries, simply wrapping user input in quotes is insufficient and highly dangerous.
 **Prevention:** Always use established, battle-tested libraries (like `pg-format`) for parameterized queries and identifier formatting. If a custom fallback is absolutely necessary, ensure proper escaping of all relevant characters (e.g., replacing `"` with `""` and `'` with `''`).
+
+## 2026-10-15 - Remove Hardcoded Encryption Key Fallback in Security Utils
+**Vulnerability:** `src/infrastructure/utils/security.ts` and `src/infrastructure/utils/encryption.ts` contained a hardcoded secret key fallback (`'test_fallback_secret_key_123456'`).
+**Learning:** Hardcoded key fallbacks can allow insecure operations or accidental secret exposure if the `ENCRYPTION_KEY` environment variable is omitted in deployment. Requiring `ENCRYPTION_KEY` strictly without hardcoded fallback strings ensures missing configuration fails fast with an explicit error.
+**Prevention:** Always enforce `ENCRYPTION_KEY` without hardcoded default fallback strings in utility modules, and supply explicit mock keys in test environment variables.
