@@ -3,7 +3,6 @@ import { FileStorageService } from "./FileStorageService";
 import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
 import { format as formatCsv } from "fast-csv";
-import fs from "fs";
 import crypto from "crypto";
 
 export class ReportGeneratorService {
