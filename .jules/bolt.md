@@ -128,3 +128,16 @@
 ## 2026-03-31 - ReceiveRMA Inventory Item Pre-fetch Optimization
 **Learning:** In bulk RMA receiving operations (`ReceiveRMA`), pre-fetching inventory items in batch via `findBySkus` returned records for items present in the DB, but for items not present in the DB, `preFetchedItems.get(key)` evaluated to `undefined`. This caused the application to fall back to calling `findBySku` sequentially in the loop for every missing item, leading to an N+1 query problem.
 **Action:** Always track pre-fetched inventory keys (`preFetchedKeys = new Set<string>()`) during batch lookup. Inside processing loops, check `!preFetchedKeys.has(key)` before executing single-record DB fallback queries. If a key was already pre-fetched, skip the individual DB query and directly instantiate new aggregates in memory.
+
+## 2026-10-07 - Process Streamlining, Sibling Coalescence & Autoloading Invariants
+**Learning:**
+1. Fragmenting stub methods across multiple micro-PRs on the same class causes unavoidable sibling merge collisions and wasted CI cycles.
+2. Placing multiple domain services into a single file breaks Composer PSR-4 autoloader discovery in PHP, triggering fatal `Class not found` errors.
+3. Writing service calls against unverified entity methods causes fatal runtime errors.
+4. String-escaping markdown journal updates corrupts rendered formatting.
+
+**Action:**
+- **Coalesce Micro-PRs**: When implementing or scaffolding related controller endpoints, stub methods, or repository queries on a single class, consolidate all changes into a single coherent pull request. Never create separate fragmented PRs for each individual method of the same class.
+- **Strict PSR-4 Isolation in PHP**: In PHP codebases, place every class, interface, and enum in its own file named `<ClassName>.php` matching its namespace path. Never combine multiple domain classes into a single file.
+- **Domain Contract Verification**: Always inspect entity and aggregate root definitions to verify exact method and property names before writing service logic or test fixtures.
+- **Clean Markdown Formatting**: Always append journal entries using actual newline characters, never literal string escape sequences.
