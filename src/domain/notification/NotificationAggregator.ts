@@ -1,5 +1,4 @@
 import { Notification } from './Notification';
-import { v4 as uuidv4 } from 'uuid';
 
 export class NotificationAggregator {
   public aggregate(events: any[]): Notification[] {
@@ -8,7 +7,7 @@ export class NotificationAggregator {
     for (const event of events) {
       if (event.type === 'LOW_STOCK') {
         notifications.push({
-          id: uuidv4(),
+          id: crypto.randomUUID(),
           tenantId: event.tenantId,
           title: 'Low Stock Alert',
           message: `SKU ${event.sku} is below reorder point.`,
@@ -18,7 +17,7 @@ export class NotificationAggregator {
         });
       } else if (event.type === 'WEBHOOK_FAILURE') {
         notifications.push({
-          id: uuidv4(),
+          id: crypto.randomUUID(),
           tenantId: event.tenantId,
           title: 'Webhook Delivery Failed',
           message: `Delivery to ${event.url} failed after 3 attempts.`,
