@@ -5,9 +5,13 @@ import { notificationRouter } from '../../../src/infrastructure/http/routes/noti
 const app = fastify();
 
 app.register(notificationRouter, { prefix: '/api/notifications' });
-    await app.ready();
+
 
 describe('Notification E2E', () => {
+  beforeAll(async () => {
+    await app.ready();
+  });
+
   it('should fetch unread notifications', async () => {
     const res = await request((app as any).server)
       .get('/api/notifications/tenant-1');

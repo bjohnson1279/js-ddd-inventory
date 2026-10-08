@@ -65,7 +65,7 @@ describe("Audit REST API Endpoints", () => {
     );
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     (prisma.inventoryModel.groupBy as jest.Mock).mockResolvedValue([]);
     // Initialize routes

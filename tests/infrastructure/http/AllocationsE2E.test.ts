@@ -23,7 +23,7 @@ describe("Allocations & In-Transit Stock E2E Tests", () => {
   let adminToken: string;
   let viewerToken: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     repository = new InMemoryInventoryRepository();
     setupApp(repository);
     await app.ready();

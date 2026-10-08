@@ -28,9 +28,13 @@ app.addHook("preHandler", (req, res, next) => {
   next();
 });
 app.register(approvalRoutes, { prefix: "/api/approvals" });
-    await app.ready();
+
 
 describe("Approval Routes", () => {
+  beforeAll(async () => {
+    await app.ready();
+  });
+
   it("should toggle a workflow", async () => {
     const res = await request((app as any).server).post("/api/approvals/workflows/wf-1/toggle");
     expect(res.status).toBe(200);

@@ -27,6 +27,10 @@ jest.mock("../../../src/infrastructure/http/middleware/auth", () => {
 });
 
 describe("RoleController", () => {
+  beforeAll(async () => {
+    await app.ready();
+  });
+
   const app = fastify();
   
 
@@ -38,7 +42,7 @@ describe("RoleController", () => {
   });
 
   app.register(roleRoutes, { prefix: "/api/roles" });
-    await app.ready();
+
 
   afterEach(() => {
     jest.clearAllMocks();

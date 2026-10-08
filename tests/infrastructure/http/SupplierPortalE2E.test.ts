@@ -5,11 +5,15 @@ import { supplierRouter } from '../../../src/infrastructure/http/routes/supplier
 const app = fastify();
 
 app.register(supplierRouter, { prefix: '/api/supplier' });
-    await app.ready();
+
 
 import { prisma } from '../../../src/infrastructure/database/prisma';
 
 describe('SupplierPortal E2E', () => {
+  beforeAll(async () => {
+    await app.ready();
+  });
+
   beforeEach(async () => {
     try {
       await prisma.supplierASN.deleteMany();

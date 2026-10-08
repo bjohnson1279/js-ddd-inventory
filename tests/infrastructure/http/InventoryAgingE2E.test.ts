@@ -5,9 +5,13 @@ import { agingRouter } from '../../../src/infrastructure/http/routes/aging.route
 const app = fastify();
 
 app.register(agingRouter, { prefix: '/api/aging' });
-    await app.ready();
+
 
 describe('InventoryAging E2E', () => {
+  beforeAll(async () => {
+    await app.ready();
+  });
+
   it('should generate an aging report', async () => {
     const res = await request((app as any).server)
       .get('/api/aging/report/tenant-1');

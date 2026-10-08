@@ -45,7 +45,7 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     jest.useRealTimers();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     inventoryRepo = new InMemoryInventoryRepository();
     policyRepo = new InMemoryReorderPolicyRepository();
     dispatchRecordRepo = new InMemoryDispatchRecordRepository();

@@ -26,7 +26,7 @@ describe("Reorder Policy HTTP API Endpoints", () => {
   let policyRepo: InMemoryReorderPolicyRepository;
   let reorderPolicyService: ReorderPolicyService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     inventoryRepo = new InMemoryInventoryRepository();
     poRepo = new InMemoryPurchaseOrderRepository();
     policyRepo = new InMemoryReorderPolicyRepository();

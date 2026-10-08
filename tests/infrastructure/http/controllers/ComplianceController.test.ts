@@ -21,7 +21,7 @@ describe("ComplianceController", () => {
   let mockReq: any;
   let mockRes: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     mockReq = {
       query: {},
     };
