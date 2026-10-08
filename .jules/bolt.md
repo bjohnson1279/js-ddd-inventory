@@ -141,3 +141,7 @@
 - **Strict PSR-4 Isolation in PHP**: In PHP codebases, place every class, interface, and enum in its own file named `<ClassName>.php` matching its namespace path. Never combine multiple domain classes into a single file.
 - **Domain Contract Verification**: Always inspect entity and aggregate root definitions to verify exact method and property names before writing service logic or test fixtures.
 - **Clean Markdown Formatting**: Always append journal entries using actual newline characters, never literal string escape sequences.
+
+## 2024-10-08 - Avoiding Promise.all map for Database Lookups in Write Paths
+**Learning:** Using `Promise.all` wrapped over an array to fire numerous single-record database lookups or loop calculations causes N+1 query latencies, massive connection pool acquisitions, and high RDBMS contention, leading to database timeouts, especially during batch operations like `ReconcileInventoryAudit`, `ReceiveRMA`, `DisassembleKit`, and `CreateInventoryAudit`.
+**Action:** Always prefer iterating sequentially using a `for...of` loop or executing database lookups using bulk operations where possible instead of using `Promise.all` to query database row by row in parallel. This significantly reduces database connection pool exhaustion and deadlocks.

@@ -1,4 +1,4 @@
-import { RMA } from "../returns/aggregates/RMA";
+import { RMA } from "../../domain/returns/aggregates/RMA";
 
 export interface RejectRMAItemDTO {
   itemId: string; // RMA item id, not variant id

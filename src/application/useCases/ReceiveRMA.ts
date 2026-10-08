@@ -88,10 +88,9 @@ export class ReceiveRMA {
           preFetchedItems.set(`${locId}|${item.sku.getValue()}`, item);
         }
       } else {
-        const items = await Promise.all(
-          skuObjs.map((skuObj) => this.inventoryRepository.findBySku(skuObj, locId))
-        );
-        for (const item of items) {
+        // Optimization: Iterate sequentially rather than concurrently via Promise.all.
+        for (const skuObj of skuObjs) {
+          const item = await this.inventoryRepository.findBySku(skuObj, locId);
           if (item) {
             preFetchedItems.set(`${locId}|${item.sku.getValue()}`, item);
           }

@@ -38,12 +38,13 @@ export class CreateInventoryAudit {
       if (this.inventoryRepository.findBySkus) {
         inventoryItems = await this.inventoryRepository.findBySkus(skus, dto.locationId);
       } else {
-        const fetchPromises = skus.map(async (sku) => {
+        // Optimization: Iterate sequentially rather than concurrently via Promise.all.
+        for (const sku of skus) {
           const item = await this.inventoryRepository.findBySku(sku, dto.locationId);
-          return item;
-        });
-        const results = await Promise.all(fetchPromises);
-        inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
+          if (item) {
+            inventoryItems.push(item);
+          }
+        }
       }
     }
 
