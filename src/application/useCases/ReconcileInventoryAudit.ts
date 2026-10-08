@@ -53,9 +53,13 @@ export class ReconcileInventoryAudit {
     if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {
       inventoryItems = await this.inventoryRepository.findBySkus(skusToFetch, audit.locationId);
     } else if (skusToFetch.length > 0) {
-      const fetchPromises = skusToFetch.map(sku => this.inventoryRepository.findBySku(sku, audit.locationId));
-      const results = await Promise.all(fetchPromises);
-      inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
+      // Optimization: Iterate sequentially rather than concurrently via Promise.all to prevent connection pool exhaustion.
+      for (const sku of skusToFetch) {
+        const item = await this.inventoryRepository.findBySku(sku, audit.locationId);
+        if (item) {
+          inventoryItems.push(item);
+        }
+      }
     }
     const inventoryItemsMap = new Map(inventoryItems.map(i => [i.sku.getValue(), i]));
     const modifiedInventoryItems = new Map<string, InventoryItem>();
@@ -112,18 +116,19 @@ export class ReconcileInventoryAudit {
           }
         }
       } else {
-        const layersPromises = uniqueVariantIds.map(async variantId => {
+        // Optimization: Iterate sequentially rather than concurrently via Promise.all.
+        for (const variantId of uniqueVariantIds) {
           const layers = await this.costLayerRepository.getActiveLayers(variantId, "desc");
           activeLayersMap.set(variantId, layers);
-        });
-        await Promise.all(layersPromises);
+        }
       }
     }
 
-    await Promise.all(audit.items.map(async (item) => {
+    // Optimization: Process audit items sequentially to reduce concurrent load and prevent deadlocks.
+    for (const item of audit.items) {
       const discrepancy = item.discrepancy;
       if (discrepancy === null || discrepancy === 0) {
-        return;
+        continue;
       }
 
       const sku = SKU.create(item.variantId);
@@ -209,7 +214,7 @@ export class ReconcileInventoryAudit {
           journalPromises.push(p);
         }
       }
-    }));
+    }
 
     await Promise.all(journalPromises);
 
