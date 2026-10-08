@@ -11,15 +11,25 @@ export class ShopifyWebhookController {
   constructor(private readonly security: ShopifyWebhookSecurity) {}
 
   public async handleOrderCreated(request: any, reply: any): Promise<void> {
-    const repository = (request.server as any)["repository"] as IInventoryRepository;
+    const repository = ((request.server as any)["inventoryRepository"] || (request.server as any)["repository"]) as IInventoryRepository;
     const processedWebhookRepo = (request.server as any).processedWebhookRepository as IProcessedWebhookRepository;
     const reorderPolicyService = (request.server as any)["reorderPolicyService"];
     const dispatchRecordRepository = (request.server as any)["dispatchRecordRepository"];
     const dispatchStock = new DispatchStock(repository, undefined, reorderPolicyService, dispatchRecordRepository);
 
-    const hmac = request.get("X-Shopify-Hmac-Sha256");
-    const topic = request.get("X-Shopify-Topic");
-    const webhookId = request.get("X-Shopify-Webhook-Id");
+    const getHeader = (name: string) => {
+      if (typeof request.headers?.[name.toLowerCase()] === "string") {
+        return request.headers[name.toLowerCase()];
+      }
+      if (typeof request.get === "function") {
+        return request.get(name) || request.get(name.toLowerCase());
+      }
+      return undefined;
+    };
+
+    const hmac = getHeader("X-Shopify-Hmac-Sha256");
+    const topic = getHeader("X-Shopify-Topic");
+    const webhookId = getHeader("X-Shopify-Webhook-Id");
 
     if (!hmac) {
       reply.status(401).send("Missing HMAC header");
@@ -31,9 +41,11 @@ export class ShopifyWebhookController {
       return;
     }
 
-    const rawBody = (request as any).rawBody;
+    const rawBodyStr = (request as any).rawBody
+      ? (request as any).rawBody.toString("utf8")
+      : (typeof request.body === "object" ? JSON.stringify(request.body) : String(request.body || ""));
 
-    if (!rawBody || !this.security.validateHmac(rawBody.toString("utf8"), hmac)) {
+    if (!this.security.validateHmac(rawBodyStr, hmac)) {
       reply.status(401).send("Invalid HMAC signature");
       return;
     }

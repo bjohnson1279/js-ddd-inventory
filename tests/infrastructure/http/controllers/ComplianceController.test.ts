@@ -21,13 +21,14 @@ describe("ComplianceController", () => {
   let mockReq: any;
   let mockRes: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     mockReq = {
       query: {},
     };
     mockRes = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
+      send: jest.fn(),
     };
     jest.clearAllMocks();
   });

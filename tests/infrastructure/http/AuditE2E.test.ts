@@ -65,11 +65,12 @@ describe("Audit REST API Endpoints", () => {
     );
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     (prisma.inventoryModel.groupBy as jest.Mock).mockResolvedValue([]);
     // Initialize routes
     setupApp(new InMemoryInventoryRepository());
+    await app.ready();
   });
 
   it("should list discrepancies", async () => {

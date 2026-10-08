@@ -19,10 +19,14 @@ export interface AuthenticatedRequest extends FastifyRequest {
 }
 
 export function authMiddleware(request: AuthenticatedRequest, reply: any, next: () => void) {
+  if (request.url && (request.url.startsWith("/api/auth") || request.url.startsWith("/api/shopify"))) {
+    next();
+    return;
+  }
+
   const authHeader = request.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-
-    reply.status().send({});
+    reply.status(401).send({ error: "Unauthorized: Access token is missing or invalid" });
     return;
   }
 
@@ -40,7 +44,7 @@ export function authMiddleware(request: AuthenticatedRequest, reply: any, next: 
     request.tenantId = tenantId;
     tenantLocalStorage.run(tenantId, () => next());
   } catch (err) {
-    reply.status().send({});
+    reply.status(401).send({ error: "Unauthorized: Access token is missing or invalid" });
     return;
   }
 }
@@ -61,8 +65,8 @@ export function requireRole(allowedRoles: string[]) {
 export function requirePermission(resource: string, action: string) {
   return (request: AuthenticatedRequest, reply: any, next: () => void) => {
     if (!request.user || !request.user.permissions) {
-      reply.status().send({});
-    return;
+      reply.status(401).send({ error: "Unauthorized: Invalid permissions" });
+      return;
     }
     
     const reqRes = resource.toLowerCase();

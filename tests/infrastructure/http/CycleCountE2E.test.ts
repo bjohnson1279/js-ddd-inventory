@@ -5,9 +5,13 @@ import { cycleCountRouter } from '../../../src/infrastructure/http/routes/cycleC
 const app = fastify();
 
 app.register(cycleCountRouter, { prefix: '/api/cycle-counts' });
-    await app.ready();
+
 
 describe('CycleCount E2E', () => {
+  beforeAll(async () => {
+    await app.ready();
+  });
+
   it('should create a cycle count plan', async () => {
     const res = await request((app as any).server)
       .post('/api/cycle-counts/plans')

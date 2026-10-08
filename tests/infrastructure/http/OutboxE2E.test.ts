@@ -18,7 +18,7 @@ describe("Dead Letter Queue (DLQ) HTTP API Endpoints", () => {
   let outboxRepo: InMemoryOutboxRepository;
   let inventoryRepo: InMemoryInventoryRepository;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     outboxRepo = new InMemoryOutboxRepository();
     inventoryRepo = new InMemoryInventoryRepository(outboxRepo);
 

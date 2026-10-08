@@ -30,7 +30,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
   let adminToken: string;
   let viewerToken: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     inventoryRepo = new InMemoryInventoryRepository();
     productRepo = new InMemoryProductRepository();
     locationRepo = new InMemoryWarehouseLocationRepository();

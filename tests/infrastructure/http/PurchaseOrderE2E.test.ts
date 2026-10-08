@@ -23,7 +23,7 @@ describe("Purchase Order HTTP API Endpoints", () => {
   let poRepo: InMemoryPurchaseOrderRepository;
   let costLayerRepo: InMemoryCostLayerRepository;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     inventoryRepo = new InMemoryInventoryRepository();
     poRepo = new InMemoryPurchaseOrderRepository();
     costLayerRepo = new InMemoryCostLayerRepository();
