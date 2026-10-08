@@ -157,3 +157,7 @@
 - **Strict PSR-4 Isolation in PHP**: In PHP codebases, place every class, interface, and enum in its own file named `<ClassName>.php` matching its namespace path. Never combine multiple domain classes into a single file.
 - **Domain Contract Verification**: Always inspect entity and aggregate root definitions to verify exact method and property names before writing service logic or test fixtures.
 - **Clean Markdown Formatting**: Always append journal entries using actual newline characters, never literal string escape sequences.
+## $(date +%Y-%m-%d) - Secure CORS Configuration
+**Vulnerability:** Fastify server was configured with `origin: '*'` in `src/index.ts`, which represents an overly permissive CORS configuration that could allow unauthorized cross-origin requests.
+**Learning:** Even if an environment variable for allowed origins exists and is parsed correctly (e.g., `parseAllowedOrigins(process.env.FRONTEND_URL)`), it can be easily bypassed or ignored if developers hardcode `'*'` during rapid development or debugging.
+**Prevention:** Always ensure that production-grade web frameworks bind their CORS origins dynamically based on validated, environment-specific configurations rather than wildcards. Review entry point files (`index.ts`, `app.ts`) for wildcard configurations early in the security audit process.
