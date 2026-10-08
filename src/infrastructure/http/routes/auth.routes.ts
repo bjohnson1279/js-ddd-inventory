@@ -1,6 +1,5 @@
 import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
 import { AuthController } from "../controllers/AuthController";
-import { rateLimit } from "express-rate-limit";
 
 const parseEnvInt = (val: string | undefined, fallback: number): number => {
   if (!val) return fallback;
@@ -8,27 +7,20 @@ const parseEnvInt = (val: string | undefined, fallback: number): number => {
   return isNaN(parsed) ? fallback : parsed;
 };
 
-const authLimiter = rateLimit({
-  windowMs: parseEnvInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
-  limit: parseEnvInt(process.env.AUTH_RATE_LIMIT_MAX, 5),
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: { error: "Too many login attempts, please try again later." }
-});
+const authLimitConfig = {
+  max: parseEnvInt(process.env.AUTH_RATE_LIMIT_MAX, 5),
+  timeWindow: parseEnvInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000)
+};
 
-
-const setupLimiter = rateLimit({
-  windowMs: parseEnvInt(process.env.SETUP_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
-  limit: parseEnvInt(process.env.SETUP_RATE_LIMIT_MAX, 10),
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: { error: "Too many setup attempts, please try again later." }
-});
+const setupLimitConfig = {
+  max: parseEnvInt(process.env.SETUP_RATE_LIMIT_MAX, 10),
+  timeWindow: parseEnvInt(process.env.SETUP_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000)
+};
 
 const router: FastifyPluginAsync = async (fastify) => {
 
-fastify.post("/setup", setupLimiter, AuthController.setup);
-fastify.post("/login", authLimiter, AuthController.login);
+  fastify.post("/setup", { config: { rateLimit: setupLimitConfig } }, AuthController.setup as any);
+  fastify.post("/login", { config: { rateLimit: authLimitConfig } }, AuthController.login as any);
 
 };
 export default router;

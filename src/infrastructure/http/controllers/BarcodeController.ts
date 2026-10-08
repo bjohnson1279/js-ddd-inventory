@@ -16,16 +16,14 @@ import { Logger } from "../../../infrastructure/logging/logger";
 
 
 export class BarcodeController {
-  static async assign(request: FastifyRequest, reply: FastifyReply) {
+  static async assign(request: any, reply: any) {
     try {
-      const barcodeRepo = req.app.get(
-        "barcodeRepository",
-      ) as IBarcodeRepository;
+      const barcodeRepo = (request.server as any).barcodeRepository as IBarcodeRepository;
       const { variantId, symbology, barcodeValue, source, isPrimary } =
-        request.body;
+        (request.body as any);
 
       if (!variantId || !symbology || !barcodeValue || !source) {
-        return res
+        return reply
           .status(400)
           .send({ error: "Missing required assignment fields." });
       }
@@ -36,7 +34,7 @@ export class BarcodeController {
       set.assign(barcode, source as BarcodeSource, isPrimary || false);
       await barcodeRepo.saveSet(set);
 
-      res
+      reply
         .status(200)
         .send({
           message: "Barcode assigned successfully.",
@@ -54,12 +52,10 @@ export class BarcodeController {
     }
   }
 
-  static async generate(request: FastifyRequest, reply: FastifyReply) {
+  static async generate(request: any, reply: any) {
     try {
-      const barcodeRepo = req.app.get(
-        "barcodeRepository",
-      ) as IBarcodeRepository;
-      const { variantId, tenantId } = request.body;
+      const barcodeRepo = (request.server as any).barcodeRepository as IBarcodeRepository;
+      const { variantId, tenantId } = (request.body as any);
 
       if (!variantId) {
         return reply.status(400).send({ error: "Missing variantId parameter." });
@@ -79,15 +75,13 @@ export class BarcodeController {
     }
   }
 
-  static async scan(request: FastifyRequest, reply: FastifyReply) {
+  static async scan(request: any, reply: any) {
     try {
-      const barcodeRepo = req.app.get(
-        "barcodeRepository",
-      ) as IBarcodeRepository;
-      const { rawScan, context, payload } = request.body;
+      const barcodeRepo = (request.server as any).barcodeRepository as IBarcodeRepository;
+      const { rawScan, context, payload } = (request.body as any);
 
       if (!rawScan || !context) {
-        return res
+        return reply
           .status(400)
           .send({ error: "Missing rawScan or scan context." });
       }
@@ -115,7 +109,7 @@ export class BarcodeController {
       }
 
       // Broadcast via WebSocket to the tenant
-      const tenantId = (req as any).tenantId || "tenant-1";
+      const tenantId = (request as any).tenantId || "tenant-1";
       WebSocketManager.broadcastToTenant(tenantId, {
         type: "barcode_scanned",
         rawScan,
@@ -147,7 +141,7 @@ export class BarcodeController {
     }
   }
 
-  static async list(request: FastifyRequest, reply: FastifyReply) {
+  static async list(request: any, reply: any) {
     try {
       const records = await prisma.barcodeAssignmentModel.findMany();
       reply.status(200).send(records);

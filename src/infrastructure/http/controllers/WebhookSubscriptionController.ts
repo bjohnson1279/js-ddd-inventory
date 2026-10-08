@@ -6,9 +6,9 @@ import { Logger } from "../../../infrastructure/logging/logger";
 import { encrypt } from "../../utils/encryption";
 
 export class WebhookSubscriptionController {
-  static async create(request: AuthenticatedRequest, reply: FastifyReply) {
+  static async create(request: AuthenticatedRequest, reply: any) {
     try {
-      const { targetUrl, secret, eventTypes } = request.body;
+      const { targetUrl, secret, eventTypes } = (request.body as any);
       if (!targetUrl || !secret || !eventTypes || !Array.isArray(eventTypes)) {
         return reply.status(400).send({ error: "Missing or invalid parameters" });
       }
@@ -30,7 +30,7 @@ export class WebhookSubscriptionController {
     }
   }
 
-  static async list(request: AuthenticatedRequest, reply: FastifyReply) {
+  static async list(request: AuthenticatedRequest, reply: any) {
     try {
       const tenantId = request.tenantId || "tenant-1";
       const subscriptions = await prisma.webhookSubscriptionModel.findMany({
@@ -43,10 +43,10 @@ export class WebhookSubscriptionController {
     }
   }
 
-  static async update(request: AuthenticatedRequest, reply: FastifyReply) {
+  static async update(request: AuthenticatedRequest, reply: any) {
     try {
-      const { id } = request.params;
-      const { targetUrl, secret, eventTypes, isActive } = request.body;
+      const { id } = (request.params as any);
+      const { targetUrl, secret, eventTypes, isActive } = (request.body as any);
       const tenantId = request.tenantId || "tenant-1";
 
       const sub = await prisma.webhookSubscriptionModel.findUnique({ where: { id } });
@@ -70,9 +70,9 @@ export class WebhookSubscriptionController {
     }
   }
 
-  static async delete(request: AuthenticatedRequest, reply: FastifyReply) {
+  static async delete(request: AuthenticatedRequest, reply: any) {
     try {
-      const { id } = request.params;
+      const { id } = (request.params as any);
       const tenantId = request.tenantId || "tenant-1";
 
       const sub = await prisma.webhookSubscriptionModel.findUnique({ where: { id } });

@@ -63,6 +63,7 @@ describe("RMA and Quarantine HTTP API Endpoints", () => {
       rmaRepo,
       quarantineRepo
     );
+    await app.ready();
 
     adminToken = jwt.sign({ actorId: "admin-user", role: "admin", tenantId }, JWT_SECRET);
     viewerToken = jwt.sign({ actorId: "viewer-user", role: "viewer", tenantId }, JWT_SECRET);
@@ -71,7 +72,7 @@ describe("RMA and Quarantine HTTP API Endpoints", () => {
   describe("RBAC Permissions", () => {
     it("should deny viewer from performing mutating RMA & Quarantine operations", async () => {
       // Create RMA
-      const rmaRes = await request(app)
+      const rmaRes = await request((app as any).server)
         .post("/api/returns/rma")
         .set("Authorization", `Bearer ${viewerToken}`)
         .send({
@@ -84,13 +85,13 @@ describe("RMA and Quarantine HTTP API Endpoints", () => {
       expect(rmaRes.status).toBe(403);
 
       // Authorize RMA
-      const authRes = await request(app)
+      const authRes = await request((app as any).server)
         .post(`/api/returns/rma/some-id/authorize`)
         .set("Authorization", `Bearer ${viewerToken}`);
       expect(authRes.status).toBe(403);
 
       // Receive RMA
-      const receiveRes = await request(app)
+      const receiveRes = await request((app as any).server)
         .post(`/api/returns/rma/some-id/receive`)
         .set("Authorization", `Bearer ${viewerToken}`)
         .send({
@@ -99,7 +100,7 @@ describe("RMA and Quarantine HTTP API Endpoints", () => {
       expect(receiveRes.status).toBe(403);
 
       // Resolve Quarantine
-      const resolveRes = await request(app)
+      const resolveRes = await request((app as any).server)
         .post(`/api/returns/quarantine/some-id/resolve`)
         .set("Authorization", `Bearer ${viewerToken}`)
         .send({ resolution: "RESTOCK" });
@@ -107,12 +108,12 @@ describe("RMA and Quarantine HTTP API Endpoints", () => {
     });
 
     it("should allow viewer to read RMA & Quarantine data", async () => {
-      const rmaRes = await request(app)
+      const rmaRes = await request((app as any).server)
         .get("/api/returns/rma/some-id")
         .set("Authorization", `Bearer ${viewerToken}`);
       expect(rmaRes.status).toBe(404); // authenticates correctly but resource doesn't exist
 
-      const quarantineRes = await request(app)
+      const quarantineRes = await request((app as any).server)
         .get("/api/returns/quarantine")
         .set("Authorization", `Bearer ${viewerToken}`);
       expect(quarantineRes.status).toBe(200);
@@ -122,7 +123,7 @@ describe("RMA and Quarantine HTTP API Endpoints", () => {
   describe("Return & Quarantine Lifecycle", () => {
     it("should complete the full Return & Quarantine lifecycle", async () => {
       // 1. Create RMA request
-      const createRes = await request(app)
+      const createRes = await request((app as any).server)
         .post("/api/returns/rma")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
@@ -144,7 +145,7 @@ describe("RMA and Quarantine HTTP API Endpoints", () => {
       const rmaId = createRes.body.id;
 
       // 2. Authorize RMA
-      const authRes = await request(app)
+      const authRes = await request((app as any).server)
         .post(`/api/returns/rma/${rmaId}/authorize`)
         .set("Authorization", `Bearer ${adminToken}`);
       expect(authRes.status).toBe(200);
@@ -153,7 +154,7 @@ describe("RMA and Quarantine HTTP API Endpoints", () => {
       expect(updatedRma?.status).toBe(RMAStatus.Authorized);
 
       // 3. Receive items (VAR-X restocked, VAR-Y quarantined)
-      const receiveRes = await request(app)
+      const receiveRes = await request((app as any).server)
         .post(`/api/returns/rma/${rmaId}/receive`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
@@ -171,7 +172,7 @@ describe("RMA and Quarantine HTTP API Endpoints", () => {
       expect(stockYQ?.quantity.getValue()).toBe(2);
 
       // 4. List Quarantine items to find the created Quarantine item
-      const listQRes = await request(app)
+      const listQRes = await request((app as any).server)
         .get("/api/returns/quarantine")
         .set("Authorization", `Bearer ${adminToken}`);
       expect(listQRes.status).toBe(200);
@@ -183,7 +184,7 @@ describe("RMA and Quarantine HTTP API Endpoints", () => {
       const qItemId = listQRes.body[0].id;
 
       // 5. Resolve Quarantine item as RESTOCK
-      const resolveRes = await request(app)
+      const resolveRes = await request((app as any).server)
         .post(`/api/returns/quarantine/${qItemId}/resolve`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
@@ -198,7 +199,7 @@ describe("RMA and Quarantine HTTP API Endpoints", () => {
       expect(stockYQResolved?.quantity.getValue()).toBe(0);
 
       // Verify resolved quarantine item details
-      const getQRes = await request(app)
+      const getQRes = await request((app as any).server)
         .get(`/api/returns/quarantine/${qItemId}`)
         .set("Authorization", `Bearer ${adminToken}`);
       expect(getQRes.status).toBe(200);

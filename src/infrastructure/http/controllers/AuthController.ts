@@ -21,10 +21,10 @@ export function addInMemoryUser(user: any) {
 }
 
 export class AuthController {
-  static async setup(request: FastifyRequest, reply: FastifyReply) {
+  static async setup(request: any, reply: any) {
     try {
       const isTestMode = process.env.NODE_ENV === "test";
-      const { orgName, tenantId, adminName, adminEmail, adminPassword } = request.body;
+      const { orgName, tenantId, adminName, adminEmail, adminPassword } = (request.body as any);
 
       if (!orgName || !tenantId || !adminName || !adminEmail || !adminPassword) {
         return reply.status(400).send({ error: "Missing required fields" });
@@ -213,9 +213,9 @@ export class AuthController {
     }
   }
 
-  static async login(request: FastifyRequest, reply: FastifyReply) {
+  static async login(request: any, reply: any) {
     try {
-      const { tenantId, email, password } = request.body;
+      const { tenantId, email, password } = (request.body as any);
 
       if (!tenantId || !email || !password) {
         return reply.status(400).send({ error: "Missing required fields" });
@@ -276,9 +276,9 @@ export class AuthController {
     }
   }
 
-  static async listUsers(request: FastifyRequest, reply: FastifyReply) {
+  static async listUsers(request: any, reply: any) {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = (request as any).tenantId;
 
       let users: any[] = [];
       try {
@@ -319,10 +319,10 @@ export class AuthController {
     }
   }
 
-  static async inviteUser(request: FastifyRequest, reply: FastifyReply) {
+  static async inviteUser(request: any, reply: any) {
     try {
-      const tenantId = (req as any).tenantId;
-      const { email, role } = request.body;
+      const tenantId = (request as any).tenantId;
+      const { email, role } = (request.body as any);
 
       if (!email || !role) {
         return reply.status(400).send({ error: "Missing required fields" });
@@ -381,7 +381,7 @@ export class AuthController {
         });
       } catch (e) {}
 
-      const emailService = request.server["emailService"] as IEmailService;
+      const emailService = (request.server as any)["emailService"] as IEmailService;
       if (emailService) {
         await emailService.sendEmail(
           normalizedEmail,
@@ -400,11 +400,11 @@ export class AuthController {
     }
   }
 
-  static async updateUserRole(request: FastifyRequest, reply: FastifyReply) {
+  static async updateUserRole(request: any, reply: any) {
     try {
-      const tenantId = (req as any).tenantId;
-      const { userId } = request.params;
-      const { role } = request.body;
+      const tenantId = (request as any).tenantId;
+      const { userId } = (request.params as any);
+      const { role } = (request.body as any);
 
       if (!role) {
         return reply.status(400).send({ error: "Role is required" });

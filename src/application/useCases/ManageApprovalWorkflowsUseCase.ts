@@ -69,12 +69,12 @@ export class ManageApprovalWorkflowsUseCase {
   }
 
   async submitDecision(tenantId: string, requestId: string, deciderId: string, decision: string, notes?: string): Promise<any> {
-    const req = await prisma.approvalRequestModel.findFirst({
+    const request = await prisma.approvalRequestModel.findFirst({
       where: { id: requestId, tenantId },
       include: { workflow: true, decisions: true }
     });
-    if (!req) throw new Error("Approval request not found");
-    if (req.status !== 'PENDING') throw new Error("Approval request is not pending");
+    if (!request) throw new Error("Approval request not found");
+    if (request.status !== 'PENDING') throw new Error("Approval request is not pending");
 
     if (this.workflowService) {
       let domainDecision: 'APPROVED' | 'REJECTED';
@@ -89,7 +89,7 @@ export class ManageApprovalWorkflowsUseCase {
       data: {
         id: randomUUID(),
         requestId,
-        stepIndex: req.currentStep,
+        stepIndex: request.currentStep,
         deciderId,
         decision,
         notes: notes || null

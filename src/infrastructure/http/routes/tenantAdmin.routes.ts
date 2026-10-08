@@ -10,9 +10,9 @@ export function createTenantAdminRoutes(
 ): FastifyPluginAsync {
   return async (fastify) => {
 
-    fastify.post('/', async (request: FastifyRequest, reply: FastifyReply) => {
+    fastify.post('/', async (request: any, reply: any) => {
       try {
-        const body = request.body as { tenantId?: string };
+        const body = (request.body as any) as { tenantId?: string };
         const tenantId = body?.tenantId;
         if (!tenantId) {
           return reply.status(400).send({ error: 'tenantId is required' });
@@ -31,9 +31,9 @@ export function createTenantAdminRoutes(
       }
     });
 
-    fastify.get('/', async (request: FastifyRequest, reply: FastifyReply) => {
+    fastify.get('/', async (request: any, reply: any) => {
       try {
-        const query = request.query as { status?: string };
+        const query = (request.query as any) as { status?: string };
         const status = query.status;
         const tenants = await registry.listTenants(status);
         return reply.send({ tenants });
@@ -42,7 +42,7 @@ export function createTenantAdminRoutes(
       }
     });
 
-    fastify.get('/pool', async (_request: FastifyRequest, reply: FastifyReply) => {
+    fastify.get('/pool', async (_request: any, reply: any) => {
       try {
         const stats = pool.getStats();
         return reply.send(stats);
@@ -51,9 +51,9 @@ export function createTenantAdminRoutes(
       }
     });
 
-    fastify.get('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+    fastify.get('/:id', async (request: any, reply: any) => {
       try {
-        const params = request.params as { id: string };
+        const params = (request.params as any) as { id: string };
         const tenant = await registry.lookupTenant(params.id);
         if (!tenant) {
           return reply.status(404).send({ error: `Tenant "${params.id}" not found.` });
@@ -64,9 +64,9 @@ export function createTenantAdminRoutes(
       }
     });
 
-    fastify.delete('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+    fastify.delete('/:id', async (request: any, reply: any) => {
       try {
-        const params = request.params as { id: string };
+        const params = (request.params as any) as { id: string };
         await pool.evict(params.id);
         await provisioner.deprovisionTenant(params.id);
         return reply.send({ message: `Tenant "${params.id}" deprovisioned.` });

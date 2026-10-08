@@ -6,32 +6,32 @@ export const notificationRouter: FastifyPluginAsync = async (fastify) => {
 
 const repo = new NotificationPrismaRepository(prisma as any);
 
-notificationRouter.get('/:tenantId', async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.get('/:tenantId', async (request: any, reply: any) => {
   try {
-    const notifications = await repo.getUnread(request.params.tenantId);
+    const notifications = await repo.getUnread((request.params as any).tenantId);
     reply.status(200).send(notifications);
   } catch (error) {
     reply.status(500).send({ error: 'Failed to fetch notifications' });
   }
 });
 
-notificationRouter.patch('/:id/read', async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.patch('/:id/read', async (request: any, reply: any) => {
   try {
-    await repo.markAsRead(request.params.id);
+    await repo.markAsRead((request.params as any).id);
     reply.status(200).send();
   } catch (error) {
     reply.status(500).send({ error: 'Failed to mark notification as read' });
   }
 });
 
-notificationRouter.post('/preferences', async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.post('/preferences', async (request: any, reply: any) => {
   try {
     const prefs = await repo.savePreferences({
-      userId: request.body.userId,
-      tenantId: request.body.tenantId,
-      channel: request.body.channel,
-      eventType: request.body.eventType,
-      isEnabled: request.body.isEnabled
+      userId: (request.body as any).userId,
+      tenantId: (request.body as any).tenantId,
+      channel: (request.body as any).channel,
+      eventType: (request.body as any).eventType,
+      isEnabled: (request.body as any).isEnabled
     });
     reply.status(201).send(prefs);
   } catch (error) {
@@ -39,6 +39,8 @@ notificationRouter.post('/preferences', async (request: FastifyRequest, reply: F
   }
 });
 
-export default notificationRouter;
+
 
 };
+
+export default notificationRouter;

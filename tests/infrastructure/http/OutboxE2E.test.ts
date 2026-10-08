@@ -24,6 +24,7 @@ describe("Dead Letter Queue (DLQ) HTTP API Endpoints", () => {
 
     // Register with express app
     setupApp(inventoryRepo, undefined, undefined, undefined, undefined, undefined, undefined, outboxRepo);
+    await app.ready();
   });
 
   it("should list dead-lettered events and trigger manual retry via API", async () => {
@@ -62,7 +63,7 @@ describe("Dead Letter Queue (DLQ) HTTP API Endpoints", () => {
     }
 
     // 4. Query GET /api/outbox/dead-letter
-    const dlqResponse = await request(app)
+    const dlqResponse = await request((app as any).server)
       .get("/api/outbox/dead-letter")
         .set("Authorization", `Bearer ${getAdminToken()}`)
       .expect(200);
@@ -78,12 +79,12 @@ describe("Dead Letter Queue (DLQ) HTTP API Endpoints", () => {
     expect(activePending[0].id).toBe(eventId2);
 
     // 6. Retry event1 via POST /api/outbox/:id/retry
-    await request(app)
+    await request((app as any).server)
       .post(`/api/outbox/${eventId1}/retry`).set("Authorization", `Bearer ${getAdminToken()}`)
       .expect(200);
 
     // 7. Verify event1 is no longer in the DLQ list and is active pending again
-    const dlqResponseAfter = await request(app)
+    const dlqResponseAfter = await request((app as any).server)
       .get("/api/outbox/dead-letter")
         .set("Authorization", `Bearer ${getAdminToken()}`)
       .expect(200);
@@ -118,7 +119,7 @@ describe("Dead Letter Queue (DLQ) HTTP API Endpoints", () => {
     await outboxRepo.markProcessed(pending[2].id);
 
     // 2. Query stats endpoint
-    const statsResponse = await request(app)
+    const statsResponse = await request((app as any).server)
       .get("/api/outbox/stats")
         .set("Authorization", `Bearer ${getAdminToken()}`)
       .expect(200);

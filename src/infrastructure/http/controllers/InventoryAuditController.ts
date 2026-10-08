@@ -14,13 +14,13 @@ import { IJournalRepository } from "../../../domain/repositories/IJournalReposit
 import { Logger } from "../../../infrastructure/logging/logger";
 
 export class InventoryAuditController {
-  static async create(request: FastifyRequest, reply: FastifyReply) {
+  static async create(request: any, reply: any) {
     try {
-      const auditRepository = request.server["inventoryAuditRepository"] as IInventoryAuditRepository;
-      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
+      const auditRepository = (request.server as any)["inventoryAuditRepository"] as IInventoryAuditRepository;
+      const inventoryRepository = (request.server as any)["inventoryRepository"] as IInventoryRepository;
       const useCase = new CreateInventoryAudit(auditRepository, inventoryRepository);
 
-      const audit = await useCase.execute(request.body);
+      const audit = await useCase.execute((request.body as any));
       reply.status(201).send({
         id: audit.id,
         auditNumber: audit.auditNumber,
@@ -44,11 +44,11 @@ export class InventoryAuditController {
     }
   }
 
-  static async start(request: FastifyRequest, reply: FastifyReply) {
+  static async start(request: any, reply: any) {
     try {
-      const auditRepository = request.server["inventoryAuditRepository"] as IInventoryAuditRepository;
+      const auditRepository = (request.server as any)["inventoryAuditRepository"] as IInventoryAuditRepository;
       const useCase = new StartInventoryAudit(auditRepository);
-      await useCase.execute(request.params.id);
+      await useCase.execute((request.params as any).id);
       reply.status(200).send({ message: "Inventory audit started successfully" });
     } catch (error: any) {
       Logger.error({ context: "InventoryAuditController", message: "An error occurred", error: error });
@@ -57,14 +57,14 @@ export class InventoryAuditController {
     }
   }
 
-  static async recordCount(request: FastifyRequest, reply: FastifyReply) {
+  static async recordCount(request: any, reply: any) {
     try {
-      const auditRepository = request.server["inventoryAuditRepository"] as IInventoryAuditRepository;
+      const auditRepository = (request.server as any)["inventoryAuditRepository"] as IInventoryAuditRepository;
       const useCase = new RecordAuditCount(auditRepository);
       await useCase.execute({
-        auditId: request.params.id,
-        variantId: request.body.variantId,
-        countedQuantity: request.body.countedQuantity
+        auditId: (request.params as any).id,
+        variantId: (request.body as any).variantId,
+        countedQuantity: (request.body as any).countedQuantity
       });
       reply.status(200).send({ message: "Count recorded successfully" });
     } catch (error: any) {
@@ -74,11 +74,11 @@ export class InventoryAuditController {
     }
   }
 
-  static async complete(request: FastifyRequest, reply: FastifyReply) {
+  static async complete(request: any, reply: any) {
     try {
-      const auditRepository = request.server["inventoryAuditRepository"] as IInventoryAuditRepository;
+      const auditRepository = (request.server as any)["inventoryAuditRepository"] as IInventoryAuditRepository;
       const useCase = new CompleteInventoryAudit(auditRepository);
-      await useCase.execute(request.params.id);
+      await useCase.execute((request.params as any).id);
       reply.status(200).send({ message: "Inventory audit completed successfully" });
     } catch (error: any) {
       Logger.error({ context: "InventoryAuditController", message: "An error occurred", error: error });
@@ -87,13 +87,13 @@ export class InventoryAuditController {
     }
   }
 
-  static async reconcile(request: FastifyRequest, reply: FastifyReply) {
+  static async reconcile(request: any, reply: any) {
     try {
-      const auditRepository = request.server["inventoryAuditRepository"] as IInventoryAuditRepository;
-      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
-      const costLayerRepository = request.server["costLayerRepository"] as ICostLayerRepository;
-      const tenantConfigRepository = request.server["tenantConfigRepository"] as ITenantConfigRepository;
-      const journalRepository = request.server["journalRepository"] as IJournalRepository;
+      const auditRepository = (request.server as any)["inventoryAuditRepository"] as IInventoryAuditRepository;
+      const inventoryRepository = (request.server as any)["inventoryRepository"] as IInventoryRepository;
+      const costLayerRepository = (request.server as any)["costLayerRepository"] as ICostLayerRepository;
+      const tenantConfigRepository = (request.server as any)["tenantConfigRepository"] as ITenantConfigRepository;
+      const journalRepository = (request.server as any)["journalRepository"] as IJournalRepository;
 
       const useCase = new ReconcileInventoryAudit(
         auditRepository,
@@ -103,7 +103,7 @@ export class InventoryAuditController {
         journalRepository
       );
 
-      await useCase.execute(request.params.id);
+      await useCase.execute((request.params as any).id);
       reply.status(200).send({ message: "Inventory audit reconciled successfully" });
     } catch (error: any) {
       Logger.error({ context: "InventoryAuditController", message: "An error occurred", error: error });
@@ -112,10 +112,10 @@ export class InventoryAuditController {
     }
   }
 
-  static async get(request: FastifyRequest, reply: FastifyReply) {
+  static async get(request: any, reply: any) {
     try {
-      const auditRepository = request.server["inventoryAuditRepository"] as IInventoryAuditRepository;
-      const audit = await auditRepository.findById(request.params.id);
+      const auditRepository = (request.server as any)["inventoryAuditRepository"] as IInventoryAuditRepository;
+      const audit = await auditRepository.findById((request.params as any).id);
       if (!audit) {
         return reply.status(404).send({ error: "Inventory audit not found" });
       }

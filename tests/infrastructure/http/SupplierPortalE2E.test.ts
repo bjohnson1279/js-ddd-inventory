@@ -1,10 +1,11 @@
 import request from 'supertest';
-import express from 'express';
+import fastify from "fastify";
 import { supplierRouter } from '../../../src/infrastructure/http/routes/supplier.routes';
 
-const app = express();
-app.use(express.json());
-app.use('/api/supplier', supplierRouter);
+const app = fastify();
+
+app.register(supplierRouter, { prefix: '/api/supplier' });
+    await app.ready();
 
 import { prisma } from '../../../src/infrastructure/database/prisma';
 
@@ -19,7 +20,7 @@ describe('SupplierPortal E2E', () => {
     await prisma.$disconnect();
   });
   it('should create an ASN', async () => {
-    const res = await request(app)
+    const res = await request((app as any).server)
       .post('/api/supplier/asn')
       .send({
         asnNumber: 'ASN-1234',
@@ -35,7 +36,7 @@ describe('SupplierPortal E2E', () => {
   });
 
   it('should get a scorecard', async () => {
-    const res = await request(app)
+    const res = await request((app as any).server)
       .get('/api/supplier/scorecard/SUP-1');
     
     expect(res.status).toBe(200);

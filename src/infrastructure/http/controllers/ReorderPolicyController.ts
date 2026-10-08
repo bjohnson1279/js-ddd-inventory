@@ -11,10 +11,10 @@ import { IDispatchRecordRepository } from "../../../domain/repositories/IDispatc
 import { Logger } from "../../../infrastructure/logging/logger";
 
 export class ReorderPolicyController {
-  static async createOrUpdate(request: FastifyRequest, reply: FastifyReply) {
+  static async createOrUpdate(request: any, reply: any) {
     try {
-      const repo = request.server["reorderPolicyRepository"] as IReorderPolicyRepository;
-      const { sku, locationId, reorderPoint, reorderQuantity, safetyStock, dynamicRopEnabled } = request.body;
+      const repo = (request.server as any)["reorderPolicyRepository"] as IReorderPolicyRepository;
+      const { sku, locationId, reorderPoint, reorderQuantity, safetyStock, dynamicRopEnabled } = (request.body as any);
 
       const id = crypto.randomUUID();
       const policy = new ReorderPolicy(
@@ -48,10 +48,10 @@ export class ReorderPolicyController {
     }
   }
 
-  static async get(request: FastifyRequest, reply: FastifyReply) {
+  static async get(request: any, reply: any) {
     try {
-      const repo = request.server["reorderPolicyRepository"] as IReorderPolicyRepository;
-      const { sku, locationId } = request.params;
+      const repo = (request.server as any)["reorderPolicyRepository"] as IReorderPolicyRepository;
+      const { sku, locationId } = (request.params as any);
 
       const policy = await repo.findBySkuAndLocation(SKU.create(sku), locationId);
       if (!policy) {
@@ -73,19 +73,19 @@ export class ReorderPolicyController {
     }
   }
 
-  static async evaluate(request: FastifyRequest, reply: FastifyReply) {
+  static async evaluate(request: any, reply: any) {
     try {
-      const service = request.server["reorderPolicyService"] as ReorderPolicyService;
-      const productRepository = request.server["productRepository"] as IProductRepository;
-      const poRepository = request.server["purchaseOrderRepository"] as any;
-      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
-      const dispatchRecordRepository = request.server["dispatchRecordRepository"] as IDispatchRecordRepository;
+      const service = (request.server as any)["reorderPolicyService"] as ReorderPolicyService;
+      const productRepository = (request.server as any)["productRepository"] as IProductRepository;
+      const poRepository = (request.server as any)["purchaseOrderRepository"] as any;
+      const inventoryRepository = (request.server as any)["inventoryRepository"] as IInventoryRepository;
+      const dispatchRecordRepository = (request.server as any)["dispatchRecordRepository"] as IDispatchRecordRepository;
 
       const velocityCalculator = new DemandVelocityCalculator(dispatchRecordRepository, productRepository);
       const forecaster = new ReorderPointForecaster(velocityCalculator, productRepository, poRepository);
-      const tenantId = (req as any).tenantId || "tenant-1";
+      const tenantId = (request as any).tenantId || "tenant-1";
 
-      const locationId = request.query.locationId as string | undefined;
+      const locationId = (request.query as any).locationId as string | undefined;
       const results = await service.evaluatePolicies(tenantId, forecaster, inventoryRepository, 30, locationId);
 
       reply.status(200).send({ results });

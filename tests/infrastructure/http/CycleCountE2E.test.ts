@@ -1,14 +1,15 @@
 import request from 'supertest';
-import express from 'express';
+import fastify from "fastify";
 import { cycleCountRouter } from '../../../src/infrastructure/http/routes/cycleCount.routes';
 
-const app = express();
-app.use(express.json());
-app.use('/api/cycle-counts', cycleCountRouter);
+const app = fastify();
+
+app.register(cycleCountRouter, { prefix: '/api/cycle-counts' });
+    await app.ready();
 
 describe('CycleCount E2E', () => {
   it('should create a cycle count plan', async () => {
-    const res = await request(app)
+    const res = await request((app as any).server)
       .post('/api/cycle-counts/plans')
       .send({
         tenantId: 'tenant-1',
@@ -22,7 +23,7 @@ describe('CycleCount E2E', () => {
   });
 
   it('should schedule cycle counts based on active plans', async () => {
-    const res = await request(app)
+    const res = await request((app as any).server)
       .post('/api/cycle-counts/schedule')
       .send({ tenantId: 'tenant-1' });
     

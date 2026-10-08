@@ -3,10 +3,10 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { prisma } from "../../database/prisma";
 
 export class ReportController {
-  static async createReport(request: AuthenticatedRequest, reply: FastifyReply) {
+  static async createReport(request: AuthenticatedRequest, reply: any) {
     try {
       const tenantId = request.tenantId || request.user?.tenantId || "tenant-1";
-      const { name, description, type, filters, grouping } = request.body;
+      const { name, description, type, filters, grouping } = (request.body as any);
       const actorId = request.user?.id || "system";
 
       const report = await prisma.reportDefinitionModel.create({
@@ -27,7 +27,7 @@ export class ReportController {
     }
   }
 
-  static async listReports(request: AuthenticatedRequest, reply: FastifyReply) {
+  static async listReports(request: AuthenticatedRequest, reply: any) {
     try {
       const tenantId = request.tenantId || "tenant-1";
       const reports = await prisma.reportDefinitionModel.findMany({
@@ -39,10 +39,10 @@ export class ReportController {
     }
   }
 
-  static async scheduleReport(request: AuthenticatedRequest, reply: FastifyReply) {
+  static async scheduleReport(request: AuthenticatedRequest, reply: any) {
     try {
-      const { id } = request.params;
-      const { cronExpression, deliveryMethod } = request.body;
+      const { id } = (request.params as any);
+      const { cronExpression, deliveryMethod } = (request.body as any);
 
       // In real code, parse cron string to calculate nextRunAt. We use a mock date for scaffolding.
       const nextRunAt = new Date(Date.now() + 60 * 60 * 1000); 
@@ -62,10 +62,10 @@ export class ReportController {
     }
   }
 
-  static async executeReport(request: AuthenticatedRequest, reply: FastifyReply) {
+  static async executeReport(request: AuthenticatedRequest, reply: any) {
     try {
-      const { id } = request.params;
-      const { format } = request.body; // csv, pdf, xlsx
+      const { id } = (request.params as any);
+      const { format } = (request.body as any); // csv, pdf, xlsx
       
       const execution = await prisma.reportExecutionModel.create({
         data: {
@@ -90,9 +90,9 @@ export class ReportController {
     }
   }
 
-  static async getSharedLink(request: AuthenticatedRequest, reply: FastifyReply) {
+  static async getSharedLink(request: AuthenticatedRequest, reply: any) {
     try {
-      const { token } = request.params;
+      const { token } = (request.params as any);
       const link = await prisma.sharedReportLinkModel.findUnique({
         where: { token },
         include: { reportExecution: true }

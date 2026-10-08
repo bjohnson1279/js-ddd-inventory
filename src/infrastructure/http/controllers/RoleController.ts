@@ -5,7 +5,7 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { ManageRolesUseCase } from "../../../application/useCases/ManageRolesUseCase";
 
 export class RoleController {
-  static async listRoles(request: AuthenticatedRequest, reply: FastifyReply) {
+  static async listRoles(request: AuthenticatedRequest, reply: any) {
     try {
       const tenantId = request.tenantId || "tenant-1";
       const roles = await prisma.roleModel.findMany({
@@ -43,10 +43,10 @@ export class RoleController {
     }
   }
 
-  static async createRole(request: AuthenticatedRequest, reply: FastifyReply) {
+  static async createRole(request: AuthenticatedRequest, reply: any) {
     try {
       const tenantId = request.tenantId || "tenant-1";
-      const { name, description, permissionIds } = request.body;
+      const { name, description, permissionIds } = (request.body as any);
 
       const result = await ManageRolesUseCase.createCustomRole(tenantId, name, description, permissionIds);
 
@@ -60,10 +60,10 @@ export class RoleController {
     }
   }
 
-  static async updateRolePermissions(request: AuthenticatedRequest, reply: FastifyReply) {
+  static async updateRolePermissions(request: AuthenticatedRequest, reply: any) {
     try {
-      const { roleId } = request.params;
-      const { permissionIds } = request.body;
+      const { roleId } = (request.params as any);
+      const { permissionIds } = (request.body as any);
 
       if (!Array.isArray(permissionIds)) {
         return reply.status(400).send({ error: "permissionIds must be an array." });
@@ -104,7 +104,7 @@ export class RoleController {
     }
   }
 
-  static async listPermissions(request: AuthenticatedRequest, reply: FastifyReply) {
+  static async listPermissions(request: AuthenticatedRequest, reply: any) {
     try {
       const permissions = await ManageRolesUseCase.listPermissions();
       return reply.status(200).send({ permissions });
@@ -114,9 +114,9 @@ export class RoleController {
     }
   }
 
-  static async deleteRole(request: AuthenticatedRequest, reply: FastifyReply) {
+  static async deleteRole(request: AuthenticatedRequest, reply: any) {
     try {
-      const { roleId } = request.params;
+      const { roleId } = (request.params as any);
 
       const existingRole = await prisma.roleModel.findUnique({ 
         where: { id: roleId },

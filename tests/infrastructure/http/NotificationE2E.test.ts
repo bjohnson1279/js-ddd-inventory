@@ -1,14 +1,15 @@
 import request from 'supertest';
-import express from 'express';
+import fastify from "fastify";
 import { notificationRouter } from '../../../src/infrastructure/http/routes/notification.routes';
 
-const app = express();
-app.use(express.json());
-app.use('/api/notifications', notificationRouter);
+const app = fastify();
+
+app.register(notificationRouter, { prefix: '/api/notifications' });
+    await app.ready();
 
 describe('Notification E2E', () => {
   it('should fetch unread notifications', async () => {
-    const res = await request(app)
+    const res = await request((app as any).server)
       .get('/api/notifications/tenant-1');
     
     expect(res.status).toBe(200);
@@ -17,7 +18,7 @@ describe('Notification E2E', () => {
 
   it('should mark notification as read', async () => {
     // Assuming valid ID or mock
-    const res = await request(app)
+    const res = await request((app as any).server)
       .patch('/api/notifications/some-uuid/read');
     
     // Might fail with 500 if id is invalid for prisma, 
@@ -26,7 +27,7 @@ describe('Notification E2E', () => {
   });
 
   it('should save preferences', async () => {
-    const res = await request(app)
+    const res = await request((app as any).server)
       .post('/api/notifications/preferences')
       .send({
         userId: 'user-1',

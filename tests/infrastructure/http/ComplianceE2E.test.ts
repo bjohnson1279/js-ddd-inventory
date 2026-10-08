@@ -26,6 +26,7 @@ describe("Compliance Ledger E2E Tests", () => {
   beforeEach(async () => {
     repository = new InMemoryInventoryRepository();
     setupApp(repository);
+    await app.ready();
 
     // Clean up ledger table
     try {
@@ -38,7 +39,7 @@ describe("Compliance Ledger E2E Tests", () => {
     await ComplianceLedgerService.logEvent("tenant-acme", "TEST_EVENT", { foo: "bar" });
 
     // Express may parse ?tenantId[]=1&tenantId[]=2 as an array.
-    const res = await request(app)
+    const res = await request((app as any).server)
       .get("/api/compliance/ledger?tenantId[]=1&tenantId[]=2")
       .set("Authorization", `Bearer ${adminToken}`);
 
@@ -54,7 +55,7 @@ describe("Compliance Ledger E2E Tests", () => {
     await ComplianceLedgerService.logEvent("tenant-acme", "TEST_EVENT", { foo: "bar" });
 
     // Express may parse ?tenantId[foo]=bar as an object.
-    const res = await request(app)
+    const res = await request((app as any).server)
       .post("/api/compliance/verify?tenantId[foo]=bar")
       .set("Authorization", `Bearer ${adminToken}`);
 

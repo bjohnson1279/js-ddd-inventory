@@ -45,11 +45,12 @@ describe("Reorder Policy HTTP API Endpoints", () => {
       policyRepo,
       reorderPolicyService
     );
+    await app.ready();
   });
 
   it("should create, fetch, and trigger auto-reorder during stock dispatch", async () => {
     // 1. Create a Reorder Policy via HTTP POST
-    const createRes = await request(app)
+    const createRes = await request((app as any).server)
       .post("/api/reorder-policies")
         .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
@@ -65,7 +66,7 @@ describe("Reorder Policy HTTP API Endpoints", () => {
     expect(createRes.body.reorderPoint).toBe(5);
 
     // 2. Fetch the created policy via HTTP GET
-    const getRes = await request(app)
+    const getRes = await request((app as any).server)
       .get("/api/reorder-policies/IPHONE-15/warehouse-south")
         .set("Authorization", `Bearer ${getAdminToken()}`);
 
@@ -77,7 +78,7 @@ describe("Reorder Policy HTTP API Endpoints", () => {
     await inventoryRepo.save(invItem);
 
     // 4. Dispatch 6 items, dropping stock level to 4 (below reorder point of 5)
-    const dispatchRes = await request(app)
+    const dispatchRes = await request((app as any).server)
       .post("/api/inventory/dispatch")
         .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({

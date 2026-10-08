@@ -14,12 +14,12 @@ import { ISerializedItemRepository } from "../../../domain/repositories/ISeriali
 import { Logger } from "../../../infrastructure/logging/logger";
 
 export class RMAController {
-  static async create(request: FastifyRequest, reply: FastifyReply) {
+  static async create(request: any, reply: any) {
     try {
-      const rmaRepository = request.server["rmaRepository"] as IRMARepository;
+      const rmaRepository = (request.server as any)["rmaRepository"] as IRMARepository;
       const useCase = new CreateRMA(rmaRepository);
 
-      const rma = await useCase.execute(request.body);
+      const rma = await useCase.execute((request.body as any));
       reply.status(201).send({
         id: rma.id,
         rmaNumber: rma.rmaNumber,
@@ -43,12 +43,12 @@ export class RMAController {
     }
   }
 
-  static async authorize(request: FastifyRequest, reply: FastifyReply) {
+  static async authorize(request: any, reply: any) {
     try {
-      const rmaRepository = request.server["rmaRepository"] as IRMARepository;
+      const rmaRepository = (request.server as any)["rmaRepository"] as IRMARepository;
       const useCase = new AuthorizeRMA(rmaRepository);
 
-      await useCase.execute(request.params.id);
+      await useCase.execute((request.params as any).id);
       reply.status(200).send({ message: "RMA authorized successfully" });
     } catch (error: any) {
       Logger.error({ context: "RMAController", message: "An error occurred", error: error });
@@ -57,15 +57,15 @@ export class RMAController {
     }
   }
 
-  static async receive(request: FastifyRequest, reply: FastifyReply) {
+  static async receive(request: any, reply: any) {
     try {
-      const rmaRepository = request.server["rmaRepository"] as IRMARepository;
-      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
-      const costLayerRepository = request.server["costLayerRepository"] as ICostLayerRepository;
-      const quarantineRepository = request.server["quarantineRepository"] as IQuarantineRepository;
-      const tenantConfigRepository = request.server["tenantConfigRepository"] as ITenantConfigRepository;
-      const journalRepository = request.server["journalRepository"] as IJournalRepository;
-      const serializedItemRepository = request.server["serializedItemRepository"] as ISerializedItemRepository;
+      const rmaRepository = (request.server as any)["rmaRepository"] as IRMARepository;
+      const inventoryRepository = (request.server as any)["inventoryRepository"] as IInventoryRepository;
+      const costLayerRepository = (request.server as any)["costLayerRepository"] as ICostLayerRepository;
+      const quarantineRepository = (request.server as any)["quarantineRepository"] as IQuarantineRepository;
+      const tenantConfigRepository = (request.server as any)["tenantConfigRepository"] as ITenantConfigRepository;
+      const journalRepository = (request.server as any)["journalRepository"] as IJournalRepository;
+      const serializedItemRepository = (request.server as any)["serializedItemRepository"] as ISerializedItemRepository;
 
       const useCase = new ReceiveRMA(
         rmaRepository,
@@ -78,8 +78,8 @@ export class RMAController {
       );
 
       await useCase.execute({
-        rmaId: request.params.id,
-        items: request.body.items,
+        rmaId: (request.params as any).id,
+        items: (request.body as any).items,
       });
 
       reply.status(200).send({ message: "RMA items received and processed successfully" });
@@ -90,10 +90,10 @@ export class RMAController {
     }
   }
 
-  static async get(request: FastifyRequest, reply: FastifyReply) {
+  static async get(request: any, reply: any) {
     try {
-      const rmaRepository = request.server["rmaRepository"] as IRMARepository;
-      const rma = await rmaRepository.findById(request.params.id);
+      const rmaRepository = (request.server as any)["rmaRepository"] as IRMARepository;
+      const rma = await rmaRepository.findById((request.params as any).id);
       if (!rma) {
         return reply.status(404).send({ error: "RMA not found" });
       }

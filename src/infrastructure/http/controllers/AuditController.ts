@@ -4,9 +4,9 @@ import { PrismaAuditDiscrepancyRepository } from "../../database/PrismaAuditDisc
 import { Logger } from "../../../infrastructure/logging/logger";
 
 export class AuditController {
-  static async runAudit(request: FastifyRequest, reply: FastifyReply) {
+  static async runAudit(request: any, reply: any) {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = (request as any).tenantId;
       if (!tenantId) {
         return reply.status(400).send({ error: "Tenant ID is required." });
       }
@@ -21,10 +21,10 @@ export class AuditController {
     }
   }
 
-  static async listDiscrepancies(request: FastifyRequest, reply: FastifyReply) {
+  static async listDiscrepancies(request: any, reply: any) {
     try {
-      const tenantId = (req as any).tenantId;
-      const { status } = request.query;
+      const tenantId = (request as any).tenantId;
+      const { status } = (request.query as any);
 
       if (status !== undefined && typeof status !== "string") {
         return reply.status(400).send({ error: "Invalid status parameter" });
@@ -40,11 +40,11 @@ export class AuditController {
     }
   }
 
-  static async resolveDiscrepancy(request: FastifyRequest, reply: FastifyReply) {
+  static async resolveDiscrepancy(request: any, reply: any) {
     try {
-      const tenantId = (req as any).tenantId;
-      const { id } = request.params;
-      const { notes } = request.body;
+      const tenantId = (request as any).tenantId;
+      const { id } = (request.params as any);
+      const { notes } = (request.body as any);
 
       if (!notes) {
         return reply.status(400).send({ error: "Notes are required for resolution." });

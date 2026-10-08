@@ -72,7 +72,7 @@ export class RebalanceOptimizationService {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      return await response.send();
+      return await (response as any).send();
     } catch (error: any) {
       Logger.error({ context: "RebalanceOptimizationService", message: error.message });
       throw new Error("Failed to optimize rebalancing");

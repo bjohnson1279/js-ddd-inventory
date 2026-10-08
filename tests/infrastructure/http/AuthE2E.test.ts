@@ -14,6 +14,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
   beforeEach(async () => {
     repository = new InMemoryInventoryRepository();
     setupApp(repository);
+    await app.ready();
 
     if (process.env.NODE_ENV === "test") {
       return;
@@ -28,7 +29,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
   });
 
   it("should setup a new organization and admin user", async () => {
-    const res = await request(app)
+    const res = await request((app as any).server)
       .post("/api/auth/setup")
       .send({
         orgName: "Acme Retail",
@@ -51,7 +52,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
     if (!user) {
       const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
       const token = jwt.sign({ actorId: "alice", role: "admin", tenantId: "tenant-acme" }, JWT_SECRET);
-      const listRes = await request(app).get("/api/users").set("Authorization", `Bearer ${token}`);
+      const listRes = await request((app as any).server).get("/api/users").set("Authorization", `Bearer ${token}`);
       if (listRes.body && Array.isArray(listRes.body.users)) {
         user = listRes.body.users.find((u: any) => u.email === "alice@acme.com");
       }
@@ -63,7 +64,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
 
   it("should issue a JWT on successful login", async () => {
     // 1. Setup organization first
-    await request(app)
+    await request((app as any).server)
       .post("/api/auth/setup")
       .send({
         orgName: "Acme Retail",
@@ -74,7 +75,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
       });
 
     // 2. Perform login
-    const res = await request(app)
+    const res = await request((app as any).server)
       .post("/api/auth/login")
       .send({
         tenantId: "tenant-acme",
@@ -86,7 +87,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
     expect(res.body.token).toBeDefined();
 
     // 3. Try to access inventory using the JWT token
-    const inventoryRes = await request(app)
+    const inventoryRes = await request((app as any).server)
       .get("/api/inventory")
       .set("Authorization", `Bearer ${res.body.token}`);
 
@@ -94,7 +95,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
   });
 
   it("should fail login with incorrect credentials", async () => {
-    await request(app)
+    await request((app as any).server)
       .post("/api/auth/setup")
       .send({
         orgName: "Acme Retail",
@@ -104,7 +105,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
         adminPassword: "Password123!"
       });
 
-    const res = await request(app)
+    const res = await request((app as any).server)
       .post("/api/auth/login")
       .send({
         tenantId: "tenant-acme",
@@ -121,7 +122,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
     process.env.NODE_ENV = "production";
 
     try {
-      const res = await request(app).get("/api/inventory");
+      const res = await request((app as any).server).get("/api/inventory");
       expect(res.status).toBe(401);
       expect(res.body.error).toMatch(/token/i);
     } finally {
@@ -134,7 +135,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
     process.env.NODE_ENV = "production";
 
     try {
-      const res = await request(app)
+      const res = await request((app as any).server)
         .get("/api/inventory")
         .set("Authorization", "Bearer invalid.jwt.token");
       expect(res.status).toBe(401);
@@ -149,7 +150,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
 
     beforeEach(async () => {
       // 1. Setup org
-      await request(app)
+      await request((app as any).server)
         .post("/api/auth/setup")
         .send({
           orgName: "Acme Retail",
@@ -160,7 +161,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
         });
 
       // 2. Login as admin
-      const loginRes = await request(app)
+      const loginRes = await request((app as any).server)
         .post("/api/auth/login")
         .send({
           tenantId: "tenant-acme",
@@ -172,7 +173,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
 
     it("should allow admin to invite user, list users, and update user role", async () => {
       // Invite user
-      const inviteRes = await request(app)
+      const inviteRes = await request((app as any).server)
         .post("/api/users")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
@@ -186,7 +187,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
       const newUserId = inviteRes.body.userId;
 
       // List users
-      const listRes = await request(app)
+      const listRes = await request((app as any).server)
         .get("/api/users")
         .set("Authorization", `Bearer ${adminToken}`);
 
@@ -197,7 +198,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
       expect(bobRecord.role).toBe("viewer");
 
       // Update role
-      const updateRes = await request(app)
+      const updateRes = await request((app as any).server)
         .patch(`/api/users/${newUserId}/role`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
@@ -208,7 +209,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
       expect(updateRes.body.success).toBe(true);
 
       // Verify updated role
-      const listRes2 = await request(app)
+      const listRes2 = await request((app as any).server)
         .get("/api/users")
         .set("Authorization", `Bearer ${adminToken}`);
       const updatedBob = listRes2.body.users.find((u: any) => u.email === "bob@acme.com");
@@ -252,7 +253,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
       } catch (e) {}
 
       // 2. Log in as viewer
-      const viewerLoginRes = await request(app)
+      const viewerLoginRes = await request((app as any).server)
         .post("/api/auth/login")
         .send({
           tenantId: "tenant-acme",
@@ -262,14 +263,14 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
       const viewerToken = viewerLoginRes.body.token;
 
       // 3. Try listing users as viewer -> should fail with 403
-      const listRes = await request(app)
+      const listRes = await request((app as any).server)
         .get("/api/users")
         .set("Authorization", `Bearer ${viewerToken}`);
       expect(listRes.status).toBe(403);
       expect(listRes.body.error).toMatch(/Forbidden/i);
 
       // 4. Try inviting a user as viewer -> should fail with 403
-      const inviteRes2 = await request(app)
+      const inviteRes2 = await request((app as any).server)
         .post("/api/users")
         .set("Authorization", `Bearer ${viewerToken}`)
         .send({
@@ -279,7 +280,7 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
       expect(inviteRes2.status).toBe(403);
 
       // 5. Try updating role as viewer -> should fail with 403
-      const updateRes = await request(app)
+      const updateRes = await request((app as any).server)
         .patch(`/api/users/some-id/role`)
         .set("Authorization", `Bearer ${viewerToken}`)
         .send({

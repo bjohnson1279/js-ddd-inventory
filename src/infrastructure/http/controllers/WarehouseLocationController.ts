@@ -9,10 +9,10 @@ import { prisma } from "../../database/prisma";
 import { Logger } from "../../../infrastructure/logging/logger";
 
 export class WarehouseLocationController {
-  static async save(request: FastifyRequest, reply: FastifyReply) {
+  static async save(request: any, reply: any) {
     try {
-      const { path, warehouseId, zone, aisle, rack, shelf, bin, maxWeightGrams, maxVolumeCubicMeters, gridX, gridY, width, height } = request.body;
-      const repo = request.server["warehouseLocationRepository"];
+      const { path, warehouseId, zone, aisle, rack, shelf, bin, maxWeightGrams, maxVolumeCubicMeters, gridX, gridY, width, height } = (request.body as any);
+      const repo = (request.server as any)["warehouseLocationRepository"];
 
       let location: WarehouseLocation;
       if (path) {
@@ -78,9 +78,9 @@ export class WarehouseLocationController {
     }
   }
 
-  static async list(request: FastifyRequest, reply: FastifyReply) {
+  static async list(request: any, reply: any) {
     try {
-      const repo = request.server["warehouseLocationRepository"];
+      const repo = (request.server as any)["warehouseLocationRepository"];
       const locations = await repo.findAll();
 
       reply.status(200).send(
@@ -106,10 +106,10 @@ export class WarehouseLocationController {
     }
   }
 
-  static async delete(request: FastifyRequest, reply: FastifyReply) {
+  static async delete(request: any, reply: any) {
     try {
-      const { id } = request.params;
-      const repo = request.server["warehouseLocationRepository"];
+      const { id } = (request.params as any);
+      const repo = (request.server as any)["warehouseLocationRepository"];
 
       await repo.delete(new LocationId(id));
 
@@ -121,16 +121,16 @@ export class WarehouseLocationController {
     }
   }
 
-  static async suggestPutaway(request: FastifyRequest, reply: FastifyReply) {
+  static async suggestPutaway(request: any, reply: any) {
     try {
-      const { sku, quantity } = request.body;
+      const { sku, quantity } = (request.body as any);
       if (!sku || quantity === undefined) {
         return reply.status(400).send({ error: "SKU and quantity are required." });
       }
 
-      const inventoryRepo = request.server["inventoryRepository"];
-      const productRepo = request.server["productRepository"];
-      const locationRepo = request.server["warehouseLocationRepository"];
+      const inventoryRepo = (request.server as any)["inventoryRepository"];
+      const productRepo = (request.server as any)["productRepository"];
+      const locationRepo = (request.server as any)["warehouseLocationRepository"];
 
       const suggester = new PutawaySuggester(inventoryRepo, productRepo, locationRepo);
       const suggestions = await suggester.suggestPutaway(SKU.create(sku), Number(quantity));
@@ -143,9 +143,9 @@ export class WarehouseLocationController {
     }
   }
 
-  static async optimizePickRoute(request: FastifyRequest, reply: FastifyReply) {
+  static async optimizePickRoute(request: any, reply: any) {
     try {
-      const { items, skus } = request.body;
+      const { items, skus } = (request.body as any);
       let pickItems = items;
 
       if (!pickItems && Array.isArray(skus)) {
@@ -175,7 +175,7 @@ export class WarehouseLocationController {
         return reply.status(400).send({ error: "Items array or SKUs array is required." });
       }
 
-      const locationRepo = request.server["warehouseLocationRepository"];
+      const locationRepo = (request.server as any)["warehouseLocationRepository"];
       const optimizer = new PickingRouteOptimizer(locationRepo);
 
       const optimized = await optimizer.optimizeRoute(pickItems);
@@ -188,7 +188,7 @@ export class WarehouseLocationController {
     }
   }
 
-  static async suggestSlotting(request: FastifyRequest, reply: FastifyReply) {
+  static async suggestSlotting(request: any, reply: any) {
     try {
       const { SlottingOptimizer } = await import("../../../domain/services/SlottingOptimizer");
       const optimizer = new SlottingOptimizer(prisma);

@@ -1,8 +1,8 @@
-import express from "express";
-import cors from "cors";
+import fastify from "fastify";
+import fastifyCors from "@fastify/cors";
 import crypto from "crypto";
-import helmet from "helmet";
-import { rateLimit } from "express-rate-limit";
+import fastifyHelmet from "@fastify/helmet";
+import fastifyRateLimit from "@fastify/rate-limit";
 import { Logger } from "./infrastructure/logging/logger";
 import { RedisCacheService } from "./infrastructure/cache/RedisCacheService";
 
@@ -151,29 +151,21 @@ export const parseAllowedOrigins = (frontendUrl?: string): string[] => {
   return validOrigins.length > 0 ? validOrigins : ["http://localhost:3080"];
 };
 
-const app = Fastify({ logger: true });
-app.disable("x-powered-by");
+const app = fastify({ logger: true });
+
 const port = process.env.PORT || 5000;
 
 const allowedOrigins = parseAllowedOrigins(process.env.FRONTEND_URL);
 
-const limiter = rateLimit({
-  windowMs: process.env.RATE_LIMIT_WINDOW_MS ? parseInt(process.env.RATE_LIMIT_WINDOW_MS) : 15 * 60 * 1000, // 15 minutes default
-  limit: process.env.RATE_LIMIT_MAX ? parseInt(process.env.RATE_LIMIT_MAX) : 100, // Limit each IP to 100 requests per `window` default
-  standardHeaders: 'draft-7', // draft-6: `RateLimit-*` headers; draft-7: combined `RateLimit` header
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-});
 
-app.register(helmet);
-app.register(cors, { origin: '*' });
+
+app.register(fastifyHelmet);
+
+app.register(fastifyCors, { origin: '*' });
 app.addHook('onRequest', traceMiddleware);
-app.decorate('trust proxy', 1);
-app.use(limiter);
-app.use("/api/shopify", express.json({
-  verify: (req: IncomingMessage, res: ServerResponse, buf: Buffer) => {
-    (req as any).rawBody = buf;
-  }
-}));
+if (!app.hasDecorator('trust proxy')) if (!app.hasDecorator('trust proxy')) app.decorate('trust proxy', 1);
+
+
 
 
 // Register Domain Event Handlers
@@ -220,42 +212,42 @@ export const setupApp = (
   productRepository?: IProductRepository,
   emailService?: IEmailService
 ) => {
-  app.decorate('inventoryRepository', inventoryRepository);
-  app.decorate('barcodeRepository', barcodeRepository || new InMemoryBarcodeRepository());
-  app.decorate('serializedItemRepository', serializedItemRepository || new InMemorySerializedItemRepository());
-  app.decorate('costLayerRepository', costLayerRepository || new InMemoryCostLayerRepository());
-  app.decorate('journalRepository', journalRepository || new InMemoryJournalRepository());
-  app.decorate('tenantConfigRepository', tenantConfigRepository || new InMemoryTenantConfigRepository());
-  app.decorate('processedWebhookRepository', processedWebhookRepository || new InMemoryProcessedWebhookRepository());
-  app.decorate('outboxRepository', outboxRepository || new InMemoryOutboxRepository());
-  app.decorate('purchaseOrderRepository', purchaseOrderRepository || new InMemoryPurchaseOrderRepository());
-  app.decorate('reorderPolicyRepository', reorderPolicyRepository || new InMemoryReorderPolicyRepository());
-  app.decorate('reorderPolicyService', reorderPolicyService || new ReorderPolicyService(app['reorderPolicyRepository'], app['purchaseOrderRepository']));
-  app.decorate('inventoryAuditRepository', inventoryAuditRepository || new InMemoryInventoryAuditRepository());
-  app.decorate('rmaRepository', rmaRepository || new InMemoryRMARepository());
-  app.decorate('quarantineRepository', quarantineRepository || new InMemoryQuarantineRepository());
-  app.decorate('messageBroker', messageBroker || new InMemoryMessageBroker());
-  app.decorate('dispatchRecordRepository', dispatchRecordRepository || new InMemoryDispatchRecordRepository());
-  app.decorate('demandForecastRepository', demandForecastRepository || new InMemoryDemandForecastRepository());
-  app.decorate('shipmentRepository', shipmentRepository || new InMemoryShipmentRepository());
-  app.decorate('carrierService', carrierService || new MockCarrierService());
-  app.decorate('warehouseLocationRepository', warehouseLocationRepository || new InMemoryWarehouseLocationRepository());
-  app.decorate('productRepository', productRepository || new InMemoryProductRepository());
-  app.decorate('emailService', emailService || new StubEmailService());
-  app.set("wmsCapacityService", new WMSCapacityService(
+  if (!app.hasDecorator('inventoryRepository')) if (!app.hasDecorator('inventoryRepository')) app.decorate('inventoryRepository', inventoryRepository);
+  if (!app.hasDecorator('barcodeRepository')) if (!app.hasDecorator('barcodeRepository')) app.decorate('barcodeRepository', barcodeRepository || new InMemoryBarcodeRepository());
+  if (!app.hasDecorator('serializedItemRepository')) if (!app.hasDecorator('serializedItemRepository')) app.decorate('serializedItemRepository', serializedItemRepository || new InMemorySerializedItemRepository());
+  if (!app.hasDecorator('costLayerRepository')) if (!app.hasDecorator('costLayerRepository')) app.decorate('costLayerRepository', costLayerRepository || new InMemoryCostLayerRepository());
+  if (!app.hasDecorator('journalRepository')) if (!app.hasDecorator('journalRepository')) app.decorate('journalRepository', journalRepository || new InMemoryJournalRepository());
+  if (!app.hasDecorator('tenantConfigRepository')) if (!app.hasDecorator('tenantConfigRepository')) app.decorate('tenantConfigRepository', tenantConfigRepository || new InMemoryTenantConfigRepository());
+  if (!app.hasDecorator('processedWebhookRepository')) if (!app.hasDecorator('processedWebhookRepository')) app.decorate('processedWebhookRepository', processedWebhookRepository || new InMemoryProcessedWebhookRepository());
+  if (!app.hasDecorator('outboxRepository')) if (!app.hasDecorator('outboxRepository')) app.decorate('outboxRepository', outboxRepository || new InMemoryOutboxRepository());
+  if (!app.hasDecorator('purchaseOrderRepository')) if (!app.hasDecorator('purchaseOrderRepository')) app.decorate('purchaseOrderRepository', purchaseOrderRepository || new InMemoryPurchaseOrderRepository());
+  if (!app.hasDecorator('reorderPolicyRepository')) if (!app.hasDecorator('reorderPolicyRepository')) app.decorate('reorderPolicyRepository', reorderPolicyRepository || new InMemoryReorderPolicyRepository());
+  if (!app.hasDecorator('reorderPolicyService')) if (!app.hasDecorator('reorderPolicyService')) app.decorate('reorderPolicyService', reorderPolicyService || new ReorderPolicyService((app as any).reorderPolicyRepository, (app as any).purchaseOrderRepository));
+  if (!app.hasDecorator('inventoryAuditRepository')) if (!app.hasDecorator('inventoryAuditRepository')) app.decorate('inventoryAuditRepository', inventoryAuditRepository || new InMemoryInventoryAuditRepository());
+  if (!app.hasDecorator('rmaRepository')) if (!app.hasDecorator('rmaRepository')) app.decorate('rmaRepository', rmaRepository || new InMemoryRMARepository());
+  if (!app.hasDecorator('quarantineRepository')) if (!app.hasDecorator('quarantineRepository')) app.decorate('quarantineRepository', quarantineRepository || new InMemoryQuarantineRepository());
+  if (!app.hasDecorator('messageBroker')) if (!app.hasDecorator('messageBroker')) app.decorate('messageBroker', messageBroker || new InMemoryMessageBroker());
+  if (!app.hasDecorator('dispatchRecordRepository')) if (!app.hasDecorator('dispatchRecordRepository')) app.decorate('dispatchRecordRepository', dispatchRecordRepository || new InMemoryDispatchRecordRepository());
+  if (!app.hasDecorator('demandForecastRepository')) if (!app.hasDecorator('demandForecastRepository')) app.decorate('demandForecastRepository', demandForecastRepository || new InMemoryDemandForecastRepository());
+  if (!app.hasDecorator('shipmentRepository')) if (!app.hasDecorator('shipmentRepository')) app.decorate('shipmentRepository', shipmentRepository || new InMemoryShipmentRepository());
+  if (!app.hasDecorator('carrierService')) if (!app.hasDecorator('carrierService')) app.decorate('carrierService', carrierService || new MockCarrierService());
+  if (!app.hasDecorator('warehouseLocationRepository')) if (!app.hasDecorator('warehouseLocationRepository')) app.decorate('warehouseLocationRepository', warehouseLocationRepository || new InMemoryWarehouseLocationRepository());
+  if (!app.hasDecorator('productRepository')) if (!app.hasDecorator('productRepository')) app.decorate('productRepository', productRepository || new InMemoryProductRepository());
+  if (!app.hasDecorator('emailService')) if (!app.hasDecorator('emailService')) app.decorate('emailService', emailService || new StubEmailService());
+  if (!app.hasDecorator("wmsCapacityService")) app.decorate("wmsCapacityService", new WMSCapacityService(
     app['inventoryRepository'],
-    app['productRepository'],
-    app['warehouseLocationRepository']
+    (app as any)['productRepository'],
+    (app as any)['warehouseLocationRepository']
   ));
   
   // Legacy key for backwards compatibility
-  app.decorate('repository', inventoryRepository);
+  if (!app.hasDecorator('repository')) if (!app.hasDecorator('repository')) app.decorate('repository', inventoryRepository);
 
   app.register(authRoutes, { prefix: '/api/auth' });
   app.register(shopifyRoutes, { prefix: '/api/shopify' });
 
   // Secure all other endpoints under auth middleware
-  app.use(authMiddleware);
+  app.addHook('preHandler', authMiddleware);
   
   // Apply platform throttling to authenticated requests
   app.addHook('preHandler', platformThrottlingMiddleware);
@@ -293,31 +285,31 @@ export const setupApp = (
   app.register(intercompanyRouter, { prefix: '/api/intercompany' });
 
   // Tier-2 Distributed Cache Management Endpoints
-  app.get("/api/admin/cache/stats", requireRole(["admin"]), (req, reply) => {
+  app.get("/api/admin/cache/stats", { preHandler: [requireRole(["admin"])] }, (request: any, reply: any) => {
     try {
       const stats = RedisCacheService.getInstance().getStats();
-      reply.status(200).json(stats);
+      reply.status(200).send(stats);
     } catch (e: unknown) {
-      reply.status(500).json({ error: "Failed to fetch cache stats." });
+      reply.status(500).send({ error: "Failed to fetch cache stats." });
     }
   });
 
-  app.post("/api/admin/cache/clear", requireRole(["admin"]), (req, reply) => {
+  app.post("/api/admin/cache/clear", { preHandler: [requireRole(["admin"])] }, (request: any, reply: any) => {
     try {
-      const tenantId = typeof req.query.tenantId === "string" ? req.query.tenantId : undefined;
+      const tenantId = typeof request.query.tenantId === "string" ? request.query.tenantId : undefined;
       const count = RedisCacheService.getInstance().flush(tenantId);
-      reply.status(200).json({ success: true, clearedKeysCount: count });
+      reply.status(200).send({ success: true, clearedKeysCount: count });
     } catch (e: unknown) {
-      reply.status(500).json({ error: "Failed to clear cache." });
+      reply.status(500).send({ error: "Failed to clear cache." });
     }
   });
 
 
   // Lot Management & Traceability Endpoints
-  app.post("/api/lots/quarantine", requireRole(["admin", "warehouse_operator"]), async (req, reply) => {
+  app.post("/api/lots/quarantine", { preHandler: [requireRole(["admin", "warehouse_operator"]) as any] }, async (request: any, reply: any) => {
     try {
-      const { lotNumber, variantId, reason } = req.body;
-      const tenantId = (req as AuthenticatedRequest).tenantId || "tenant-1";
+      const { lotNumber, variantId, reason } = request.body;
+      const tenantId = (request as AuthenticatedRequest).tenantId || "tenant-1";
 
       let lot = await prisma.lotBatchModel.findUnique({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } }
@@ -345,15 +337,15 @@ export const setupApp = (
       }
       reply.send(lot);
     } catch (err: unknown) {
-      reply.status(500).json({ error: err instanceof Error ? err.message : String(err) });
-      reply.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
+      reply.status(500).send({ error: err instanceof Error ? err.message : String(err) });
+      reply.status(500).send({ error: err instanceof Error ? err.message : "Unknown error" });
     }
   });
 
-  app.post("/api/lots/recall", requireRole(["admin"]), async (req, reply) => {
+  app.post("/api/lots/recall", { preHandler: [requireRole(["admin"]) as any] }, async (request: any, reply: any) => {
     try {
-      const { lotNumber, variantId, reason } = req.body;
-      const tenantId = (req as AuthenticatedRequest).tenantId || "tenant-1";
+      const { lotNumber, variantId, reason } = request.body;
+      const tenantId = (request as AuthenticatedRequest).tenantId || "tenant-1";
 
       let lot = await prisma.lotBatchModel.findUnique({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } }
@@ -381,14 +373,14 @@ export const setupApp = (
       }
       reply.send(lot);
     } catch (err: unknown) {
-      reply.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+      reply.status(500).send({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
-  app.post("/api/lots/release", requireRole(["admin", "warehouse_operator"]), async (req, reply) => {
+  app.post("/api/lots/release", { preHandler: [requireRole(["admin", "warehouse_operator"]) as any] }, async (request: any, reply: any) => {
     try {
-      const { lotNumber, variantId } = req.body;
-      const tenantId = (req as AuthenticatedRequest).tenantId || "tenant-1";
+      const { lotNumber, variantId } = request.body;
+      const tenantId = (request as AuthenticatedRequest).tenantId || "tenant-1";
 
       const lot = await prisma.lotBatchModel.update({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } },
@@ -401,15 +393,15 @@ export const setupApp = (
       });
       reply.send(lot);
     } catch (err: unknown) {
-      reply.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+      reply.status(500).send({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
-  app.get("/api/lots/:lotNumber/traceability", requireRole(["admin", "warehouse_operator", "viewer", "accountant"]), async (req, reply) => {
+  app.get("/api/lots/:lotNumber/traceability", { preHandler: [requireRole(["admin", "warehouse_operator", "viewer", "accountant"]) as any] }, async (request: any, reply: any) => {
     try {
-      const { lotNumber } = req.params;
-      const variantId = typeof req.query.variantId === "string" ? req.query.variantId : "";
-      const tenantId = (req as AuthenticatedRequest).tenantId || "tenant-1";
+      const { lotNumber } = request.params;
+      const variantId = typeof request.query.variantId === "string" ? request.query.variantId : "";
+      const tenantId = (request as AuthenticatedRequest).tenantId || "tenant-1";
 
       const lot = await prisma.lotBatchModel.findUnique({
         where: { tenantId_lotNumber_variantId: { tenantId, lotNumber, variantId } }
@@ -441,25 +433,25 @@ export const setupApp = (
       const report = LotRecallService.generateTraceabilityReport(lotEntity, costLayers, shipments);
       reply.send(report);
     } catch (err: unknown) {
-      reply.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+      reply.status(500).send({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
   // Cross-Docking & Drop-Shipping Endpoints
-  app.post("/api/cross-dock/evaluate", requireRole(["admin", "warehouse_operator"]), (req, reply) => {
+  app.post("/api/cross-dock/evaluate", { preHandler: [requireRole(["admin", "warehouse_operator"])] }, (request: any, reply: any) => {
     try {
-      const { purchaseOrderId, inboundItems, backorders } = req.body;
+      const { purchaseOrderId, inboundItems, backorders } = request.body;
       const { CrossDockingEngine } = require("./domain/shipping/services/CrossDockingEngine");
       const result = CrossDockingEngine.evaluate(purchaseOrderId, inboundItems || [], backorders || []);
       reply.send(result);
     } catch (err: unknown) {
-      reply.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+      reply.status(500).send({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
   // Section 11 Enterprise Extensions Endpoints
-  app.post("/api/shipping/quote", (req, reply) => {
-    const { carrier, weightKg, serviceLevel } = req.body;
+  app.post("/api/shipping/quote", (request: any, reply: any) => {
+    const { carrier, weightKg, serviceLevel } = request.body;
     const base = Math.round((parseFloat(weightKg) || 1.0) * 450);
     reply.send([
       {
@@ -474,8 +466,8 @@ export const setupApp = (
     ]);
   });
 
-  app.post("/api/shipping/label", (req, reply) => {
-    const { carrier, recipientName, shippingAddress, weightKg, format } = req.body;
+  app.post("/api/shipping/label", (request: any, reply: any) => {
+    const { carrier, recipientName, shippingAddress, weightKg, format } = request.body;
     const trackingNumber = `${carrier || 'CARRIER'}-${crypto.randomInt(100000000, 1000000000)}`;
     const safeRecipient = escapeZpl(recipientName);
     reply.send({
@@ -489,8 +481,8 @@ export const setupApp = (
     });
   });
 
-  app.post("/api/shipping/bol", (req, reply) => {
-    const { carrier, originAddress, destinationAddress, weightKg, totalPackages } = req.body;
+  app.post("/api/shipping/bol", (request: any, reply: any) => {
+    const { carrier, originAddress, destinationAddress, weightKg, totalPackages } = request.body;
     const bolNumber = `BOL-${crypto.randomInt(100000, 1000000)}`;
     reply.send({
       bolNumber,
@@ -505,8 +497,8 @@ export const setupApp = (
     });
   });
 
-  app.post("/api/erp/sync", (req, reply) => {
-    const { provider, referenceId, lines } = req.body;
+  app.post("/api/erp/sync", (request: any, reply: any) => {
+    const { provider, referenceId, lines } = request.body;
     const lineArr = Array.isArray(lines) ? lines : [];
     const postedAmountCents = lineArr.reduce((sum: number, l: any) => sum + (parseInt(l.amountCents) || 0), 0);
     reply.send({
@@ -520,8 +512,8 @@ export const setupApp = (
     });
   });
 
-  app.post("/api/rma/inspect", (req, reply) => {
-    const { rmaNumber, sku, disposition, notes } = req.body;
+  app.post("/api/rma/inspect", (request: any, reply: any) => {
+    const { rmaNumber, sku, disposition, notes } = request.body;
     reply.send({
       success: true,
       rmaNumber,
@@ -533,8 +525,8 @@ export const setupApp = (
     });
   });
 
-  app.post("/api/supplier/asn", (req, reply) => {
-    const { asnNumber, supplierId, expectedDelivery, lineItemsJson } = req.body;
+  app.post("/api/supplier/asn", (request: any, reply: any) => {
+    const { asnNumber, supplierId, expectedDelivery, lineItemsJson } = request.body;
     reply.send({
       success: true,
       asnNumber,
@@ -546,8 +538,8 @@ export const setupApp = (
     });
   });
 
-  app.get("/api/supplier/otif-scorecard", (req, reply) => {
-    const supplierId = typeof req.query.supplierId === "string" ? req.query.supplierId : "SUP-101";
+  app.get("/api/supplier/otif-scorecard", (request: any, reply: any) => {
+    const supplierId = typeof request.query.supplierId === "string" ? request.query.supplierId : "SUP-101";
     reply.send({
       supplierId,
       onTimeRate: 94.5,
@@ -559,8 +551,8 @@ export const setupApp = (
     });
   });
 
-  app.post("/api/hardware/print-thermal", (req, reply) => {
-    const { printerName, labelType, barcodeValue, subtitle } = req.body;
+  app.post("/api/hardware/print-thermal", (request: any, reply: any) => {
+    const { printerName, labelType, barcodeValue, subtitle } = request.body;
     const safeLabelType = escapeZpl(labelType || 'LABEL').toUpperCase();
     const safeBarcodeValue = escapeZpl(barcodeValue || 'BARCODE');
     const safeSubtitle = escapeZpl(subtitle || '');
@@ -574,8 +566,8 @@ export const setupApp = (
     });
   });
 
-  app.post("/api/digital-twin/simulate", (req, reply) => {
-    const { orderWaveCount, activePickersCount } = req.body;
+  app.post("/api/digital-twin/simulate", (request: any, reply: any) => {
+    const { orderWaveCount, activePickersCount } = request.body;
     const waves = parseInt(orderWaveCount) || 10;
     const pickers = parseInt(activePickersCount) || 5;
     const totalOrdersProcessed = waves * 25;
@@ -591,8 +583,8 @@ export const setupApp = (
     });
   });
 
-  app.post("/api/copilot/query", (req, reply) => {
-    const { query } = req.body;
+  app.post("/api/copilot/query", (request: any, reply: any) => {
+    const { query } = request.body;
     reply.send({
       query: query || "What is the stockout risk?",
       intent: 'INVENTORY_METRICS_QUERY',
@@ -602,8 +594,8 @@ export const setupApp = (
     });
   });
 
-  app.get("/api/sustainability/emissions-report", (req, reply) => {
-    const tenantId = typeof req.query.tenantId === "string" ? req.query.tenantId : "tenant-1";
+  app.get("/api/sustainability/emissions-report", (request: any, reply: any) => {
+    const tenantId = typeof request.query.tenantId === "string" ? request.query.tenantId : "tenant-1";
     reply.send({
       tenantId,
       period: '2026-Q3',
@@ -617,9 +609,9 @@ export const setupApp = (
   });
 
 
-  app.post("/api/fulfillment/drop-ship", requireRole(["admin", "warehouse_operator"]), (req, reply) => {
+  app.post("/api/fulfillment/drop-ship", { preHandler: [requireRole(["admin", "warehouse_operator"])] }, (request: any, reply: any) => {
     try {
-      const { orderId, variantId, quantity, supplierId } = req.body;
+      const { orderId, variantId, quantity, supplierId } = request.body;
       reply.send({
         status: "SUCCESS",
         dropShipPoId: require("crypto").randomUUID(),
@@ -630,7 +622,7 @@ export const setupApp = (
         createdAt: new Date().toISOString()
       });
     } catch (err: unknown) {
-      reply.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+      reply.status(500).send({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 };
@@ -765,7 +757,7 @@ const start = async () => {
     WebhookDeliveryWorker.start(2000);
   }
 
-  const server = app.listen(port, () => {
+  const server = app.listen({ port: typeof port === "string" ? parseInt(port) : port }, () => {
     Logger.info({ context: "index", message: `Server is running on port ${port}` });
   });
   WebSocketManager.init(app.server);

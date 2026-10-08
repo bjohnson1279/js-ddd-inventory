@@ -9,14 +9,14 @@ export const supplierRouter: FastifyPluginAsync = async (fastify) => {
 const repo = new SupplierPrismaRepository(prisma as any);
 const calculator = new SupplierOTIFCalculator();
 
-supplierRouter.post('/asn', async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.post('/asn', async (request: any, reply: any) => {
   try {
     const asn = await repo.saveASN({
-      asnNumber: request.body.asnNumber,
-      supplierId: request.body.supplierId,
-      expectedDelivery: new Date(request.body.expectedDelivery),
-      actualDelivery: request.body.actualDelivery ? new Date(request.body.actualDelivery) : null,
-      status: request.body.status || 'IN_TRANSIT',
+      asnNumber: (request.body as any).asnNumber,
+      supplierId: (request.body as any).supplierId,
+      expectedDelivery: new Date((request.body as any).expectedDelivery),
+      actualDelivery: (request.body as any).actualDelivery ? new Date((request.body as any).actualDelivery) : null,
+      status: (request.body as any).status || 'IN_TRANSIT',
     });
     reply.status(201).send(asn);
   } catch (error) {
@@ -25,9 +25,9 @@ supplierRouter.post('/asn', async (request: FastifyRequest, reply: FastifyReply)
   }
 });
 
-supplierRouter.get('/scorecard/:supplierId', async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.get('/scorecard/:supplierId', async (request: any, reply: any) => {
   try {
-    const { supplierId } = request.params;
+    const { supplierId } = (request.params as any);
     const dbAsns = await repo.getASNsForSupplier(supplierId);
     
     // Map to domain entity

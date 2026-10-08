@@ -12,12 +12,12 @@ import { Logger } from "../../../infrastructure/logging/logger";
 
 
 export class ForecastingController {
-  static async getReport(request: FastifyRequest, reply: FastifyReply) {
+  static async getReport(request: any, reply: any) {
     try {
-      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
-      const reorderPolicyRepository = request.server["reorderPolicyRepository"] as IReorderPolicyRepository;
-      const demandForecastRepository = request.server["demandForecastRepository"] as IDemandForecastRepository;
-      const dispatchRecordRepository = request.server["dispatchRecordRepository"] as IDispatchRecordRepository;
+      const inventoryRepository = (request.server as any)["inventoryRepository"] as IInventoryRepository;
+      const reorderPolicyRepository = (request.server as any)["reorderPolicyRepository"] as IReorderPolicyRepository;
+      const demandForecastRepository = (request.server as any)["demandForecastRepository"] as IDemandForecastRepository;
+      const dispatchRecordRepository = (request.server as any)["dispatchRecordRepository"] as IDispatchRecordRepository;
 
       const salesVelocityService = new CalculateSalesVelocity(dispatchRecordRepository, inventoryRepository);
       const useCase = new GetDemandPlanningReport(
@@ -28,10 +28,10 @@ export class ForecastingController {
         salesVelocityService
       );
 
-      if (request.query.locationId !== undefined && typeof request.query.locationId !== "string") {
+      if ((request.query as any).locationId !== undefined && typeof (request.query as any).locationId !== "string") {
         return reply.status(400).send({ error: "Invalid locationId parameter" });
       }
-      const locationId = request.query.locationId ? (request.query.locationId as string).trim() : "default";
+      const locationId = (request.query as any).locationId ? ((request.query as any).locationId as string).trim() : "default";
       const report = await useCase.execute(locationId);
 
       reply.status(200).send(report);
@@ -46,16 +46,16 @@ export class ForecastingController {
     }
   }
 
-  static async generateForecast(request: FastifyRequest, reply: FastifyReply) {
+  static async generateForecast(request: any, reply: any) {
     try {
-      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
-      const demandForecastRepository = request.server["demandForecastRepository"] as IDemandForecastRepository;
-      const dispatchRecordRepository = request.server["dispatchRecordRepository"] as IDispatchRecordRepository;
+      const inventoryRepository = (request.server as any)["inventoryRepository"] as IInventoryRepository;
+      const demandForecastRepository = (request.server as any)["demandForecastRepository"] as IDemandForecastRepository;
+      const dispatchRecordRepository = (request.server as any)["dispatchRecordRepository"] as IDispatchRecordRepository;
 
       const salesVelocityService = new CalculateSalesVelocity(dispatchRecordRepository, inventoryRepository);
       const useCase = new GenerateDemandForecast(demandForecastRepository, salesVelocityService, dispatchRecordRepository);
 
-      const { sku, locationId, forecastDays, trendMultiplier } = request.body;
+      const { sku, locationId, forecastDays, trendMultiplier } = (request.body as any);
       if (!sku) {
         return reply.status(400).send({ error: "Missing required parameter: sku" });
       }
@@ -91,10 +91,10 @@ export class ForecastingController {
     }
   }
 
-  static async getDispatchSummary(request: FastifyRequest, reply: FastifyReply) {
+  static async getDispatchSummary(request: any, reply: any) {
     try {
       const { prisma } = require("../../database/prisma");
-      const sku = request.query.sku as string;
+      const sku = (request.query as any).sku as string;
       
       if (sku !== undefined && typeof sku !== "string") {
         return reply.status(400).send({ error: "Invalid sku parameter" });

@@ -10,18 +10,16 @@ import { Logger } from "../../../infrastructure/logging/logger";
 export class ShopifyWebhookController {
   constructor(private readonly security: ShopifyWebhookSecurity) {}
 
-  public async handleOrderCreated(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const repository = request.server["repository"] as IInventoryRepository;
-    const processedWebhookRepo = req.app.get(
-      "processedWebhookRepository",
-    ) as IProcessedWebhookRepository;
-    const reorderPolicyService = request.server["reorderPolicyService"];
-    const dispatchRecordRepository = request.server["dispatchRecordRepository"];
+  public async handleOrderCreated(request: any, reply: any): Promise<void> {
+    const repository = (request.server as any)["repository"] as IInventoryRepository;
+    const processedWebhookRepo = (request.server as any).processedWebhookRepository as IProcessedWebhookRepository;
+    const reorderPolicyService = (request.server as any)["reorderPolicyService"];
+    const dispatchRecordRepository = (request.server as any)["dispatchRecordRepository"];
     const dispatchStock = new DispatchStock(repository, undefined, reorderPolicyService, dispatchRecordRepository);
 
-    const hmac = req.get("X-Shopify-Hmac-Sha256");
-    const topic = req.get("X-Shopify-Topic");
-    const webhookId = req.get("X-Shopify-Webhook-Id");
+    const hmac = request.get("X-Shopify-Hmac-Sha256");
+    const topic = request.get("X-Shopify-Topic");
+    const webhookId = request.get("X-Shopify-Webhook-Id");
 
     if (!hmac) {
       reply.status(401).send("Missing HMAC header");
@@ -33,7 +31,7 @@ export class ShopifyWebhookController {
       return;
     }
 
-    const rawBody = (req as any).rawBody;
+    const rawBody = (request as any).rawBody;
 
     if (!rawBody || !this.security.validateHmac(rawBody.toString("utf8"), hmac)) {
       reply.status(401).send("Invalid HMAC signature");
@@ -52,7 +50,7 @@ export class ShopifyWebhookController {
         return;
       }
 
-      const order = request.body;
+      const order = (request.body as any);
       const lineItems = order.line_items || [];
 
       // Group by SKU to avoid race conditions when multiple line items have the same SKU

@@ -8,13 +8,13 @@ import { IJournalRepository } from "../../../domain/repositories/IJournalReposit
 import { Logger } from "../../../infrastructure/logging/logger";
 
 export class QuarantineController {
-  static async resolve(request: FastifyRequest, reply: FastifyReply) {
+  static async resolve(request: any, reply: any) {
     try {
-      const quarantineRepository = request.server["quarantineRepository"] as IQuarantineRepository;
-      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
-      const costLayerRepository = request.server["costLayerRepository"] as ICostLayerRepository;
-      const tenantConfigRepository = request.server["tenantConfigRepository"] as ITenantConfigRepository;
-      const journalRepository = request.server["journalRepository"] as IJournalRepository;
+      const quarantineRepository = (request.server as any)["quarantineRepository"] as IQuarantineRepository;
+      const inventoryRepository = (request.server as any)["inventoryRepository"] as IInventoryRepository;
+      const costLayerRepository = (request.server as any)["costLayerRepository"] as ICostLayerRepository;
+      const tenantConfigRepository = (request.server as any)["tenantConfigRepository"] as ITenantConfigRepository;
+      const journalRepository = (request.server as any)["journalRepository"] as IJournalRepository;
 
       const useCase = new ResolveQuarantineItem(
         quarantineRepository,
@@ -25,8 +25,8 @@ export class QuarantineController {
       );
 
       await useCase.execute({
-        quarantineItemId: request.params.id,
-        resolution: request.body.resolution,
+        quarantineItemId: (request.params as any).id,
+        resolution: (request.body as any).resolution,
       });
 
       reply.status(200).send({ message: "Quarantine item resolved successfully" });
@@ -36,10 +36,10 @@ export class QuarantineController {
     }
   }
 
-  static async get(request: FastifyRequest, reply: FastifyReply) {
+  static async get(request: any, reply: any) {
     try {
-      const quarantineRepository = request.server["quarantineRepository"] as IQuarantineRepository;
-      const item = await quarantineRepository.findById(request.params.id);
+      const quarantineRepository = (request.server as any)["quarantineRepository"] as IQuarantineRepository;
+      const item = await quarantineRepository.findById((request.params as any).id);
       if (!item) {
         return reply.status(404).send({ error: "Quarantine item not found" });
       }
@@ -61,9 +61,9 @@ export class QuarantineController {
     }
   }
 
-  static async list(request: FastifyRequest, reply: FastifyReply) {
+  static async list(request: any, reply: any) {
     try {
-      const quarantineRepository = request.server["quarantineRepository"] as IQuarantineRepository;
+      const quarantineRepository = (request.server as any)["quarantineRepository"] as IQuarantineRepository;
       const items = await quarantineRepository.findAll();
 
       reply.status(200).send(

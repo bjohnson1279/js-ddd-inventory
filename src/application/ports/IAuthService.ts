@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 
-export interface IApiTokenClaims extends Prisma.JsTokens.Payload {
+export interface IApiTokenClaims {
   tenantId: string;
   scopes?: Array<string>;
 }

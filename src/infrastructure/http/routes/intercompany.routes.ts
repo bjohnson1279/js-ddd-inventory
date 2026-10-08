@@ -9,13 +9,13 @@ export const intercompanyRouter: FastifyPluginAsync = async (fastify) => {
 const transferService = new IntercompanyTransferService();
 const transferRepo = new PrismaIntercompanyRepository();
 
-intercompanyRouter.post('/entities', async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.post('/entities', async (request: any, reply: any) => {
   try {
     const entity = LegalEntity.create(
-      request.body.tenantId,
-      request.body.name,
-      request.body.baseCurrency,
-      request.body.taxIdentifier
+      (request.body as any).tenantId,
+      (request.body as any).name,
+      (request.body as any).baseCurrency,
+      (request.body as any).taxIdentifier
     );
     if (!(prisma as any).legalEntityModel) {
       return reply.status(201).send(entity);
@@ -38,14 +38,14 @@ intercompanyRouter.post('/entities', async (request: FastifyRequest, reply: Fast
   }
 });
 
-intercompanyRouter.get('/entities/:tenantId', async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.get('/entities/:tenantId', async (request: any, reply: any) => {
   try {
     if (!(prisma as any).legalEntityModel) {
       return reply.send([]);
     }
 
     const entities = await (prisma as any).legalEntityModel.findMany({
-      where: { tenantId: request.params.tenantId }
+      where: { tenantId: (request.params as any).tenantId }
     });
     reply.send(entities);
   } catch (error: any) {
@@ -53,7 +53,7 @@ intercompanyRouter.get('/entities/:tenantId', async (request: FastifyRequest, re
   }
 });
 
-intercompanyRouter.post('/transfers', async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.post('/transfers', async (request: any, reply: any) => {
   try {
     const {
       tenantId,
@@ -64,7 +64,7 @@ intercompanyRouter.post('/transfers', async (request: FastifyRequest, reply: Fas
       unitCostCents,
       markupPercentage,
       dutyCents
-    } = request.body;
+    } = (request.body as any);
 
     const result = transferService.executeTransfer(
       tenantId,
@@ -93,9 +93,9 @@ intercompanyRouter.post('/transfers', async (request: FastifyRequest, reply: Fas
   }
 });
 
-intercompanyRouter.get('/transfers/:tenantId', async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.get('/transfers/:tenantId', async (request: any, reply: any) => {
   try {
-    const transfers = await transferRepo.getTransfersByTenant(request.params.tenantId);
+    const transfers = await transferRepo.getTransfersByTenant((request.params as any).tenantId);
     reply.send(transfers);
   } catch (error: any) {
     reply.status(400).send({ error: error.message });

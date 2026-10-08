@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+
 import { ComplianceController } from "../../../../src/infrastructure/http/controllers/ComplianceController";
 import { prisma } from "../../../../src/infrastructure/database/prisma";
 import { ComplianceLedgerService } from "../../../../src/domain/services/ComplianceLedgerService";
@@ -18,8 +18,8 @@ jest.mock("../../../../src/domain/services/ComplianceLedgerService", () => ({
 }));
 
 describe("ComplianceController", () => {
-  let mockReq: Partial<Request>;
-  let mockRes: Partial<Response>;
+  let mockReq: any;
+  let mockRes: any;
 
   beforeEach(() => {
     mockReq = {

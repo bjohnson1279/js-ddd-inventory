@@ -15,7 +15,7 @@ const REFILL_INTERVAL_MS = 1000;
 
 const usageRepo = new ApiUsageMetricRepository();
 
-export const platformThrottlingMiddleware = async (request: FastifyRequest, reply: FastifyReply) => {
+export const platformThrottlingMiddleware = async (request: any, reply: any) => {
   const authReq = request as AuthenticatedRequest;
   const tenantId = authReq.tenantId;
 

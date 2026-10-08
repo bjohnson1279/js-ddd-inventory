@@ -39,11 +39,12 @@ describe("Purchase Order HTTP API Endpoints", () => {
       undefined,
       poRepo
     );
+    await app.ready();
   });
 
   it("should complete the full PO lifecycle: Create -> Approve -> Send -> Receive", async () => {
     // 1. Create Purchase Order
-    const createRes = await request(app)
+    const createRes = await request((app as any).server)
       .post("/api/purchase-orders")
         .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
@@ -65,7 +66,7 @@ describe("Purchase Order HTTP API Endpoints", () => {
     const poId = createRes.body.id;
 
     // 2. Approve Purchase Order
-    const approveRes = await request(app)
+    const approveRes = await request((app as any).server)
       .post(`/api/purchase-orders/${poId}/approve`).set("Authorization", `Bearer ${getAdminToken()}`);
     
     expect(approveRes.status).toBe(200);
@@ -74,7 +75,7 @@ describe("Purchase Order HTTP API Endpoints", () => {
     expect(po?.status).toBe(PurchaseOrderStatus.Approved);
 
     // 3. Send Purchase Order
-    const sendRes = await request(app)
+    const sendRes = await request((app as any).server)
       .post(`/api/purchase-orders/${poId}/send`).set("Authorization", `Bearer ${getAdminToken()}`);
     
     expect(sendRes.status).toBe(200);
@@ -83,7 +84,7 @@ describe("Purchase Order HTTP API Endpoints", () => {
     expect(po?.status).toBe(PurchaseOrderStatus.Sent);
 
     // 4. Receive items
-    const receiveRes = await request(app)
+    const receiveRes = await request((app as any).server)
       .post(`/api/purchase-orders/${poId}/receive`).set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
         items: [

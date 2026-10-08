@@ -6,13 +6,13 @@ import { DomainException } from "../../../domain/exceptions/DomainException";
 import { Logger } from "../../../infrastructure/logging/logger";
 
 export class OnboardingController {
-  static async submit(request: FastifyRequest, reply: FastifyReply) {
+  static async submit(request: any, reply: any) {
     try {
-      const repository = request.server["repository"] as IInventoryRepository;
-      const { locationId, asOfDate, items, actorId } = request.body;
+      const repository = (request.server as any)["repository"] as IInventoryRepository;
+      const { locationId, asOfDate, items, actorId } = (request.body as any);
 
       if (!locationId || !asOfDate || !Array.isArray(items)) {
-        return res
+        return reply
           .status(400)
           .send({ error: "Missing required onboarding data" });
       }

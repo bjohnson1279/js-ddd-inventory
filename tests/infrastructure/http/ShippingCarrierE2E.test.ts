@@ -68,6 +68,7 @@ describe("Shipping Carrier HTTP API Endpoints", () => {
       shipmentRepo,
       carrierService
     );
+    await app.ready();
   });
 
   it("should estimate rates, purchase labels, update inventory levels, post double-entry journals, and track shipments", async () => {
@@ -77,7 +78,7 @@ describe("Shipping Carrier HTTP API Endpoints", () => {
     await inventoryRepo.save(item);
 
     // 2. Fetch rates
-    const ratesRes = await request(app)
+    const ratesRes = await request((app as any).server)
       .get(`/api/shipping/rates?sku=${sku}&quantity=3&address=1600+Amphitheatre+Pkwy,+Mountain+View,+CA`).set("Authorization", `Bearer ${getAdminToken()}`);
 
     expect(ratesRes.status).toBe(200);
@@ -86,7 +87,7 @@ describe("Shipping Carrier HTTP API Endpoints", () => {
     expect(ratesRes.body[0].rateCents).toBeGreaterThan(0);
 
     // 3. Purchase shipping label
-    const labelRes = await request(app)
+    const labelRes = await request((app as any).server)
       .post("/api/shipping/labels")
         .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
@@ -135,7 +136,7 @@ describe("Shipping Carrier HTTP API Endpoints", () => {
     expect(outboxEvents[0].eventName).toBe("ShipmentCreatedEvent");
 
     // 8. Track/update shipment status to In Transit
-    const trackRes = await request(app)
+    const trackRes = await request((app as any).server)
       .post(`/api/shipping/shipments/${shipmentId}/track`).set("Authorization", `Bearer ${getAdminToken()}`)
       .send({ status: ShipmentStatus.IN_TRANSIT });
 
@@ -161,7 +162,7 @@ describe("Shipping Carrier HTTP API Endpoints", () => {
     await inventoryRepo.save(itemEast);
     await inventoryRepo.save(itemWest);
 
-    const res = await request(app)
+    const res = await request((app as any).server)
       .post("/api/shipping/route")
         .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({

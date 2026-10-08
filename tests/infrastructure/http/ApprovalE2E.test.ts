@@ -22,6 +22,7 @@ describe("Approval E2E Integration Test Suite", () => {
       {} as any, {} as any, {} as any, {} as any, {} as any,
       {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any
     );
+    await app.ready();
     await prisma.approvalDecisionModel.deleteMany();
     await prisma.approvalRequestModel.deleteMany();
     await prisma.approvalWorkflowModel.deleteMany();
@@ -63,7 +64,7 @@ describe("Approval E2E Integration Test Suite", () => {
     });
 
     // Get the request via API
-    const getRes = await request(app)
+    const getRes = await request((app as any).server)
       .get(`/api/approvals/${requestId}`)
       .set("Authorization", `Bearer ${token}`);
 

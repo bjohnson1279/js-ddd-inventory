@@ -1,5 +1,5 @@
 import request from "supertest";
-import express from "express";
+import fastify from "fastify";
 
 jest.mock("../../../../src/application/useCases/ManageApprovalWorkflowsUseCase", () => {
   return {
@@ -21,17 +21,18 @@ jest.mock("../../../../src/infrastructure/http/middleware/auth", () => {
 
 import approvalRoutes from "../../../../src/infrastructure/http/routes/approval.routes";
 
-const app = express();
-app.use(express.json());
-app.use((req, res, next) => {
+const app = fastify();
+
+app.addHook("preHandler", (req, res, next) => {
   (req as any).tenantId = "test-tenant";
   next();
 });
-app.use("/api/approvals", approvalRoutes);
+app.register(approvalRoutes, { prefix: "/api/approvals" });
+    await app.ready();
 
 describe("Approval Routes", () => {
   it("should toggle a workflow", async () => {
-    const res = await request(app).post("/api/approvals/workflows/wf-1/toggle");
+    const res = await request((app as any).server).post("/api/approvals/workflows/wf-1/toggle");
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ id: "wf-1", isActive: true });
   });

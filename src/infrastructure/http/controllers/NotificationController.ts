@@ -10,9 +10,9 @@ const sseClients = new Map<string, FastifyReply[]>();
 const inMemoryNotifications = new Map<string, any>();
 
 export class NotificationController {
-  static async list(request: FastifyRequest, reply: FastifyReply) {
+  static async list(request: any, reply: any) {
     try {
-      const tenantId = (req as any).tenantId || "tenant-1";
+      const tenantId = (request as any).tenantId || "tenant-1";
       let notifications: any[] = [];
       try {
         notifications = await prisma.notificationModel.findMany({
@@ -36,10 +36,10 @@ export class NotificationController {
     }
   }
 
-  static async read(request: FastifyRequest, reply: FastifyReply) {
+  static async read(request: any, reply: any) {
     try {
-      const { id } = request.params;
-      const tenantId = (req as any).tenantId || "tenant-1";
+      const { id } = (request.params as any);
+      const tenantId = (request as any).tenantId || "tenant-1";
 
       let notification: any = inMemoryNotifications.get(id);
       if (notification && notification.tenantId === tenantId) {
@@ -74,9 +74,9 @@ export class NotificationController {
     }
   }
 
-  static async readAll(request: FastifyRequest, reply: FastifyReply) {
+  static async readAll(request: any, reply: any) {
     try {
-      const tenantId = (req as any).tenantId || "tenant-1";
+      const tenantId = (request as any).tenantId || "tenant-1";
 
       for (const n of inMemoryNotifications.values()) {
         if (n.tenantId === tenantId) {
@@ -103,33 +103,33 @@ export class NotificationController {
     }
   }
 
-  static async subscribe(request: FastifyRequest, reply: FastifyReply) {
-    const tenantId = (req as any).tenantId || "tenant-1";
+  static async subscribe(request: any, reply: any) {
+    const tenantId = (request as any).tenantId || "tenant-1";
 
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.setHeader("Content-Encoding", "none");
+    reply.header("Content-Type", "text/event-stream");
+    reply.header("Cache-Control", "no-cache");
+    reply.header("Connection", "keep-alive");
+    reply.header("Content-Encoding", "none");
 
     // Send initial connection message
-    res.write("data: " + JSON.stringify({ status: "connected" }) + "\n\n");
+    reply.raw.write("data: " + JSON.stringify({ status: "connected" }) + "\n\n");
 
     if (!sseClients.has(tenantId)) {
       sseClients.set(tenantId, []);
     }
-    sseClients.get(tenantId)!.push(res);
+    sseClients.get(tenantId)!.push(reply);
 
-    req.on("close", () => {
+    request.raw.on("close", () => {
       const clients = sseClients.get(tenantId) || [];
-      sseClients.set(tenantId, clients.filter((client) => client !== res));
+      sseClients.set(tenantId, clients.filter((client) => client !== reply));
     });
   }
 
   // Create notification and broadcast it to connected clients
-  static async create(request: FastifyRequest, reply: FastifyReply) {
+  static async create(request: any, reply: any) {
     try {
-      const tenantId = (req as any).tenantId || "tenant-1";
-      const { title, message, type } = request.body;
+      const tenantId = (request as any).tenantId || "tenant-1";
+      const { title, message, type } = (request.body as any);
 
       if (!title || !message) {
         return reply.status(400).send({ error: "Title and message are required" });
@@ -178,7 +178,7 @@ export class NotificationController {
   static broadcastToTenant(tenantId: string, data: any) {
     const clients = sseClients.get(tenantId) || [];
     for (const client of clients) {
-      client.write(`data: ${JSON.stringify(data)}\n\n`);
+      client.raw.write(`data: ${JSON.stringify(data)}\n\n`);
     }
   }
 }

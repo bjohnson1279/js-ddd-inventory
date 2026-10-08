@@ -4,7 +4,7 @@ import * as mqtt from "mqtt";
 import { Logger } from "../../logging/logger";
 
 export class RfidController {
-  static async list(request: FastifyRequest, reply: FastifyReply) {
+  static async list(request: any, reply: any) {
     try {
       const tags = await prisma.rfidTagModel.findMany({
         orderBy: { createdAt: "desc" }
@@ -16,9 +16,9 @@ export class RfidController {
     }
   }
 
-  static async assign(request: FastifyRequest, reply: FastifyReply) {
+  static async assign(request: any, reply: any) {
     try {
-      const { epc, sku, serialNumber } = request.body;
+      const { epc, sku, serialNumber } = (request.body as any);
       if (!epc || !sku || !serialNumber) {
         return reply.status(400).send({ error: "Missing required fields: epc, sku, serialNumber" });
       }
@@ -41,14 +41,14 @@ export class RfidController {
     }
   }
 
-  static async simulateScan(request: FastifyRequest, reply: FastifyReply) {
+  static async simulateScan(request: any, reply: any) {
     try {
-      const { locationId, tags } = request.body;
+      const { locationId, tags } = (request.body as any);
       if (!locationId || !tags || !Array.isArray(tags)) {
         return reply.status(400).send({ error: "Missing required fields: locationId, tags (array of EPC strings)" });
       }
 
-      const tenantId = (req as any).tenantId || "tenant-1";
+      const tenantId = (request as any).tenantId || "tenant-1";
       const client = mqtt.connect(process.env.MQTT_URL || "mqtt://localhost:1883");
       const payload = {
         locationId,

@@ -11,7 +11,7 @@ export interface RejectRMADTO {
 }
 
 export class RejectRMA {
-  constructor(private readonly rmaRepository) {}
+  constructor(private readonly rmaRepository: any) {}
 
   async execute({ rmaNumber }: RejectRMADTO): Promise<void> {
     const rma = await this.rmaRepository.get(rmaNumber);

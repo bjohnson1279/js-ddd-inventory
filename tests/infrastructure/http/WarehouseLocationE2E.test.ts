@@ -58,6 +58,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
       locationRepo,
       productRepo
     );
+    await app.ready();
 
     adminToken = jwt.sign({ actorId: "admin-user", role: "admin", tenantId: "tenant-1" }, JWT_SECRET);
     viewerToken = jwt.sign({ actorId: "viewer-user", role: "viewer", tenantId: "tenant-1" }, JWT_SECRET);
@@ -65,7 +66,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
 
   describe("Role Enforcement / RBAC", () => {
     it("should deny viewer from saving a location", async () => {
-      const res = await request(app)
+      const res = await request((app as any).server)
         .post("/api/warehouse-locations")
         .set("Authorization", `Bearer ${viewerToken}`)
         .send({
@@ -78,7 +79,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     });
 
     it("should deny viewer from deleting a location", async () => {
-      const res = await request(app)
+      const res = await request((app as any).server)
         .delete("/api/warehouse-locations/WH1-ZONEA-A01-R01-S01-B01")
         .set("Authorization", `Bearer ${viewerToken}`);
 
@@ -86,7 +87,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     });
 
     it("should allow admin to save and list locations", async () => {
-      const saveRes = await request(app)
+      const saveRes = await request((app as any).server)
         .post("/api/warehouse-locations")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
@@ -97,7 +98,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
 
       expect(saveRes.status).toBe(200);
 
-      const listRes = await request(app)
+      const listRes = await request((app as any).server)
         .get("/api/warehouse-locations")
         .set("Authorization", `Bearer ${viewerToken}`); // listing is read-only, allowed for viewer
 
@@ -109,7 +110,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
 
   describe("CRUD Actions", () => {
     it("should create, list, and delete a warehouse location successfully", async () => {
-      const createRes = await request(app)
+      const createRes = await request((app as any).server)
         .post("/api/warehouse-locations")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
@@ -126,18 +127,18 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
       expect(createRes.status).toBe(200);
       expect(createRes.body.location.id).toBe("WH1-ZONEB-A02-R03-S04-B05");
 
-      const listRes = await request(app)
+      const listRes = await request((app as any).server)
         .get("/api/warehouse-locations")
         .set("Authorization", `Bearer ${adminToken}`);
       expect(listRes.body.length).toBe(1);
 
-      const deleteRes = await request(app)
+      const deleteRes = await request((app as any).server)
         .delete("/api/warehouse-locations/WH1-ZONEB-A02-R03-S04-B05")
         .set("Authorization", `Bearer ${adminToken}`);
 
       expect(deleteRes.status).toBe(200);
 
-      const listRes2 = await request(app)
+      const listRes2 = await request((app as any).server)
         .get("/api/warehouse-locations")
         .set("Authorization", `Bearer ${adminToken}`);
       expect(listRes2.body.length).toBe(0);
@@ -155,7 +156,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     });
 
     it("should allow receipt of stock that fits capacity limits", async () => {
-      const res = await request(app)
+      const res = await request((app as any).server)
         .post("/api/inventory/receive")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
@@ -171,7 +172,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     });
 
     it("should reject receipt of stock that exceeds weight limit", async () => {
-      const res = await request(app)
+      const res = await request((app as any).server)
         .post("/api/inventory/receive")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
@@ -185,7 +186,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     });
 
     it("should reject receipt of stock that exceeds volume limit", async () => {
-      const res = await request(app)
+      const res = await request((app as any).server)
         .post("/api/inventory/receive")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
@@ -224,7 +225,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     });
 
     it("should recommend fast-moving zone and front aisle for fast SKU", async () => {
-      const res = await request(app)
+      const res = await request((app as any).server)
         .post("/api/warehouse-locations/putaway-suggestions")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ sku: "FAST-SKU", quantity: 10 });
@@ -235,7 +236,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     });
 
     it("should recommend hazmat zone for hazmat SKU", async () => {
-      const res = await request(app)
+      const res = await request((app as any).server)
         .post("/api/warehouse-locations/putaway-suggestions")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ sku: "HA-SKU", quantity: 5 }).send({ sku: "HAZ-SKU", quantity: 5 });
@@ -246,7 +247,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
     });
 
     it("should recommend cold zone for cold SKU", async () => {
-      const res = await request(app)
+      const res = await request((app as any).server)
         .post("/api/warehouse-locations/putaway-suggestions")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ sku: "COLD-SKU", quantity: 8 });
@@ -273,7 +274,7 @@ describe("Warehouse Location WMS Routing & Bins E2E Tests", () => {
         { sku: "SKU4", quantity: 3, locationId: "WH1-ZONEA-A02-R02-S01-B01" }
       ];
 
-      const res = await request(app)
+      const res = await request((app as any).server)
         .post("/api/warehouse-locations/optimize-pick-route")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ items });

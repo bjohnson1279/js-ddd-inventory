@@ -3,11 +3,11 @@ import { FastifyRequest, FastifyReply, FastifyPluginAsync } from 'fastify';
 export const supplierPortalRouter: FastifyPluginAsync = async (fastify) => {
 
 
-supplierPortalRouter.post('/asn', (request: FastifyRequest, reply: FastifyReply) => {
+fastify.post('/asn', (request: any, reply: any) => {
   reply.send({ id: 'asn-123', status: 'SUBMITTED' });
 });
 
-supplierPortalRouter.get('/asn', (request: FastifyRequest, reply: FastifyReply) => {
+fastify.get('/asn', (request: any, reply: any) => {
   reply.send([]);
 });
 

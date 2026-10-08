@@ -65,7 +65,7 @@ export class SlottingOptimizer {
       });
 
       if (response.ok) {
-        return await response.send() as SlottingSuggestion[];
+        return await (response as any).send() as SlottingSuggestion[];
       }
     } catch (err: any) {
       console.warn(`[JS SlottingOptimizer] Python sidecar down. Fallback to basic: ${err.message}`);

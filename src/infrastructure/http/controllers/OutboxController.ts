@@ -5,15 +5,15 @@ import { Logger } from "../../../infrastructure/logging/logger";
 
 
 export class OutboxController {
-  static async listDeadLettered(request: FastifyRequest, reply: FastifyReply) {
+  static async listDeadLettered(request: any, reply: any) {
     try {
-      const outboxRepository = request.server["outboxRepository"] as IOutboxRepository;
-      if ((request.query.limit !== undefined && typeof request.query.limit !== "string") ||
-          (request.query.maxAttempts !== undefined && typeof request.query.maxAttempts !== "string")) {
+      const outboxRepository = (request.server as any)["outboxRepository"] as IOutboxRepository;
+      if (((request.query as any).limit !== undefined && typeof (request.query as any).limit !== "string") ||
+          ((request.query as any).maxAttempts !== undefined && typeof (request.query as any).maxAttempts !== "string")) {
         return reply.status(400).send({ error: "Invalid query parameters" });
       }
-      const limit = request.query.limit ? parseInt(request.query.limit as string, 10) : 50;
-      const maxAttempts = request.query.maxAttempts ? parseInt(request.query.maxAttempts as string, 10) : 5;
+      const limit = (request.query as any).limit ? parseInt((request.query as any).limit as string, 10) : 50;
+      const maxAttempts = (request.query as any).maxAttempts ? parseInt((request.query as any).maxAttempts as string, 10) : 5;
       if (isNaN(limit) || isNaN(maxAttempts)) {
         return reply.status(400).send({ error: "Invalid query parameters" });
       }
@@ -43,10 +43,10 @@ export class OutboxController {
     }
   }
 
-  static async retry(request: FastifyRequest, reply: FastifyReply) {
+  static async retry(request: any, reply: any) {
     try {
-      const outboxRepository = request.server["outboxRepository"] as IOutboxRepository;
-      const { id } = request.params;
+      const outboxRepository = (request.server as any)["outboxRepository"] as IOutboxRepository;
+      const { id } = (request.params as any);
 
       await outboxRepository.retryEvent(id);
 
@@ -56,19 +56,19 @@ export class OutboxController {
         Logger.error({ context: "OutboxController", message: "An error occurred", error: error.message });
         reply.status(400).send({ error: "A domain error occurred while processing the request.", type: error.name });
       } else {
-        Logger.error({ context: "OutboxController", message: `Failed to retry outbox event ${request.params.id}:`, error: error });
+        Logger.error({ context: "OutboxController", message: `Failed to retry outbox event ${(request.params as any).id}:`, error: error });
         reply.status(500).send({ error: "Failed to retry event" });
       }
     }
   }
 
-  static async getStats(request: FastifyRequest, reply: FastifyReply) {
+  static async getStats(request: any, reply: any) {
     try {
-      const outboxRepository = request.server["outboxRepository"] as IOutboxRepository;
-      if (request.query.maxAttempts !== undefined && typeof request.query.maxAttempts !== "string") {
+      const outboxRepository = (request.server as any)["outboxRepository"] as IOutboxRepository;
+      if ((request.query as any).maxAttempts !== undefined && typeof (request.query as any).maxAttempts !== "string") {
         return reply.status(400).send({ error: "Invalid maxAttempts parameter" });
       }
-      const maxAttempts = request.query.maxAttempts ? parseInt(request.query.maxAttempts as string, 10) : 5;
+      const maxAttempts = (request.query as any).maxAttempts ? parseInt((request.query as any).maxAttempts as string, 10) : 5;
       if (isNaN(maxAttempts)) {
         return reply.status(400).send({ error: "Invalid maxAttempts parameter" });
       }

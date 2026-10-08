@@ -62,6 +62,7 @@ describe("Inventory Audit HTTP API Endpoints", () => {
       undefined,
       auditRepo
     );
+    await app.ready();
   });
 
   it("should complete the physical audit cycle: Create -> Start -> Count -> Complete -> Reconcile", async () => {
@@ -74,7 +75,7 @@ describe("Inventory Audit HTTP API Endpoints", () => {
     await costLayerRepo.save(layer);
 
     // 2. Create physical audit
-    const createRes = await request(app)
+    const createRes = await request((app as any).server)
       .post("/api/audits")
         .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
@@ -93,7 +94,7 @@ describe("Inventory Audit HTTP API Endpoints", () => {
     const auditId = createRes.body.id;
 
     // 3. Start audit
-    const startRes = await request(app)
+    const startRes = await request((app as any).server)
       .post(`/api/audits/${auditId}/start`).set("Authorization", `Bearer ${getAdminToken()}`);
     expect(startRes.status).toBe(200);
 
@@ -101,7 +102,7 @@ describe("Inventory Audit HTTP API Endpoints", () => {
     expect(updatedAudit?.status).toBe(AuditStatus.InProgress);
 
     // 4. Record count
-    const countRes = await request(app)
+    const countRes = await request((app as any).server)
       .post(`/api/audits/${auditId}/count`).set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
         variantId: "SKU-AUDIT",
@@ -110,7 +111,7 @@ describe("Inventory Audit HTTP API Endpoints", () => {
     expect(countRes.status).toBe(200);
 
     // 5. Complete audit
-    const completeRes = await request(app)
+    const completeRes = await request((app as any).server)
       .post(`/api/audits/${auditId}/complete`).set("Authorization", `Bearer ${getAdminToken()}`);
     expect(completeRes.status).toBe(200);
 
@@ -118,7 +119,7 @@ describe("Inventory Audit HTTP API Endpoints", () => {
     expect(updatedAudit?.status).toBe(AuditStatus.Completed);
 
     // 6. Reconcile audit
-    const reconcileRes = await request(app)
+    const reconcileRes = await request((app as any).server)
       .post(`/api/audits/${auditId}/reconcile`).set("Authorization", `Bearer ${getAdminToken()}`);
     expect(reconcileRes.status).toBe(200);
 

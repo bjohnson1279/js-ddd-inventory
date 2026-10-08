@@ -12,18 +12,16 @@ import { Logger } from "../../../infrastructure/logging/logger";
 import crypto from "crypto";
 
 export class AccountingController {
-  static async getLedger(request: FastifyRequest, reply: FastifyReply) {
+  static async getLedger(request: any, reply: any) {
     try {
-      const journalRepo = req.app.get(
-        "journalRepository",
-      ) as IJournalRepository;
-      if (request.query.tenantId !== undefined && typeof request.query.tenantId !== "string") {
+      const journalRepo = (request.server as any).journalRepository as IJournalRepository;
+      if ((request.query as any).tenantId !== undefined && typeof (request.query as any).tenantId !== "string") {
         return reply.status(400).send({ error: "Invalid tenantId parameter." });
       }
-      if (request.query.tenantId !== undefined && typeof request.query.tenantId !== "string") {
+      if ((request.query as any).tenantId !== undefined && typeof (request.query as any).tenantId !== "string") {
         return reply.status(400).send({ error: "Invalid tenantId parameter." });
       }
-      const tenantId = request.query.tenantId ? (request.query.tenantId as string).trim() || undefined : undefined;
+      const tenantId = (request.query as any).tenantId ? ((request.query as any).tenantId as string).trim() || undefined : undefined;
       const entries = await journalRepo.findAll(tenantId);
 
       reply.status(200).send(
@@ -53,17 +51,11 @@ export class AccountingController {
     }
   }
 
-  static async recordStockReceived(request: FastifyRequest, reply: FastifyReply) {
+  static async recordStockReceived(request: any, reply: any) {
     try {
-      const journalRepo = req.app.get(
-        "journalRepository",
-      ) as IJournalRepository;
-      const costLayerRepo = req.app.get(
-        "costLayerRepository",
-      ) as ICostLayerRepository;
-      const tenantConfigRepo = req.app.get(
-        "tenantConfigRepository",
-      ) as ITenantConfigRepository;
+      const journalRepo = (request.server as any).journalRepository as IJournalRepository;
+      const costLayerRepo = (request.server as any).costLayerRepository as ICostLayerRepository;
+      const tenantConfigRepo = (request.server as any).tenantConfigRepository as ITenantConfigRepository;
 
       const {
         variantId,
@@ -74,10 +66,10 @@ export class AccountingController {
         accountingMethod,
         costingMethod,
         tenantId,
-      } = request.body;
+      } = (request.body as any);
 
       if (!variantId || !totalCostCents || !purchaseOrderId || !supplierName) {
-        return res
+        return reply
           .status(400)
           .send({ error: "Missing stock received parameters." });
       }
@@ -125,17 +117,11 @@ export class AccountingController {
     }
   }
 
-  static async recordStockSold(request: FastifyRequest, reply: FastifyReply) {
+  static async recordStockSold(request: any, reply: any) {
     try {
-      const journalRepo = req.app.get(
-        "journalRepository",
-      ) as IJournalRepository;
-      const costLayerRepo = req.app.get(
-        "costLayerRepository",
-      ) as ICostLayerRepository;
-      const tenantConfigRepo = req.app.get(
-        "tenantConfigRepository",
-      ) as ITenantConfigRepository;
+      const journalRepo = (request.server as any).journalRepository as IJournalRepository;
+      const costLayerRepo = (request.server as any).costLayerRepository as ICostLayerRepository;
+      const tenantConfigRepo = (request.server as any).tenantConfigRepository as ITenantConfigRepository;
 
       const {
         variantId,
@@ -148,10 +134,10 @@ export class AccountingController {
         accountingMethod,
         costingMethod,
         tenantId,
-      } = request.body;
+      } = (request.body as any);
 
       if (!variantId || !quantity || !salePriceCents || !saleId) {
-        return res
+        return reply
           .status(400)
           .send({ error: "Missing stock sold parameters." });
       }
@@ -204,42 +190,38 @@ export class AccountingController {
     }
   }
 
-  static async calculateValuation(request: FastifyRequest, reply: FastifyReply) {
+  static async calculateValuation(request: any, reply: any) {
     try {
-      const costLayerRepo = req.app.get(
-        "costLayerRepository",
-      ) as ICostLayerRepository;
-      const tenantConfigRepo = req.app.get(
-        "tenantConfigRepository",
-      ) as ITenantConfigRepository;
-      const { variantId } = request.params;
-      if (request.query.quantity !== undefined && typeof request.query.quantity !== "string") {
+      const costLayerRepo = (request.server as any).costLayerRepository as ICostLayerRepository;
+      const tenantConfigRepo = (request.server as any).tenantConfigRepository as ITenantConfigRepository;
+      const { variantId } = (request.params as any);
+      if ((request.query as any).quantity !== undefined && typeof (request.query as any).quantity !== "string") {
         return reply.status(400).send({ error: "Invalid quantity parameter." });
       }
-      if (request.query.quantity !== undefined && typeof request.query.quantity !== "string") {
+      if ((request.query as any).quantity !== undefined && typeof (request.query as any).quantity !== "string") {
         return reply.status(400).send({ error: "Invalid quantity parameter." });
       }
-      const parsedQuantity = request.query.quantity !== undefined ? parseInt(request.query.quantity as string, 10) : NaN;
+      const parsedQuantity = (request.query as any).quantity !== undefined ? parseInt((request.query as any).quantity as string, 10) : NaN;
       const quantity = isNaN(parsedQuantity) || parsedQuantity <= 0 ? 1 : parsedQuantity;
 
-      if (request.query.tenantId !== undefined && typeof request.query.tenantId !== "string") {
+      if ((request.query as any).tenantId !== undefined && typeof (request.query as any).tenantId !== "string") {
         return reply.status(400).send({ error: "Invalid tenantId parameter." });
       }
-      if (request.query.tenantId !== undefined && typeof request.query.tenantId !== "string") {
+      if ((request.query as any).tenantId !== undefined && typeof (request.query as any).tenantId !== "string") {
         return reply.status(400).send({ error: "Invalid tenantId parameter." });
       }
-      let tenantId = request.query.tenantId ? (request.query.tenantId as string).trim() : "";
+      let tenantId = (request.query as any).tenantId ? ((request.query as any).tenantId as string).trim() : "";
       if (!tenantId) {
         tenantId = "DEFAULT";
       }
 
-      if (request.query.method !== undefined && typeof request.query.method !== "string") {
+      if ((request.query as any).method !== undefined && typeof (request.query as any).method !== "string") {
         return reply.status(400).send({ error: "Invalid method parameter." });
       }
-      if (request.query.method !== undefined && typeof request.query.method !== "string") {
+      if ((request.query as any).method !== undefined && typeof (request.query as any).method !== "string") {
         return reply.status(400).send({ error: "Invalid method parameter." });
       }
-      let method = request.query.method ? (request.query.method as string).trim() : "";
+      let method = (request.query as any).method ? ((request.query as any).method as string).trim() : "";
       if (!method) {
         const config = await tenantConfigRepo.findByTenantId(tenantId);
         if (config) {
@@ -294,12 +276,10 @@ export class AccountingController {
     }
   }
 
-  static async getTenantConfig(request: FastifyRequest, reply: FastifyReply) {
+  static async getTenantConfig(request: any, reply: any) {
     try {
-      const tenantConfigRepo = req.app.get(
-        "tenantConfigRepository",
-      ) as ITenantConfigRepository;
-      const { tenantId } = request.params;
+      const tenantConfigRepo = (request.server as any).tenantConfigRepository as ITenantConfigRepository;
+      const { tenantId } = (request.params as any);
       let config = await tenantConfigRepo.findByTenantId(tenantId);
       if (!config) {
         config = new TenantAccountingConfig(
@@ -323,18 +303,16 @@ export class AccountingController {
     }
   }
 
-  static async saveTenantConfig(request: FastifyRequest, reply: FastifyReply) {
+  static async saveTenantConfig(request: any, reply: any) {
     try {
-      const tenantConfigRepo = req.app.get(
-        "tenantConfigRepository",
-      ) as ITenantConfigRepository;
+      const tenantConfigRepo = (request.server as any).tenantConfigRepository as ITenantConfigRepository;
       const {
         tenantId,
         accountingMethod,
         costingMethod,
         currencyCode,
         fiscalYearStart,
-      } = request.body;
+      } = (request.body as any);
 
       if (!tenantId || !accountingMethod || !costingMethod) {
         return reply.status(400).send({ error: "Missing config fields." });
@@ -366,9 +344,9 @@ export class AccountingController {
     }
   }
 
-  static async syncJournal(request: FastifyRequest, reply: FastifyReply) {
+  static async syncJournal(request: any, reply: any) {
     try {
-      const { provider, referenceId, memo, lines, apiKey } = request.body;
+      const { provider, referenceId, memo, lines, apiKey } = (request.body as any);
       if (!provider || !referenceId || !lines || !Array.isArray(lines)) {
         return reply.status(400).send({ error: "Missing required fields: provider, referenceId, lines." });
       }

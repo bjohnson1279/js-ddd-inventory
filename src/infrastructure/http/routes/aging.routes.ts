@@ -12,9 +12,9 @@ export const agingRouter: FastifyPluginAsync = async (fastify) => {
 const agingService = new AgingAnalysisService();
 const deadStockDetector = new DeadStockDetector();
 
-agingRouter.get('/report/:tenantId', async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.get('/report/:tenantId', async (request: any, reply: any) => {
   try {
-    const { tenantId } = request.params;
+    const { tenantId } = (request.params as any);
     const layers = await prisma.inventoryCostLayerModel.findMany({
       where: {
         tenantId,
@@ -35,10 +35,10 @@ agingRouter.get('/report/:tenantId', async (request: FastifyRequest, reply: Fast
   }
 });
 
-agingRouter.get('/dead-stock/:tenantId', async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.get('/dead-stock/:tenantId', async (request: any, reply: any) => {
   try {
-    const { tenantId } = request.params;
-    const days = parseInt(request.query.days as string) || 180;
+    const { tenantId } = (request.params as any);
+    const days = parseInt((request.query as any).days as string) || 180;
     
     // Find dispatches in the last N days
     const sinceDate = new Date();

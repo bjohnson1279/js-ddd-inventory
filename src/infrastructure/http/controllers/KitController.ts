@@ -15,9 +15,9 @@ const inMemoryKits = new Map<string, any>();
 export function getInMemoryKit(sku: string) { return inMemoryKits.get(sku); }
 
 export class KitController {
-  static async create(request: FastifyRequest, reply: FastifyReply) {
+  static async create(request: any, reply: any) {
     try {
-      const { sku, name, components } = request.body;
+      const { sku, name, components } = (request.body as any);
 
       if (
         !sku ||
@@ -25,7 +25,7 @@ export class KitController {
         !Array.isArray(components) ||
         components.length === 0
       ) {
-        return res
+        return reply
           .status(400)
           .send({
             error: "Missing required fields (sku, name, components array).",
@@ -67,7 +67,7 @@ export class KitController {
         }
       }
 
-      res
+      reply
         .status(201)
         .send({ message: "Kit formula created successfully.", kitId: id, sku });
     } catch (error: any) {
@@ -76,12 +76,12 @@ export class KitController {
     }
   }
 
-  static async dispatchSale(request: FastifyRequest, reply: FastifyReply) {
+  static async dispatchSale(request: any, reply: any) {
     try {
-      const { kitSku, quantity, saleId, actorId } = request.body;
+      const { kitSku, quantity, saleId, actorId } = (request.body as any);
 
       if (!kitSku || !quantity || !saleId || !actorId) {
-        return res
+        return reply
           .status(400)
           .send({ error: "Missing required dispatch fields." });
       }
@@ -104,7 +104,7 @@ export class KitController {
       }
 
       if (!kitRecord) {
-        return res
+        return reply
           .status(404)
           .send({ error: `Kit with SKU ${kitSku} not found.` });
       }
@@ -120,15 +120,13 @@ export class KitController {
       }
 
       // Execute atomic sale via InventoryService
-      const inventoryRepo = req.app.get(
-        "inventoryRepository",
-      ) as IInventoryRepository;
-      const reorderPolicyService = request.server["reorderPolicyService"];
+      const inventoryRepo = (request.server as any).inventoryRepository as IInventoryRepository;
+      const reorderPolicyService = (request.server as any)["reorderPolicyService"];
       const service = new InventoryService(inventoryRepo, reorderPolicyService);
 
       await service.decrementForKitSale(kit, quantity, saleId, actorId);
 
-      res
+      reply
         .status(200)
         .send({
           message: "Kit sale dispatched successfully.",
@@ -149,7 +147,7 @@ export class KitController {
     }
   }
 
-  static async list(request: FastifyRequest, reply: FastifyReply) {
+  static async list(request: any, reply: any) {
     try {
       let records: any[] = Array.from(inMemoryKits.values());
       try {
@@ -165,20 +163,20 @@ export class KitController {
     }
   }
 
-  static async assemble(request: FastifyRequest, reply: FastifyReply) {
+  static async assemble(request: any, reply: any) {
     try {
-      const { kitSku, quantity, locationId, referenceId } = request.body;
-      const tenantId = (req as any).tenantId || "tenant-1";
-      const actorId = (req as any).user?.id || "system";
+      const { kitSku, quantity, locationId, referenceId } = (request.body as any);
+      const tenantId = (request as any).tenantId || "tenant-1";
+      const actorId = (request as any).user?.id || "system";
 
       if (!kitSku || !quantity || !locationId || !referenceId) {
         return reply.status(400).send({ error: "Missing required fields (kitSku, quantity, locationId, referenceId)." });
       }
 
-      const inventoryRepository = request.server["inventoryRepository"];
-      const costLayerRepository = request.server["costLayerRepository"];
-      const tenantConfigRepository = request.server["tenantConfigRepository"];
-      const journalRepository = request.server["journalRepository"];
+      const inventoryRepository = (request.server as any)["inventoryRepository"];
+      const costLayerRepository = (request.server as any)["costLayerRepository"];
+      const tenantConfigRepository = (request.server as any)["tenantConfigRepository"];
+      const journalRepository = (request.server as any)["journalRepository"];
 
       const useCase = AutoRetryDecorator.wrap(new AssembleKit(
         inventoryRepository,
@@ -203,20 +201,20 @@ export class KitController {
     }
   }
 
-  static async disassemble(request: FastifyRequest, reply: FastifyReply) {
+  static async disassemble(request: any, reply: any) {
     try {
-      const { kitSku, quantity, locationId, referenceId } = request.body;
-      const tenantId = (req as any).tenantId || "tenant-1";
-      const actorId = (req as any).user?.id || "system";
+      const { kitSku, quantity, locationId, referenceId } = (request.body as any);
+      const tenantId = (request as any).tenantId || "tenant-1";
+      const actorId = (request as any).user?.id || "system";
 
       if (!kitSku || !quantity || !locationId || !referenceId) {
         return reply.status(400).send({ error: "Missing required fields (kitSku, quantity, locationId, referenceId)." });
       }
 
-      const inventoryRepository = request.server["inventoryRepository"];
-      const costLayerRepository = request.server["costLayerRepository"];
-      const tenantConfigRepository = request.server["tenantConfigRepository"];
-      const journalRepository = request.server["journalRepository"];
+      const inventoryRepository = (request.server as any)["inventoryRepository"];
+      const costLayerRepository = (request.server as any)["costLayerRepository"];
+      const tenantConfigRepository = (request.server as any)["tenantConfigRepository"];
+      const journalRepository = (request.server as any)["journalRepository"];
 
       const useCase = AutoRetryDecorator.wrap(new DisassembleKit(
         inventoryRepository,

@@ -8,21 +8,17 @@ import { DomainException } from "../../../domain/exceptions/DomainException";
 import { Logger } from "../../../infrastructure/logging/logger";
 
 export class SerialController {
-  private static getService(req: FastifyRequest): SerializedInventoryService {
-    const serials = req.app.get(
-      "serializedItemRepository",
-    ) as ISerializedItemRepository;
-    const inventory = req.app.get(
-      "inventoryRepository",
-    ) as IInventoryRepository;
+  private static getService(request: FastifyRequest): SerializedInventoryService {
+    const serials = (request.server as any).serializedItemRepository as ISerializedItemRepository;
+    const inventory = (request.server as any).inventoryRepository as IInventoryRepository;
     return new SerializedInventoryService(serials, inventory);
   }
 
-  static async register(request: FastifyRequest, reply: FastifyReply) {
+  static async register(request: any, reply: any) {
     try {
-      const service = SerialController.getService(req);
+      const service = SerialController.getService(request);
       const { serialNumber, variantId, tenantId, locationId, actorId } =
-        request.body;
+        (request.body as any);
 
       if (!serialNumber || !variantId || !locationId || !actorId) {
         return reply.status(400).send({ error: "Missing registration fields." });
@@ -37,7 +33,7 @@ export class SerialController {
         actorId,
       );
 
-      res
+      reply
         .status(201)
         .send({
           message: "Serial number registered.",
@@ -55,11 +51,11 @@ export class SerialController {
     }
   }
 
-  static async receive(request: FastifyRequest, reply: FastifyReply) {
+  static async receive(request: any, reply: any) {
     try {
-      const service = SerialController.getService(req);
+      const service = SerialController.getService(request);
       const { serialNumber, tenantId, locationId, purchaseOrderId, actorId } =
-        request.body;
+        (request.body as any);
 
       if (!serialNumber || !locationId || !purchaseOrderId || !actorId) {
         return reply.status(400).send({ error: "Missing receipt parameters." });
@@ -74,7 +70,7 @@ export class SerialController {
         actorId,
       );
 
-      res
+      reply
         .status(200)
         .send({ message: "Serial number received and stock incremented." });
     } catch (error: any) {
@@ -91,10 +87,10 @@ export class SerialController {
     }
   }
 
-  static async sell(request: FastifyRequest, reply: FastifyReply) {
+  static async sell(request: any, reply: any) {
     try {
-      const service = SerialController.getService(req);
-      const { serialNumber, tenantId, saleId, actorId } = request.body;
+      const service = SerialController.getService(request);
+      const { serialNumber, tenantId, saleId, actorId } = (request.body as any);
 
       if (!serialNumber || !saleId || !actorId) {
         return reply.status(400).send({ error: "Missing sales parameters." });
@@ -103,7 +99,7 @@ export class SerialController {
       const serial = new SerialNumber(serialNumber);
       await service.sell(serial, tenantId || "DEFAULT", saleId, actorId);
 
-      res
+      reply
         .status(200)
         .send({ message: "Serial number sold and stock decremented." });
     } catch (error: any) {
@@ -120,10 +116,10 @@ export class SerialController {
     }
   }
 
-  static async acceptReturn(request: FastifyRequest, reply: FastifyReply) {
+  static async acceptReturn(request: any, reply: any) {
     try {
-      const service = SerialController.getService(req);
-      const { serialNumber, tenantId, returnId, actorId } = request.body;
+      const service = SerialController.getService(request);
+      const { serialNumber, tenantId, returnId, actorId } = (request.body as any);
 
       if (!serialNumber || !returnId || !actorId) {
         return reply.status(400).send({ error: "Missing return parameters." });
@@ -144,10 +140,10 @@ export class SerialController {
     }
   }
 
-  static async restock(request: FastifyRequest, reply: FastifyReply) {
+  static async restock(request: any, reply: any) {
     try {
-      const service = SerialController.getService(req);
-      const { serialNumber, tenantId, returnId, actorId } = request.body;
+      const service = SerialController.getService(request);
+      const { serialNumber, tenantId, returnId, actorId } = (request.body as any);
 
       if (!serialNumber || !returnId || !actorId) {
         return reply.status(400).send({ error: "Missing restock parameters." });
@@ -156,7 +152,7 @@ export class SerialController {
       const serial = new SerialNumber(serialNumber);
       await service.restock(serial, tenantId || "DEFAULT", returnId, actorId);
 
-      res
+      reply
         .status(200)
         .send({ message: "Serial number restocked and stock incremented." });
     } catch (error: any) {
@@ -165,19 +161,17 @@ export class SerialController {
     }
   }
 
-  static async getHistory(request: FastifyRequest, reply: FastifyReply) {
+  static async getHistory(request: any, reply: any) {
     try {
-      const serials = req.app.get(
-        "serializedItemRepository",
-      ) as ISerializedItemRepository;
-      const { serialNumber } = request.params;
-      if (request.query.tenantId !== undefined && typeof request.query.tenantId !== "string") {
+      const serials = (request.server as any).serializedItemRepository as ISerializedItemRepository;
+      const { serialNumber } = (request.params as any);
+      if ((request.query as any).tenantId !== undefined && typeof (request.query as any).tenantId !== "string") {
         return reply.status(400).send({ error: "Invalid tenantId parameter" });
       }
-      const tenantId = request.query.tenantId ? (request.query.tenantId as string).trim() : "DEFAULT";
+      const tenantId = (request.query as any).tenantId ? ((request.query as any).tenantId as string).trim() : "DEFAULT";
 
       if (!serialNumber) {
-        return res
+        return reply
           .status(400)
           .send({ error: "Missing serial number parameter." });
       }
@@ -186,7 +180,7 @@ export class SerialController {
       const item = await serials.findBySerial(serial, tenantId);
 
       if (!item) {
-        return res
+        return reply
           .status(404)
           .send({ error: `Serial number ${serialNumber} not registered.` });
       }
@@ -212,7 +206,7 @@ export class SerialController {
     }
   }
 
-  static async list(request: FastifyRequest, reply: FastifyReply) {
+  static async list(request: any, reply: any) {
     try {
       const records = await prisma.serializedItemModel.findMany({
         include: { transitions: true },

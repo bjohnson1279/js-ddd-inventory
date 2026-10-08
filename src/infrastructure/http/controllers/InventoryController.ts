@@ -16,10 +16,10 @@ import { AutoRetryDecorator } from "../../../application/decorators/AutoRetryDec
 import { Logger } from "../../../infrastructure/logging/logger";
 
 export class InventoryController {
-  static async receive(request: FastifyRequest, reply: FastifyReply) {
+  static async receive(request: any, reply: any) {
     try {
-      const repository = request.server["repository"] as IInventoryRepository;
-      const { sku, amount, locationId, unitCostCents, lotNumber, expirationDate, tenantId, purchaseOrderId } = request.body;
+      const repository = (request.server as any)["repository"] as IInventoryRepository;
+      const { sku, amount, locationId, unitCostCents, lotNumber, expirationDate, tenantId, purchaseOrderId } = (request.body as any);
       if (!sku || typeof sku !== 'string' || sku.trim() === '') {
         return reply.status(400).send({ error: "Invalid or missing sku" });
       }
@@ -29,9 +29,9 @@ export class InventoryController {
       if (locationId && typeof locationId !== 'string') {
         return reply.status(400).send({ error: "Invalid locationId" });
       }
-      const capacityService = request.server["wmsCapacityService"];
-      const productRepository = request.server["productRepository"];
-      const costLayerRepository = request.server["costLayerRepository"];
+      const capacityService = (request.server as any)["wmsCapacityService"];
+      const productRepository = (request.server as any)["productRepository"];
+      const costLayerRepository = (request.server as any)["costLayerRepository"];
       const receiveStock = AutoRetryDecorator.wrap(new ReceiveStock(repository, undefined, capacityService, productRepository, costLayerRepository));
       await receiveStock.execute(
         sku,
@@ -55,10 +55,10 @@ export class InventoryController {
     }
   }
 
-  static async dispatch(request: FastifyRequest, reply: FastifyReply) {
+  static async dispatch(request: any, reply: any) {
     try {
-      const repository = request.server["repository"] as IInventoryRepository;
-      const { sku, amount, locationId, lotNumber } = request.body;
+      const repository = (request.server as any)["repository"] as IInventoryRepository;
+      const { sku, amount, locationId, lotNumber } = (request.body as any);
       if (!sku || typeof sku !== 'string' || sku.trim() === '') {
         return reply.status(400).send({ error: "Invalid or missing sku" });
       }
@@ -68,10 +68,10 @@ export class InventoryController {
       if (locationId && typeof locationId !== 'string') {
         return reply.status(400).send({ error: "Invalid locationId" });
       }
-      const reorderPolicyService = request.server["reorderPolicyService"];
-      const dispatchRecordRepository = request.server["dispatchRecordRepository"];
-      const productRepository = request.server["productRepository"];
-      const costLayerRepository = request.server["costLayerRepository"];
+      const reorderPolicyService = (request.server as any)["reorderPolicyService"];
+      const dispatchRecordRepository = (request.server as any)["dispatchRecordRepository"];
+      const productRepository = (request.server as any)["productRepository"];
+      const costLayerRepository = (request.server as any)["costLayerRepository"];
       const dispatchStock = AutoRetryDecorator.wrap(new DispatchStock(
         repository,
         undefined,
@@ -93,14 +93,14 @@ export class InventoryController {
     }
   }
 
-  static async getLevel(request: FastifyRequest, reply: FastifyReply) {
+  static async getLevel(request: any, reply: any) {
     try {
-      const repository = request.server["repository"] as IInventoryRepository;
-      const { sku } = request.params;
-      if (request.query.locationId !== undefined && typeof request.query.locationId !== "string") {
+      const repository = (request.server as any)["repository"] as IInventoryRepository;
+      const { sku } = (request.params as any);
+      if ((request.query as any).locationId !== undefined && typeof (request.query as any).locationId !== "string") {
         return reply.status(400).send({ error: "Invalid locationId parameter" });
       }
-      const locationId = request.query.locationId ? (request.query.locationId as string).trim() : "default";
+      const locationId = (request.query as any).locationId ? ((request.query as any).locationId as string).trim() : "default";
 
       const skuObj = SKU.create(sku);
       const item = await repository.findBySku(skuObj, locationId);
@@ -113,7 +113,7 @@ export class InventoryController {
         available: item ? item.available.getValue() : 0,
       };
 
-      if (request.query.locationId) {
+      if ((request.query as any).locationId) {
         responseBody.locationId = locationId;
       }
       reply.status(200).send(responseBody);
@@ -128,10 +128,10 @@ export class InventoryController {
     }
   }
 
-  static async performCount(request: FastifyRequest, reply: FastifyReply) {
+  static async performCount(request: any, reply: any) {
     try {
-      const repository = request.server["repository"] as IInventoryRepository;
-      const { counts, locationId } = request.body;
+      const repository = (request.server as any)["repository"] as IInventoryRepository;
+      const { counts, locationId } = (request.body as any);
       if (!Array.isArray(counts)) {
         return reply.status(400).send({ error: "Expected 'counts' to be an array" });
       }
@@ -163,9 +163,9 @@ export class InventoryController {
     }
   }
 
-  static async list(request: FastifyRequest, reply: FastifyReply) {
+  static async list(request: any, reply: any) {
     try {
-      const repository = request.server["repository"] as IInventoryRepository;
+      const repository = (request.server as any)["repository"] as IInventoryRepository;
       const items = await repository.findAll();
       reply.status(200).send(
         items.map((item) => ({
@@ -183,10 +183,10 @@ export class InventoryController {
     }
   }
 
-  static async allocate(request: FastifyRequest, reply: FastifyReply) {
+  static async allocate(request: any, reply: any) {
     try {
-      const repository = request.server["repository"] as IInventoryRepository;
-      const { sku, amount, locationId } = request.body;
+      const repository = (request.server as any)["repository"] as IInventoryRepository;
+      const { sku, amount, locationId } = (request.body as any);
       const useCase = AutoRetryDecorator.wrap(new AllocateStock(repository));
       await useCase.execute(sku, amount, locationId);
       reply.status(200).send({ message: "Stock allocated successfully" });
@@ -201,10 +201,10 @@ export class InventoryController {
     }
   }
 
-  static async releaseAllocation(request: FastifyRequest, reply: FastifyReply) {
+  static async releaseAllocation(request: any, reply: any) {
     try {
-      const repository = request.server["repository"] as IInventoryRepository;
-      const { sku, amount, locationId } = request.body;
+      const repository = (request.server as any)["repository"] as IInventoryRepository;
+      const { sku, amount, locationId } = (request.body as any);
       const useCase = AutoRetryDecorator.wrap(new ReleaseAllocation(repository));
       await useCase.execute(sku, amount, locationId);
       reply.status(200).send({ message: "Allocation released successfully" });
@@ -219,10 +219,10 @@ export class InventoryController {
     }
   }
 
-  static async fulfillAllocation(request: FastifyRequest, reply: FastifyReply) {
+  static async fulfillAllocation(request: any, reply: any) {
     try {
-      const repository = request.server["repository"] as IInventoryRepository;
-      const { sku, amount, locationId } = request.body;
+      const repository = (request.server as any)["repository"] as IInventoryRepository;
+      const { sku, amount, locationId } = (request.body as any);
       const useCase = AutoRetryDecorator.wrap(new FulfillAllocation(repository));
       await useCase.execute(sku, amount, locationId);
       reply.status(200).send({ message: "Allocation fulfilled successfully" });
@@ -237,10 +237,10 @@ export class InventoryController {
     }
   }
 
-  static async createInTransit(request: FastifyRequest, reply: FastifyReply) {
+  static async createInTransit(request: any, reply: any) {
     try {
-      const repository = request.server["repository"] as IInventoryRepository;
-      const { sku, amount, locationId } = request.body;
+      const repository = (request.server as any)["repository"] as IInventoryRepository;
+      const { sku, amount, locationId } = (request.body as any);
       const useCase = AutoRetryDecorator.wrap(new CreateInTransit(repository));
       await useCase.execute(sku, amount, locationId);
       reply.status(200).send({ message: "In-transit stock created successfully" });
@@ -255,10 +255,10 @@ export class InventoryController {
     }
   }
 
-  static async receiveInTransit(request: FastifyRequest, reply: FastifyReply) {
+  static async receiveInTransit(request: any, reply: any) {
     try {
-      const repository = request.server["repository"] as IInventoryRepository;
-      const { sku, amount, locationId } = request.body;
+      const repository = (request.server as any)["repository"] as IInventoryRepository;
+      const { sku, amount, locationId } = (request.body as any);
       const useCase = AutoRetryDecorator.wrap(new ReceiveInTransit(repository));
       await useCase.execute(sku, amount, locationId);
       reply.status(200).send({ message: "In-transit stock received successfully" });
@@ -273,11 +273,11 @@ export class InventoryController {
     }
   }
 
-  static async suggestFefoPick(request: FastifyRequest, reply: FastifyReply) {
+  static async suggestFefoPick(request: any, reply: any) {
     try {
-      const productRepository = request.server["productRepository"];
-      const costLayerRepository = request.server["costLayerRepository"];
-      const { sku, quantity } = request.query;
+      const productRepository = (request.server as any)["productRepository"];
+      const costLayerRepository = (request.server as any)["costLayerRepository"];
+      const { sku, quantity } = (request.query as any);
 
       if (!sku || !quantity) {
         return reply.status(400).send({ error: "SKU and quantity are required query parameters" });
@@ -314,10 +314,10 @@ export class InventoryController {
     }
   }
 
-  static async traceRecall(request: FastifyRequest, reply: FastifyReply) {
+  static async traceRecall(request: any, reply: any) {
     try {
-      const dispatchRecordRepository = request.server["dispatchRecordRepository"];
-      const { lotNumber } = request.params;
+      const dispatchRecordRepository = (request.server as any)["dispatchRecordRepository"];
+      const { lotNumber } = (request.params as any);
 
       if (!lotNumber) {
         return reply.status(400).send({ error: "Lot number is required" });

@@ -17,12 +17,12 @@ import { Logger } from "../../../infrastructure/logging/logger";
 import crypto from "crypto";
 
 export class ShippingController {
-  static async getRates(request: FastifyRequest, reply: FastifyReply) {
+  static async getRates(request: any, reply: any) {
     try {
-      const carrierService = request.server["carrierService"] as ICarrierService;
+      const carrierService = (request.server as any)["carrierService"] as ICarrierService;
       const useCase = new CalculateShippingRates(carrierService);
 
-      const { sku, quantity, address } = request.query;
+      const { sku, quantity, address } = (request.query as any);
 
       if (!sku || !address) {
         return reply.status(400).send({ error: "Missing required parameters: sku, address." });
@@ -55,15 +55,15 @@ export class ShippingController {
     }
   }
 
-  static async purchaseLabel(request: FastifyRequest, reply: FastifyReply) {
+  static async purchaseLabel(request: any, reply: any) {
     try {
-      const shipmentRepository = request.server["shipmentRepository"] as IShipmentRepository;
-      const carrierService = request.server["carrierService"] as ICarrierService;
-      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
-      const dispatchRecordRepository = request.server["dispatchRecordRepository"] as IDispatchRecordRepository;
-      const tenantConfigRepository = request.server["tenantConfigRepository"] as ITenantConfigRepository;
-      const journalRepository = request.server["journalRepository"] as IJournalRepository;
-      const outboxRepository = request.server["outboxRepository"] as IOutboxRepository;
+      const shipmentRepository = (request.server as any)["shipmentRepository"] as IShipmentRepository;
+      const carrierService = (request.server as any)["carrierService"] as ICarrierService;
+      const inventoryRepository = (request.server as any)["inventoryRepository"] as IInventoryRepository;
+      const dispatchRecordRepository = (request.server as any)["dispatchRecordRepository"] as IDispatchRecordRepository;
+      const tenantConfigRepository = (request.server as any)["tenantConfigRepository"] as ITenantConfigRepository;
+      const journalRepository = (request.server as any)["journalRepository"] as IJournalRepository;
+      const outboxRepository = (request.server as any)["outboxRepository"] as IOutboxRepository;
 
       const useCase = new PurchaseShippingLabel(
         shipmentRepository,
@@ -75,7 +75,7 @@ export class ShippingController {
         outboxRepository
       );
 
-      const { sku, quantity, destinationAddress, carrier, locationId, tenantId } = request.body;
+      const { sku, quantity, destinationAddress, carrier, locationId, tenantId } = (request.body as any);
 
       const result = await useCase.execute({
         sku,
@@ -101,9 +101,9 @@ export class ShippingController {
     }
   }
 
-  static async getShipments(request: FastifyRequest, reply: FastifyReply) {
+  static async getShipments(request: any, reply: any) {
     try {
-      const shipmentRepository = request.server["shipmentRepository"] as IShipmentRepository;
+      const shipmentRepository = (request.server as any)["shipmentRepository"] as IShipmentRepository;
       const shipments = await shipmentRepository.findAll();
 
       reply.status(200).send(
@@ -132,14 +132,14 @@ export class ShippingController {
     }
   }
 
-  static async trackShipment(request: FastifyRequest, reply: FastifyReply) {
+  static async trackShipment(request: any, reply: any) {
     try {
-      const shipmentRepository = request.server["shipmentRepository"] as IShipmentRepository;
-      const outboxRepository = request.server["outboxRepository"] as IOutboxRepository;
+      const shipmentRepository = (request.server as any)["shipmentRepository"] as IShipmentRepository;
+      const outboxRepository = (request.server as any)["outboxRepository"] as IOutboxRepository;
       const useCase = new UpdateShipmentStatus(shipmentRepository, outboxRepository);
 
-      const { id } = request.params;
-      const { status } = request.body;
+      const { id } = (request.params as any);
+      const { status } = (request.body as any);
 
       await useCase.execute({
         shipmentId: id,
@@ -158,15 +158,15 @@ export class ShippingController {
     }
   }
 
-  static async routeOrder(request: FastifyRequest, reply: FastifyReply) {
+  static async routeOrder(request: any, reply: any) {
     try {
-      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
-      const carrierService = request.server["carrierService"] as ICarrierService;
-      const geocoderService = request.server["geocoderService"] || new MockGeocoderService();
+      const inventoryRepository = (request.server as any)["inventoryRepository"] as IInventoryRepository;
+      const carrierService = (request.server as any)["carrierService"] as ICarrierService;
+      const geocoderService = (request.server as any)["geocoderService"] || new MockGeocoderService();
 
       const useCase = new RouteOrder(inventoryRepository, carrierService, geocoderService);
 
-      const { sku, quantity, destinationAddress, strategyName } = request.body;
+      const { sku, quantity, destinationAddress, strategyName } = (request.body as any);
 
       if (!sku || !quantity || !destinationAddress) {
         return reply.status(400).send({ error: "Missing required body fields: sku, quantity, and destinationAddress." });
@@ -191,9 +191,9 @@ export class ShippingController {
     }
   }
 
-  static async calculateCarrierRates(request: FastifyRequest, reply: FastifyReply) {
+  static async calculateCarrierRates(request: any, reply: any) {
     try {
-      const { carrier, originPostalCode, destinationPostalCode, weightKg, serviceLevel } = request.body;
+      const { carrier, originPostalCode, destinationPostalCode, weightKg, serviceLevel } = (request.body as any);
       if (!carrier || !originPostalCode || !destinationPostalCode || weightKg === undefined) {
         return reply.status(400).send({ error: "Missing required fields: carrier, originPostalCode, destinationPostalCode, weightKg." });
       }
@@ -230,9 +230,9 @@ export class ShippingController {
     }
   }
 
-  static async generateShippingLabel(request: FastifyRequest, reply: FastifyReply) {
+  static async generateShippingLabel(request: any, reply: any) {
     try {
-      const { carrier, recipientName, shippingAddress, weightKg, serviceLevel, format } = request.body;
+      const { carrier, recipientName, shippingAddress, weightKg, serviceLevel, format } = (request.body as any);
       if (!carrier || !recipientName || !shippingAddress) {
         return reply.status(400).send({ error: "Missing required fields: carrier, recipientName, shippingAddress." });
       }

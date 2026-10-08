@@ -62,7 +62,7 @@ export class AuthService implements IAuthService {
         if (!response.ok) {
           throw new Error(`Failed to fetch JWKS: ${response.statusText}`);
         }
-        const json: any = await response.send();
+        const json: any = await (response as any).send();
         const keys = json.keys || [];
         this.cachedKeys = keys;
         this.cacheExpiry = Date.now() + this.cacheTtlMs;
@@ -70,11 +70,11 @@ export class AuthService implements IAuthService {
       } else {
         data = await new Promise<string>((resolve, reject) => {
           const client = this.jwksUri.startsWith('https') ? https : http;
-          client.get(this.jwksUri, (res) => {
+          client.get(this.jwksUri, (reply) => {
             let body = '';
-            res.on('data', (chunk) => (body += chunk));
-            res.on('end', () => resolve(body));
-            res.on('error', reject);
+            reply.on('data', (chunk) => (body += chunk));
+            reply.on('end', () => resolve(body));
+            reply.on('error', reject);
           }).on('error', reject);
         });
         const json = JSON.parse(data);
@@ -193,7 +193,7 @@ export class AuthService implements IAuthService {
   }
 }
 
-export const authenticateRequestMiddleware = async (req: any): Promise<{ tenantId?: string }> => {
+export const authenticateRequestMiddleware = async (request: any): Promise<{ tenantId?: string }> => {
   try {
     let authHeaderValue = request.headers?.['authorization']?.replace(/^Bearer /, '');
 
@@ -204,7 +204,7 @@ export const authenticateRequestMiddleware = async (req: any): Promise<{ tenantI
     const token = authHeaderValue || String(request.query.token);
 
     try {
-      const authService = new AuthService(req.prisma);
+      const authService = new AuthService(request.prisma);
       const payload = await authService.verifyToken(token);
       if (!payload) {
         throw new Error('TOKEN_INVALID');

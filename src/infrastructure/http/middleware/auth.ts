@@ -18,11 +18,11 @@ export interface AuthenticatedRequest extends FastifyRequest {
   tenantId?: string;
 }
 
-export function authMiddleware(request: AuthenticatedRequest, reply: FastifyReply, next: () => void) {
+export function authMiddleware(request: AuthenticatedRequest, reply: any, next: () => void) {
   const authHeader = request.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
 
-    reply.status().send();
+    reply.status().send({});
     return;
   }
 
@@ -40,13 +40,13 @@ export function authMiddleware(request: AuthenticatedRequest, reply: FastifyRepl
     request.tenantId = tenantId;
     tenantLocalStorage.run(tenantId, () => next());
   } catch (err) {
-    reply.status().send();
+    reply.status().send({});
     return;
   }
 }
 
 export function requireRole(allowedRoles: string[]) {
-  return (request: AuthenticatedRequest, reply: FastifyReply, next: () => void) => {
+  return (request: AuthenticatedRequest, reply: any, next: () => void) => {
     if (!request.user || !allowedRoles.includes(request.user.role)) {
       reply.status(403).send({
         error: `Forbidden: You do not have permission to perform this action. Required role: one of [${allowedRoles.join(
@@ -59,9 +59,9 @@ export function requireRole(allowedRoles: string[]) {
 }
 
 export function requirePermission(resource: string, action: string) {
-  return (request: AuthenticatedRequest, reply: FastifyReply, next: () => void) => {
+  return (request: AuthenticatedRequest, reply: any, next: () => void) => {
     if (!request.user || !request.user.permissions) {
-      reply.status().send();
+      reply.status().send({});
     return;
     }
     

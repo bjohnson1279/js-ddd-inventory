@@ -76,6 +76,7 @@ describe("FEFO and Recall E2E Integration Tests", () => {
       undefined,
       productRepository
     );
+    await app.ready();
   });
 
   it("should suggest FEFO picking and trace product recall", async () => {
@@ -95,7 +96,7 @@ describe("FEFO and Recall E2E Integration Tests", () => {
     const expiryC = new Date(now.getTime() + 20 * 24 * 60 * 60 * 1000);
 
     // Receive Lot A: 10 units
-    await request(app)
+    await request((app as any).server)
       .post("/api/inventory/receive")
         .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
@@ -108,7 +109,7 @@ describe("FEFO and Recall E2E Integration Tests", () => {
       });
 
     // Receive Lot B: 15 units
-    await request(app)
+    await request((app as any).server)
       .post("/api/inventory/receive")
         .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
@@ -121,7 +122,7 @@ describe("FEFO and Recall E2E Integration Tests", () => {
       });
 
     // Receive Lot C: 20 units
-    await request(app)
+    await request((app as any).server)
       .post("/api/inventory/receive")
         .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
@@ -137,7 +138,7 @@ describe("FEFO and Recall E2E Integration Tests", () => {
     // Expected pick:
     // First 15 units from Lot B (expires first)
     // Remaining 5 units from Lot A (expires next)
-    const pickResponse = await request(app)
+    const pickResponse = await request((app as any).server)
       .get("/api/inventory/fefo-pick")
         .set("Authorization", `Bearer ${getAdminToken()}`)
       .query({ sku: skuStr, quantity: 20 });
@@ -149,7 +150,7 @@ describe("FEFO and Recall E2E Integration Tests", () => {
     for (let i = 0; i < 3; i++) {
         if (resp.status === 200) break;
         await new Promise(r => setTimeout(r, 1000));
-        resp = await request(app)
+        resp = await request((app as any).server)
             .get("/api/inventory/fefo-pick")
         .set("Authorization", `Bearer ${getAdminToken()}`)
             .query({ sku: skuStr, quantity: 20 });
@@ -158,7 +159,7 @@ describe("FEFO and Recall E2E Integration Tests", () => {
     expect(resp.body.length).toBeGreaterThan(0);
 
     // 4. Dispatch stock of 20 units without specifying lot (uses FEFO auto-selection)
-    const dispatchResponse = await request(app)
+    const dispatchResponse = await request((app as any).server)
       .post("/api/inventory/dispatch")
         .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
@@ -171,7 +172,7 @@ describe("FEFO and Recall E2E Integration Tests", () => {
 
     // 5. Trace product recall for Lot B
     // We expect 1 contaminated dispatch of 15 units of Lot B
-    const recallResponse = await request(app)
+    const recallResponse = await request((app as any).server)
       .get("/api/inventory/reports/recall/LOT-B")
         .set("Authorization", `Bearer ${getAdminToken()}`);
 

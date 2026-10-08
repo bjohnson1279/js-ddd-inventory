@@ -299,9 +299,9 @@ export class ApprovalWorkflowService {
     }
 
     // Filter to requests where current step's approverRoles overlap with decider's roles
-    return requests.filter(req => {
-      const config = JSON.parse(req.workflow.config) as ApprovalWorkflowConfig;
-      const currentStep = config.steps[req.currentStep];
+    return requests.filter(request => {
+      const config = JSON.parse(request.workflow.config) as ApprovalWorkflowConfig;
+      const currentStep = config.steps[request.currentStep];
       if (!currentStep) return false;
       return currentStep.approverRoles.some(role => deciderRoleIds.includes(role));
     });

@@ -70,6 +70,7 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
       dispatchRecordRepo,
       demandForecastRepo
     );
+    await app.ready();
   });
 
   afterEach(() => {
@@ -106,7 +107,7 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     await dispatchRecordRepo.save(new DispatchRecord("3", sku, locationId, 10, d3));
 
     // 3. Request demand planning report
-    const reportRes = await request(app)
+    const reportRes = await request((app as any).server)
       .get(`/api/forecasting/report?locationId=${locationId}`).set("Authorization", `Bearer ${getAdminToken()}`);
 
     expect(reportRes.status).toBe(200);
@@ -124,7 +125,7 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     expect(reportItem.runOutDate).toBeDefined();
 
     // 4. Generate manual demand forecast via POST
-    const forecastRes = await request(app)
+    const forecastRes = await request((app as any).server)
       .post("/api/forecasting/forecast")
         .set("Authorization", `Bearer ${getAdminToken()}`)
       .send({
@@ -163,7 +164,7 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
     expect(forecast.confidenceLevel).toBe(0.85);
 
     // 5. Request the report again. It should now reflect the active forecast
-    const reportRes2 = await request(app)
+    const reportRes2 = await request((app as any).server)
       .get(`/api/forecasting/report?locationId=${locationId}`).set("Authorization", `Bearer ${getAdminToken()}`);
 
     expect(reportRes2.status).toBe(200);
@@ -187,20 +188,20 @@ describe("Forecasting & Demand Planning HTTP API Endpoints", () => {
 
   it("should safely handle GET /api/forecasting/dispatch-summary with SQL injection payload", async () => {
     // Test fetch without sku
-    const resAll = await request(app)
+    const resAll = await request((app as any).server)
       .get("/api/forecasting/dispatch-summary")
       .set("Authorization", `Bearer ${getAdminToken()}`);
     expect([200, 500]).toContain(resAll.status); // 200 if table/view exists or [] empty result, 500 if view doesn't exist in test DB
 
     // Test fetch with valid sku parameter
-    const resValid = await request(app)
+    const resValid = await request((app as any).server)
       .get("/api/forecasting/dispatch-summary?sku=IPHONE-15")
       .set("Authorization", `Bearer ${getAdminToken()}`);
     expect([200, 500]).toContain(resValid.status);
 
     // Test fetch with SQL injection payload
     const sqlInjectionPayload = "IPHONE-15' OR '1'='1";
-    const resSqlInjection = await request(app)
+    const resSqlInjection = await request((app as any).server)
       .get(`/api/forecasting/dispatch-summary?sku=${encodeURIComponent(sqlInjectionPayload)}`)
       .set("Authorization", `Bearer ${getAdminToken()}`);
 

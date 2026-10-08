@@ -1,5 +1,5 @@
 import request from "supertest";
-import express from "express";
+import fastify from "fastify";
 import roleRoutes from "../../../src/infrastructure/http/routes/role.routes";
 import { ManageRolesUseCase } from "../../../src/application/useCases/ManageRolesUseCase";
 import { AuthenticatedRequest } from "../../../src/infrastructure/http/middleware/auth";
@@ -27,17 +27,18 @@ jest.mock("../../../src/infrastructure/http/middleware/auth", () => {
 });
 
 describe("RoleController", () => {
-  const app = express();
-  app.use(express.json());
+  const app = fastify();
+  
 
   // Apply mocked auth middleware globally for tests
-  app.use((req, res, next) => {
+  app.addHook("preHandler", (req, res, next) => {
       (req as AuthenticatedRequest).user = { id: "1", role: "admin", tenantId: "tenant-1" } as any;
       (req as AuthenticatedRequest).tenantId = "tenant-1";
       next();
   });
 
-  app.use("/api/roles", roleRoutes);
+  app.register(roleRoutes, { prefix: "/api/roles" });
+    await app.ready();
 
   afterEach(() => {
     jest.clearAllMocks();
@@ -52,7 +53,7 @@ describe("RoleController", () => {
 
       (ManageRolesUseCase.listPermissions as jest.Mock).mockResolvedValue(mockPermissions);
 
-      const response = await request(app).get("/api/roles/permissions");
+      const response = await request((app as any).server).get("/api/roles/permissions");
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({ permissions: mockPermissions });
@@ -62,7 +63,7 @@ describe("RoleController", () => {
     it("should handle errors and return 500", async () => {
       (ManageRolesUseCase.listPermissions as jest.Mock).mockRejectedValue(new Error("Database error"));
 
-      const response = await request(app).get("/api/roles/permissions");
+      const response = await request((app as any).server).get("/api/roles/permissions");
 
       expect(response.status).toBe(500);
       expect(response.body).toEqual({ error: "Internal server error" });

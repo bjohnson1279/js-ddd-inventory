@@ -85,7 +85,7 @@ describe("Audit REST API Endpoints", () => {
     };
     (prisma.auditDiscrepancyModel.findMany as jest.Mock).mockResolvedValueOnce([mockDiscrepancy]);
 
-    const res = await request(app)
+    const res = await request((app as any).server)
       .get("/api/audit/discrepancies")
       .set("Authorization", `Bearer ${token}`)
       .expect(200);
@@ -118,7 +118,7 @@ describe("Audit REST API Endpoints", () => {
     // 5. Mock mapping check
     (prisma.quickbooksJournalMappingModel.findUnique as jest.Mock).mockResolvedValueOnce(null);
 
-    const res = await request(app)
+    const res = await request((app as any).server)
       .post("/api/audit/run")
       .set("Authorization", `Bearer ${token}`)
       .expect(200);
@@ -139,7 +139,7 @@ describe("Audit REST API Endpoints", () => {
       status: "OPEN"
     });
 
-    const res = await request(app)
+    const res = await request((app as any).server)
       .post("/api/audit/discrepancies/disc-1/resolve")
       .set("Authorization", `Bearer ${token}`)
       .send({ notes: "Manually synchronized" })

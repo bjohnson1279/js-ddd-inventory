@@ -7,7 +7,7 @@ export interface ProcessDispositionDTO {
 }
 
 export class ProcessDisposition {
-  constructor(private readonly rmaRepository) {}
+  constructor(private readonly rmaRepository: any) {}
 
   async execute(dto: ProcessDispositionDTO): Promise<void> {
     const rma = await this.rmaRepository.get(dto.rmaId);

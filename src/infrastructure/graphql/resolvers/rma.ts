@@ -1,25 +1,15 @@
-interface RejectRMAItemDTO {
-  itemId: string; // RMA item id, not variant id
-  reason: string;
-}
+export class RMAResolver {
+  private rmaRepo: any;
 
-export interface RejectRMADTO {
-  rmaNumber: string;
-  items: RejectRMAItemDTO[];
-}
-
-export class GraphQLRMAResolver {
-  constructor(private rmaRepo) {}
-
-  async rejectRma({ rmaNumber, items }: RejectRMADTO): Promise<void> {
-    const rma = await this.rmaRepo.get(rmaNumber);
-    if (!rma) throw new Error("RMA not found");
-    for (const item of rma.items) {
-      await this.rmaRepo.rejectItem(item.id, item.reason);
-    }
+  constructor(rmaRepo: any) {
+    this.rmaRepo = rmaRepo;
   }
 
-  async updateRMAMapping(rmaNumber, warehouseId): Promise<void> {
+  async getRMA(rmaNumber: string): Promise<any> {
+    return await this.rmaRepo.get(rmaNumber);
+  }
+
+  async updateRMAMapping(rmaNumber: any, warehouseId: any): Promise<void> {
     const rma = await this.rmaRepo.get(rmaNumber);
     if (!rma) throw new Error("RMA not found");
     for (const item of rma.items) {
@@ -27,25 +17,25 @@ export class GraphQLRMAResolver {
     }
   }
 
-  async processDisposition(rmaId, itemId, disposition): Promise<void> {
+  async processDisposition(rmaId: any, itemId: any, disposition: any): Promise<void> {
     const rma = await this.rmaRepo.get(rmaId);
     if (!rma) throw new Error("RMA not found");
     for (const item of rma.items) {
       if (item.id === itemId) {
         await this.rmaRepo.processDisposition(item.variantId, { disposition });
-        return;  // Found and processed
+        return;
       }
     }
     throw new Error("Item not found in RMA");
   }
 
-  async trackInspectionNotes(rmaNumber, itemId, notes): Promise<void> {
+  async trackInspectionNotes(rmaNumber: any, itemId: any, notes: any): Promise<void> {
     const rma = await this.rmaRepo.get(rmaNumber);
     if (!rma) throw new Error("RMA not found");
     for (const item of rma.items) {
       if (item.id === itemId) {
         await this.rmaRepo.trackInspectionNotes(rmaNumber, { itemId, notes });
-        return;  // Found and tracked
+        return;
       }
     }
     throw new Error("Item not found in RMA");

@@ -82,7 +82,7 @@ export class AuditProcessorService {
             );
 
             if (response.ok) {
-              const resData = (await response.send()) as any;
+              const resData = (await (response as any).send()) as any;
               chunk.forEach((variant, idx) => {
                 const edges = resData?.data?.[(`var${idx}`)]?.edges || [];
                 if (edges.length > 0) {

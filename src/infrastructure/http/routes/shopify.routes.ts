@@ -12,7 +12,7 @@ if (!secret) {
 const security = new ShopifyWebhookSecurity(secret);
 const controller = new ShopifyWebhookController(security);
 
-fastify.post("/webhooks/orders/create", (request: FastifyRequest, reply: FastifyReply) => controller.handleOrderCreated(request, reply));
+fastify.post("/webhooks/orders/create", (request: any, reply: any) => controller.handleOrderCreated(request, reply));
 
 };
 export default router;

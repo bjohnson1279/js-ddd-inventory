@@ -9,12 +9,12 @@ import { AutoRetryDecorator } from "../../../application/decorators/AutoRetryDec
 import { Logger } from "../../../infrastructure/logging/logger";
 
 export class PurchaseOrderController {
-  static async create(request: FastifyRequest, reply: FastifyReply) {
+  static async create(request: any, reply: any) {
     try {
-      const poRepository = request.server["purchaseOrderRepository"] as IPurchaseOrderRepository;
+      const poRepository = (request.server as any)["purchaseOrderRepository"] as IPurchaseOrderRepository;
       const useCase = AutoRetryDecorator.wrap(new CreatePurchaseOrder(poRepository));
       
-      const po = await useCase.execute(request.body);
+      const po = await useCase.execute((request.body as any));
       reply.status(201).send({
         id: po.id,
         purchaseOrderNumber: po.purchaseOrderNumber,
@@ -41,10 +41,10 @@ export class PurchaseOrderController {
     }
   }
 
-  static async approve(request: FastifyRequest, reply: FastifyReply) {
+  static async approve(request: any, reply: any) {
     try {
-      const poRepository = request.server["purchaseOrderRepository"] as IPurchaseOrderRepository;
-      const po = await poRepository.findById(request.params.id);
+      const poRepository = (request.server as any)["purchaseOrderRepository"] as IPurchaseOrderRepository;
+      const po = await poRepository.findById((request.params as any).id);
       if (!po) {
         return reply.status(404).send({ error: "Purchase order not found" });
       }
@@ -62,10 +62,10 @@ export class PurchaseOrderController {
     }
   }
 
-  static async send(request: FastifyRequest, reply: FastifyReply) {
+  static async send(request: any, reply: any) {
     try {
-      const poRepository = request.server["purchaseOrderRepository"] as IPurchaseOrderRepository;
-      const po = await poRepository.findById(request.params.id);
+      const poRepository = (request.server as any)["purchaseOrderRepository"] as IPurchaseOrderRepository;
+      const po = await poRepository.findById((request.params as any).id);
       if (!po) {
         return reply.status(404).send({ error: "Purchase order not found" });
       }
@@ -83,17 +83,17 @@ export class PurchaseOrderController {
     }
   }
 
-  static async receive(request: FastifyRequest, reply: FastifyReply) {
+  static async receive(request: any, reply: any) {
     try {
-      const poRepository = request.server["purchaseOrderRepository"] as IPurchaseOrderRepository;
-      const inventoryRepository = request.server["inventoryRepository"] as IInventoryRepository;
-      const costLayerRepository = request.server["costLayerRepository"] as ICostLayerRepository;
+      const poRepository = (request.server as any)["purchaseOrderRepository"] as IPurchaseOrderRepository;
+      const inventoryRepository = (request.server as any)["inventoryRepository"] as IInventoryRepository;
+      const costLayerRepository = (request.server as any)["costLayerRepository"] as ICostLayerRepository;
       
       const useCase = AutoRetryDecorator.wrap(new ReceivePurchaseOrder(poRepository, inventoryRepository, costLayerRepository));
       
       await useCase.execute({
-        purchaseOrderId: request.params.id,
-        items: request.body.items
+        purchaseOrderId: (request.params as any).id,
+        items: (request.body as any).items
       });
       reply.status(200).send({ message: "Items received successfully" });
     } catch (error: any) {
@@ -107,10 +107,10 @@ export class PurchaseOrderController {
     }
   }
 
-  static async get(request: FastifyRequest, reply: FastifyReply) {
+  static async get(request: any, reply: any) {
     try {
-      const poRepository = request.server["purchaseOrderRepository"] as IPurchaseOrderRepository;
-      const po = await poRepository.findById(request.params.id);
+      const poRepository = (request.server as any)["purchaseOrderRepository"] as IPurchaseOrderRepository;
+      const po = await poRepository.findById((request.params as any).id);
       if (!po) {
         return reply.status(404).send({ error: "Purchase order not found" });
       }

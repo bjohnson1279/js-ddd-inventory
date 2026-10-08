@@ -6,12 +6,11 @@ import { Logger } from "../../../infrastructure/logging/logger";
 
 const router: FastifyPluginAsync = async (fastify) => {
 
-// Only tenant admins can manage roles and permissions
-fastify.use(requireRole(["admin"]));
+fastify.addHook('preHandler', requireRole(["admin"]));
 
 fastify.get("/permissions", { preHandler: [requirePermission('user', 'edit_role')] }, RoleController.listPermissions);
 
-fastify.get("/", requirePermission('user', 'edit_role'), async (req: any, res: any) => {
+fastify.get("/", { preHandler: [requirePermission('user', 'edit_role')] }, async (request: any, reply: any) => {
   try {
     const tenantId = request.tenantId || "tenant-1";
     const roles = await ManageRolesUseCase.listRoles(tenantId);
@@ -21,10 +20,10 @@ fastify.get("/", requirePermission('user', 'edit_role'), async (req: any, res: a
   }
 });
 
-fastify.post("/", requirePermission('user', 'edit_role'), async (req: any, res: any) => {
+fastify.post("/", { preHandler: [requirePermission('user', 'edit_role')] }, async (request: any, reply: any) => {
   try {
     const tenantId = request.tenantId || "tenant-1";
-    const { name, description, permissionIds } = request.body;
+    const { name, description, permissionIds } = (request.body as any);
 
     const result = await ManageRolesUseCase.createCustomRole(tenantId, name, description, permissionIds);
 

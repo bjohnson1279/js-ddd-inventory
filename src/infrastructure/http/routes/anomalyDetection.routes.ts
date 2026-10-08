@@ -4,9 +4,9 @@ import { AnomalyDetectionService } from "../../../domain/services/AnomalyDetecti
 const router: FastifyPluginAsync = async (fastify) => {
 const anomalyService = new AnomalyDetectionService();
 
-fastify.get("/analyze", async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.get("/analyze", async (request: any, reply: any) => {
   try {
-    const tenantId = (req as any).user?.tenantId || "tenant-1";
+    const tenantId = (request as any).user?.tenantId || "tenant-1";
     const result = await anomalyService.analyze(tenantId);
     reply.send(result);
   } catch (err: any) {

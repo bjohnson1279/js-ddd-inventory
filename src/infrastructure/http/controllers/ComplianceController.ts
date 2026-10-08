@@ -4,9 +4,9 @@ import { ComplianceLedgerService } from "../../../domain/services/ComplianceLedg
 import { Logger } from "../../../infrastructure/logging/logger";
 
 export class ComplianceController {
-  public static async list(request: FastifyRequest, reply: FastifyReply) {
+  public static async list(request: any, reply: any) {
     try {
-      const tenantId = typeof request.query.tenantId === "string" ? request.query.tenantId : undefined;
+      const tenantId = typeof (request.query as any).tenantId === "string" ? (request.query as any).tenantId : undefined;
       let ledger: any[] = [];
       try {
         ledger = await prisma.complianceLedgerModel.findMany({
@@ -24,9 +24,9 @@ export class ComplianceController {
     }
   }
 
-  public static async verify(request: FastifyRequest, reply: FastifyReply) {
+  public static async verify(request: any, reply: any) {
     try {
-      const tenantId = typeof request.query.tenantId === "string" ? request.query.tenantId : undefined;
+      const tenantId = typeof (request.query as any).tenantId === "string" ? (request.query as any).tenantId : undefined;
       const result = await ComplianceLedgerService.validateLedger(tenantId);
       
       reply.status(200).send(result);
@@ -36,10 +36,10 @@ export class ComplianceController {
     }
   }
 
-  public static async reconstruct(request: FastifyRequest, reply: FastifyReply) {
+  public static async reconstruct(request: any, reply: any) {
     try {
-      const tenantId = typeof request.query.tenantId === "string" ? request.query.tenantId : "tenant-1";
-      const timestamp = typeof request.query.timestamp === "string" ? request.query.timestamp : undefined;
+      const tenantId = typeof (request.query as any).tenantId === "string" ? (request.query as any).tenantId : "tenant-1";
+      const timestamp = typeof (request.query as any).timestamp === "string" ? (request.query as any).timestamp : undefined;
       const result = await ComplianceLedgerService.reconstructState(tenantId, timestamp);
       reply.status(200).send(result);
     } catch (error: any) {
@@ -48,10 +48,10 @@ export class ComplianceController {
     }
   }
 
-  public static async replay(request: FastifyRequest, reply: FastifyReply) {
+  public static async replay(request: any, reply: any) {
     try {
-      const tenantId = typeof request.query.tenantId === "string" ? request.query.tenantId : "tenant-1";
-      const timestamp = typeof request.query.timestamp === "string" ? request.query.timestamp : undefined;
+      const tenantId = typeof (request.query as any).tenantId === "string" ? (request.query as any).tenantId : "tenant-1";
+      const timestamp = typeof (request.query as any).timestamp === "string" ? (request.query as any).timestamp : undefined;
       const result = await ComplianceLedgerService.replayAudit(tenantId, timestamp);
       reply.status(200).send(result);
     } catch (error: any) {

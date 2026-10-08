@@ -10,14 +10,14 @@ export const cycleCountRouter: FastifyPluginAsync = async (fastify) => {
 const repo = new CycleCountPrismaRepository(prisma as any);
 const scheduler = new CycleCountScheduler();
 
-cycleCountRouter.post('/plans', async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.post('/plans', async (request: any, reply: any) => {
   try {
     const plan = await repo.savePlan({
-      tenantId: request.body.tenantId,
-      name: request.body.name,
-      abcClassification: request.body.abcClassification,
-      frequencyDays: request.body.frequencyDays,
-      zone: request.body.zone || null,
+      tenantId: (request.body as any).tenantId,
+      name: (request.body as any).name,
+      abcClassification: (request.body as any).abcClassification,
+      frequencyDays: (request.body as any).frequencyDays,
+      zone: (request.body as any).zone || null,
       isActive: true,
     });
     reply.status(201).send(plan);
@@ -26,9 +26,9 @@ cycleCountRouter.post('/plans', async (request: FastifyRequest, reply: FastifyRe
   }
 });
 
-cycleCountRouter.post('/schedule', async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.post('/schedule', async (request: any, reply: any) => {
   try {
-    const { tenantId } = request.body;
+    const { tenantId } = (request.body as any);
     const plans = await repo.getActivePlans(tenantId);
     
     // In a real system, query CycleCountRecordModel for last execution dates.
@@ -45,9 +45,9 @@ cycleCountRouter.post('/schedule', async (request: FastifyRequest, reply: Fastif
   }
 });
 
-cycleCountRouter.post('/classify', (request: FastifyRequest, reply: FastifyReply) => {
+fastify.post('/classify', (request: any, reply: any) => {
   try {
-    const { totalUsageValue, totalOrgValue, thresholds } = request.body;
+    const { totalUsageValue, totalOrgValue, thresholds } = (request.body as any);
     const abcService = new ABCClassificationService();
     const result = abcService.classifySku(totalUsageValue, totalOrgValue, thresholds);
     const frequency = abcService.getRecommendedFrequency(result);
