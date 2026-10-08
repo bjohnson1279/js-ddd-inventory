@@ -161,7 +161,7 @@ const allowedOrigins = parseAllowedOrigins(process.env.FRONTEND_URL);
 
 app.register(fastifyHelmet);
 
-app.register(fastifyCors, { origin: '*' });
+app.register(fastifyCors, { origin: allowedOrigins });
 app.addHook('onRequest', traceMiddleware);
 if (!app.hasDecorator('trust proxy')) if (!app.hasDecorator('trust proxy')) app.decorate('trust proxy', 1);
 
