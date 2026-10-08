@@ -466,37 +466,6 @@ export const setupApp = (
   });
 
   // Section 11 Enterprise Extensions Endpoints
-  app.post("/api/shipping/quote", (request: any, reply: any) => {
-    const { carrier, weightKg, serviceLevel } = request.body;
-    const base = Math.round((parseFloat(weightKg) || 1.0) * 450);
-    reply.send([
-      {
-        carrier: carrier || "FEDEX",
-        serviceLevel: serviceLevel || "GROUND",
-        baseRateCents: base,
-        fuelSurchargeCents: Math.round(base * 0.12),
-        totalRateCents: Math.round(base * 1.12),
-        estimatedDeliveryDays: carrier === "FEDEX" ? 2 : 3,
-        currency: "USD"
-      }
-    ]);
-  });
-
-  app.post("/api/shipping/label", (request: any, reply: any) => {
-    const { carrier, recipientName, shippingAddress, weightKg, format } = request.body;
-    const trackingNumber = `${carrier || 'CARRIER'}-${crypto.randomInt(100000000, 1000000000)}`;
-    const safeRecipient = escapeZpl(recipientName);
-    reply.send({
-      carrier: carrier || "FEDEX",
-      trackingNumber,
-      serviceLevel: "EXPRESS",
-      labelFormat: format || "BOTH",
-      zplString: `^XA^FO50,50^A0N,36,36^FDSHIP TO: ${safeRecipient}^FS^FO50,100^BCN,100,Y,N,N^FD${trackingNumber}^FS^XZ`,
-      pdfBase64: Buffer.from(`SHIPPING LABEL\nCarrier: ${carrier}\nTracking: ${trackingNumber}`).toString("base64"),
-      createdAt: new Date().toISOString()
-    });
-  });
-
   app.post("/api/shipping/bol", (request: any, reply: any) => {
     const { carrier, originAddress, destinationAddress, weightKg, totalPackages } = request.body;
     const bolNumber = `BOL-${crypto.randomInt(100000, 1000000)}`;
@@ -541,18 +510,6 @@ export const setupApp = (
     });
   });
 
-  app.post("/api/supplier/asn", (request: any, reply: any) => {
-    const { asnNumber, supplierId, expectedDelivery, lineItemsJson } = request.body;
-    reply.send({
-      success: true,
-      asnNumber,
-      supplierId,
-      expectedDelivery,
-      itemCount: JSON.parse(lineItemsJson || '[]').length,
-      status: 'IN_TRANSIT',
-      createdAt: new Date().toISOString()
-    });
-  });
 
   app.get("/api/supplier/otif-scorecard", (request: any, reply: any) => {
     const supplierId = typeof request.query.supplierId === "string" ? request.query.supplierId : "SUP-101";
