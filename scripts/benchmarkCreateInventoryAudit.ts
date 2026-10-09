@@ -75,7 +75,7 @@ async function runBenchmark() {
       inventoryItems = results.filter((item: any): item is InventoryItem => item !== null && item !== undefined);
     }
 
-    // Proposed Fix: Use a Map for O(1) lookups instead of potentially finding items in a loop
+    // Use a Map for O(1) lookups instead of finding items in a loop
     const itemsBySku = new Map(inventoryItems.map((item: any) => [item.sku.getValue(), item]));
     const auditItems: any[] = [];
 
