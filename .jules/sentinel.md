@@ -144,3 +144,8 @@
 **Vulnerability:** `src/infrastructure/utils/security.ts` and `src/infrastructure/utils/encryption.ts` contained a hardcoded secret key fallback (`'test_fallback_secret_key_123456'`).
 **Learning:** Hardcoded key fallbacks can allow insecure operations or accidental secret exposure if the `ENCRYPTION_KEY` environment variable is omitted in deployment. Requiring `ENCRYPTION_KEY` strictly without hardcoded fallback strings ensures missing configuration fails fast with an explicit error.
 **Prevention:** Always enforce `ENCRYPTION_KEY` without hardcoded default fallback strings in utility modules, and supply explicit mock keys in test environment variables.
+
+## 2025-02-28 - Insecure JWT Secret Fallback Logic
+**Vulnerability:** The application used a logical OR operator (`||`) to fallback to a hardcoded string (`'default-secret'`) if the `JWT_SECRET` environment variable was not set, allowing the application to silently start and operate in non-test environments with a globally known, forgeable secret key.
+**Learning:** Logical fallback chains (e.g., `process.env.SECRET || (isTest ? 'test' : 'default')`) are extremely dangerous for cryptographic keys because they fail open. If the environment is misconfigured, the application runs insecurely instead of crashing.
+**Prevention:** Cryptographic keys must fail securely (fail closed). Never use fallback values in non-test environments. Initialize the secret strictly from the environment and throw an explicit, fatal Error if it is missing and the environment is not explicitly flagged as 'test'.
