@@ -162,8 +162,7 @@ export class ReconcileInventoryAudit {
             new Date(),
             config,
             audit.tenantId
-          );
-          p.catch(() => {});
+          ).catch(() => {});
           journalPromises.push(p);
         }
       } else {
@@ -209,8 +208,7 @@ export class ReconcileInventoryAudit {
             new Date(),
             config,
             audit.tenantId
-          );
-          p.catch(() => {});
+          ).catch(() => {});
           journalPromises.push(p);
         }
       }

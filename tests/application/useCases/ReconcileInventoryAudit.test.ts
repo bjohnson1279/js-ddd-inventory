@@ -215,4 +215,48 @@ describe("ReconcileInventoryAudit Use Case", () => {
     const entries = await journalRepository.findAll(tenantId);
     expect(entries.length).toBe(0);
   });
+
+  it("should complete audit reconciliation even if journal posting throws an exception", async () => {
+    // 1. Setup inventory & cost layer
+    const sku = SKU.create("VAR-ERR");
+    const item = InventoryItem.create("inv-4", sku, locationId, Quantity.create(10));
+    await inventoryRepository.save(item);
+
+    const l1 = new InventoryCostLayer("L1", "VAR-ERR", tenantId, 10, 1000, new Date(), "PO-4", locationId);
+    await costLayerRepository.save(l1);
+
+    // Mock journalRepository.save to simulate a database/journal failure
+    jest.spyOn(journalRepository, "save").mockRejectedValue(new Error("Database write failure"));
+
+    // 2. Create Audit, Count, Complete
+    const audit = await createUseCase.execute({
+      auditNumber: "AUD-400",
+      tenantId,
+      locationId,
+      variantIds: ["VAR-ERR"],
+    });
+
+    audit.start();
+    await auditRepository.save(audit);
+
+    await recordCountUseCase.execute({
+      auditId: audit.id,
+      variantId: "VAR-ERR",
+      countedQuantity: 6, // Shrinkage of 4 units
+    });
+
+    await completeUseCase.execute(audit.id);
+
+    // 3. Reconcile - should NOT throw despite journal exception
+    await expect(reconcileUseCase.execute(audit.id)).resolves.not.toThrow();
+
+    // 4. Verify stock level was still decremented to 6
+    const updatedItem = await inventoryRepository.findBySku(sku, locationId);
+    expect(updatedItem?.quantity.getValue()).toBe(6);
+
+    // 5. Verify audit was saved and reconciled
+    const savedAudit = await auditRepository.findById(audit.id);
+    expect(savedAudit).not.toBeNull();
+    expect(savedAudit?.status).toBe(AuditStatus.Reconciled);
+  });
 });
