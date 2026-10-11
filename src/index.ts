@@ -738,7 +738,8 @@ const start = async () => {
     WebhookDeliveryWorker.start(2000);
   }
 
-  const server = app.listen({ port: typeof port === "string" ? parseInt(port) : port }, () => {
+  const host = process.env.HOST || "0.0.0.0";
+  const server = app.listen({ port: typeof port === "string" ? parseInt(port) : port, host }, () => {
     Logger.info({ context: "index", message: `Server is running on port ${port}` });
   });
   WebSocketManager.init(app.server);
