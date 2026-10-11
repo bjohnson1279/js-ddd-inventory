@@ -19,7 +19,7 @@ export interface AuthenticatedRequest extends FastifyRequest {
 }
 
 export function authMiddleware(request: AuthenticatedRequest, reply: any, next: () => void) {
-  if (request.url && (request.url.startsWith("/api/auth") || request.url.startsWith("/api/shopify"))) {
+  if (request.url && (request.url.startsWith("/api/auth") || request.url.startsWith("/api/shopify") || request.url === "/health" || request.url === "/api/health" || request.url.startsWith("/health?") || request.url.startsWith("/api/health?"))) {
     next();
     return;
   }

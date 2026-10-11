@@ -264,6 +264,9 @@ export const setupApp = (
   }
   routesRegistered = true;
 
+  app.get('/health', async () => ({ status: 'ok', service: 'js-ddd-inventory' }));
+  app.get('/api/health', async () => ({ status: 'ok', service: 'js-ddd-inventory' }));
+
   app.register(authRoutes, { prefix: '/api/auth' });
   app.register(shopifyRoutes, { prefix: '/api/shopify' });
 
