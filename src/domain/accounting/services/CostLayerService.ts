@@ -69,12 +69,16 @@ export class CostLayerService {
       activeLayersByVariant = await this.layers.getActiveLayersByVariantIds(variantIds);
     } else {
       activeLayersByVariant = new Map<string, InventoryCostLayer[]>();
-      await Promise.all(
-        variantIds.map(async (vId) => {
-          const layers = await this.layers.getActiveLayers(vId);
-          activeLayersByVariant.set(vId, layers);
-        })
-      );
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < variantIds.length; i += CHUNK_SIZE) {
+        const chunk = variantIds.slice(i, i + CHUNK_SIZE);
+        await Promise.all(
+          chunk.map(async (vId) => {
+            const layers = await this.layers.getActiveLayers(vId);
+            activeLayersByVariant.set(vId, layers);
+          })
+        );
+      }
     }
 
     // 3. Sequentially consume layers in-memory
@@ -122,12 +126,16 @@ export class CostLayerService {
       activeLayersByVariant = await this.layers.getActiveLayersByVariantIds(variantIds);
     } else {
       activeLayersByVariant = new Map<string, InventoryCostLayer[]>();
-      await Promise.all(
-        variantIds.map(async (vId) => {
-          const layers = await this.layers.getActiveLayers(vId);
-          activeLayersByVariant.set(vId, layers);
-        })
-      );
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < variantIds.length; i += CHUNK_SIZE) {
+        const chunk = variantIds.slice(i, i + CHUNK_SIZE);
+        await Promise.all(
+          chunk.map(async (vId) => {
+            const layers = await this.layers.getActiveLayers(vId);
+            activeLayersByVariant.set(vId, layers);
+          })
+        );
+      }
     }
 
     // 3. Sequentially calculate layers in-memory

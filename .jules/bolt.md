@@ -148,3 +148,6 @@
 ## 2026-10-10 - Bounded Concurrency Chunking for Asynchronous Reconciliation
 **Learning:** In asynchronous bulk operations like `ReconcileInventoryAudit`, firing unbounded `Promise.all` over hundreds or thousands of elements can quickly exhaust database connection pools or overwhelm downstream microservices.
 **Action:** Chunk unbounded array executions into bounded batches (e.g., chunks of 10) using `slice(i, i + CHUNK_SIZE)` and `Promise.all` per chunk to maintain high throughput while strictly protecting database connection pools from exhaustion.
+## 2024-05-18 - Promise.all Connection Pool Exhaustion Mitigation
+**Learning:** In combinatorial or large-batch logic (e.g., `decrementForKitSale`, `consumeLayersBatch`), using unbounded `Promise.all` mapping over entities for DB operations causes linear O(N) connection pool exhaustion and deadlocks under load. A completely sequential fallback (e.g., `for...of` loop) is an extreme anti-pattern, causing O(N) linear slowdowns.
+**Action:** When refactoring unbounded `Promise.all` without an underlying batch repository method (like `findBySkus`), always use chunked batch processing (e.g., slicing into arrays of 10 and executing `await Promise.all(chunk)`).

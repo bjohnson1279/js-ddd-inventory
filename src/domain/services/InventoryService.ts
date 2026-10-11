@@ -64,16 +64,20 @@ export class InventoryService {
 
     if (!this.inventoryRepository.findBySkus) {
       // Fallback: fetch individually concurrently if batch fetch isn't supported
-      const fetchPromises = kit.components
-        .filter((c) => !cachedItems.has(c.variantId))
-        .map(async (c) => {
-          const sku = SKU.create(c.variantId);
-          const fetchedItem = await this.inventoryRepository.findBySku(sku, locationId);
-          if (fetchedItem) {
-            cachedItems.set(c.variantId, fetchedItem);
-          }
-        });
-      await Promise.all(fetchPromises);
+      const missingComponents = kit.components.filter((c) => !cachedItems.has(c.variantId));
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < missingComponents.length; i += CHUNK_SIZE) {
+        const chunk = missingComponents.slice(i, i + CHUNK_SIZE);
+        await Promise.all(
+          chunk.map(async (c) => {
+            const sku = SKU.create(c.variantId);
+            const fetchedItem = await this.inventoryRepository.findBySku(sku, locationId);
+            if (fetchedItem) {
+              cachedItems.set(c.variantId, fetchedItem);
+            }
+          })
+        );
+      }
     }
 
     for (const component of kit.components) {
@@ -103,21 +107,27 @@ export class InventoryService {
     if (this.inventoryRepository.saveMany) {
       await this.inventoryRepository.saveMany(itemsToSave);
     } else {
-      await Promise.all(
-        itemsToSave.map((item) => this.inventoryRepository.save(item))
-      );
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < itemsToSave.length; i += CHUNK_SIZE) {
+        const chunk = itemsToSave.slice(i, i + CHUNK_SIZE);
+        await Promise.all(chunk.map((item) => this.inventoryRepository.save(item)));
+      }
     }
 
     if (this.reorderPolicyService) {
-      await Promise.all(
-        itemsToSave.map((item) =>
-          this.reorderPolicyService!.checkPolicy(
-            item.sku.getValue(),
-            locationId,
-            item.quantity.getValue()
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < itemsToSave.length; i += CHUNK_SIZE) {
+        const chunk = itemsToSave.slice(i, i + CHUNK_SIZE);
+        await Promise.all(
+          chunk.map((item) =>
+            this.reorderPolicyService!.checkPolicy(
+              item.sku.getValue(),
+              locationId,
+              item.quantity.getValue()
+            )
           )
-        )
-      );
+        );
+      }
     }
   }
 }
