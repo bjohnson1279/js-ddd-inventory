@@ -53,13 +53,14 @@ export class ReconcileInventoryAudit {
     if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {
       inventoryItems = await this.inventoryRepository.findBySkus(skusToFetch, audit.locationId);
     } else if (skusToFetch.length > 0) {
-      // Optimization: Iterate sequentially rather than concurrently via Promise.all to prevent connection pool exhaustion.
-      for (const sku of skusToFetch) {
-        const item = await this.inventoryRepository.findBySku(sku, audit.locationId);
-        if (item) {
-          inventoryItems.push(item);
-        }
+      const results = [];
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < skusToFetch.length; i += CHUNK_SIZE) {
+        const chunk = skusToFetch.slice(i, i + CHUNK_SIZE);
+        const chunkResults = await Promise.all(chunk.map(sku => this.inventoryRepository.findBySku(sku, audit.locationId)));
+        results.push(...chunkResults);
       }
+      inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
     }
     const inventoryItemsMap = new Map(inventoryItems.map(i => [i.sku.getValue(), i]));
     const modifiedInventoryItems = new Map<string, InventoryItem>();
@@ -78,6 +79,8 @@ export class ReconcileInventoryAudit {
       }
     }
 
+    const journalPromises: (() => Promise<void>)[] = [];
+
     const fifoBreakdownsMap = new Map<string, number>();
     const weightedAverageBreakdownsMap = new Map<string, number>();
     if (shrinkages.length > 0) {
@@ -93,8 +96,6 @@ export class ReconcileInventoryAudit {
         }
       }
     }
-
-    const journalPromises: Promise<any>[] = [];
 
     // Optimization: Pre-fetch all required active layers in a single batch to avoid N+1 DB lookups during positive discrepancies
     let activeLayersMap = new Map<string, InventoryCostLayer[]>();
@@ -116,10 +117,13 @@ export class ReconcileInventoryAudit {
           }
         }
       } else {
-        // Optimization: Iterate sequentially rather than concurrently via Promise.all.
-        for (const variantId of uniqueVariantIds) {
-          const layers = await this.costLayerRepository.getActiveLayers(variantId, "desc");
-          activeLayersMap.set(variantId, layers);
+        const CHUNK_SIZE = 10;
+        for (let i = 0; i < uniqueVariantIds.length; i += CHUNK_SIZE) {
+          const chunk = uniqueVariantIds.slice(i, i + CHUNK_SIZE);
+          await Promise.all(chunk.map(async variantId => {
+            const layers = await this.costLayerRepository.getActiveLayers(variantId, "desc");
+            activeLayersMap.set(variantId, layers);
+          }));
         }
       }
     }
@@ -154,16 +158,19 @@ export class ReconcileInventoryAudit {
             totalCostCents = weightedAverageBreakdownsMap.get(item.variantId) || 0;
           }
 
-          const p = this.journalService.onInventoryAuditReconciliation(
-            audit.id,
-            item.variantId,
-            discrepancy,
-            totalCostCents,
-            new Date(),
-            config,
-            audit.tenantId
-          ).catch(() => {});
-          journalPromises.push(p);
+          journalPromises.push(async () => {
+            try {
+              await this.journalService.onInventoryAuditReconciliation(
+                audit.id,
+                item.variantId,
+                discrepancy,
+                totalCostCents,
+                new Date(),
+                config,
+                audit.tenantId
+              );
+            } catch (e) {}
+          });
         }
       } else {
         // Gain (Positive discrepancy)
@@ -200,21 +207,28 @@ export class ReconcileInventoryAudit {
 
         // 4. Post journal entries if Accrual and cost > 0
         if (totalCostCents > 0) {
-          const p = this.journalService.onInventoryAuditReconciliation(
-            audit.id,
-            item.variantId,
-            discrepancy,
-            totalCostCents,
-            new Date(),
-            config,
-            audit.tenantId
-          ).catch(() => {});
-          journalPromises.push(p);
+          journalPromises.push(async () => {
+            try {
+              await this.journalService.onInventoryAuditReconciliation(
+                audit.id,
+                item.variantId,
+                discrepancy,
+                totalCostCents,
+                new Date(),
+                config,
+                audit.tenantId
+              );
+            } catch (e) {}
+          });
         }
       }
     }
 
-    await Promise.all(journalPromises);
+    const CHUNK_SIZE = 10;
+    for (let i = 0; i < journalPromises.length; i += CHUNK_SIZE) {
+      const chunk = journalPromises.slice(i, i + CHUNK_SIZE);
+      await Promise.all(chunk.map(fn => fn()));
+    }
 
     // Save batched inventory items
     if (modifiedInventoryItems.size > 0) {

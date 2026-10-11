@@ -145,3 +145,6 @@
 ## 2024-10-08 - Avoiding Promise.all map for Database Lookups in Write Paths
 **Learning:** Using `Promise.all` wrapped over an array to fire numerous single-record database lookups or loop calculations causes N+1 query latencies, massive connection pool acquisitions, and high RDBMS contention, leading to database timeouts, especially during batch operations like `ReconcileInventoryAudit`, `ReceiveRMA`, `DisassembleKit`, and `CreateInventoryAudit`.
 **Action:** Always prefer iterating sequentially using a `for...of` loop or executing database lookups using bulk operations where possible instead of using `Promise.all` to query database row by row in parallel. This significantly reduces database connection pool exhaustion and deadlocks.
+## 2026-10-10 - Bounded Concurrency Chunking for Asynchronous Reconciliation
+**Learning:** In asynchronous bulk operations like `ReconcileInventoryAudit`, firing unbounded `Promise.all` over hundreds or thousands of elements can quickly exhaust database connection pools or overwhelm downstream microservices.
+**Action:** Chunk unbounded array executions into bounded batches (e.g., chunks of 10) using `slice(i, i + CHUNK_SIZE)` and `Promise.all` per chunk to maintain high throughput while strictly protecting database connection pools from exhaustion.
