@@ -28,10 +28,10 @@ export class ForecastingController {
         salesVelocityService
       );
 
-      if ((request.query as any).locationId !== undefined && typeof (request.query as any).locationId !== "string") {
+      if (request.query && (request.query as any).locationId !== undefined && typeof (request.query as any).locationId !== "string") {
         return reply.status(400).send({ error: "Invalid locationId parameter" });
       }
-      const locationId = (request.query as any).locationId ? ((request.query as any).locationId as string).trim() : "default";
+      const locationId = request.query && (request.query as any).locationId ? ((request.query as any).locationId as string).trim() : "default";
       const report = await useCase.execute(locationId);
 
       reply.status(200).send(report);
@@ -94,11 +94,10 @@ export class ForecastingController {
   static async getDispatchSummary(request: any, reply: any) {
     try {
       const { prisma } = require("../../database/prisma");
-      const sku = (request.query as any).sku as string;
-      
-      if (sku !== undefined && typeof sku !== "string") {
+      if (request.query && (request.query as any).sku !== undefined && typeof (request.query as any).sku !== "string") {
         return reply.status(400).send({ error: "Invalid sku parameter" });
       }
+      const sku = request.query && (request.query as any).sku ? ((request.query as any).sku as string) : undefined;
 
       let results;
       if (sku) {

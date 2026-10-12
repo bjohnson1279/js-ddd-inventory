@@ -8,12 +8,12 @@ export class OutboxController {
   static async listDeadLettered(request: any, reply: any) {
     try {
       const outboxRepository = (request.server as any)["outboxRepository"] as IOutboxRepository;
-      if (((request.query as any).limit !== undefined && typeof (request.query as any).limit !== "string") ||
-          ((request.query as any).maxAttempts !== undefined && typeof (request.query as any).maxAttempts !== "string")) {
+      if (request.query && (((request.query as any).limit !== undefined && typeof (request.query as any).limit !== "string") ||
+          ((request.query as any).maxAttempts !== undefined && typeof (request.query as any).maxAttempts !== "string"))) {
         return reply.status(400).send({ error: "Invalid query parameters" });
       }
-      const limit = (request.query as any).limit ? parseInt((request.query as any).limit as string, 10) : 50;
-      const maxAttempts = (request.query as any).maxAttempts ? parseInt((request.query as any).maxAttempts as string, 10) : 5;
+      const limit = request.query && (request.query as any).limit ? parseInt((request.query as any).limit as string, 10) : 50;
+      const maxAttempts = request.query && (request.query as any).maxAttempts ? parseInt((request.query as any).maxAttempts as string, 10) : 5;
       if (isNaN(limit) || isNaN(maxAttempts)) {
         return reply.status(400).send({ error: "Invalid query parameters" });
       }
@@ -65,10 +65,10 @@ export class OutboxController {
   static async getStats(request: any, reply: any) {
     try {
       const outboxRepository = (request.server as any)["outboxRepository"] as IOutboxRepository;
-      if ((request.query as any).maxAttempts !== undefined && typeof (request.query as any).maxAttempts !== "string") {
+      if (request.query && (request.query as any).maxAttempts !== undefined && typeof (request.query as any).maxAttempts !== "string") {
         return reply.status(400).send({ error: "Invalid maxAttempts parameter" });
       }
-      const maxAttempts = (request.query as any).maxAttempts ? parseInt((request.query as any).maxAttempts as string, 10) : 5;
+      const maxAttempts = request.query && (request.query as any).maxAttempts ? parseInt((request.query as any).maxAttempts as string, 10) : 5;
       if (isNaN(maxAttempts)) {
         return reply.status(400).send({ error: "Invalid maxAttempts parameter" });
       }

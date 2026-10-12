@@ -165,10 +165,10 @@ export class SerialController {
     try {
       const serials = (request.server as any).serializedItemRepository as ISerializedItemRepository;
       const { serialNumber } = (request.params as any);
-      if ((request.query as any).tenantId !== undefined && typeof (request.query as any).tenantId !== "string") {
+      if (request.query && (request.query as any).tenantId !== undefined && typeof (request.query as any).tenantId !== "string") {
         return reply.status(400).send({ error: "Invalid tenantId parameter" });
       }
-      const tenantId = (request.query as any).tenantId ? ((request.query as any).tenantId as string).trim() : "DEFAULT";
+      const tenantId = request.query && (request.query as any).tenantId ? ((request.query as any).tenantId as string).trim() : "DEFAULT";
 
       if (!serialNumber) {
         return reply
