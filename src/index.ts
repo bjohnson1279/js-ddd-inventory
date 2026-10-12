@@ -320,7 +320,7 @@ export const setupApp = (
 
   app.post("/api/admin/cache/clear", { preHandler: [requireRole(["admin"])] }, (request: any, reply: any) => {
     try {
-      const tenantId = typeof request.query.tenantId === "string" ? request.query.tenantId : undefined;
+      const tenantId = request.query && typeof (request.query as any).tenantId === "string" ? (request.query as any).tenantId : undefined;
       const count = RedisCacheService.getInstance().flush(tenantId);
       reply.status(200).send({ success: true, clearedKeysCount: count });
     } catch (e: unknown) {
@@ -424,7 +424,7 @@ export const setupApp = (
   app.get("/api/lots/:lotNumber/traceability", { preHandler: [requireRole(["admin", "warehouse_operator", "viewer", "accountant"]) as any] }, async (request: any, reply: any) => {
     try {
       const { lotNumber } = request.params;
-      const variantId = typeof request.query.variantId === "string" ? request.query.variantId : "";
+      const variantId = request.query && typeof (request.query as any).variantId === "string" ? (request.query as any).variantId : "";
       const tenantId = (request as AuthenticatedRequest).tenantId || "tenant-1";
 
       const lot = await prisma.lotBatchModel.findUnique({
@@ -520,7 +520,7 @@ export const setupApp = (
 
 
   app.get("/api/supplier/otif-scorecard", (request: any, reply: any) => {
-    const supplierId = typeof request.query.supplierId === "string" ? request.query.supplierId : "SUP-101";
+    const supplierId = request.query && typeof (request.query as any).supplierId === "string" ? (request.query as any).supplierId : "SUP-101";
     reply.send({
       supplierId,
       onTimeRate: 94.5,
@@ -576,7 +576,7 @@ export const setupApp = (
   });
 
   app.get("/api/sustainability/emissions-report", (request: any, reply: any) => {
-    const tenantId = typeof request.query.tenantId === "string" ? request.query.tenantId : "tenant-1";
+    const tenantId = request.query && typeof (request.query as any).tenantId === "string" ? (request.query as any).tenantId : "tenant-1";
     reply.send({
       tenantId,
       period: '2026-Q3',

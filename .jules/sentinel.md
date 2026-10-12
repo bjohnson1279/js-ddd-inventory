@@ -165,3 +165,8 @@
 **Vulnerability:** The application used a logical OR operator (`||`) to fallback to a hardcoded string (`'default-secret'`) if the `JWT_SECRET` environment variable was not set, allowing the application to silently start and operate in non-test environments with a globally known, forgeable secret key.
 **Learning:** Logical fallback chains (e.g., `process.env.SECRET || (isTest ? 'test' : 'default')`) are extremely dangerous for cryptographic keys because they fail open. If the environment is misconfigured, the application runs insecurely instead of crashing.
 **Prevention:** Cryptographic keys must fail securely (fail closed). Never use fallback values in non-test environments. Initialize the secret strictly from the environment and throw an explicit, fatal Error if it is missing and the environment is not explicitly flagged as 'test'.
+
+## 2026-10-12 - [Express Parameter Type Confusion Fix]
+**Vulnerability:** The application extracted parameters like `tenantId` and `timestamp` from `req.query` in controllers using TypeScript type assertions (e.g., `req.query.tenantId as string`) without runtime verification.
+**Learning:** TypeScript assertions do not exist at runtime. If an attacker provides an array or object in the query string (e.g., `?tenantId[]=foo`), it bypasses the type check. If this parameter is subsequently used in ORM queries, it can lead to NoSQL/ORM injection or filtering vulnerabilities.
+**Prevention:** Always enforce runtime type safety using `typeof req.query.param === 'string' ? req.query.param : undefined` (or a default value) when extracting single string parameters from Express `req.query`. Fixed the codebase where these vulnerabilities still existed.

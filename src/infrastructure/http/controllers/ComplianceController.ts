@@ -6,7 +6,7 @@ import { Logger } from "../../../infrastructure/logging/logger";
 export class ComplianceController {
   public static async list(request: any, reply: any) {
     try {
-      const tenantId = typeof (request.query as any).tenantId === "string" ? (request.query as any).tenantId : undefined;
+      const tenantId = request.query && typeof (request.query as any).tenantId === "string" ? (request.query as any).tenantId : undefined;
       let ledger: any[] = [];
       try {
         ledger = await prisma.complianceLedgerModel.findMany({
@@ -26,7 +26,7 @@ export class ComplianceController {
 
   public static async verify(request: any, reply: any) {
     try {
-      const tenantId = typeof (request.query as any).tenantId === "string" ? (request.query as any).tenantId : undefined;
+      const tenantId = request.query && typeof (request.query as any).tenantId === "string" ? (request.query as any).tenantId : undefined;
       const result = await ComplianceLedgerService.validateLedger(tenantId);
       
       reply.status(200).send(result);
@@ -38,8 +38,8 @@ export class ComplianceController {
 
   public static async reconstruct(request: any, reply: any) {
     try {
-      const tenantId = typeof (request.query as any).tenantId === "string" ? (request.query as any).tenantId : "tenant-1";
-      const timestamp = typeof (request.query as any).timestamp === "string" ? (request.query as any).timestamp : undefined;
+      const tenantId = request.query && typeof (request.query as any).tenantId === "string" ? (request.query as any).tenantId : "tenant-1";
+      const timestamp = request.query && typeof (request.query as any).timestamp === "string" ? (request.query as any).timestamp : undefined;
       const result = await ComplianceLedgerService.reconstructState(tenantId, timestamp);
       reply.status(200).send(result);
     } catch (error: any) {
@@ -50,8 +50,8 @@ export class ComplianceController {
 
   public static async replay(request: any, reply: any) {
     try {
-      const tenantId = typeof (request.query as any).tenantId === "string" ? (request.query as any).tenantId : "tenant-1";
-      const timestamp = typeof (request.query as any).timestamp === "string" ? (request.query as any).timestamp : undefined;
+      const tenantId = request.query && typeof (request.query as any).tenantId === "string" ? (request.query as any).tenantId : "tenant-1";
+      const timestamp = request.query && typeof (request.query as any).timestamp === "string" ? (request.query as any).timestamp : undefined;
       const result = await ComplianceLedgerService.replayAudit(tenantId, timestamp);
       reply.status(200).send(result);
     } catch (error: any) {

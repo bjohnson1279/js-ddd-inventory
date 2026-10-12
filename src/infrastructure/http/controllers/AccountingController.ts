@@ -15,13 +15,10 @@ export class AccountingController {
   static async getLedger(request: any, reply: any) {
     try {
       const journalRepo = (request.server as any).journalRepository as IJournalRepository;
-      if ((request.query as any).tenantId !== undefined && typeof (request.query as any).tenantId !== "string") {
+      if (request.query && (request.query as any).tenantId !== undefined && typeof (request.query as any).tenantId !== "string") {
         return reply.status(400).send({ error: "Invalid tenantId parameter." });
       }
-      if ((request.query as any).tenantId !== undefined && typeof (request.query as any).tenantId !== "string") {
-        return reply.status(400).send({ error: "Invalid tenantId parameter." });
-      }
-      const tenantId = (request.query as any).tenantId ? ((request.query as any).tenantId as string).trim() || undefined : undefined;
+      const tenantId = request.query && (request.query as any).tenantId ? ((request.query as any).tenantId as string).trim() || undefined : undefined;
       const entries = await journalRepo.findAll(tenantId);
 
       reply.status(200).send(
@@ -195,33 +192,24 @@ export class AccountingController {
       const costLayerRepo = (request.server as any).costLayerRepository as ICostLayerRepository;
       const tenantConfigRepo = (request.server as any).tenantConfigRepository as ITenantConfigRepository;
       const { variantId } = (request.params as any);
-      if ((request.query as any).quantity !== undefined && typeof (request.query as any).quantity !== "string") {
+      if (request.query && (request.query as any).quantity !== undefined && typeof (request.query as any).quantity !== "string") {
         return reply.status(400).send({ error: "Invalid quantity parameter." });
       }
-      if ((request.query as any).quantity !== undefined && typeof (request.query as any).quantity !== "string") {
-        return reply.status(400).send({ error: "Invalid quantity parameter." });
-      }
-      const parsedQuantity = (request.query as any).quantity !== undefined ? parseInt((request.query as any).quantity as string, 10) : NaN;
+      const parsedQuantity = request.query && (request.query as any).quantity !== undefined ? parseInt((request.query as any).quantity as string, 10) : NaN;
       const quantity = isNaN(parsedQuantity) || parsedQuantity <= 0 ? 1 : parsedQuantity;
 
-      if ((request.query as any).tenantId !== undefined && typeof (request.query as any).tenantId !== "string") {
+      if (request.query && (request.query as any).tenantId !== undefined && typeof (request.query as any).tenantId !== "string") {
         return reply.status(400).send({ error: "Invalid tenantId parameter." });
       }
-      if ((request.query as any).tenantId !== undefined && typeof (request.query as any).tenantId !== "string") {
-        return reply.status(400).send({ error: "Invalid tenantId parameter." });
-      }
-      let tenantId = (request.query as any).tenantId ? ((request.query as any).tenantId as string).trim() : "";
+      let tenantId = request.query && (request.query as any).tenantId ? ((request.query as any).tenantId as string).trim() : "";
       if (!tenantId) {
         tenantId = "DEFAULT";
       }
 
-      if ((request.query as any).method !== undefined && typeof (request.query as any).method !== "string") {
+      if (request.query && (request.query as any).method !== undefined && typeof (request.query as any).method !== "string") {
         return reply.status(400).send({ error: "Invalid method parameter." });
       }
-      if ((request.query as any).method !== undefined && typeof (request.query as any).method !== "string") {
-        return reply.status(400).send({ error: "Invalid method parameter." });
-      }
-      let method = (request.query as any).method ? ((request.query as any).method as string).trim() : "";
+      let method = request.query && (request.query as any).method ? ((request.query as any).method as string).trim() : "";
       if (!method) {
         const config = await tenantConfigRepo.findByTenantId(tenantId);
         if (config) {
