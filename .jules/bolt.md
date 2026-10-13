@@ -151,3 +151,7 @@
 ## 2024-05-18 - Promise.all Connection Pool Exhaustion Mitigation
 **Learning:** In combinatorial or large-batch logic (e.g., `decrementForKitSale`, `consumeLayersBatch`), using unbounded `Promise.all` mapping over entities for DB operations causes linear O(N) connection pool exhaustion and deadlocks under load. A completely sequential fallback (e.g., `for...of` loop) is an extreme anti-pattern, causing O(N) linear slowdowns.
 **Action:** When refactoring unbounded `Promise.all` without an underlying batch repository method (like `findBySkus`), always use chunked batch processing (e.g., slicing into arrays of 10 and executing `await Promise.all(chunk)`).
+
+## 2024-05-18 - Promise.all Connection Pool Exhaustion Mitigation in OpeningBalanceService and batchSave
+**Learning:** Using unbounded `Promise.all` mapping over entities for DB operations (like fallback `findBySku` and `.save` calls) causes connection pool exhaustion and deadlocks under load. A completely sequential fallback (e.g., `for...of` loop) is an extreme anti-pattern, causing O(N) linear slowdowns.
+**Action:** When refactoring unbounded `Promise.all` without an underlying batch repository method, always use chunked batch processing (e.g., slicing into arrays of 10 and executing `await Promise.all(chunk)`).
