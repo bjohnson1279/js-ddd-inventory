@@ -103,6 +103,7 @@ describe('Security Utilities', () => {
 
   describe('encryptSymmetric and decryptSymmetric', () => {
     it('should encrypt and decrypt a string successfully', () => {
+      process.env.ENCRYPTION_KEY = 'test_fallback_secret_key_123456';
       const plaintext = 'sensitive_db_password_123';
       const encrypted = encryptSymmetric(plaintext);
       expect(encrypted).not.toBe(plaintext);
@@ -131,17 +132,19 @@ describe('Security Utilities', () => {
       expect(decrypted).toBe('test_data');
     });
 
-    it('should use fallback secret key when NODE_ENV is test and ENCRYPTION_KEY is unset', () => {
+    it('should throw an error when NODE_ENV is test and ENCRYPTION_KEY is unset due to removal of fallback', () => {
       delete process.env.ENCRYPTION_KEY;
       process.env.NODE_ENV = 'test';
 
-      const encrypted = encryptSymmetric('test_data');
-      const decrypted = decryptSymmetric(encrypted);
-      expect(decrypted).toBe('test_data');
+      expect(() => encryptSymmetric('test_data')).toThrow('ENCRYPTION_KEY environment variable is required for security.');
     });
   });
 
   describe('parseAllowedOrigins', () => {
+    beforeEach(() => {
+      process.env.JWT_SECRET = 'test_jwt_secret';
+      process.env.ENCRYPTION_KEY = 'test_fallback_secret_key_123456';
+    });
     it('should return default origin if process.env.FRONTEND_URL is undefined or empty', () => {
       const { parseAllowedOrigins } = require('../../../src/index');
       expect(parseAllowedOrigins(undefined)).toEqual(['http://localhost:3080']);
