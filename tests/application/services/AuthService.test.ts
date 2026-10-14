@@ -12,7 +12,7 @@ describe('AuthService Unit Tests', () => {
     },
   };
 
-  const JWT_SECRET = process.env.JWT_SECRET || 'test';
+  const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
 
   describe('Symmetric (HS256) Token Verification', () => {
     it('should create and verify a symmetric token', async () => {

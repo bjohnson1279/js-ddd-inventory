@@ -103,7 +103,7 @@ describe('Security Utilities', () => {
 
   describe('encryptSymmetric and decryptSymmetric', () => {
     it('should encrypt and decrypt a string successfully', () => {
-      process.env.ENCRYPTION_KEY = 'test_fallback_secret_key_123456';
+      process.env.ENCRYPTION_KEY = 'test_key';
       const plaintext = 'sensitive_db_password_123';
       const encrypted = encryptSymmetric(plaintext);
       expect(encrypted).not.toBe(plaintext);
@@ -143,7 +143,7 @@ describe('Security Utilities', () => {
   describe('parseAllowedOrigins', () => {
     beforeEach(() => {
       process.env.JWT_SECRET = 'test_jwt_secret';
-      process.env.ENCRYPTION_KEY = 'test_fallback_secret_key_123456';
+      process.env.ENCRYPTION_KEY = 'test_key';
     });
     it('should return default origin if process.env.FRONTEND_URL is undefined or empty', () => {
       const { parseAllowedOrigins } = require('../../../src/index');
