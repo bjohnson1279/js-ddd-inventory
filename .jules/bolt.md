@@ -155,3 +155,6 @@
 ## 2024-05-18 - Promise.all Connection Pool Exhaustion Mitigation in OpeningBalanceService and batchSave
 **Learning:** Using unbounded `Promise.all` mapping over entities for DB operations (like fallback `findBySku` and `.save` calls) causes connection pool exhaustion and deadlocks under load. A completely sequential fallback (e.g., `for...of` loop) is an extreme anti-pattern, causing O(N) linear slowdowns.
 **Action:** When refactoring unbounded `Promise.all` without an underlying batch repository method, always use chunked batch processing (e.g., slicing into arrays of 10 and executing `await Promise.all(chunk)`).
+## 2026-10-13 - Prisma createMany vs Promise.all in Event Processing
+**Learning:** In asynchronous event processors like `OutboxProcessor`, executing multiple concurrent `prisma.create` queries using `Promise.all` causes connection pool exhaustion and unnecessary N+1 roundtrips.
+**Action:** When inserting multiple related database rows (like webhook deliveries), always replace concurrent `Promise.all` insertions with Prisma's `createMany` bulk insert API to consolidate database operations and improve throughput.
