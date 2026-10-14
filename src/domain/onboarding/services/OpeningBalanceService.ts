@@ -55,13 +55,21 @@ export class OpeningBalanceService {
     if (this.inventoryRepository.findBySkus) {
       existingItems = await this.inventoryRepository.findBySkus(skus, onboarding.locationId);
     } else {
-      const fetchPromises = skus.map(async (sku) => {
-        const item = await this.inventoryRepository.findBySku(sku, onboarding.locationId);
-        if (item) {
-          existingItems.push(item);
-        }
-      });
-      await Promise.all(fetchPromises);
+      // Optimization: Bounded concurrency chunking
+      // Fallback pre-fetching limits concurrent DB queries to batches of 10 to protect
+      // the connection pool while maintaining significantly higher throughput than sequential execution.
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < skus.length; i += CHUNK_SIZE) {
+        const chunk = skus.slice(i, i + CHUNK_SIZE);
+        await Promise.all(
+          chunk.map(async (sku) => {
+            const item = await this.inventoryRepository.findBySku(sku, onboarding.locationId);
+            if (item) {
+              existingItems.push(item);
+            }
+          })
+        );
+      }
     }
 
     const itemsBySku = new Map(existingItems.map((item) => [item.sku.getValue(), item]));
