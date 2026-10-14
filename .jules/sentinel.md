@@ -170,3 +170,8 @@
 **Vulnerability:** The application extracted parameters like `tenantId` and `timestamp` from `req.query` in controllers using TypeScript type assertions (e.g., `req.query.tenantId as string`) without runtime verification.
 **Learning:** TypeScript assertions do not exist at runtime. If an attacker provides an array or object in the query string (e.g., `?tenantId[]=foo`), it bypasses the type check. If this parameter is subsequently used in ORM queries, it can lead to NoSQL/ORM injection or filtering vulnerabilities.
 **Prevention:** Always enforce runtime type safety using `typeof req.query.param === 'string' ? req.query.param : undefined` (or a default value) when extracting single string parameters from Express `req.query`. Fixed the codebase where these vulnerabilities still existed.
+
+## $(date +%Y-%m-%d) - Remove Hardcoded Encryption Key Fallback in Security Utils
+**Vulnerability:** \`src/infrastructure/utils/security.ts\` and \`src/infrastructure/utils/encryption.ts\` contained a hardcoded secret key fallback (\`'test_fallback_secret_key_123456'\`).
+**Learning:** Hardcoded key fallbacks can allow insecure operations or accidental secret exposure if the \`ENCRYPTION_KEY\` environment variable is omitted in deployment. Requiring \`ENCRYPTION_KEY\` strictly without hardcoded fallback strings ensures missing configuration fails fast with an explicit error.
+**Prevention:** Always enforce \`ENCRYPTION_KEY\` without hardcoded default fallback strings in utility modules, and supply explicit mock keys in test environment variables.
