@@ -155,3 +155,7 @@
 ## 2026-10-13 - Prisma createMany vs Promise.all in Event Processing
 **Learning:** In asynchronous event processors like `OutboxProcessor`, executing multiple concurrent `prisma.create` queries using `Promise.all` causes connection pool exhaustion and unnecessary N+1 roundtrips.
 **Action:** When inserting multiple related database rows (like webhook deliveries), always replace concurrent `Promise.all` insertions with Prisma's `createMany` bulk insert API to consolidate database operations and improve throughput.
+
+## 2024-11-20 - Batching Nested Repository Operations Inside Loops
+**Learning:** In orchestration use cases like `ReceivePurchaseOrder`, iterating over items and sequentially calling a nested use case (e.g., `ReceiveStock`) that saves to the repository causes an N+1 write bottleneck. Even if data is pre-fetched, if the pre-fetched objects aren't properly mapped and tracked in memory to prevent fallback database queries, the optimization is useless.
+**Action:** When bulk processing items, fetch missing entities efficiently, accumulate modified aggregates in an in-memory `Map` (to cleanly handle duplicate item logic across loop iterations), and use a single concurrent `batchSave` operation at the end of the procedure instead of sequential writes within the loop.

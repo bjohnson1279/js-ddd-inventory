@@ -2,9 +2,11 @@ import { batchSave } from "../../utils/batchSave";
 import { IPurchaseOrderRepository } from "../../domain/repositories/IPurchaseOrderRepository";
 import { IInventoryRepository } from "../../domain/repositories/IInventoryRepository";
 import { ICostLayerRepository } from "../../domain/repositories/ICostLayerRepository";
-import { ReceiveStock } from "./ReceiveStock";
 import { InventoryCostLayer } from "../../domain/accounting/entities/InventoryCostLayer";
 import { SKU } from "../../domain/valueObjects/SKU";
+import { Quantity } from "../../domain/valueObjects/Quantity";
+import { InventoryItem } from "../../domain/aggregates/InventoryItem";
+import crypto from "crypto";
 
 export interface ReceivePurchaseOrderItemDTO {
   variantId: string;
@@ -29,28 +31,43 @@ export class ReceivePurchaseOrder {
       throw new Error(`Purchase order with ID ${dto.purchaseOrderId} not found.`);
     }
 
-    const receiveStock = new ReceiveStock(this.inventoryRepository);
-
     const costLayers: InventoryCostLayer[] = [];
 
     // Optimization: Index purchase order items by variantId to prevent O(N*M) nested lookups
     const poItemsMap = new Map(po.items.map((i) => [i.variantId, i]));
 
     // Optimization: Bulk pre-fetch inventory items to avoid N+1 queries.
-    // The underlying ReceiveStock use case internally executes `this.inventoryRepository.findBySku`.
-    // By invoking `findBySkus` here first, a properly configured repository implementation
-    // (such as Prisma with a dataloader/transaction context or an in-memory cache layer)
-    // will satisfy the inner queries from memory.
     const skusToFetch = dto.items.map(i => SKU.create(i.variantId));
-    if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {
-      await this.inventoryRepository.findBySkus(skusToFetch, po.locationId);
+
+    const preFetchedItems = new Map<string, InventoryItem>();
+    const preFetchedKeys = new Set<string>();
+
+    if (skusToFetch.length > 0) {
+      for (const sku of skusToFetch) {
+        preFetchedKeys.add(sku.getValue());
+      }
+
+      if (this.inventoryRepository.findBySkus) {
+        const items = await this.inventoryRepository.findBySkus(skusToFetch, po.locationId);
+        for (const item of items) {
+          preFetchedItems.set(item.sku.getValue(), item);
+        }
+      } else {
+        const CHUNK_SIZE = 10;
+        for (let i = 0; i < skusToFetch.length; i += CHUNK_SIZE) {
+          const chunk = skusToFetch.slice(i, i + CHUNK_SIZE);
+          await Promise.all(chunk.map(async sku => {
+            const item = await this.inventoryRepository.findBySku(sku, po.locationId);
+            if (item) {
+              preFetchedItems.set(item.sku.getValue(), item);
+            }
+          }));
+        }
+      }
     }
 
-    // Optimization: Iterate sequentially rather than concurrently via Promise.all.
-    // Concurrent execution of `receiveStock.execute(...)` results in race conditions
-    // where multiple updates to the same SKU overwrite each other due to fetching
-    // stale optimistic locks simultaneously. Sequential execution guarantees safety
-    // at the slight cost of synchronous await steps, offset by the pre-fetch optimization.
+    const inventoryItemsToSave = new Map<string, InventoryItem>();
+
     for (const item of dto.items) {
       const poItem = poItemsMap.get(item.variantId);
       if (!poItem) {
@@ -60,8 +77,24 @@ export class ReceivePurchaseOrder {
       // 1. Update PO received quantity & state
       po.receiveItems(item.variantId, item.quantityReceived);
 
-      // 2. Receive physical stock safely using the underlying use case rules
-      await receiveStock.execute(item.variantId, item.quantityReceived, po.locationId);
+      // 2. Receive physical stock safely without N+1 queries
+      const sku = SKU.create(item.variantId);
+      let invItem = inventoryItemsToSave.get(sku.getValue()) || preFetchedItems.get(sku.getValue()) || null;
+      if (!invItem && !preFetchedKeys.has(sku.getValue())) {
+        invItem = await this.inventoryRepository.findBySku(sku, po.locationId);
+      }
+
+      if (!invItem) {
+        invItem = InventoryItem.create(
+          crypto.randomUUID(),
+          sku,
+          po.locationId,
+          Quantity.create(0)
+        );
+      }
+
+      invItem.receiveStock(Quantity.create(item.quantityReceived));
+      inventoryItemsToSave.set(sku.getValue(), invItem);
 
       // 3. Prepare Cost Layer
       const layerId = crypto.randomUUID();
@@ -78,14 +111,11 @@ export class ReceivePurchaseOrder {
       costLayers.push(costLayer);
     }
 
-    const savePromises: Promise<any>[] = [];
-
-    const p = batchSave(this.costLayerRepository, costLayers);
-    savePromises.push(p);
-
-    // 4. Save updated PO concurrently with cost layers
-    savePromises.push(this.poRepository.save(po));
-
-    await Promise.all(savePromises);
+    // Save updated PO concurrently with cost layers and inventory items
+    await Promise.all([
+      batchSave(this.inventoryRepository, Array.from(inventoryItemsToSave.values())),
+      batchSave(this.costLayerRepository, costLayers),
+      this.poRepository.save(po)
+    ]);
   }
 }
