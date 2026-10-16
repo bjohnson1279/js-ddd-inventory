@@ -1,36 +1,31 @@
 const fs = require('fs');
-const path = require('path');
 
-function walkDir(dir, callback) {
-    fs.readdirSync(dir).forEach(f => {
-        let dirPath = path.join(dir, f);
-        let isDirectory = fs.statSync(dirPath).isDirectory();
-        isDirectory ? walkDir(dirPath, callback) : callback(dirPath);
-    });
-}
+const testFiles = [
+  'tests/infrastructure/http/E2E.test.ts',
+  'tests/infrastructure/http/WarehouseLocationE2E.test.ts',
+  'tests/infrastructure/http/ForecastingE2E.test.ts',
+  'tests/infrastructure/http/AuthE2E.test.ts',
+  'tests/infrastructure/http/RMAE2E.test.ts',
+  'tests/infrastructure/http/AllocationsE2E.test.ts',
+  'tests/infrastructure/http/ShippingCarrierE2E.test.ts',
+  'tests/infrastructure/http/FefoRecallE2E.test.ts',
+  'tests/infrastructure/database/TenantRegistry.test.ts',
+  'tests/infrastructure/http/InventoryAuditE2E.test.ts',
+  'tests/infrastructure/http/OutboxE2E.test.ts',
+  'tests/infrastructure/http/AuditE2E.test.ts',
+  'tests/infrastructure/http/PurchaseOrderE2E.test.ts',
+  'tests/infrastructure/http/ReorderPolicyE2E.test.ts',
+  'tests/infrastructure/workers/WebhookDeliveryWorker.test.ts',
+  'tests/infrastructure/http/ComplianceE2E.test.ts',
+  'tests/infrastructure/http/ApprovalE2E.test.ts',
+];
 
-walkDir('tests', (filePath) => {
-    if (filePath.endsWith('.ts') || filePath.endsWith('.js')) {
-        let content = fs.readFileSync(filePath, 'utf8');
-        let original = content;
-
-        // supertest integration
-        content = content.replace(/request\(app\)/g, 'request(app.server)');
-
-        // if there's request(app.server) and no app.ready(), we might need to add it to beforeAll
-        // but let's just try replacing first
-        
-        // express imports
-        content = content.replace(/import express from ["']express["'];?/g, 'import fastify from "fastify";');
-        content = content.replace(/const app = express\(\);?/g, 'const app = fastify();');
-        content = content.replace(/import \{.*?Request.*?\} from ["']express["'];?/g, '');
-        content = content.replace(/import \{.*?Response.*?\} from ["']express["'];?/g, '');
-        
-        // mock routes
-        content = content.replace(/app\.use\(\(req, res, next\) => \{/g, 'app.addHook("preHandler", (req, res, next) => {');
-
-        if (content !== original) {
-            fs.writeFileSync(filePath, content);
-        }
+for (const file of testFiles) {
+  if (fs.existsSync(file)) {
+    let content = fs.readFileSync(file, 'utf8');
+    if (!content.includes('process.env.ENCRYPTION_KEY =')) {
+      content = 'process.env.ENCRYPTION_KEY = "test_encryption_key";\n' + content;
+      fs.writeFileSync(file, content, 'utf8');
     }
-});
+  }
+}

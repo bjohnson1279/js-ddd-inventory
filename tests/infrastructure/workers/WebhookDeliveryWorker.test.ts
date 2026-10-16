@@ -1,3 +1,4 @@
+process.env.ENCRYPTION_KEY = "test_encryption_key";
 import { WebhookDeliveryWorker } from "../../../src/infrastructure/workers/WebhookDeliveryWorker";
 import { prisma } from "../../../src/infrastructure/database/prisma";
 import crypto from "crypto";
