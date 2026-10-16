@@ -1,3 +1,4 @@
+process.env.ENCRYPTION_KEY = "test_encryption_key";
 import { TenantRegistry } from '../../../src/infrastructure/database/TenantRegistry';
 
 describe('TenantRegistry', () => {
