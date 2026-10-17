@@ -1,4 +1,3 @@
-process.env.ENCRYPTION_KEY = "test_encryption_key";
 process.env.COMPLIANCE_PRIVATE_KEY = "test_key";
 process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = "dummy_test_secret";
