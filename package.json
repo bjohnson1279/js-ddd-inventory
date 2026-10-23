@@ -27,7 +27,7 @@
     "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
     "fast-csv": "^5.0.7",
-    "fastify": "^5.12.5",
+    "fastify": "^5.12.6",
     "jsonwebtoken": "^9.0.3",
     "kafkajs": "^2.2.4",
     "mqtt": "^5.15.2",
