@@ -69,15 +69,10 @@ export class CostLayerService {
       activeLayersByVariant = await this.layers.getActiveLayersByVariantIds(variantIds);
     } else {
       activeLayersByVariant = new Map<string, InventoryCostLayer[]>();
-      const CHUNK_SIZE = 10;
-      for (let i = 0; i < variantIds.length; i += CHUNK_SIZE) {
-        const chunk = variantIds.slice(i, i + CHUNK_SIZE);
-        await Promise.all(
-          chunk.map(async (vId) => {
-            const layers = await this.layers.getActiveLayers(vId);
-            activeLayersByVariant.set(vId, layers);
-          })
-        );
+      // Optimization: Iterate sequentially rather than concurrently via Promise.all.
+      for (const vId of variantIds) {
+        const layers = await this.layers.getActiveLayers(vId);
+        activeLayersByVariant.set(vId, layers);
       }
     }
 
@@ -126,15 +121,10 @@ export class CostLayerService {
       activeLayersByVariant = await this.layers.getActiveLayersByVariantIds(variantIds);
     } else {
       activeLayersByVariant = new Map<string, InventoryCostLayer[]>();
-      const CHUNK_SIZE = 10;
-      for (let i = 0; i < variantIds.length; i += CHUNK_SIZE) {
-        const chunk = variantIds.slice(i, i + CHUNK_SIZE);
-        await Promise.all(
-          chunk.map(async (vId) => {
-            const layers = await this.layers.getActiveLayers(vId);
-            activeLayersByVariant.set(vId, layers);
-          })
-        );
+      // Optimization: Iterate sequentially rather than concurrently via Promise.all.
+      for (const vId of variantIds) {
+        const layers = await this.layers.getActiveLayers(vId);
+        activeLayersByVariant.set(vId, layers);
       }
     }
 

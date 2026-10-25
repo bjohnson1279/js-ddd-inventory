@@ -165,3 +165,7 @@
 ## 2026-10-18 - Promise.all Connection Pool Exhaustion Mitigation in Prisma Transactions
 **Learning:** Using unbounded `Promise.all` for database inserts and upserts inside a `$transaction` (e.g. `Promise.all(po.items.map(...))`) in Prisma repositories causes connection contention and unpredictable deadlocks because Prisma queues these concurrent requests on a single shared transaction connection.
 **Action:** When executing sequential saves or upserts within a Prisma transaction, always refactor `Promise.all` mappings into synchronous `for...of` loops unless using native bulk operations like `createMany`/`updateMany`. This completely prevents transaction deadlocks and guarantees safe execution inside `$transaction`.
+
+## 2024-11-21 - Promise.all Refactoring to Iteration
+**Learning:** Using `Promise.all` wrapped over an array to fire numerous single-record database lookups (e.g., `Promise.all(skus.map(sku => repo.findBySku(sku)))`) inside Use Cases causes N+1 query latencies, massive connection pool acquisitions, and high RDBMS contention.
+**Action:** Always prefer iterating sequentially using a `for...of` loop or executing database lookups using bulk operations where possible instead of using `Promise.all` in `ReceivePurchaseOrder`, `ReconcileInventoryAudit`, `DisassembleKit`, `CreateInventoryAudit`, `ReceiveRMA`, `CostLayerService`, `OpeningBalanceService`, `InventoryService`, and `batchSave`.

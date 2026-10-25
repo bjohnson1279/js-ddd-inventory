@@ -53,14 +53,13 @@ export class ReconcileInventoryAudit {
     if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {
       inventoryItems = await this.inventoryRepository.findBySkus(skusToFetch, audit.locationId);
     } else if (skusToFetch.length > 0) {
-      const results = [];
-      const CHUNK_SIZE = 10;
-      for (let i = 0; i < skusToFetch.length; i += CHUNK_SIZE) {
-        const chunk = skusToFetch.slice(i, i + CHUNK_SIZE);
-        const chunkResults = await Promise.all(chunk.map(sku => this.inventoryRepository.findBySku(sku, audit.locationId)));
-        results.push(...chunkResults);
+      // Optimization: Iterate sequentially rather than concurrently via Promise.all.
+      for (const sku of skusToFetch) {
+        const item = await this.inventoryRepository.findBySku(sku, audit.locationId);
+        if (item) {
+          inventoryItems.push(item);
+        }
       }
-      inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
     }
     const inventoryItemsMap = new Map(inventoryItems.map(i => [i.sku.getValue(), i]));
     const modifiedInventoryItems = new Map<string, InventoryItem>();
@@ -117,13 +116,10 @@ export class ReconcileInventoryAudit {
           }
         }
       } else {
-        const CHUNK_SIZE = 10;
-        for (let i = 0; i < uniqueVariantIds.length; i += CHUNK_SIZE) {
-          const chunk = uniqueVariantIds.slice(i, i + CHUNK_SIZE);
-          await Promise.all(chunk.map(async variantId => {
-            const layers = await this.costLayerRepository.getActiveLayers(variantId, "desc");
-            activeLayersMap.set(variantId, layers);
-          }));
+        // Optimization: Iterate sequentially rather than concurrently via Promise.all.
+        for (const variantId of uniqueVariantIds) {
+          const layers = await this.costLayerRepository.getActiveLayers(variantId, "desc");
+          activeLayersMap.set(variantId, layers);
         }
       }
     }
@@ -224,10 +220,9 @@ export class ReconcileInventoryAudit {
       }
     }
 
-    const CHUNK_SIZE = 10;
-    for (let i = 0; i < journalPromises.length; i += CHUNK_SIZE) {
-      const chunk = journalPromises.slice(i, i + CHUNK_SIZE);
-      await Promise.all(chunk.map(fn => fn()));
+    // Optimization: Iterate sequentially rather than concurrently via Promise.all.
+    for (const fn of journalPromises) {
+      await fn();
     }
 
     // Save batched inventory items
