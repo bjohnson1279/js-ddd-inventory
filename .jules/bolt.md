@@ -169,3 +169,7 @@
 ## 2024-10-21 - Chunked Concurrency Optimization in Fallback Sequential DB Lookups
 **Learning:** In fallback paths where batch DB fetching methods (e.g. `findBySkus`) are unavailable, iterating arrays with sequential `for...of` loops prevents connection exhaustion but introduces a severe O(N) linear performance slowdown.
 **Action:** Always refactor purely sequential loop DB operations into chunked bounded concurrency loops (e.g. `slice` in chunks of 10 and map `await Promise.all(chunk)`). This balances database connection pool limits while preserving highly performant asynchronous query execution.
+
+## 2026-10-25 - Bounded Concurrency Chunking for Webhook Processing
+**Learning:** Using unbounded `Promise.all` for database reads/writes (like `dispatchStock.execute`) inside webhook event handlers (such as `ShopifyWebhookController`) can exhaust connection pools when processing payloads containing many unique items.
+**Action:** When handling webhook payloads with collections of items, chunk concurrent database operations into bounded batches (e.g., chunks of 10) to maintain high throughput while protecting the database connection pool.
