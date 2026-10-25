@@ -32,7 +32,7 @@ export function authMiddleware(request: AuthenticatedRequest, reply: any, next: 
 
   const token = authHeader.split(" ")[1];
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as any;
     request.user = {
       id: decoded.actorId || decoded.userId,
       role: decoded.role || "viewer",

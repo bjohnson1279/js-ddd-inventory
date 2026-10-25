@@ -71,10 +71,14 @@ export class AssembleKit {
     if (this.inventoryRepository.findBySkus && skusToFetch.length > 0) {
       inventoryItems = await this.inventoryRepository.findBySkus(skusToFetch, locationId);
     } else if (skusToFetch.length > 0) {
-      const results = [];
-      for (const sku of skusToFetch) {
-        const item = await this.inventoryRepository.findBySku(sku, locationId);
-        results.push(item);
+      const results: (InventoryItem | null)[] = [];
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < skusToFetch.length; i += CHUNK_SIZE) {
+        const chunk = skusToFetch.slice(i, i + CHUNK_SIZE);
+        await Promise.all(chunk.map(async (sku: SKU) => {
+          const item = await this.inventoryRepository.findBySku(sku, locationId);
+          results.push(item);
+        }));
       }
       inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
     }

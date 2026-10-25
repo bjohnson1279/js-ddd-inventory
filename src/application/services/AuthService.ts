@@ -128,10 +128,10 @@ export class AuthService implements IAuthService {
 
       if (!decoded || typeof decoded === 'string' || !decoded.header) {
         const payload = jwt.verify(
-          token,
-          JWT_SECRET,
-          { issuer: 'https://inventory.example.com' }
-        ) as jwt.JwtPayload;
+        token,
+        JWT_SECRET,
+        { issuer: 'https://inventory.example.com', algorithms: ['HS256'] }
+      ) as jwt.JwtPayload;
         return { tenantId: payload.tenantId, iat: payload.iat as number, exp: payload.exp as number } as TokenPayload;
       }
 
@@ -154,7 +154,7 @@ export class AuthService implements IAuthService {
       const payload = jwt.verify(
         token,
         JWT_SECRET,
-        { issuer: 'https://inventory.example.com' }
+        { issuer: 'https://inventory.example.com', algorithms: ['HS256'] }
       ) as jwt.JwtPayload;
 
       return { tenantId: payload.tenantId, iat: payload.iat as number, exp: payload.exp as number } as TokenPayload;

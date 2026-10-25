@@ -162,3 +162,10 @@
 ## 2024-11-20 - Batching Nested Repository Operations Inside Loops
 **Learning:** In orchestration use cases like `ReceivePurchaseOrder`, iterating over items and sequentially calling a nested use case (e.g., `ReceiveStock`) that saves to the repository causes an N+1 write bottleneck. Even if data is pre-fetched, if the pre-fetched objects aren't properly mapped and tracked in memory to prevent fallback database queries, the optimization is useless.
 **Action:** When bulk processing items, fetch missing entities efficiently, accumulate modified aggregates in an in-memory `Map` (to cleanly handle duplicate item logic across loop iterations), and use a single concurrent `batchSave` operation at the end of the procedure instead of sequential writes within the loop.
+## 2026-10-18 - Promise.all Connection Pool Exhaustion Mitigation in Prisma Transactions
+**Learning:** Using unbounded `Promise.all` for database inserts and upserts inside a `$transaction` (e.g. `Promise.all(po.items.map(...))`) in Prisma repositories causes connection contention and unpredictable deadlocks because Prisma queues these concurrent requests on a single shared transaction connection.
+**Action:** When executing sequential saves or upserts within a Prisma transaction, always refactor `Promise.all` mappings into synchronous `for...of` loops unless using native bulk operations like `createMany`/`updateMany`. This completely prevents transaction deadlocks and guarantees safe execution inside `$transaction`.
+
+## 2024-10-21 - Chunked Concurrency Optimization in Fallback Sequential DB Lookups
+**Learning:** In fallback paths where batch DB fetching methods (e.g. `findBySkus`) are unavailable, iterating arrays with sequential `for...of` loops prevents connection exhaustion but introduces a severe O(N) linear performance slowdown.
+**Action:** Always refactor purely sequential loop DB operations into chunked bounded concurrency loops (e.g. `slice` in chunks of 10 and map `await Promise.all(chunk)`). This balances database connection pool limits while preserving highly performant asynchronous query execution.

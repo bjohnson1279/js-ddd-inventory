@@ -157,7 +157,7 @@
 - **Strict PSR-4 Isolation in PHP**: In PHP codebases, place every class, interface, and enum in its own file named `<ClassName>.php` matching its namespace path. Never combine multiple domain classes into a single file.
 - **Domain Contract Verification**: Always inspect entity and aggregate root definitions to verify exact method and property names before writing service logic or test fixtures.
 - **Clean Markdown Formatting**: Always append journal entries using actual newline characters, never literal string escape sequences.
-## $(date +%Y-%m-%d) - Secure CORS Configuration
+## 2026-10-16 - Secure CORS Configuration
 **Vulnerability:** Fastify server was configured with `origin: '*'` in `src/index.ts`, which represents an overly permissive CORS configuration that could allow unauthorized cross-origin requests.
 **Learning:** Even if an environment variable for allowed origins exists and is parsed correctly (e.g., `parseAllowedOrigins(process.env.FRONTEND_URL)`), it can be easily bypassed or ignored if developers hardcode `'*'` during rapid development or debugging.
 **Prevention:** Always ensure that production-grade web frameworks bind their CORS origins dynamically based on validated, environment-specific configurations rather than wildcards. Review entry point files (`index.ts`, `app.ts`) for wildcard configurations early in the security audit process.
@@ -171,7 +171,17 @@
 **Learning:** TypeScript assertions do not exist at runtime. If an attacker provides an array or object in the query string (e.g., `?tenantId[]=foo`), it bypasses the type check. If this parameter is subsequently used in ORM queries, it can lead to NoSQL/ORM injection or filtering vulnerabilities.
 **Prevention:** Always enforce runtime type safety using `typeof req.query.param === 'string' ? req.query.param : undefined` (or a default value) when extracting single string parameters from Express `req.query`. Fixed the codebase where these vulnerabilities still existed.
 
-## $(date +%Y-%m-%d) - Remove Hardcoded Encryption Key Fallback in Security Utils
+## 2026-10-16 - Remove Hardcoded Encryption Key Fallback in Security Utils
 **Vulnerability:** \`src/infrastructure/utils/security.ts\` and \`src/infrastructure/utils/encryption.ts\` contained a hardcoded secret key fallback (\`'test_fallback_secret_key_123456'\`).
 **Learning:** Hardcoded key fallbacks can allow insecure operations or accidental secret exposure if the \`ENCRYPTION_KEY\` environment variable is omitted in deployment. Requiring \`ENCRYPTION_KEY\` strictly without hardcoded fallback strings ensures missing configuration fails fast with an explicit error.
 **Prevention:** Always enforce \`ENCRYPTION_KEY\` without hardcoded default fallback strings in utility modules, and supply explicit mock keys in test environment variables.
+
+## 2026-10-16 - JWT Algorithm Confusion Vulnerability
+**Vulnerability:** The application used `jwt.verify(token, JWT_SECRET)` without explicitly specifying the allowed `algorithms`. This allows an attacker to potentially bypass authentication by changing the algorithm in the JWT header to `none` or to `HS256` while signing the token using the server's public key (if asymmetric keys are used elsewhere).
+**Learning:** `jsonwebtoken`'s `verify` function relies on the `alg` header in the JWT by default unless explicitly constrained. This "fail-open" default allows algorithm confusion attacks.
+**Prevention:** Always enforce the expected algorithm by explicitly passing the `{ algorithms: ['HS256'] }` (or appropriate asymmetric algorithm) option to `jwt.verify()`.
+
+## 2026-10-18 - [Express Parameter Type Confusion]
+**Vulnerability:** The application extracted parameters from `req.query` in `ReorderPolicyController.ts`, `ShippingController.ts`, and `aging.routes.ts` using TypeScript type assertions (e.g., `req.query.locationId as string`) without runtime verification.
+**Learning:** TypeScript assertions do not exist at runtime. If an attacker provides an array or object in the query string (e.g., `?locationId[]=foo`), it bypasses the type check. If this parameter is subsequently used in ORM queries or backend logic, it can lead to NoSQL/ORM injection, filtering vulnerabilities, or application crashes.
+**Prevention:** Always enforce runtime type safety using `typeof req.query.param === 'string' ? req.query.param : undefined` (or a default value) when extracting single string parameters from Express/Fastify `req.query`.
