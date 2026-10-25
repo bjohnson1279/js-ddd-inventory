@@ -165,3 +165,7 @@
 ## 2026-10-18 - Promise.all Connection Pool Exhaustion Mitigation in Prisma Transactions
 **Learning:** Using unbounded `Promise.all` for database inserts and upserts inside a `$transaction` (e.g. `Promise.all(po.items.map(...))`) in Prisma repositories causes connection contention and unpredictable deadlocks because Prisma queues these concurrent requests on a single shared transaction connection.
 **Action:** When executing sequential saves or upserts within a Prisma transaction, always refactor `Promise.all` mappings into synchronous `for...of` loops unless using native bulk operations like `createMany`/`updateMany`. This completely prevents transaction deadlocks and guarantees safe execution inside `$transaction`.
+
+## 2026-10-25 - Bounded Concurrency Chunking for Webhook Processing
+**Learning:** Using unbounded `Promise.all` for database reads/writes (like `dispatchStock.execute`) inside webhook event handlers (such as `ShopifyWebhookController`) can exhaust connection pools when processing payloads containing many unique items.
+**Action:** When handling webhook payloads with collections of items, chunk concurrent database operations into bounded batches (e.g., chunks of 10) to maintain high throughput while protecting the database connection pool.

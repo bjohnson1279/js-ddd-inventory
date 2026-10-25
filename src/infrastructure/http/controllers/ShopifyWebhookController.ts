@@ -74,12 +74,20 @@ export class ShopifyWebhookController {
         }
       }
 
+      // Optimization: Bounded concurrency chunking
+      // Fallback batch dispatching uses bounded Promise.all to prevent database connection pool
+      // exhaustion and avoid O(N) linear slowdowns caused by sequential execution.
       const dispatchPromises = [];
       for (const [sku, quantity] of skuQuantities.entries()) {
         // We skip publishing back to Shopify because this change originated from Shopify
-        dispatchPromises.push(dispatchStock.execute(sku, quantity, "default", true));
+        dispatchPromises.push(() => dispatchStock.execute(sku, quantity, "default", true));
       }
-      await Promise.all(dispatchPromises);
+
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < dispatchPromises.length; i += CHUNK_SIZE) {
+        const chunk = dispatchPromises.slice(i, i + CHUNK_SIZE);
+        await Promise.all(chunk.map(fn => fn()));
+      }
 
       // Mark as processed
       await processedWebhookRepo.save(webhookId);
