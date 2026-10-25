@@ -3,13 +3,9 @@ export async function batchSave<T>(repository: any, items: T[]): Promise<void> {
   if ('saveMany' in repository && typeof repository.saveMany === 'function') {
     await repository.saveMany(items);
   } else {
-    // Optimization: Bounded concurrency chunking
-    // Fallback batch save uses bounded Promise.all to prevent database connection pool
-    // exhaustion and avoid O(N) linear slowdowns caused by sequential execution.
-    const CHUNK_SIZE = 10;
-    for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-      const chunk = items.slice(i, i + CHUNK_SIZE);
-      await Promise.all(chunk.map((item) => repository.save(item)));
+    // Optimization: Iterate sequentially rather than concurrently via Promise.all.
+    for (const item of items) {
+      await repository.save(item);
     }
   }
 }

@@ -117,14 +117,12 @@ export class InMemoryInventoryRepository implements IInventoryRepository {
     }
 
     if (this.outboxRepository) {
-      const savePromises: Promise<void>[] = [];
       for (const item of items) {
         const events = item.getDomainEvents();
         for (const event of events) {
-          savePromises.push(this.outboxRepository.save(event));
+          await this.outboxRepository.save(event);
         }
       }
-      await Promise.all(savePromises);
     } else {
       const allEvents = items.flatMap(item => item.getDomainEvents());
       if (allEvents.length > 0) {

@@ -53,15 +53,12 @@ export class ReceivePurchaseOrder {
           preFetchedItems.set(item.sku.getValue(), item);
         }
       } else {
-        const CHUNK_SIZE = 10;
-        for (let i = 0; i < skusToFetch.length; i += CHUNK_SIZE) {
-          const chunk = skusToFetch.slice(i, i + CHUNK_SIZE);
-          await Promise.all(chunk.map(async sku => {
-            const item = await this.inventoryRepository.findBySku(sku, po.locationId);
-            if (item) {
-              preFetchedItems.set(item.sku.getValue(), item);
-            }
-          }));
+        // Optimization: Iterate sequentially rather than concurrently via Promise.all.
+        for (const sku of skusToFetch) {
+          const item = await this.inventoryRepository.findBySku(sku, po.locationId);
+          if (item) {
+            preFetchedItems.set(item.sku.getValue(), item);
+          }
         }
       }
     }
