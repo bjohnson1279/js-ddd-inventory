@@ -85,7 +85,10 @@ export class ReorderPolicyController {
       const forecaster = new ReorderPointForecaster(velocityCalculator, productRepository, poRepository);
       const tenantId = (request as any).tenantId || "tenant-1";
 
-      const locationId = (request.query as any).locationId as string | undefined;
+      if (request.query && (request.query as any).locationId !== undefined && typeof (request.query as any).locationId !== "string") {
+        return reply.status(400).send({ error: "Invalid locationId parameter" });
+      }
+      const locationId = request.query && (request.query as any).locationId ? ((request.query as any).locationId as string).trim() : undefined;
       const results = await service.evaluatePolicies(tenantId, forecaster, inventoryRepository, 30, locationId);
 
       reply.status(200).send({ results });

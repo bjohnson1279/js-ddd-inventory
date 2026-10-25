@@ -24,11 +24,10 @@ export class AuditController {
   static async listDiscrepancies(request: any, reply: any) {
     try {
       const tenantId = (request as any).tenantId;
-      const { status } = (request.query as any);
-
-      if (status !== undefined && typeof status !== "string") {
+      if (request.query && (request.query as any).status !== undefined && typeof (request.query as any).status !== "string") {
         return reply.status(400).send({ error: "Invalid status parameter" });
       }
+      const status = request.query && typeof (request.query as any).status === "string" ? (request.query as any).status : undefined;
 
       const repo = new PrismaAuditDiscrepancyRepository();
       const discrepancies = await repo.findAll(tenantId, status as string || undefined);

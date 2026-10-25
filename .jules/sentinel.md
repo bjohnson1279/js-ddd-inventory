@@ -180,3 +180,8 @@
 **Vulnerability:** The application used `jwt.verify(token, JWT_SECRET)` without explicitly specifying the allowed `algorithms`. This allows an attacker to potentially bypass authentication by changing the algorithm in the JWT header to `none` or to `HS256` while signing the token using the server's public key (if asymmetric keys are used elsewhere).
 **Learning:** `jsonwebtoken`'s `verify` function relies on the `alg` header in the JWT by default unless explicitly constrained. This "fail-open" default allows algorithm confusion attacks.
 **Prevention:** Always enforce the expected algorithm by explicitly passing the `{ algorithms: ['HS256'] }` (or appropriate asymmetric algorithm) option to `jwt.verify()`.
+
+## 2026-10-18 - [Express Parameter Type Confusion]
+**Vulnerability:** The application extracted parameters from `req.query` in `ReorderPolicyController.ts`, `ShippingController.ts`, and `aging.routes.ts` using TypeScript type assertions (e.g., `req.query.locationId as string`) without runtime verification.
+**Learning:** TypeScript assertions do not exist at runtime. If an attacker provides an array or object in the query string (e.g., `?locationId[]=foo`), it bypasses the type check. If this parameter is subsequently used in ORM queries or backend logic, it can lead to NoSQL/ORM injection, filtering vulnerabilities, or application crashes.
+**Prevention:** Always enforce runtime type safety using `typeof req.query.param === 'string' ? req.query.param : undefined` (or a default value) when extracting single string parameters from Express/Fastify `req.query`.
