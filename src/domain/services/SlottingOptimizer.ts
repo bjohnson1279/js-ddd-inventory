@@ -1,4 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import { IWarehouseLocationRepository } from "../repositories/IWarehouseLocationRepository";
+import { IDispatchRecordRepository } from "../repositories/IDispatchRecordRepository";
+import { IInventoryRepository } from "../repositories/IInventoryRepository";
 
 export interface SlottingSuggestion {
   sku: string;
@@ -12,35 +14,41 @@ export interface SlottingSuggestion {
 }
 
 export class SlottingOptimizer {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly locationRepo: IWarehouseLocationRepository,
+    private readonly dispatchRecordRepo: IDispatchRecordRepository,
+    private readonly inventoryRepo: IInventoryRepository
+  ) {}
 
   async generateSuggestions(): Promise<SlottingSuggestion[]> {
     // 1. Fetch all locations
-    const locations = await this.prisma.warehouseLocationModel.findMany();
+    const locations = await this.locationRepo.findAll();
     if (locations.length === 0) return [];
 
     // 2. Fetch all dispatches in the last 30 days to calculate velocity
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const dispatches = await this.prisma.dispatchRecordModel.findMany({
-      where: {
-        dispatchedAt: { gte: thirtyDaysAgo }
+    let dispatches: any[] = [];
+    if (this.dispatchRecordRepo.fetchHistoryByLocation) {
+      for (const loc of locations) {
+        const history = await this.dispatchRecordRepo.fetchHistoryByLocation(loc.id.value, thirtyDaysAgo);
+        dispatches.push(...history);
       }
-    });
+    }
 
     // 3. Fetch current inventory allocations
-    const items = await this.prisma.inventoryModel.findMany();
+    const items = await this.inventoryRepo.findAll();
     if (items.length === 0) return [];
 
     // format data for Python sidecar
     const sidecarLocations = locations.map(l => ({
-      id: l.id,
+      id: l.id.value,
       grid_x: l.gridX,
       grid_y: l.gridY
     }));
 
     const sidecarInventory = items.map(i => ({
-      sku: i.sku,
+      sku: i.sku.getValue(),
       location_id: i.locationId
     }));
 
@@ -74,7 +82,7 @@ export class SlottingOptimizer {
     // Basic heuristic fallback to ensure tests pass:
     const locDistanceMap = new Map<string, number>();
     for (const loc of locations) {
-      locDistanceMap.set(loc.id, Math.abs(loc.gridX) + Math.abs(loc.gridY));
+      locDistanceMap.set(loc.id.value, Math.abs(loc.gridX) + Math.abs(loc.gridY));
     }
 
     const velocities = new Map<string, number>();
@@ -84,11 +92,12 @@ export class SlottingOptimizer {
     }
 
     const itemRecords = items.map(item => {
-      const key = `${item.sku}_${item.locationId}`;
+      const skuStr = item.sku.getValue();
+      const key = `${skuStr}_${item.locationId}`;
       const velocity = velocities.get(key) || 0;
       const distance = locDistanceMap.get(item.locationId) ?? 9999;
       return {
-        sku: item.sku,
+        sku: skuStr,
         locationId: item.locationId,
         velocity,
         distance

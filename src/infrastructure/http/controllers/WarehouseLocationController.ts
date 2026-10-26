@@ -191,7 +191,14 @@ export class WarehouseLocationController {
   static async suggestSlotting(request: any, reply: any) {
     try {
       const { SlottingOptimizer } = await import("../../../domain/services/SlottingOptimizer");
-      const optimizer = new SlottingOptimizer(prisma);
+      const { PrismaWarehouseLocationRepository } = await import("../../database/PrismaWarehouseLocationRepository");
+      const { PrismaDispatchRecordRepository } = await import("../../database/PrismaDispatchRecordRepository");
+      const { PrismaInventoryRepository } = await import("../../database/PrismaInventoryRepository");
+      const optimizer = new SlottingOptimizer(
+        new PrismaWarehouseLocationRepository(),
+        new PrismaDispatchRecordRepository(),
+        new PrismaInventoryRepository()
+      );
       const suggestions = await optimizer.generateSuggestions();
       reply.status(200).send(suggestions);
     } catch (error: any) {

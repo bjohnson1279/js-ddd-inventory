@@ -1,42 +1,56 @@
 import { SlottingOptimizer } from "../../../src/domain/services/SlottingOptimizer";
+import { WarehouseLocation } from "../../../src/domain/product/entities/WarehouseLocation";
+import { LocationId } from "../../../src/domain/valueObjects/LocationId";
+import { DispatchRecord } from "../../../src/domain/repositories/IDispatchRecordRepository";
+import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
+import { SKU } from "../../../src/domain/valueObjects/SKU";
+import { Quantity } from "../../../src/domain/valueObjects/Quantity";
 
 describe("SlottingOptimizer", () => {
-  let mockPrisma: any;
+  let mockLocationRepo: any;
+  let mockDispatchRepo: any;
+  let mockInventoryRepo: any;
 
   beforeEach(() => {
-    mockPrisma = {
-      warehouseLocationModel: {
-        findMany: jest.fn(),
-      },
-      dispatchRecordModel: {
-        findMany: jest.fn(),
-      },
-      inventoryModel: {
-        findMany: jest.fn(),
-      },
+    mockLocationRepo = {
+      findAll: jest.fn(),
+    };
+    mockDispatchRepo = {
+      fetchHistoryByLocation: jest.fn(),
+    };
+    mockInventoryRepo = {
+      findAll: jest.fn(),
     };
   });
 
   it("should generate suggestions to swap high-velocity items with low-velocity items closer to dispatch", async () => {
     // 1. Setup locations (distance: LOC-A = 2, LOC-B = 10)
-    mockPrisma.warehouseLocationModel.findMany.mockResolvedValue([
-      { id: "LOC-A", gridX: 1, gridY: 1 },
-      { id: "LOC-B", gridX: 5, gridY: 5 },
-    ]);
+    const locA = new WarehouseLocation(
+      new LocationId("LOC-A"),
+      "WH1", "A", "A01", "R1", "S1", "B1", 1000, 10, 1, 1
+    );
+    const locB = new WarehouseLocation(
+      new LocationId("LOC-B"),
+      "WH1", "B", "B01", "R1", "S1", "B1", 1000, 10, 5, 5
+    );
+    mockLocationRepo.findAll.mockResolvedValue([locA, locB]);
 
     // 2. Setup dispatches (velocity of SKU-FAST = 100, SKU-SLOW = 10)
-    mockPrisma.dispatchRecordModel.findMany.mockResolvedValue([
-      { sku: "SKU-FAST", locationId: "LOC-B", quantity: 100 },
-      { sku: "SKU-SLOW", locationId: "LOC-A", quantity: 10 },
-    ]);
+    const dispatchFast = new DispatchRecord("d1", "SKU-FAST", "LOC-B", 100, new Date());
+    const dispatchSlow = new DispatchRecord("d2", "SKU-SLOW", "LOC-A", 10, new Date());
+
+    mockDispatchRepo.fetchHistoryByLocation.mockImplementation(async (locationId: string) => {
+      if (locationId === "LOC-A") return [dispatchSlow];
+      if (locationId === "LOC-B") return [dispatchFast];
+      return [];
+    });
 
     // 3. Setup current inventory (SKU-FAST is at distant LOC-B, SKU-SLOW is at close LOC-A)
-    mockPrisma.inventoryModel.findMany.mockResolvedValue([
-      { sku: "SKU-FAST", locationId: "LOC-B" },
-      { sku: "SKU-SLOW", locationId: "LOC-A" },
-    ]);
+    const itemFast = InventoryItem.create("inv-1", SKU.create("SKU-FAST"), "LOC-B", Quantity.create(10));
+    const itemSlow = InventoryItem.create("inv-2", SKU.create("SKU-SLOW"), "LOC-A", Quantity.create(10));
+    mockInventoryRepo.findAll.mockResolvedValue([itemFast, itemSlow]);
 
-    const optimizer = new SlottingOptimizer(mockPrisma);
+    const optimizer = new SlottingOptimizer(mockLocationRepo, mockDispatchRepo, mockInventoryRepo);
     const suggestions = await optimizer.generateSuggestions();
 
     // Verify recommendations
@@ -58,10 +72,10 @@ describe("SlottingOptimizer", () => {
   });
 
   it("should return empty array if no locations or items exist", async () => {
-    mockPrisma.warehouseLocationModel.findMany.mockResolvedValue([]);
-    mockPrisma.inventoryModel.findMany.mockResolvedValue([]);
+    mockLocationRepo.findAll.mockResolvedValue([]);
+    mockInventoryRepo.findAll.mockResolvedValue([]);
 
-    const optimizer = new SlottingOptimizer(mockPrisma);
+    const optimizer = new SlottingOptimizer(mockLocationRepo, mockDispatchRepo, mockInventoryRepo);
     const suggestions = await optimizer.generateSuggestions();
     expect(suggestions).toEqual([]);
   });
