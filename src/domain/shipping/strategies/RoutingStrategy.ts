@@ -1,5 +1,10 @@
 import { GeoLocation } from "../../valueObjects/GeoLocation";
-import { CarrierRate } from "../../../application/ports/ICarrierService";
+
+export interface CarrierRate {
+  carrier: string;
+  rateCents: number;
+  estimatedDays: number;
+}
 
 export interface CandidateLocation {
   locationId: string;
