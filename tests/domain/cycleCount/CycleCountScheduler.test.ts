@@ -1,5 +1,5 @@
 import { CycleCountScheduler } from '../../../src/domain/cycleCount/CycleCountScheduler';
-import { CycleCountPlanModel } from '@prisma/client';
+import { CycleCountPlan } from '../../../src/domain/cycleCount/CycleCountPlan';
 
 describe('CycleCountScheduler', () => {
   let scheduler: CycleCountScheduler;
@@ -9,7 +9,7 @@ describe('CycleCountScheduler', () => {
   });
 
   it('should generate audits for active plans due for cycle count', () => {
-    const plans: CycleCountPlanModel[] = [
+    const plans: CycleCountPlan[] = [
       {
         id: 'plan-1',
         tenantId: 'tenant-1',

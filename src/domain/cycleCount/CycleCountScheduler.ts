@@ -1,8 +1,8 @@
-import { CycleCountPlanModel } from '@prisma/client';
+import { CycleCountPlan } from './CycleCountPlan';
 import { CycleCount } from './CycleCount';
 
 export class CycleCountScheduler {
-  public generateAudits(activePlans: CycleCountPlanModel[], lastCountDates: Record<string, Date>): CycleCount[] {
+  public generateAudits(activePlans: CycleCountPlan[], lastCountDates: Record<string, Date>): CycleCount[] {
     const generated: CycleCount[] = [];
     const now = new Date();
 
