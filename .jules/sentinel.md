@@ -185,3 +185,8 @@
 **Vulnerability:** The application extracted parameters from `req.query` in `ReorderPolicyController.ts`, `ShippingController.ts`, and `aging.routes.ts` using TypeScript type assertions (e.g., `req.query.locationId as string`) without runtime verification.
 **Learning:** TypeScript assertions do not exist at runtime. If an attacker provides an array or object in the query string (e.g., `?locationId[]=foo`), it bypasses the type check. If this parameter is subsequently used in ORM queries or backend logic, it can lead to NoSQL/ORM injection, filtering vulnerabilities, or application crashes.
 **Prevention:** Always enforce runtime type safety using `typeof req.query.param === 'string' ? req.query.param : undefined` (or a default value) when extracting single string parameters from Express/Fastify `req.query`.
+
+## $(date +%Y-%m-%d) - Fix Authorization Bypass in Fastify Middleware
+**Vulnerability:** Fastify/Express authorization middleware (`requireRole`, `requirePermission`) sent a 403 Forbidden response using `reply.status(403).send(...)` but failed to return immediately afterward.
+**Learning:** Sending a response in Fastify/Express does not automatically halt the execution of the function. If `return;` is omitted, the middleware will continue executing, eventually calling `next()` and allowing the unauthorized request to proceed to the protected route handler.
+**Prevention:** Always add an explicit `return;` statement immediately after calling `reply.send(...)` in middleware when handling unauthorized or invalid requests to enforce secure control flow.

@@ -57,6 +57,7 @@ export function requireRole(allowedRoles: string[]) {
           ", "
         )}]. Current role: ${request.user?.role || "none"}`
       });
+      return;
     }
     next();
   };
@@ -84,6 +85,7 @@ export function requirePermission(resource: string, action: string) {
       reply.status(403).send({
         error: `Forbidden: You do not have permission to perform this action. Required permission: ${required}.`
       });
+      return;
     }
     next();
   };
