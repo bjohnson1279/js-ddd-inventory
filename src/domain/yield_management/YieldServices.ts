@@ -1,7 +1,7 @@
-import { v4 as uuidv4 } from 'uuid';
 import { 
-  LiquidationProfile, InventoryYieldMetrics, PriceMarkdownRecommendation, MarkdownStatus 
+  LiquidationProfile, InventoryYieldMetrics, PriceMarkdownRecommendation
 } from './YieldEntities';
+import { RecommendationId } from './valueObjects/RecommendationId';
 
 export class YieldCalculationService {
   public calculateOptimalPrice(metrics: InventoryYieldMetrics, profile: LiquidationProfile): number {
@@ -42,7 +42,7 @@ export class DynamicPricingEngine {
       }
       
       return new PriceMarkdownRecommendation(
-        uuidv4(),
+        RecommendationId.create(),
         metrics.sku,
         optimalPrice,
         reasoning

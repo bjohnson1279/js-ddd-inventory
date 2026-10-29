@@ -19,14 +19,20 @@ export interface InventoryYieldMetrics {
   currentStockQuantity: number;
 }
 
+import { RecommendationId } from './valueObjects/RecommendationId';
+
 export class PriceMarkdownRecommendation {
+  public readonly id: RecommendationId;
+
   constructor(
-    public id: string,
+    id: RecommendationId | string,
     public sku: string,
     public recommendedPriceCents: number,
     public reasoning: string,
     public status: MarkdownStatus = MarkdownStatus.PROPOSED
-  ) {}
+  ) {
+    this.id = typeof id === 'string' ? RecommendationId.create(id) : id;
+  }
 
   public approve(): void {
     if (this.status !== MarkdownStatus.PROPOSED) {
