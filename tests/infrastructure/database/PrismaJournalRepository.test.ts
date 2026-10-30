@@ -1,34 +1,115 @@
+const journalStore = new Map<string, any>();
+const lineStore: any[] = [];
+const outboxStore: any[] = [];
+
+jest.mock("../../../src/infrastructure/database/prisma", () => {
+  const mockTx = {
+    journalEntryModel: {
+      upsert: jest.fn(async (args: any) => {
+        const id = args.where.id;
+        const existing = journalStore.get(id) || {};
+        const updated = { ...existing, ...(args.create || {}), ...(args.update || {}) };
+        journalStore.set(id, updated);
+        return updated;
+      }),
+    },
+    journalLineModel: {
+      deleteMany: jest.fn(async (args: any) => {
+        const id = args.where.journalEntryId;
+        for (let i = lineStore.length - 1; i >= 0; i--) {
+          if (lineStore[i].journalEntryId === id) {
+            lineStore.splice(i, 1);
+          }
+        }
+      }),
+      createMany: jest.fn(async (args: any) => {
+        for (const line of args.data) {
+          lineStore.push({ ...line });
+        }
+      }),
+    },
+    outboxEventModel: {
+      create: jest.fn(async (args: any) => {
+        const event = {
+          id: randomUUID(),
+          attempts: 0,
+          processedAt: null,
+          lastError: null,
+          nextAttemptAt: new Date(),
+          ...args.data,
+        };
+        outboxStore.push(event);
+        return event;
+      }),
+    },
+  };
+
+  return {
+    prisma: {
+      journalEntryModel: {
+        deleteMany: jest.fn(async () => {
+          journalStore.clear();
+        }),
+        findMany: jest.fn(async (args?: any) => {
+          const results: any[] = [];
+          for (const entry of journalStore.values()) {
+            if (args?.where?.tenantId && entry.tenantId !== args.where.tenantId) {
+              continue;
+            }
+            const lines = lineStore.filter(l => l.journalEntryId === entry.id);
+            results.push({ ...entry, lines });
+          }
+          return results;
+        }),
+      },
+      journalLineModel: {
+        deleteMany: jest.fn(async () => {
+          lineStore.length = 0;
+        }),
+      },
+      outboxEventModel: {
+        deleteMany: jest.fn(async () => {
+          outboxStore.length = 0;
+        }),
+        findMany: jest.fn(async () => {
+          return [...outboxStore];
+        }),
+      },
+      $transaction: jest.fn(async (callback: any) => {
+        return callback(mockTx);
+      }),
+      $disconnect: jest.fn(),
+    },
+    pool: {
+      end: jest.fn(),
+    },
+  };
+});
+
 import { PrismaJournalRepository } from "../../../src/infrastructure/database/PrismaJournalRepository";
 import { PrismaOutboxRepository } from "../../../src/infrastructure/database/PrismaOutboxRepository";
-import { prisma as sharedPrisma, pool } from "../../../src/infrastructure/database/prisma";
 import { JournalEntry } from "../../../src/domain/accounting/aggregates/JournalEntry";
 import { AccountCode } from "../../../src/domain/accounting/valueObjects/AccountCode";
 import { AccountingMethod } from "../../../src/domain/accounting/enums/AccountingMethod";
 import { DebitCredit } from "../../../src/domain/accounting/enums/DebitCredit";
+import { randomUUID } from "crypto";
 
-describe("PrismaJournalRepository Integration Tests", () => {
-  let prisma = sharedPrisma;
+describe("PrismaJournalRepository Unit Tests", () => {
   let journalRepo: PrismaJournalRepository;
   let journalRepoWithOutbox: PrismaJournalRepository;
   let outboxRepo: PrismaOutboxRepository;
 
-  beforeAll(async () => {
+  beforeAll(() => {
     outboxRepo = new PrismaOutboxRepository();
     journalRepo = new PrismaJournalRepository();
     journalRepoWithOutbox = new PrismaJournalRepository(outboxRepo);
   });
 
-  beforeEach(async () => {
-    try {
-      await prisma.journalLineModel.deleteMany();
-      await prisma.journalEntryModel.deleteMany();
-      await prisma.outboxEventModel.deleteMany();
-    } catch {}
-  });
-
-  afterAll(async () => {
-    await prisma.$disconnect();
-    await pool.end();
+  beforeEach(() => {
+    journalStore.clear();
+    lineStore.length = 0;
+    outboxStore.length = 0;
+    jest.clearAllMocks();
   });
 
   it("should save and retrieve a journal entry", async () => {
@@ -123,18 +204,17 @@ describe("PrismaJournalRepository Integration Tests", () => {
 
     await journalRepoWithOutbox.save(entry);
 
-    const outboxEvents = await prisma.outboxEventModel.findMany();
-    expect(outboxEvents.length).toBe(1);
-    expect(outboxEvents[0].eventName).toBe("JournalEntryCreatedEvent");
-    const payload = JSON.parse(outboxEvents[0].payload);
+    expect(outboxStore.length).toBe(1);
+    expect(outboxStore[0].eventName).toBe("JournalEntryCreatedEvent");
+    const payload = JSON.parse(outboxStore[0].payload);
     expect(payload.aggregateId).toBe(entryId);
     expect(payload.description).toBe("Outbox description");
     expect(payload.lines.length).toBe(2);
   });
 
   it("should save entry with empty lines if needed", async () => {
-     const entryId = "J-ENTRY-TEST-4";
-     const entry = new JournalEntry(
+    const entryId = "J-ENTRY-TEST-4";
+    const entry = new JournalEntry(
       entryId,
       "TENANT-1",
       new Date(),
