@@ -1,16 +1,56 @@
+const qboStore = new Map<string, any>();
+const nsStore = new Map<string, any>();
+const xeroStore = new Map<string, any>();
+
+jest.mock("../../../src/infrastructure/database/prisma", () => ({
+  prisma: {
+    quickbooksJournalMappingModel: {
+      deleteMany: jest.fn(async () => { qboStore.clear(); }),
+      upsert: jest.fn(async (args: any) => {
+        const item = { ...args.create, ...args.update };
+        qboStore.set(args.where.journalEntryId, item);
+        return item;
+      }),
+      findUnique: jest.fn(async (args: any) => {
+        return qboStore.get(args.where.journalEntryId) || null;
+      }),
+    },
+    netsuiteJournalMappingModel: {
+      deleteMany: jest.fn(async () => { nsStore.clear(); }),
+      upsert: jest.fn(async (args: any) => {
+        const item = { ...args.create, ...args.update };
+        nsStore.set(args.where.journalEntryId, item);
+        return item;
+      }),
+      findUnique: jest.fn(async (args: any) => {
+        return nsStore.get(args.where.journalEntryId) || null;
+      }),
+    },
+    xeroJournalMappingModel: {
+      deleteMany: jest.fn(async () => { xeroStore.clear(); }),
+      upsert: jest.fn(async (args: any) => {
+        const item = { ...args.create, ...args.update };
+        xeroStore.set(args.where.journalEntryId, item);
+        return item;
+      }),
+      findUnique: jest.fn(async (args: any) => {
+        return xeroStore.get(args.where.journalEntryId) || null;
+      }),
+    },
+    $disconnect: jest.fn(),
+  },
+  pool: {
+    end: jest.fn(),
+  },
+}));
+
 import { JournalEntryCreatedEvent } from "../../../src/domain/events/JournalEntryCreatedEvent";
 import { syncJournalToQuickBooks } from "../../../src/application/eventHandlers/SyncJournalToQuickBooks";
 import { syncJournalToNetSuite } from "../../../src/application/eventHandlers/SyncJournalToNetSuite";
 import { syncJournalToXero } from "../../../src/application/eventHandlers/SyncJournalToXero";
-import { prisma, pool } from "../../../src/infrastructure/database/prisma";
 
 describe("Accounting Sync Mapping Integration Tests", () => {
-  afterAll(async () => {
-    await prisma.$disconnect();
-    await pool.end();
-  });
   beforeEach(async () => {
-    // Setup environment variables to bypass mock checks
     process.env.QUICKBOOKS_REALM_ID = "real-realm";
     process.env.QUICKBOOKS_ACCESS_TOKEN = "real-token";
     process.env.NETSUITE_ACCOUNT_ID = "real-account";
@@ -18,14 +58,10 @@ describe("Accounting Sync Mapping Integration Tests", () => {
     process.env.XERO_TENANT_ID = "real-tenant";
     process.env.XERO_ACCESS_TOKEN = "real-token";
 
-    // Cleanup the mappings tables before each test runs
-    try {
-      await prisma.quickbooksJournalMappingModel.deleteMany();
-      await prisma.netsuiteJournalMappingModel.deleteMany();
-      await prisma.xeroJournalMappingModel.deleteMany();
-    } catch {}
+    qboStore.clear();
+    nsStore.clear();
+    xeroStore.clear();
 
-    // Mock fetch API globally
     global.fetch = jest.fn(() =>
       Promise.resolve({
         ok: true,
@@ -68,26 +104,24 @@ describe("Accounting Sync Mapping Integration Tests", () => {
       ]
     );
 
-    // Trigger the three sync handlers
     await syncJournalToQuickBooks(event);
     await syncJournalToNetSuite(event);
     await syncJournalToXero(event);
 
-    // Verify QBO mapping persisted
+    const { prisma } = require("../../../src/infrastructure/database/prisma");
+
     const qboMapping = await prisma.quickbooksJournalMappingModel.findUnique({
       where: { journalEntryId: "journal-entry-123" }
     });
     expect(qboMapping).not.toBeNull();
     expect(qboMapping?.quickbooksJournalId).toBe("remote-id-123");
 
-    // Verify NetSuite mapping persisted
     const nsMapping = await prisma.netsuiteJournalMappingModel.findUnique({
       where: { journalEntryId: "journal-entry-123" }
     });
     expect(nsMapping).not.toBeNull();
     expect(nsMapping?.netsuiteJournalId).toBe("ns-remote-id");
 
-    // Verify Xero mapping persisted
     const xeroMapping = await prisma.xeroJournalMappingModel.findUnique({
       where: { journalEntryId: "journal-entry-123" }
     });

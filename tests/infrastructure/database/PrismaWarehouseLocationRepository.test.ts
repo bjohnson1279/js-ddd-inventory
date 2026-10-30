@@ -1,24 +1,52 @@
+const store = new Map<string, any>();
+
+jest.mock("../../../src/infrastructure/database/prisma", () => ({
+  prisma: {
+    warehouseLocationModel: {
+      deleteMany: jest.fn(async () => {
+        store.clear();
+      }),
+      upsert: jest.fn(async (args: any) => {
+        const id = args.where.id;
+        const data = args.create || args.update;
+        store.set(id, { id, ...data });
+        return store.get(id);
+      }),
+      findUnique: jest.fn(async (args: any) => {
+        return store.get(args.where.id) || null;
+      }),
+      findMany: jest.fn(async (args?: any) => {
+        if (args?.where?.id?.in) {
+          const ids = args.where.id.in as string[];
+          return Array.from(store.values()).filter((item) => ids.includes(item.id));
+        }
+        return Array.from(store.values());
+      }),
+      delete: jest.fn(async (args: any) => {
+        if (!store.has(args.where.id)) {
+          throw new Error("Record to delete does not exist.");
+        }
+        store.delete(args.where.id);
+      }),
+    },
+    $disconnect: jest.fn(),
+  },
+}));
+
 import { PrismaWarehouseLocationRepository } from "../../../src/infrastructure/database/PrismaWarehouseLocationRepository";
-import { prisma as sharedPrisma } from "../../../src/infrastructure/database/prisma";
 import { WarehouseLocation } from "../../../src/domain/product/entities/WarehouseLocation";
 import { LocationId } from "../../../src/domain/valueObjects/LocationId";
 
-describe("PrismaWarehouseLocationRepository Integration Tests", () => {
-  let prisma = sharedPrisma;
+describe("PrismaWarehouseLocationRepository Unit Tests", () => {
   let repo: PrismaWarehouseLocationRepository;
 
   beforeAll(() => {
     repo = new PrismaWarehouseLocationRepository();
   });
 
-  beforeEach(async () => {
-    try {
-      await prisma.warehouseLocationModel.deleteMany();
-    } catch {}
-  });
-
-  afterAll(async () => {
-    await prisma.$disconnect();
+  beforeEach(() => {
+    store.clear();
+    jest.clearAllMocks();
   });
 
   it("should save and find a warehouse location by ID", async () => {
@@ -70,7 +98,6 @@ describe("PrismaWarehouseLocationRepository Integration Tests", () => {
 
     await repo.save(location);
 
-    // Update fields
     const updatedLocation = new WarehouseLocation(
       locId,
       "WH1",
@@ -139,7 +166,6 @@ describe("PrismaWarehouseLocationRepository Integration Tests", () => {
     await repo.save(loc2);
 
     const all = await repo.findAll();
-    // It might return more if previous tests didn't clean up, but we clean up in beforeEach
     expect(all.length).toBe(2);
     expect(all.find(l => l.id.value === "LOC-4")).toBeDefined();
     expect(all.find(l => l.id.value === "LOC-5")).toBeDefined();
