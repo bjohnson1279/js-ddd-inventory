@@ -1,6 +1,6 @@
 # Retail Inventory System (DDD)
 
-An Express.js API for a retail inventory system built using Domain-Driven Design (DDD) principles. This project handles complex inventory scenarios including multi-unit conversions, structured initial stock onboarding, and two-way Shopify synchronization.
+A Fastify API for a retail inventory system built using Domain-Driven Design (DDD) principles. This project handles complex inventory scenarios including multi-unit conversions, structured initial stock onboarding, and two-way Shopify synchronization.
 
 ## Features
 
@@ -78,6 +78,12 @@ Once the containers are running, navigate to `http://localhost:3080` to access t
 | `QUICKBOOKS_REALM_ID` | QuickBooks Company ID | - |
 | `QUICKBOOKS_ACCESS_TOKEN` | QuickBooks API Access Token | - |
 | `QUICKBOOKS_ENVIRONMENT` | Set to 'production' for live sync | `sandbox` |
+| `JWT_SECRET` | Secret key for JWT token signing and validation | - |
+| `ENCRYPTION_KEY` | Symmetric key for database field-level encryption | - |
+| `COMPLIANCE_PRIVATE_KEY` | Private key for cryptographically signed compliance ledger | - |
+| `FRONTEND_URL` | Allowed CORS origins (comma-separated URLs) | `http://localhost:3080` |
+| `KAFKA_URL` | Kafka broker address for event messaging | `host.docker.internal:9092` |
+| `RABBITMQ_URL` | RabbitMQ connection URL | - |
 
 ## Project Structure
 
@@ -89,4 +95,5 @@ Once the containers are running, navigate to `http://localhost:3080` to access t
 ## Documentation
 
 - [API Documentation](API.md): Detailed usage of all API endpoints.
+- [OpenAPI Specification](docs/openapi.yaml): OpenAPI 3.1 specification schema.
 - [Design Plans](plan/): Detailed DDD design documents for various features.
