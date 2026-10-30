@@ -1,21 +1,82 @@
+const poStore = new Map<string, any>();
+const itemStore = new Map<string, any>();
+
+jest.mock("../../../src/infrastructure/database/prisma", () => {
+  const mockTx = {
+    purchaseOrderModel: {
+      upsert: jest.fn(async (args: any) => {
+        const id = args.where.id;
+        const existing = poStore.get(id) || {};
+        const updated = { ...existing, ...(args.create || {}), ...(args.update || {}) };
+        poStore.set(id, updated);
+        return updated;
+      }),
+    },
+    purchaseOrderItemModel: {
+      upsert: jest.fn(async (args: any) => {
+        const id = args.where.id;
+        const existing = itemStore.get(id) || {};
+        const updated = { ...existing, ...(args.create || {}), ...(args.update || {}) };
+        itemStore.set(id, updated);
+        return updated;
+      }),
+    },
+  };
+
+  return {
+    prisma: {
+      purchaseOrderModel: {
+        deleteMany: jest.fn(async () => {
+          poStore.clear();
+        }),
+        findMany: jest.fn(async (args?: any) => {
+          const results: any[] = [];
+          for (const po of poStore.values()) {
+            const poItems = Array.from(itemStore.values()).filter(i => i.purchaseOrderId === po.id);
+            const where = args?.where;
+            if (where) {
+              if (where.tenantId && po.tenantId !== where.tenantId) continue;
+              if (where.status && po.status !== where.status) continue;
+              if (where.locationId && po.locationId !== where.locationId) continue;
+              if (where.items?.some?.variantId) {
+                const targetVariant = where.items.some.variantId;
+                if (!poItems.some(i => i.variantId === targetVariant)) continue;
+              }
+            }
+            results.push({ ...po, items: poItems });
+          }
+          return results;
+        }),
+      },
+      purchaseOrderItemModel: {
+        deleteMany: jest.fn(async () => {
+          itemStore.clear();
+        }),
+      },
+      $transaction: jest.fn(async (callback: any) => {
+        return callback(mockTx);
+      }),
+      $disconnect: jest.fn(),
+    },
+  };
+});
+
 import { PrismaPurchaseOrderRepository } from "../../../src/infrastructure/database/PrismaPurchaseOrderRepository";
 import { PurchaseOrder } from "../../../src/domain/procurement/aggregates/PurchaseOrder";
 import { PurchaseOrderItem } from "../../../src/domain/procurement/aggregates/PurchaseOrderItem";
 import { PurchaseOrderStatus } from "../../../src/domain/procurement/enums/PurchaseOrderStatus";
-import { prisma } from "../../../src/infrastructure/database/prisma";
 
-describe("PrismaPurchaseOrderRepository Integration Tests", () => {
+describe("PrismaPurchaseOrderRepository Unit Tests", () => {
   let repository: PrismaPurchaseOrderRepository;
 
-  beforeAll(async () => {
+  beforeAll(() => {
     repository = new PrismaPurchaseOrderRepository();
-    // Clean up
-    await prisma.purchaseOrderItemModel.deleteMany();
-    await prisma.purchaseOrderModel.deleteMany();
   });
 
-  afterAll(async () => {
-    await prisma.$disconnect();
+  beforeEach(() => {
+    poStore.clear();
+    itemStore.clear();
+    jest.clearAllMocks();
   });
 
   it("should find received purchase orders by tenant, variant and location", async () => {

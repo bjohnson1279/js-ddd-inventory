@@ -1,28 +1,50 @@
 import request from 'supertest';
 import fastify from "fastify";
 import { supplierRouter } from '../../../src/infrastructure/http/routes/supplier.routes';
+import { randomUUID } from "crypto";
+
+const asnStore = new Map<string, any>();
+const scorecardStore = new Map<string, any>();
+
+jest.mock('../../../src/infrastructure/database/prisma', () => ({
+  prisma: {
+    supplierASN: {
+      deleteMany: jest.fn(async () => { asnStore.clear(); }),
+      create: jest.fn(async (args: any) => {
+        const item = { id: randomUUID(), createdAt: new Date(), ...args.data };
+        asnStore.set(item.id, item);
+        return item;
+      }),
+      findMany: jest.fn(async (args: any) => {
+        return Array.from(asnStore.values()).filter(a => a.supplierId === args?.where?.supplierId);
+      }),
+    },
+    supplierScorecard: {
+      deleteMany: jest.fn(async () => { scorecardStore.clear(); }),
+      create: jest.fn(async (args: any) => {
+        const item = { id: randomUUID(), evaluatedAt: new Date(), ...args.data };
+        scorecardStore.set(item.id, item);
+        return item;
+      }),
+    },
+    $disconnect: jest.fn(),
+  },
+}));
 
 const app = fastify();
-
 app.register(supplierRouter, { prefix: '/api/supplier' });
-
-
-import { prisma } from '../../../src/infrastructure/database/prisma';
 
 describe('SupplierPortal E2E', () => {
   beforeAll(async () => {
     await app.ready();
   });
 
-  beforeEach(async () => {
-    try {
-      await prisma.supplierASN.deleteMany();
-    } catch (e) {}
+  beforeEach(() => {
+    asnStore.clear();
+    scorecardStore.clear();
+    jest.clearAllMocks();
   });
 
-  afterAll(async () => {
-    await prisma.$disconnect();
-  });
   it('should create an ASN', async () => {
     const res = await request((app as any).server)
       .post('/api/supplier/asn')
@@ -32,9 +54,6 @@ describe('SupplierPortal E2E', () => {
         expectedDelivery: new Date().toISOString(),
       });
     
-    if (res.status !== 201) {
-      console.log(res.body);
-    }
     expect(res.status).toBe(201);
     expect(res.body.asnNumber).toBe('ASN-1234');
   });
