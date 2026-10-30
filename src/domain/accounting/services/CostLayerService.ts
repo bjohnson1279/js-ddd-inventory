@@ -1,4 +1,3 @@
-import { batchSave } from "../../../utils/batchSave";
 import { ICostLayerRepository } from "../../repositories/ICostLayerRepository";
 import { CostBreakdown } from "../valueObjects/CostBreakdown";
 import { InventoryCostLayer } from "../entities/InventoryCostLayer";
@@ -27,7 +26,7 @@ export class CostLayerService {
     const strategy = CostingStrategyRegistry.get(method);
     const breakdown = strategy.consumeLayers(activeLayers, quantity, variantId);
 
-    await batchSave(this.layers, activeLayers);
+    await this.saveLayers(activeLayers);
 
     return breakdown;
   }
@@ -100,7 +99,7 @@ export class CostLayerService {
     // 4. Batch save all modified layers at once
     const layersToSave = Array.from(modifiedLayers);
     if (layersToSave.length > 0) {
-      await batchSave(this.layers, layersToSave);
+      await this.saveLayers(layersToSave);
     }
 
     return breakdowns;
@@ -155,5 +154,18 @@ export class CostLayerService {
     components: { variantId: string; quantity: number }[]
   ): Promise<CostBreakdown[]> {
     return this.calculateLayersBatch(components, CostingMethod.WeightedAverageCost);
+  }
+
+  private async saveLayers(layers: InventoryCostLayer[]): Promise<void> {
+    if (layers.length === 0) return;
+    if (this.layers.saveMany) {
+      await this.layers.saveMany(layers);
+    } else {
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < layers.length; i += CHUNK_SIZE) {
+        const chunk = layers.slice(i, i + CHUNK_SIZE);
+        await Promise.all(chunk.map((layer) => this.layers.save(layer)));
+      }
+    }
   }
 }
