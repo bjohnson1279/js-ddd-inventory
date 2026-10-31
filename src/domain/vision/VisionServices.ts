@@ -1,9 +1,10 @@
 import { 
   VisionInspection, InspectionResult, VolumeDimensions, DimensionUnit 
 } from './VisionEntities';
+import { InspectionId } from './valueObjects/InspectionId';
 
 export class ComputerVisionService {
-  public analyzeImage(imageUrl: string, inspectionId: string): InspectionResult {
+  public analyzeImage(imageUrl: string, inspectionId: InspectionId | string): InspectionResult {
     const isDamaged = imageUrl.toLowerCase().includes('damaged');
     const damageScore = isDamaged ? 0.85 : 0.05;
     const anomalies = isDamaged ? ["CRUSHED_CORNER"] : [];
