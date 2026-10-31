@@ -1,3 +1,5 @@
+import { InspectionId } from './valueObjects/InspectionId';
+
 export enum InspectionStatus {
   PENDING = 'PENDING',
   ANALYZED = 'ANALYZED',
@@ -18,7 +20,7 @@ export interface VolumeDimensions {
 }
 
 export interface InspectionResult {
-  inspectionId: string;
+  inspectionId: InspectionId | string;
   detectedBarcode: string;
   dimensions: VolumeDimensions;
   damageScore: number;
@@ -26,14 +28,20 @@ export interface InspectionResult {
 }
 
 export class VisionInspection {
+  public readonly inspectionId: InspectionId;
+
   constructor(
-    public inspectionId: string,
+    inspectionId: InspectionId | string,
     public tenantId: string,
     public dockStationId: string,
     public capturedAt: Date,
     public imageUrl: string,
     public status: InspectionStatus = InspectionStatus.PENDING
-  ) {}
+  ) {
+    this.inspectionId = typeof inspectionId === 'string'
+      ? InspectionId.create(inspectionId)
+      : (inspectionId || InspectionId.create());
+  }
 
   public passInspection(): void {
     if (this.status !== InspectionStatus.PENDING && this.status !== InspectionStatus.ANALYZED) {
