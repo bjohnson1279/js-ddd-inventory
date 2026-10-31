@@ -1,6 +1,6 @@
 # Retail Inventory System (DDD)
 
-An Express.js API for a retail inventory system built using Domain-Driven Design (DDD) principles. This project handles complex inventory scenarios including multi-unit conversions, structured initial stock onboarding, and two-way Shopify synchronization.
+A Fastify API for a retail inventory system built using Domain-Driven Design (DDD) principles. This project handles complex inventory scenarios including multi-unit conversions, structured initial stock onboarding, and two-way Shopify synchronization.
 
 ## Features
 
@@ -75,6 +75,9 @@ Once the containers are running, navigate to `http://localhost:3080` to access t
 | `SHOPIFY_API_SECRET` | Shopify App API Secret | - |
 | `SHOPIFY_SHOP_URL` | Shopify Shop URL | - |
 | `SHOPIFY_ACCESS_TOKEN` | Shopify Admin Access Token | - |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:password@127.0.0.1:5432/inventory?schema=public` |
+| `JWT_SECRET` | Secret key used for signing authentication tokens | - |
+| `KAFKA_URL` | Kafka broker URL for event streaming | `host.docker.internal:9092` |
 | `QUICKBOOKS_REALM_ID` | QuickBooks Company ID | - |
 | `QUICKBOOKS_ACCESS_TOKEN` | QuickBooks API Access Token | - |
 | `QUICKBOOKS_ENVIRONMENT` | Set to 'production' for live sync | `sandbox` |
@@ -89,4 +92,5 @@ Once the containers are running, navigate to `http://localhost:3080` to access t
 ## Documentation
 
 - [API Documentation](API.md): Detailed usage of all API endpoints.
+- [OpenAPI Specification](docs/openapi.yaml): OpenAPI 3.1 specification for the inventory REST API.
 - [Design Plans](plan/): Detailed DDD design documents for various features.
