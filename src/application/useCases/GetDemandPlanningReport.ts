@@ -73,67 +73,58 @@ export class GetDemandPlanningReport {
         historyMap.get(record.sku)!.push(record);
       }
     }
-
-    // Optimization: Bounded concurrency chunking
-    // We use a chunked Promise.all to prevent database connection pool exhaustion
-    // while avoiding the O(N) linear slowdown of a completely sequential loop.
     const reportItems: DemandPlanningReportItem[] = [];
-    const CHUNK_SIZE = 10;
-    for (let i = 0; i < inventoryItems.length; i += CHUNK_SIZE) {
-      const chunk = inventoryItems.slice(i, i + CHUNK_SIZE);
-      const chunkResults = await Promise.all(chunk.map(async (item) => {
-        const skuStr = item.sku.getValue();
+    for (const item of inventoryItems) {
+      const skuStr = item.sku.getValue();
 
-        // Calculate Sales Velocity and Fetch Reorder Policy concurrently
-        // We pass the current stock to execute to avoid an N+1 query inside CalculateSalesVelocity
-        let skuHistory;
-        if (this.dispatchRecordRepository.fetchHistoryByLocation) {
-          skuHistory = historyMap.get(skuStr) || [];
-        } else {
-          skuHistory = undefined;
-        }
+      // Calculate Sales Velocity and Fetch Reorder Policy concurrently
+      // We pass the current stock to execute to avoid an N+1 query inside CalculateSalesVelocity
+      let skuHistory;
+      if (this.dispatchRecordRepository.fetchHistoryByLocation) {
+        skuHistory = historyMap.get(skuStr) || [];
+      } else {
+        skuHistory = undefined;
+      }
 
-        const [velocity, policy] = await Promise.all([
-          this.calculateSalesVelocity.execute(skuStr, locationId, item.quantity.getValue(), skuHistory),
-          policyMap ? Promise.resolve(policyMap.get(skuStr)) : this.reorderPolicyRepository.findBySkuAndLocation(item.sku, locationId)
-        ]);
+      const [velocity, policy] = await Promise.all([
+        this.calculateSalesVelocity.execute(skuStr, locationId, item.quantity.getValue(), skuHistory),
+        policyMap ? Promise.resolve(policyMap.get(skuStr)) : this.reorderPolicyRepository.findBySkuAndLocation(item.sku, locationId)
+      ]);
 
-        const reorderPoint = policy ? policy.reorderPoint : 10;
-        const reorderQuantity = policy ? policy.reorderQuantity : 20;
-        const safetyStock = policy ? policy.safetyStock : 5;
+      const reorderPoint = policy ? policy.reorderPoint : 10;
+      const reorderQuantity = policy ? policy.reorderQuantity : 20;
+      const safetyStock = policy ? policy.safetyStock : 5;
 
-        // Find active forecast within the next 30 days
-        const activeForecast = activeForecastsMap.get(skuStr);
+      // Find active forecast within the next 30 days
+      const activeForecast = activeForecastsMap.get(skuStr);
 
-        const forecastedDemand30d = activeForecast ? activeForecast.forecastedQuantity : Math.ceil(velocity.averageDailySales30d * 30);
-        const confidenceLevel = activeForecast ? activeForecast.confidenceLevel : (velocity.averageDailySales30d > 0 ? 0.70 : 0.50);
+      const forecastedDemand30d = activeForecast ? activeForecast.forecastedQuantity : Math.ceil(velocity.averageDailySales30d * 30);
+      const confidenceLevel = activeForecast ? activeForecast.confidenceLevel : (velocity.averageDailySales30d > 0 ? 0.70 : 0.50);
 
-        // Heuristic: Action Required if current stock is below reorderPoint
-        const actionRequired = item.quantity.getValue() <= reorderPoint;
-        const recommendedOrderQuantity = actionRequired ? reorderQuantity : 0;
+      // Heuristic: Action Required if current stock is below reorderPoint
+      const actionRequired = item.quantity.getValue() <= reorderPoint;
+      const recommendedOrderQuantity = actionRequired ? reorderQuantity : 0;
 
-        return {
-          sku: skuStr,
-          locationId,
-          currentStock: item.quantity.getValue(),
-          averageDailySales7d: velocity.averageDailySales7d,
-          averageDailySales30d: velocity.averageDailySales30d,
-          averageDailySales90d: velocity.averageDailySales90d,
-          daysOfCover: velocity.daysOfCover,
-          runOutDate: velocity.runOutDate,
+      reportItems.push({
+        sku: skuStr,
+        locationId,
+        currentStock: item.quantity.getValue(),
+        averageDailySales7d: velocity.averageDailySales7d,
+        averageDailySales30d: velocity.averageDailySales30d,
+        averageDailySales90d: velocity.averageDailySales90d,
+        daysOfCover: velocity.daysOfCover,
+        runOutDate: velocity.runOutDate,
 
-          reorderPoint,
-          reorderQuantity,
-          safetyStock,
+        reorderPoint,
+        reorderQuantity,
+        safetyStock,
 
-          forecastedDemand30d,
-          confidenceLevel,
+        forecastedDemand30d,
+        confidenceLevel,
 
-          actionRequired,
-          recommendedOrderQuantity
-        };
-      }));
-      reportItems.push(...chunkResults);
+        actionRequired,
+        recommendedOrderQuantity
+      });
     }
 
     return reportItems;

@@ -173,3 +173,7 @@
 ## 2026-10-25 - Bounded Concurrency Chunking for Webhook Processing
 **Learning:** Using unbounded `Promise.all` for database reads/writes (like `dispatchStock.execute`) inside webhook event handlers (such as `ShopifyWebhookController`) can exhaust connection pools when processing payloads containing many unique items.
 **Action:** When handling webhook payloads with collections of items, chunk concurrent database operations into bounded batches (e.g., chunks of 10) to maintain high throughput while protecting the database connection pool.
+
+## 2026-10-31 - Sequential Loops Over Promise.all for Fallback Batch Logic
+**Learning:** Even when chunking is applied (`CHUNK_SIZE = 10`), using `Promise.all` wrapped over an array to query the database row by row inside fallback fallback branches (like missing `findBySkus` implementations) can still cause database connection pool exhaustion and deadlocks under extremely high load compared to purely sequential iteration.
+**Action:** When refactoring fallback DB lookups or writes without an underlying batch repository method (e.g. `inventoryRepository.findBySku`), always replace chunked concurrent arrays (like `await Promise.all(chunk.map(async sku => {...}))`) with completely sequential `for...of` loops. This significantly reduces DB connection exhaustion and deadlock risks, even at the cost of some latency for the fallback branch.

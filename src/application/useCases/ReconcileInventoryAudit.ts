@@ -54,11 +54,9 @@ export class ReconcileInventoryAudit {
       inventoryItems = await this.inventoryRepository.findBySkus(skusToFetch, audit.locationId);
     } else if (skusToFetch.length > 0) {
       const results = [];
-      const CHUNK_SIZE = 10;
-      for (let i = 0; i < skusToFetch.length; i += CHUNK_SIZE) {
-        const chunk = skusToFetch.slice(i, i + CHUNK_SIZE);
-        const chunkResults = await Promise.all(chunk.map(sku => this.inventoryRepository.findBySku(sku, audit.locationId)));
-        results.push(...chunkResults);
+      for (const sku of skusToFetch) {
+        const item = await this.inventoryRepository.findBySku(sku, audit.locationId);
+        results.push(item);
       }
       inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
     }
@@ -117,13 +115,9 @@ export class ReconcileInventoryAudit {
           }
         }
       } else {
-        const CHUNK_SIZE = 10;
-        for (let i = 0; i < uniqueVariantIds.length; i += CHUNK_SIZE) {
-          const chunk = uniqueVariantIds.slice(i, i + CHUNK_SIZE);
-          await Promise.all(chunk.map(async variantId => {
-            const layers = await this.costLayerRepository.getActiveLayers(variantId, "desc");
-            activeLayersMap.set(variantId, layers);
-          }));
+        for (const variantId of uniqueVariantIds) {
+          const layers = await this.costLayerRepository.getActiveLayers(variantId, "desc");
+          activeLayersMap.set(variantId, layers);
         }
       }
     }
@@ -224,10 +218,8 @@ export class ReconcileInventoryAudit {
       }
     }
 
-    const CHUNK_SIZE = 10;
-    for (let i = 0; i < journalPromises.length; i += CHUNK_SIZE) {
-      const chunk = journalPromises.slice(i, i + CHUNK_SIZE);
-      await Promise.all(chunk.map(fn => fn()));
+    for (const fn of journalPromises) {
+      await fn();
     }
 
     // Save batched inventory items
