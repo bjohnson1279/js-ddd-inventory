@@ -88,16 +88,11 @@ export class ReceiveRMA {
           preFetchedItems.set(`${locId}|${item.sku.getValue()}`, item);
         }
       } else {
-        // Optimization: Bounded concurrency chunking
-        const CHUNK_SIZE = 10;
-        for (let i = 0; i < skuObjs.length; i += CHUNK_SIZE) {
-          const chunk = skuObjs.slice(i, i + CHUNK_SIZE);
-          await Promise.all(chunk.map(async skuObj => {
-            const item = await this.inventoryRepository.findBySku(skuObj, locId);
-            if (item) {
-              preFetchedItems.set(`${locId}|${item.sku.getValue()}`, item);
-            }
-          }));
+        for (const skuObj of skuObjs) {
+          const item = await this.inventoryRepository.findBySku(skuObj, locId);
+          if (item) {
+            preFetchedItems.set(`${locId}|${item.sku.getValue()}`, item);
+          }
         }
       }
     }

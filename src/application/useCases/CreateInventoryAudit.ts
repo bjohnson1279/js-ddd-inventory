@@ -38,16 +38,11 @@ export class CreateInventoryAudit {
       if (this.inventoryRepository.findBySkus) {
         inventoryItems = await this.inventoryRepository.findBySkus(skus, dto.locationId);
       } else {
-        // Optimization: Bounded concurrency chunking
-        const CHUNK_SIZE = 10;
-        for (let i = 0; i < skus.length; i += CHUNK_SIZE) {
-          const chunk = skus.slice(i, i + CHUNK_SIZE);
-          await Promise.all(chunk.map(async sku => {
-            const item = await this.inventoryRepository.findBySku(sku, dto.locationId);
-            if (item) {
-              inventoryItems.push(item);
-            }
-          }));
+        for (const sku of skus) {
+          const item = await this.inventoryRepository.findBySku(sku, dto.locationId);
+          if (item) {
+            inventoryItems.push(item);
+          }
         }
       }
     }
