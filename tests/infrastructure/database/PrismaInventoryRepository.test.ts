@@ -1,3 +1,104 @@
+process.env.COMPLIANCE_PRIVATE_KEY = "test_key";
+const inventoryStore = new Map<string, any>();
+
+jest.mock("../../../src/infrastructure/database/prisma", () => {
+  const model = {
+    findUnique: jest.fn(async (args: any) => {
+      if (args?.where?.id) {
+        return inventoryStore.get(args.where.id) ? { ...inventoryStore.get(args.where.id) } : null;
+      }
+      if (args?.where?.sku_locationId) {
+        const { sku, locationId } = args.where.sku_locationId;
+        const found = Array.from(inventoryStore.values()).find(i => i.sku === sku && i.locationId === locationId);
+        return found ? { ...found } : null;
+      }
+      return null;
+    }),
+    findFirst: jest.fn(async (args: any) => {
+      if (args?.where?.sku) {
+        const found = Array.from(inventoryStore.values()).find(i => i.sku === args.where.sku);
+        return found ? { ...found } : null;
+      }
+      return null;
+    }),
+    findMany: jest.fn(async (args: any) => {
+      let items = Array.from(inventoryStore.values());
+      if (!args || !args.where) return items.map(i => ({ ...i }));
+      const w = args.where;
+      if (w.id?.in) {
+        items = items.filter(i => w.id.in.includes(i.id));
+      }
+      if (w.sku?.in) {
+        items = items.filter(i => w.sku.in.includes(i.sku));
+      } else if (w.sku) {
+        items = items.filter(i => i.sku === w.sku);
+      }
+      if (w.locationId?.in) {
+        items = items.filter(i => w.locationId.in.includes(i.locationId));
+      } else if (w.locationId) {
+        items = items.filter(i => i.locationId === w.locationId);
+      }
+      return items.map(i => ({ ...i }));
+    }),
+    create: jest.fn(async (args: any) => {
+      const data = { ...args.data };
+      inventoryStore.set(data.id, data);
+      return { ...data };
+    }),
+    createMany: jest.fn(async (args: any) => {
+      for (const item of args.data) {
+        inventoryStore.set(item.id, { ...item });
+      }
+      return { count: args.data.length };
+    }),
+    update: jest.fn(async (args: any) => {
+      const existing = inventoryStore.get(args.where.id) || {};
+      const updated = { ...existing, ...args.data };
+      inventoryStore.set(args.where.id, updated);
+      return { ...updated };
+    }),
+    updateMany: jest.fn(async (args: any) => {
+      const id = args?.where?.id;
+      const expectedVersion = args?.where?.version;
+      const existing = inventoryStore.get(id);
+      if (!existing || existing.version !== expectedVersion) {
+        return { count: 0 };
+      }
+      const updated = { ...existing, ...args.data };
+      inventoryStore.set(id, updated);
+      return { count: 1 };
+    }),
+    deleteMany: jest.fn(async () => {
+      inventoryStore.clear();
+      return { count: 0 };
+    }),
+  };
+
+  const mockTx = {
+    inventoryModel: model,
+    complianceLedgerModel: { deleteMany: jest.fn(), create: jest.fn() },
+    outboxEventModel: { deleteMany: jest.fn(), create: jest.fn() },
+  };
+
+  return {
+    prisma: {
+      inventoryModel: model,
+      complianceLedgerModel: { deleteMany: jest.fn(), create: jest.fn(async () => ({})), createMany: jest.fn(async () => ({})) },
+      outboxEventModel: { deleteMany: jest.fn() },
+      $transaction: jest.fn(async (cbOrPromises: any) => {
+        if (typeof cbOrPromises === "function") {
+          return await cbOrPromises(mockTx);
+        }
+        return cbOrPromises;
+      }),
+      $disconnect: jest.fn(async () => {}),
+    },
+    pool: {
+      end: jest.fn(async () => {}),
+    },
+  };
+});
+
 import { PrismaInventoryRepository } from "../../../src/infrastructure/database/PrismaInventoryRepository";
 import { prisma as sharedPrisma, pool } from "../../../src/infrastructure/database/prisma";
 import { InventoryItem } from "../../../src/domain/aggregates/InventoryItem";
@@ -28,6 +129,7 @@ describe("PrismaInventoryRepository Integration Tests", () => {
   });
 
   beforeEach(async () => {
+    inventoryStore.clear();
     jest.clearAllMocks();
     try {
       await prisma.inventoryModel.deleteMany();
