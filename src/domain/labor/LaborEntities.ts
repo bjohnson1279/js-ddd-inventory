@@ -1,3 +1,5 @@
+import { ScheduleId } from './valueObjects/ScheduleId';
+
 export enum ScheduleStatus {
   DRAFT = 'DRAFT',
   PUBLISHED = 'PUBLISHED'
@@ -20,14 +22,20 @@ export interface OperatorPerformanceKpi {
 }
 
 export class PredictiveStaffingSchedule {
+  public readonly scheduleId: ScheduleId;
+
   constructor(
-    public scheduleId: string,
+    scheduleId: ScheduleId | string,
     public targetDate: Date,
     public projectedInboundVolume: number,
     public projectedOutboundVolume: number,
     public recommendedHeadcount: number,
     public status: ScheduleStatus = ScheduleStatus.DRAFT
-  ) {}
+  ) {
+    this.scheduleId = typeof scheduleId === 'string'
+      ? ScheduleId.create(scheduleId)
+      : (scheduleId || ScheduleId.create());
+  }
 
   public publish(): void {
     if (this.status !== ScheduleStatus.DRAFT) {
