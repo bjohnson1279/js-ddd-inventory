@@ -136,9 +136,12 @@ export class AuthService implements IAuthService {
       }
 
       const header = decoded.header;
-      const isAsymmetric = header.alg && !header.alg.startsWith('HS');
+      const isAsymmetric = header.alg && !header.alg.startsWith('HS') && header.alg !== 'none';
 
       if (isAsymmetric || header.kid) {
+        if (!isAsymmetric) {
+          throw new Error('TOKEN_INVALID');
+        }
         const publicKey = await this.getSigningKey(header.kid, header.alg);
         if (publicKey) {
           const payload = jwt.verify(
