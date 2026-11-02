@@ -1,5 +1,5 @@
-import { v4 as uuidv4 } from 'uuid';
 import { OperatorPerformanceKpi, PredictiveStaffingSchedule } from './LaborEntities';
+import { ScheduleId } from './valueObjects/ScheduleId';
 
 export class OperatorPerformanceService {
   public calculateDailyKpi(
@@ -43,7 +43,7 @@ export class PredictiveSchedulingEngine {
     }
     
     return new PredictiveStaffingSchedule(
-      uuidv4(),
+      ScheduleId.create(),
       targetDate,
       projectedInboundVolume,
       projectedOutboundVolume,
