@@ -42,6 +42,18 @@ A Fastify API for a retail inventory system built using Domain-Driven Design (DD
    npm run dev
    ```
 
+### Running Tests
+
+Execute unit, domain, and integration test suites using Jest:
+
+```bash
+# Run unit and application tests locally with SQLite fallback
+COMPLIANCE_PRIVATE_KEY=test_key SHOPIFY_API_SECRET=fake_secret JWT_SECRET=test ENCRYPTION_KEY=test_key DATABASE_URL="file:./dev.db" DB_PASSWORD= npm test
+
+# Run tests against local PostgreSQL / TimescaleDB instance
+DATABASE_URL="postgresql://postgres:password@localhost:5432/inventory?schema=public" COMPLIANCE_PRIVATE_KEY=test_key SHOPIFY_API_SECRET=fake_secret JWT_SECRET=test ENCRYPTION_KEY=test_key npm test
+```
+
 ### Docker Setup (with TimescaleDB)
 
 The easiest way to run the application with a persistent database and the setup web app is using Docker Compose.
@@ -78,6 +90,8 @@ Once the containers are running, navigate to `http://localhost:3080` to access t
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:password@127.0.0.1:5432/inventory?schema=public` |
 | `JWT_SECRET` | Secret key used for signing authentication tokens | - |
 | `KAFKA_URL` | Kafka broker URL for event streaming | `host.docker.internal:9092` |
+| `COMPLIANCE_PRIVATE_KEY` | Private signing key for immutable compliance ledger records | - |
+| `ENCRYPTION_KEY` | AES-256 cryptographic key used for sensitive payload encryption | - |
 | `QUICKBOOKS_REALM_ID` | QuickBooks Company ID | - |
 | `QUICKBOOKS_ACCESS_TOKEN` | QuickBooks API Access Token | - |
 | `QUICKBOOKS_ENVIRONMENT` | Set to 'production' for live sync | `sandbox` |
