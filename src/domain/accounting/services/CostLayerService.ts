@@ -68,15 +68,9 @@ export class CostLayerService {
       activeLayersByVariant = await this.layers.getActiveLayersByVariantIds(variantIds);
     } else {
       activeLayersByVariant = new Map<string, InventoryCostLayer[]>();
-      const CHUNK_SIZE = 10;
-      for (let i = 0; i < variantIds.length; i += CHUNK_SIZE) {
-        const chunk = variantIds.slice(i, i + CHUNK_SIZE);
-        await Promise.all(
-          chunk.map(async (vId) => {
-            const layers = await this.layers.getActiveLayers(vId);
-            activeLayersByVariant.set(vId, layers);
-          })
-        );
+      for (const vId of variantIds) {
+        const layers = await this.layers.getActiveLayers(vId);
+        activeLayersByVariant.set(vId, layers);
       }
     }
 
@@ -125,15 +119,9 @@ export class CostLayerService {
       activeLayersByVariant = await this.layers.getActiveLayersByVariantIds(variantIds);
     } else {
       activeLayersByVariant = new Map<string, InventoryCostLayer[]>();
-      const CHUNK_SIZE = 10;
-      for (let i = 0; i < variantIds.length; i += CHUNK_SIZE) {
-        const chunk = variantIds.slice(i, i + CHUNK_SIZE);
-        await Promise.all(
-          chunk.map(async (vId) => {
-            const layers = await this.layers.getActiveLayers(vId);
-            activeLayersByVariant.set(vId, layers);
-          })
-        );
+      for (const vId of variantIds) {
+        const layers = await this.layers.getActiveLayers(vId);
+        activeLayersByVariant.set(vId, layers);
       }
     }
 
@@ -161,10 +149,8 @@ export class CostLayerService {
     if (this.layers.saveMany) {
       await this.layers.saveMany(layers);
     } else {
-      const CHUNK_SIZE = 10;
-      for (let i = 0; i < layers.length; i += CHUNK_SIZE) {
-        const chunk = layers.slice(i, i + CHUNK_SIZE);
-        await Promise.all(chunk.map((layer) => this.layers.save(layer)));
+      for (const layer of layers) {
+        await this.layers.save(layer);
       }
     }
   }

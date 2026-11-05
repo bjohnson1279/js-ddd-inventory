@@ -107,11 +107,9 @@ export class ReceivePurchaseOrder {
       costLayers.push(costLayer);
     }
 
-    // Save updated PO concurrently with cost layers and inventory items
-    await Promise.all([
-      batchSave(this.inventoryRepository, Array.from(inventoryItemsToSave.values())),
-      batchSave(this.costLayerRepository, costLayers),
-      this.poRepository.save(po)
-    ]);
+    // Save updated PO with cost layers and inventory items
+    await batchSave(this.inventoryRepository, Array.from(inventoryItemsToSave.values()));
+    await batchSave(this.costLayerRepository, costLayers);
+    await this.poRepository.save(po);
   }
 }
