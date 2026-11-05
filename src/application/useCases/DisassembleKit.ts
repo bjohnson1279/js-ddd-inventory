@@ -193,10 +193,10 @@ export class DisassembleKit {
       compInv.receiveStock(Quantity.create(item.quantity));
     }
 
-    // Batch save inventory items if possible, otherwise Promise.all
+    // Batch save inventory items
     await batchSave(this.inventoryRepository, itemsToSave);
 
-    // Batch save cost layers if possible, otherwise Promise.all
+    // Batch save cost layers
     await batchSave(this.costLayerRepository, restoreLayers);
 
     // 7. Write balanced journal entry if Accrual

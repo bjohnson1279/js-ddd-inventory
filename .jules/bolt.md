@@ -177,3 +177,7 @@
 ## 2026-10-31 - Sequential Loops Over Promise.all for Fallback Batch Logic
 **Learning:** Even when chunking is applied (`CHUNK_SIZE = 10`), using `Promise.all` wrapped over an array to query the database row by row inside fallback fallback branches (like missing `findBySkus` implementations) can still cause database connection pool exhaustion and deadlocks under extremely high load compared to purely sequential iteration.
 **Action:** When refactoring fallback DB lookups or writes without an underlying batch repository method (e.g. `inventoryRepository.findBySku`), always replace chunked concurrent arrays (like `await Promise.all(chunk.map(async sku => {...}))`) with completely sequential `for...of` loops. This significantly reduces DB connection exhaustion and deadlock risks, even at the cost of some latency for the fallback branch.
+
+## 2026-11-04 - Promise.all vs sequential execution for purely parallel tasks
+**Learning:** For distinct repository endpoints writing bulk objects on unrelated tables without transactional locking, wrapping them in an unbounded `Promise.all` can increase connection pool usage simultaneously in orchestrator services compared to awaiting sequentially, preventing potential connection deadlocks when many parallel workflows execute.
+**Action:** Always refactor arbitrary concurrent saves across differing repositories at the end of high-volume event processing loop use cases (like `ReceivePurchaseOrder`) into purely sequential saves (`await saveA(); await saveB();`).

@@ -63,20 +63,14 @@ export class InventoryService {
     }
 
     if (!this.inventoryRepository.findBySkus) {
-      // Fallback: fetch individually concurrently if batch fetch isn't supported
+      // Fallback: fetch individually
       const missingComponents = kit.components.filter((c) => !cachedItems.has(c.variantId));
-      const CHUNK_SIZE = 10;
-      for (let i = 0; i < missingComponents.length; i += CHUNK_SIZE) {
-        const chunk = missingComponents.slice(i, i + CHUNK_SIZE);
-        await Promise.all(
-          chunk.map(async (c) => {
-            const sku = SKU.create(c.variantId);
-            const fetchedItem = await this.inventoryRepository.findBySku(sku, locationId);
-            if (fetchedItem) {
-              cachedItems.set(c.variantId, fetchedItem);
-            }
-          })
-        );
+      for (const c of missingComponents) {
+        const sku = SKU.create(c.variantId);
+        const fetchedItem = await this.inventoryRepository.findBySku(sku, locationId);
+        if (fetchedItem) {
+          cachedItems.set(c.variantId, fetchedItem);
+        }
       }
     }
 
@@ -107,25 +101,17 @@ export class InventoryService {
     if (this.inventoryRepository.saveMany) {
       await this.inventoryRepository.saveMany(itemsToSave);
     } else {
-      const CHUNK_SIZE = 10;
-      for (let i = 0; i < itemsToSave.length; i += CHUNK_SIZE) {
-        const chunk = itemsToSave.slice(i, i + CHUNK_SIZE);
-        await Promise.all(chunk.map((item) => this.inventoryRepository.save(item)));
+      for (const item of itemsToSave) {
+        await this.inventoryRepository.save(item);
       }
     }
 
     if (this.reorderPolicyService) {
-      const CHUNK_SIZE = 10;
-      for (let i = 0; i < itemsToSave.length; i += CHUNK_SIZE) {
-        const chunk = itemsToSave.slice(i, i + CHUNK_SIZE);
-        await Promise.all(
-          chunk.map((item) =>
-            this.reorderPolicyService!.checkPolicy(
-              item.sku.getValue(),
-              locationId,
-              item.quantity.getValue()
-            )
-          )
+      for (const item of itemsToSave) {
+        await this.reorderPolicyService.checkPolicy(
+          item.sku.getValue(),
+          locationId,
+          item.quantity.getValue()
         );
       }
     }
