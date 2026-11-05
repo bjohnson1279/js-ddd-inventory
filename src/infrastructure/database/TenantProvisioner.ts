@@ -5,7 +5,7 @@ let format: any;
 try {
   format = require('pg-format');
 } catch (e) {
-  format = (fmt: string, val: string) => fmt.replace('%I', `"${val.replace(/"/g, '""')}"`).replace('%L', `'${val.replace(/'/g, "''")}'`);
+  format = (fmt: string, val: string) => fmt.replace(/%I/g, () => `"${val.replace(/"/g, '""')}"`).replace(/%L/g, () => `'${val.replace(/'/g, "''")}'`);
 }
 
 /**

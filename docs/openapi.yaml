@@ -632,35 +632,64 @@ paths:
         '200':
           description: OK
   /api/purchase-orders:
+    post:
+      summary: Create purchase order
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+  /api/purchase-orders/{id}:
     get:
+      summary: Get purchase order
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
       security:
       - bearerAuth: []
       responses:
         '200':
           description: OK
-  /api/purchase-orders/create:
+  /api/purchase-orders/{id}/approve:
     post:
+      summary: Approve purchase order
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
       security:
       - bearerAuth: []
       responses:
         '200':
           description: OK
-  /api/purchase-orders/approve:
+  /api/purchase-orders/{id}/send:
     post:
+      summary: Send purchase order
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
       security:
       - bearerAuth: []
       responses:
         '200':
           description: OK
-  /api/purchase-orders/send:
+  /api/purchase-orders/{id}/receive:
     post:
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: OK
-  /api/purchase-orders/receive:
-    post:
+      summary: Receive purchase order items
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
       security:
       - bearerAuth: []
       responses:
