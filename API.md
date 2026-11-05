@@ -832,3 +832,160 @@ Verify the cryptographic hash-chain and digital signatures across all blocks in 
     { "isValid": true }
     ```
 *   **Workflow**: Runs mathematical hash-chain continuity checks and public key signature verification across the entire audit log.
+
+---
+
+## 🛒 Procurement & Purchase Orders
+
+### 1. Create Purchase Order
+Initialize a new purchase order draft for a supplier with requested line items.
+
+*   **URL**: `/api/purchase-orders`
+*   **Method**: `POST`
+*   **Headers**: `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Body**:
+        *   `purchaseOrderNumber` (string, Required): Unique purchase order reference code.
+        *   `vendorId` (string, Required): Unique supplier/vendor identifier.
+        *   `tenantId` (string, Required): Tenant ID.
+        *   `locationId` (string, Required): Destination warehouse location ID.
+        *   `requesterId` (string, Optional): User or actor ID submitting the order.
+        *   `items` (array of objects, Required): Array of purchase order items:
+            *   `variantId` (string, Required): Product SKU / variant identifier.
+            *   `quantity` (number, Required): Quantity ordered (positive integer).
+            *   `unitCostCents` (number, Required): Agreed cost per unit in cents.
+*   **Request Body**:
+    ```json
+    {
+      "purchaseOrderNumber": "PO-2026-001",
+      "vendorId": "vendor-123",
+      "tenantId": "tenant-1",
+      "locationId": "LOC-A1",
+      "items": [
+        { "variantId": "IPHONE-15-PRO-BLK", "quantity": 10, "unitCostCents": 80000 },
+        { "variantId": "IPAD-AIR-64GB", "quantity": 5, "unitCostCents": 50000 }
+      ]
+    }
+    ```
+*   **Success Response**: `201 Created`
+    ```json
+    {
+      "id": "po_123",
+      "purchaseOrderNumber": "PO-2026-001",
+      "status": "DRAFT",
+      "vendorId": "vendor-123",
+      "tenantId": "tenant-1",
+      "locationId": "LOC-A1",
+      "items": [
+        {
+          "id": "item_1",
+          "variantId": "IPHONE-15-PRO-BLK",
+          "quantity": 10,
+          "receivedQuantity": 0,
+          "unitCostCents": 80000
+        },
+        {
+          "id": "item_2",
+          "variantId": "IPAD-AIR-64GB",
+          "quantity": 5,
+          "receivedQuantity": 0,
+          "unitCostCents": 50000
+        }
+      ]
+    }
+    ```
+*   **Workflow**: Creates a draft purchase order with vendor details and line item pricing; evaluates approval workflows if spending thresholds require managerial sign-off.
+
+---
+
+### 2. Get Purchase Order
+Retrieve detailed information and line item fulfillment status for a specific purchase order.
+
+*   **URL**: `/api/purchase-orders/:id`
+*   **Method**: `GET`
+*   **Parameters**:
+    *   **Path**:
+        *   `id` (string, Required): Unique identifier of the purchase order.
+*   **Success Response**: `200 OK`
+    ```json
+    {
+      "id": "po_123",
+      "purchaseOrderNumber": "PO-2026-001",
+      "status": "APPROVED",
+      "vendorId": "vendor-123",
+      "tenantId": "tenant-1",
+      "locationId": "LOC-A1",
+      "items": [
+        {
+          "id": "item_1",
+          "variantId": "IPHONE-15-PRO-BLK",
+          "quantity": 10,
+          "receivedQuantity": 0,
+          "unitCostCents": 80000
+        }
+      ]
+    }
+    ```
+*   **Workflow**: Inspects purchase order metadata, approval status, and tracking quantities received against quantities ordered.
+
+---
+
+### 3. Approve Purchase Order
+Approve a draft purchase order for submission to the supplier.
+
+*   **URL**: `/api/purchase-orders/:id/approve`
+*   **Method**: `POST`
+*   **Parameters**:
+    *   **Path**:
+        *   `id` (string, Required): Unique identifier of the purchase order.
+*   **Success Response**: `200 OK`
+    ```json
+    { "message": "Purchase order approved successfully" }
+    ```
+*   **Workflow**: Transitions a draft or pending purchase order into the approved state following internal budget or supervisor approval.
+
+---
+
+### 4. Send Purchase Order
+Mark an approved purchase order as dispatched/sent to the supplier.
+
+*   **URL**: `/api/purchase-orders/:id/send`
+*   **Method**: `POST`
+*   **Parameters**:
+    *   **Path**:
+        *   `id` (string, Required): Unique identifier of the purchase order.
+*   **Success Response**: `200 OK`
+    ```json
+    { "message": "Purchase order sent to vendor successfully" }
+    ```
+*   **Workflow**: Updates order state to sent once communication has been confirmed with the supplier, anticipating inbound delivery.
+
+---
+
+### 5. Receive Purchase Order Items
+Record inbound goods receipt against an active purchase order, updating inventory stock and creating accounting cost layers.
+
+*   **URL**: `/api/purchase-orders/:id/receive`
+*   **Method**: `POST`
+*   **Headers**: `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Path**:
+        *   `id` (string, Required): Unique identifier of the purchase order.
+    *   **Body**:
+        *   `items` (array of objects, Required): Array of received item updates:
+            *   `variantId` (string, Required): Product SKU / variant identifier.
+            *   `quantityReceived` (number, Required): Positive quantity physically received.
+*   **Request Body**:
+    ```json
+    {
+      "items": [
+        { "variantId": "IPHONE-15-PRO-BLK", "quantityReceived": 10 },
+        { "variantId": "IPAD-AIR-64GB", "quantityReceived": 5 }
+      ]
+    }
+    ```
+*   **Success Response**: `200 OK`
+    ```json
+    { "message": "Items received successfully" }
+    ```
+*   **Workflow**: Receiving dock operators scan or confirm delivered items against the PO. Updates line item received quantities, marks PO as PartiallyReceived or Received, increments on-hand warehouse inventory, and logs FIFO/WAC cost layers.
