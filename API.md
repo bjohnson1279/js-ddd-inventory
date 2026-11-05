@@ -989,3 +989,213 @@ Record inbound goods receipt against an active purchase order, updating inventor
     { "message": "Items received successfully" }
     ```
 *   **Workflow**: Receiving dock operators scan or confirm delivered items against the PO. Updates line item received quantities, marks PO as PartiallyReceived or Received, increments on-hand warehouse inventory, and logs FIFO/WAC cost layers.
+
+---
+
+## 📍 Warehouse Locations & WMS Routing
+
+### 1. Create or Save Warehouse Location
+Define or update a warehouse storage location with physical capacity limits and coordinates.
+
+*   **URL**: `/api/warehouse-locations`
+*   **Method**: `POST`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Role required: `admin`, `warehouse_operator`)
+    *   `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Body**:
+        *   `path` (string, Optional): Standard location path string (e.g. `WH1-ZONEA-A01-R01-S01-B01`). When provided, location components are parsed automatically.
+        *   `warehouseId` (string, Optional): Warehouse identifier (required if `path` is not provided).
+        *   `zone` (string, Optional): Warehouse zone identifier (required if `path` is not provided).
+        *   `aisle` (string, Optional): Aisle designation (required if `path` is not provided).
+        *   `rack` (string, Optional): Rack identifier (required if `path` is not provided).
+        *   `shelf` (string, Optional): Shelf identifier (required if `path` is not provided).
+        *   `bin` (string, Optional): Bin compartment code (required if `path` is not provided).
+        *   `maxWeightGrams` (number, Optional): Maximum weight capacity supported in grams.
+        *   `maxVolumeCubicMeters` (number, Optional): Maximum volume capacity supported in cubic meters.
+        *   `gridX` (number, Optional): Floor layout X coordinate (defaults to 0).
+        *   `gridY` (number, Optional): Floor layout Y coordinate (defaults to 0).
+        *   `width` (number, Optional): Spatial width in grid units (defaults to 1).
+        *   `height` (number, Optional): Spatial height in grid units (defaults to 1).
+*   **Request Body**:
+    ```json
+    {
+      "path": "WH1-ZONEA-A01-R01-S01-B01",
+      "maxWeightGrams": 50000,
+      "maxVolumeCubicMeters": 2.0,
+      "gridX": 10,
+      "gridY": 5
+    }
+    ```
+*   **Success Response**: `200 OK`
+    ```json
+    {
+      "message": "Warehouse location saved successfully.",
+      "location": {
+        "id": "WH1-ZONEA-A01-R01-S01-B01",
+        "warehouseId": "WH1",
+        "zone": "ZONEA",
+        "aisle": "A01",
+        "rack": "R01",
+        "shelf": "S01",
+        "bin": "B01",
+        "maxWeightGrams": 50000,
+        "maxVolumeCubicMeters": 2.0,
+        "gridX": 10,
+        "gridY": 5,
+        "width": 1,
+        "height": 1
+      }
+    }
+    ```
+*   **Workflow**: Logistics administrators map physical facility topography, establish volumetric / weight constraints, and assign spatial coordinates for routing.
+
+---
+
+### 2. List Warehouse Locations
+Retrieve all configured warehouse storage locations and capacity thresholds.
+
+*   **URL**: `/api/warehouse-locations`
+*   **Method**: `GET`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required)
+*   **Parameters**: None
+*   **Success Response**: `200 OK`
+    ```json
+    [
+      {
+        "id": "WH1-ZONEA-A01-R01-S01-B01",
+        "warehouseId": "WH1",
+        "zone": "ZONEA",
+        "aisle": "A01",
+        "rack": "R01",
+        "shelf": "S01",
+        "bin": "B01",
+        "maxWeightGrams": 50000,
+        "maxVolumeCubicMeters": 2.0,
+        "gridX": 10,
+        "gridY": 5,
+        "width": 1,
+        "height": 1
+      }
+    ]
+    ```
+*   **Workflow**: Used by warehouse management dashboards and handheld scanners to display available bin locations and capacity ceilings.
+
+---
+
+### 3. Delete Warehouse Location
+Remove a storage location from the facility configuration.
+
+*   **URL**: `/api/warehouse-locations/:id`
+*   **Method**: `DELETE`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Role required: `admin`, `warehouse_operator`)
+*   **Parameters**:
+    *   **Path**:
+        *   `id` (string, Required): The identifier of the location to delete (e.g. `WH1-ZONEA-A01-R01-S01-B01`).
+*   **Success Response**: `200 OK`
+    ```json
+    { "message": "Warehouse location deleted successfully." }
+    ```
+*   **Workflow**: Decommissions obsolete racks, shelves, or damaged storage bins from active routing and putaway engines.
+
+---
+
+### 4. Suggest Putaway Locations
+Generate intelligent putaway location recommendations for inbound items based on SKU characteristics and bin capacities.
+
+*   **URL**: `/api/warehouse-locations/putaway-suggestions`
+*   **Method**: `POST`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required)
+    *   `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Body**:
+        *   `sku` (string, Required): Product SKU being received.
+        *   `quantity` (number, Required): Quantity of units to put away.
+*   **Request Body**:
+    ```json
+    {
+      "sku": "FAST-SKU",
+      "quantity": 10
+    }
+    ```
+*   **Success Response**: `200 OK`
+    ```json
+    [
+      {
+        "locationId": "WH1-FAST-A01-R01-S01-B01",
+        "score": 95,
+        "reason": "Fast-moving SKU placed near dispatch dock with available capacity"
+      }
+    ]
+    ```
+*   **Workflow**: Inbound dock workers query putaway recommendations to place high-velocity SKUs near front aisles, hazardous items into hazmat zones, and temperature-controlled items into cold storage.
+
+---
+
+### 5. Optimize Serpentine Pick Route
+Calculate an optimal pick route across multiple warehouse bins using serpentine (S-shape) aisle traversal.
+
+*   **URL**: `/api/warehouse-locations/optimize-pick-route`
+*   **Method**: `POST`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required)
+    *   `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Body**: Provide either `items` or `skus`:
+        *   `items` (array of objects, Optional): Explicit list of pick items:
+            *   `sku` (string, Required): Item SKU.
+            *   `quantity` (number, Required): Quantity to pick.
+            *   `locationId` (string, Required): Target bin location ID.
+        *   `skus` (array of strings, Optional): Array of SKUs to automatically resolve to on-hand inventory locations.
+*   **Request Body**:
+    ```json
+    {
+      "items": [
+        { "sku": "SKU1", "quantity": 2, "locationId": "WH1-ZONEA-A02-R01-S01-B01" },
+        { "sku": "SKU2", "quantity": 1, "locationId": "WH1-ZONEA-A01-R02-S01-B01" },
+        { "sku": "SKU3", "quantity": 5, "locationId": "WH1-ZONEA-A01-R01-S01-B01" },
+        { "sku": "SKU4", "quantity": 3, "locationId": "WH1-ZONEA-A02-R02-S01-B01" }
+      ]
+    }
+    ```
+*   **Success Response**: `200 OK`
+    ```json
+    [
+      {
+        "zone": "ZONEA",
+        "items": [
+          { "sku": "SKU3", "quantity": 5, "locationId": "WH1-ZONEA-A01-R01-S01-B01" },
+          { "sku": "SKU2", "quantity": 1, "locationId": "WH1-ZONEA-A01-R02-S01-B01" },
+          { "sku": "SKU4", "quantity": 3, "locationId": "WH1-ZONEA-A02-R02-S01-B01" },
+          { "sku": "SKU1", "quantity": 2, "locationId": "WH1-ZONEA-A02-R01-S01-B01" }
+        ]
+      }
+    ]
+    ```
+*   **Workflow**: Order fulfillment pickers generate sequenced pick lists traversing aisles in an alternating serpentine pattern (odd aisles ascending, even aisles descending) to minimize warehouse travel time.
+
+---
+
+### 6. Warehouse Slotting Suggestions
+Analyze dispatch velocity and inventory placement to recommend optimal SKU re-slotting.
+
+*   **URL**: `/api/warehouse-locations/slotting-suggestions`
+*   **Method**: `GET`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Role required: `admin`, `warehouse_operator`)
+*   **Parameters**: None
+*   **Success Response**: `200 OK`
+    ```json
+    [
+      {
+        "sku": "IPHONE-15-PRO-BLK",
+        "currentLocationId": "WH1-ZONEB-A05-R02-S01-B01",
+        "suggestedLocationId": "WH1-ZONEA-A01-R01-S01-B01",
+        "reason": "High pick velocity warrants relocation to front fast-pick zone"
+      }
+    ]
+    ```
+*   **Workflow**: Periodic warehouse optimization workflow providing data-driven recommendations to reposition fast-moving SKUs closer to packing stations.
