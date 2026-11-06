@@ -1199,3 +1199,179 @@ Analyze dispatch velocity and inventory placement to recommend optimal SKU re-sl
     ]
     ```
 *   **Workflow**: Periodic warehouse optimization workflow providing data-driven recommendations to reposition fast-moving SKUs closer to packing stations.
+
+---
+
+## 🛡️ Roles & Permissions (RBAC)
+
+### 1. List System Permissions
+Retrieve all available granular resource permissions defined across the application.
+
+*   **URL**: `/api/roles/permissions`
+*   **Method**: `GET`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Role required: `admin`, Permission required: `user:edit_role`)
+*   **Parameters**: None
+*   **Success Response**: `200 OK`
+    ```json
+    {
+      "permissions": [
+        {
+          "id": "perm_inv_read",
+          "resource": "inventory",
+          "action": "read",
+          "description": "Read inventory items and stock levels"
+        },
+        {
+          "id": "perm_user_edit_role",
+          "resource": "user",
+          "action": "edit_role",
+          "description": "Create and manage custom roles"
+        }
+      ]
+    }
+    ```
+*   **Workflow**: Used by admin console dashboards when creating or editing custom roles to present assignable capabilities.
+
+---
+
+### 2. List Roles
+Retrieve all predefined system roles as well as tenant-specific custom roles along with their assigned permissions.
+
+*   **URL**: `/api/roles`
+*   **Method**: `GET`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Role required: `admin`, Permission required: `user:edit_role`)
+*   **Parameters**: None
+*   **Success Response**: `200 OK`
+    ```json
+    [
+      {
+        "id": "role_admin",
+        "name": "admin",
+        "description": "Full administrative access",
+        "isCustom": false,
+        "permissions": [
+          {
+            "id": "perm_all",
+            "resource": "*",
+            "action": "*",
+            "description": "Full access"
+          }
+        ]
+      },
+      {
+        "id": "custom_tenant-1_auditor_1700000000000",
+        "name": "Inventory Auditor",
+        "description": "Auditor with read-only stock and count reconciliation access",
+        "isCustom": true,
+        "permissions": [
+          {
+            "id": "perm_inv_read",
+            "resource": "inventory",
+            "action": "read",
+            "description": "Read inventory items and stock levels"
+          }
+        ]
+      }
+    ]
+    ```
+*   **Workflow**: Administrators inspect currently configured roles and assigned permission sets within their tenant organization.
+
+---
+
+### 3. Create Custom Role
+Create a new tenant-scoped custom role with a designated set of permission IDs.
+
+*   **URL**: `/api/roles`
+*   **Method**: `POST`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Role required: `admin`, Permission required: `user:edit_role`)
+    *   `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Body**:
+        *   `name` (string, Required): Unique display name for the custom role.
+        *   `description` (string, Optional): Description of role duties and access level.
+        *   `permissionIds` (array of strings, Optional): Array of valid permission IDs to assign to the role.
+*   **Request Body**:
+    ```json
+    {
+      "name": "Receiving Lead",
+      "description": "Supervises inbound goods receipt and warehouse putaway",
+      "permissionIds": ["perm_inv_receive", "perm_po_receive"]
+    }
+    ```
+*   **Success Response**: `201 Created`
+    ```json
+    {
+      "success": true,
+      "message": "Role created successfully.",
+      "id": "custom_tenant-1_receiving_lead_1700000000000"
+    }
+    ```
+*   **Error Responses**:
+    *   `400 Bad Request`: If `name` is missing or if any item in `permissionIds` does not exist.
+        ```json
+        { "error": "name is required." }
+        ```
+*   **Workflow**: Administrators tailor granular roles matching job functions and assign them to staff members.
+
+---
+
+### 4. Update Role Permissions
+Replace the complete set of permissions assigned to an existing custom or system role.
+
+*   **URL**: `/api/roles/:roleId/permissions`
+*   **Method**: `PUT`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Role required: `admin`)
+    *   `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Path**:
+        *   `roleId` (string, Required): Identifier of the target role.
+    *   **Body**:
+        *   `permissionIds` (array of strings, Required): Array of valid permission IDs to associate with this role.
+*   **Request Body**:
+    ```json
+    {
+      "permissionIds": ["perm_inv_read", "perm_inv_receive", "perm_inv_dispatch"]
+    }
+    ```
+*   **Success Response**: `200 OK`
+    ```json
+    {
+      "success": true,
+      "message": "Role permissions updated successfully."
+    }
+    ```
+*   **Error Responses**:
+    *   `400 Bad Request`: If `permissionIds` is not an array or contains invalid permission IDs.
+    *   `404 Not Found`: If `roleId` does not exist.
+*   **Workflow**: Modifies the capability set for an existing role, immediately affecting permissions for all assigned users.
+
+---
+
+### 5. Delete Custom Role
+Delete a tenant custom role. Built-in system roles or roles currently assigned to users cannot be deleted.
+
+*   **URL**: `/api/roles/:roleId`
+*   **Method**: `DELETE`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Role required: `admin`)
+*   **Parameters**:
+    *   **Path**:
+        *   `roleId` (string, Required): Identifier of the custom role to delete.
+*   **Success Response**: `200 OK`
+    ```json
+    {
+      "success": true,
+      "message": "Role deleted successfully."
+    }
+    ```
+*   **Error Responses**:
+    *   `403 Forbidden`: If attempting to delete a built-in system role or a role currently assigned to one or more users.
+        ```json
+        { "error": "Cannot delete a built-in system role." }
+        ```
+    *   `404 Not Found`: If `roleId` does not exist.
+*   **Workflow**: Clean up unused custom roles that have been decommissioned and unassigned from all users.

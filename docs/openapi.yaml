@@ -478,6 +478,67 @@ paths:
       responses:
         '200':
           description: OK
+  /api/roles/permissions:
+    get:
+      summary: List system permissions
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/roles:
+    get:
+      summary: List roles
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create custom role
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad Request
+  /api/roles/{roleId}/permissions:
+    put:
+      summary: Update role permissions
+      parameters:
+      - name: roleId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '404':
+          description: Not Found
+  /api/roles/{roleId}:
+    delete:
+      summary: Delete custom role
+      parameters:
+      - name: roleId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
   /api/shopify:
     get:
       security:
