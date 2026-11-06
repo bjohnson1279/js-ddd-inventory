@@ -18,6 +18,8 @@ export enum NotificationStatus {
   ESCALATED = 'ESCALATED'
 }
 
+import { NotificationId } from './valueObjects/NotificationId';
+
 export enum NotificationChannel {
   IN_APP = 'IN_APP',
   EMAIL = 'EMAIL',
@@ -26,8 +28,10 @@ export enum NotificationChannel {
 }
 
 export class Notification {
+  public readonly id: NotificationId;
+
   constructor(
-    public id: string,
+    id: NotificationId | string,
     public tenantId: string,
     public userId: string,
     public category: NotificationCategory,
@@ -37,7 +41,11 @@ export class Notification {
     public status: NotificationStatus = NotificationStatus.UNREAD,
     public createdAt: Date = new Date(),
     public snoozedUntil: Date | null = null
-  ) {}
+  ) {
+    this.id = typeof id === 'string'
+      ? NotificationId.create(id)
+      : (id || NotificationId.create());
+  }
 
   public markAsRead(): void {
     this.status = NotificationStatus.READ;
