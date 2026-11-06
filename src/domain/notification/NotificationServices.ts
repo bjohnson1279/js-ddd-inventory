@@ -3,6 +3,7 @@ import {
   Notification, NotificationPreference, NotificationCategory, 
   NotificationSeverity, NotificationChannel, NotificationStatus 
 } from './NotificationEntities';
+import { NotificationId } from './valueObjects/NotificationId';
 
 export class NotificationDispatcherService {
   public outboxEvents: any[] = [];
@@ -46,18 +47,19 @@ export class NotificationDispatcherService {
 export class NotificationInboxService {
   constructor(public notifications: Notification[]) {}
 
-  private getNotification(notifId: string, userId: string): Notification | null {
-    return this.notifications.find(n => n.id === notifId && n.userId === userId) || null;
+  private getNotification(notifId: NotificationId | string, userId: string): Notification | null {
+    const idVo = typeof notifId === 'string' ? NotificationId.create(notifId) : notifId;
+    return this.notifications.find(n => n.id.equals(idVo) && n.userId === userId) || null;
   }
 
-  public markAsRead(notifId: string, userId: string): boolean {
+  public markAsRead(notifId: NotificationId | string, userId: string): boolean {
     const n = this.getNotification(notifId, userId);
     if (!n) return false;
     n.markAsRead();
     return true;
   }
 
-  public snooze(notifId: string, userId: string, hours: number): boolean {
+  public snooze(notifId: NotificationId | string, userId: string, hours: number): boolean {
     const n = this.getNotification(notifId, userId);
     if (!n) return false;
     const until = new Date();
@@ -66,7 +68,7 @@ export class NotificationInboxService {
     return true;
   }
 
-  public escalate(notifId: string, userId: string, targetManagerId: string): Notification | null {
+  public escalate(notifId: NotificationId | string, userId: string, targetManagerId: string): Notification | null {
     const n = this.getNotification(notifId, userId);
     if (!n) return null;
     
