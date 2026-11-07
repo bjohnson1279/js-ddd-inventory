@@ -199,8 +199,3 @@
 **Vulnerability:** The `TenantProvisioner` used a custom SQL formatter fallback (when `pg-format` failed to load) utilizing `String.prototype.replace('%I', `"${val.replace(/"/g, '""')}"`)`.
 **Learning:** In JavaScript, when passing a string as the second argument to `replace()`, special replacement patterns (like `$$`, `$&`, `$1`) are interpolated by the JS engine. If an attacker controls the `val` parameter and passes a string like `$$test`, the `replace` function turns `$$` into `$`, resulting in incorrect formatting and potential breakage of escaping logic, leading to injection or syntax errors.
 **Prevention:** When substituting user-controlled or dynamically escaped strings via `String.prototype.replace()`, always use a replacer function (e.g., `replace(/%I/g, () => `"${val}"`)`) rather than a raw string replacement. This ensures the output is treated purely as literal characters without interpreting `$X` directives.
-
-## 2026-10-31 - Express Parameter Type Confusion Remediation
-**Vulnerability:** Fastify `request.query` variables were directly cast to `string` in various controllers. Because Fastify/Express parses multiple same-named query parameters as an array instead of a string, this caused runtime type confusion.
-**Learning:** Type assertions (`as string`) in TypeScript do not alter runtime values. Relying on them for query parameter parsing can lead to unexpected array or object injection into database ORMs, potentially triggering DoS or logical bypass.
-**Prevention:** Query parameter access should strictly involve a `typeof === "string"` runtime check before the assertion, or default gracefully to `undefined` or a known safe value, regardless of framework mapping configurations.
