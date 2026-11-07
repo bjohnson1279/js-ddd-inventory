@@ -88,7 +88,7 @@ export class ReorderPolicyController {
       if (request.query && (request.query as any).locationId !== undefined && typeof (request.query as any).locationId !== "string") {
         return reply.status(400).send({ error: "Invalid locationId parameter" });
       }
-      const locationId = request.query && (request.query as any).locationId ? ((request.query as any).locationId as string).trim() : undefined;
+      const locationId = request.query && typeof (request.query as any).locationId === "string" ? ((request.query as any).locationId as string).trim() : undefined;
       const results = await service.evaluatePolicies(tenantId, forecaster, inventoryRepository, 30, locationId);
 
       reply.status(200).send({ results });
