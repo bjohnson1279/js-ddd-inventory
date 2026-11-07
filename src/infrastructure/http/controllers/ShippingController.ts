@@ -22,7 +22,8 @@ export class ShippingController {
       const carrierService = (request.server as any)["carrierService"] as ICarrierService;
       const useCase = new CalculateShippingRates(carrierService);
 
-      const { sku, quantity, address } = (request.query as any);
+      const { sku, quantity, address } = typeof request.query === "object" && request.query ? (request.query as any) : {};
+      if (sku !== undefined && typeof sku !== "string" || quantity !== undefined && typeof quantity !== "string" || address !== undefined && typeof address !== "string") { return reply.status(400).send({ error: "Invalid query parameters" }); }
 
       if (!sku || !address) {
         return reply.status(400).send({ error: "Missing required parameters: sku, address." });

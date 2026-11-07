@@ -12,8 +12,8 @@ export class OutboxController {
           ((request.query as any).maxAttempts !== undefined && typeof (request.query as any).maxAttempts !== "string"))) {
         return reply.status(400).send({ error: "Invalid query parameters" });
       }
-      const limit = request.query && (request.query as any).limit ? parseInt((request.query as any).limit as string, 10) : 50;
-      const maxAttempts = request.query && (request.query as any).maxAttempts ? parseInt((request.query as any).maxAttempts as string, 10) : 5;
+      const limit = request.query && typeof (request.query as any).limit === "string" ? parseInt((request.query as any).limit as string, 10) : 50;
+      const maxAttempts = request.query && typeof (request.query as any).maxAttempts === "string" ? parseInt((request.query as any).maxAttempts as string, 10) : 5;
       if (isNaN(limit) || isNaN(maxAttempts)) {
         return reply.status(400).send({ error: "Invalid query parameters" });
       }
@@ -68,7 +68,7 @@ export class OutboxController {
       if (request.query && (request.query as any).maxAttempts !== undefined && typeof (request.query as any).maxAttempts !== "string") {
         return reply.status(400).send({ error: "Invalid maxAttempts parameter" });
       }
-      const maxAttempts = request.query && (request.query as any).maxAttempts ? parseInt((request.query as any).maxAttempts as string, 10) : 5;
+      const maxAttempts = request.query && typeof (request.query as any).maxAttempts === "string" ? parseInt((request.query as any).maxAttempts as string, 10) : 5;
       if (isNaN(maxAttempts)) {
         return reply.status(400).send({ error: "Invalid maxAttempts parameter" });
       }

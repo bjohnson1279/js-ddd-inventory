@@ -41,7 +41,7 @@ fastify.get('/dead-stock/:tenantId', async (request: any, reply: any) => {
     if (request.query && (request.query as any).days !== undefined && typeof (request.query as any).days !== "string") {
       return reply.status(400).send({ error: "Invalid days parameter" });
     }
-    const days = parseInt((request.query as any).days as string) || 180;
+    const days = typeof (request.query as any).days === "string" ? parseInt((request.query as any).days as string) : 180;
     
     // Find dispatches in the last N days
     const sinceDate = new Date();
