@@ -100,7 +100,7 @@ export class InventoryController {
       if (request.query && (request.query as any).locationId !== undefined && typeof (request.query as any).locationId !== "string") {
         return reply.status(400).send({ error: "Invalid locationId parameter" });
       }
-      const locationId = request.query && (request.query as any).locationId ? ((request.query as any).locationId as string).trim() : "default";
+      const locationId = request.query && typeof (request.query as any).locationId === "string" ? ((request.query as any).locationId as string).trim() : "default";
 
       const skuObj = SKU.create(sku);
       const item = await repository.findBySku(skuObj, locationId);
@@ -285,8 +285,8 @@ export class InventoryController {
         return reply.status(400).send({ error: "Invalid query parameters" });
       }
 
-      const sku = (request.query as any).sku as string;
-      const quantity = (request.query as any).quantity as string;
+      const sku = typeof (request.query as any).sku === "string" ? (request.query as any).sku as string : "";
+      const quantity = typeof (request.query as any).quantity === "string" ? (request.query as any).quantity as string : "";
 
       const parsedQuantity = parseInt(quantity.trim(), 10);
       if (isNaN(parsedQuantity) || parsedQuantity <= 0) {

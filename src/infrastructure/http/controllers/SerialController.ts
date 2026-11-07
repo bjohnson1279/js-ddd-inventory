@@ -168,7 +168,7 @@ export class SerialController {
       if (request.query && (request.query as any).tenantId !== undefined && typeof (request.query as any).tenantId !== "string") {
         return reply.status(400).send({ error: "Invalid tenantId parameter" });
       }
-      const tenantId = request.query && (request.query as any).tenantId ? ((request.query as any).tenantId as string).trim() : "DEFAULT";
+      const tenantId = request.query && typeof (request.query as any).tenantId === "string" ? ((request.query as any).tenantId as string).trim() : "DEFAULT";
 
       if (!serialNumber) {
         return reply
