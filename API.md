@@ -1375,3 +1375,106 @@ Delete a tenant custom role. Built-in system roles or roles currently assigned t
         ```
     *   `404 Not Found`: If `roleId` does not exist.
 *   **Workflow**: Clean up unused custom roles that have been decommissioned and unassigned from all users.
+
+---
+
+## 🔔 Notifications & Preferences
+Manage system alerts, in-app notifications, and per-user delivery channel preferences for operational events (such as low stock, order discrepancies, and audits).
+
+### 1. Fetch Unread Notifications
+Retrieve all active, unread notifications for a specified tenant, ordered by creation date descending.
+
+*   **URL**: `/api/notifications/:tenantId`
+*   **Method**: `GET`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required)
+*   **Parameters**:
+    *   **Path**:
+        *   `tenantId` (string, Required): The unique identifier of the tenant.
+*   **Success Response**: `200 OK`
+    ```json
+    [
+      {
+        "id": "e44c219a-9e12-4f36-963d-4c3dcfefd092",
+        "tenantId": "tenant-1",
+        "title": "Low Stock Warning",
+        "message": "SKU-SAMPLE-1 stock level has fallen below minimum threshold of 10 units at LOC-MAIN.",
+        "type": "warning",
+        "isRead": false,
+        "createdAt": "2026-11-06T15:30:00.000Z"
+      }
+    ]
+    ```
+*   **Error Responses**:
+    *   `500 Internal Server Error`: If fetching notifications fails.
+        ```json
+        { "error": "Failed to fetch notifications" }
+        ```
+*   **Workflow**: Front-end applications poll or load unread notifications on dashboard launch to display active alerts and warnings to warehouse managers and inventory operators.
+
+---
+
+### 2. Mark Notification as Read
+Acknowledge and mark a single notification as read by its unique identifier.
+
+*   **URL**: `/api/notifications/:id/read`
+*   **Method**: `PATCH`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required)
+*   **Parameters**:
+    *   **Path**:
+        *   `id` (string, Required): Unique notification record identifier.
+*   **Success Response**: `200 OK`
+    *(Empty response body)*
+*   **Error Responses**:
+    *   `500 Internal Server Error`: If updating the notification status fails.
+        ```json
+        { "error": "Failed to mark notification as read" }
+        ```
+*   **Workflow**: Invoked when an operator views or dismisses a notification from their notification drawer or bell icon in the web dashboard.
+
+---
+
+### 3. Save Notification Preferences
+Create or update delivery preferences for an individual user across notification channels and event types (upsert).
+
+*   **URL**: `/api/notifications/preferences`
+*   **Method**: `POST`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required)
+    *   `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Body**:
+        *   `userId` (string, Required): Unique identifier of the user.
+        *   `tenantId` (string, Required): Unique identifier of the user's tenant organization.
+        *   `channel` (string, Required): Delivery channel name (e.g. `"EMAIL"`, `"SMS"`, `"IN_APP"`, `"WEBHOOK"`).
+        *   `eventType` (string, Required): Target event category identifier (e.g. `"LOW_STOCK"`, `"AUDIT_DISCREPANCY"`, `"ALL"`).
+        *   `isEnabled` (boolean, Required): Boolean flag toggling delivery on (`true`) or off (`false`).
+*   **Request Body**:
+    ```json
+    {
+      "userId": "usr_ops_01",
+      "tenantId": "tenant-1",
+      "channel": "EMAIL",
+      "eventType": "LOW_STOCK",
+      "isEnabled": true
+    }
+    ```
+*   **Success Response**: `201 Created`
+    ```json
+    {
+      "id": "pref_c0a80101-7b91-4e44-88aa-123456789abc",
+      "userId": "usr_ops_01",
+      "tenantId": "tenant-1",
+      "channel": "EMAIL",
+      "eventType": "LOW_STOCK",
+      "isEnabled": true,
+      "createdAt": "2026-11-06T16:00:00.000Z"
+    }
+    ```
+*   **Error Responses**:
+    *   `500 Internal Server Error`: If saving preference configurations fails.
+        ```json
+        { "error": "Failed to save preferences" }
+        ```
+*   **Workflow**: Users customize their alert dispatch channels within account settings to control which events trigger in-app, email, or webhook notifications.
