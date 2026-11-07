@@ -11,6 +11,61 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        type:
+          type: string
+          example: info
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+      - id
+      - tenantId
+      - title
+      - message
+      - type
+      - isRead
+      - createdAt
+    NotificationPreference:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        tenantId:
+          type: string
+        channel:
+          type: string
+          example: EMAIL
+        eventType:
+          type: string
+          example: LOW_STOCK
+        isEnabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+      - id
+      - userId
+      - tenantId
+      - channel
+      - eventType
+      - isEnabled
+      - createdAt
     Item:
       type: object
       properties:
@@ -868,13 +923,88 @@ paths:
       responses:
         '200':
           description: OK
-  /api/notifications:
+  /api/notifications/{tenantId}:
     get:
+      summary: Fetch unread notifications
+      description: Retrieve all active, unread notifications for a specified tenant, ordered by creation date descending.
       security:
       - bearerAuth: []
+      parameters:
+      - name: tenantId
+        in: path
+        required: true
+        description: Unique identifier of the tenant
+        schema:
+          type: string
       responses:
         '200':
-          description: OK
+          description: List of unread notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+        '500':
+          description: Failed to fetch notifications
+  /api/notifications/{id}/read:
+    patch:
+      summary: Mark notification as read
+      description: Acknowledge and mark a single notification as read by its unique identifier.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Unique notification record identifier
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Notification successfully marked as read
+        '500':
+          description: Failed to mark notification as read
+  /api/notifications/preferences:
+    post:
+      summary: Save notification preferences
+      description: Create or update delivery preferences for an individual user across notification channels and event types (upsert).
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                tenantId:
+                  type: string
+                channel:
+                  type: string
+                  example: EMAIL
+                eventType:
+                  type: string
+                  example: LOW_STOCK
+                isEnabled:
+                  type: boolean
+              required:
+              - userId
+              - tenantId
+              - channel
+              - eventType
+              - isEnabled
+      responses:
+        '201':
+          description: Saved notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreference'
+        '500':
+          description: Failed to save preferences
   /api/compliance/ledger:
     get:
       security:
