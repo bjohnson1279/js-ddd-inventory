@@ -1,5 +1,6 @@
 import { IntercompanyTransfer, TransferStatus, PricingRuleType } from '../../../src/domain/intercompany/IntercompanyEntities';
 import { TransferPricingService, IntercompanyAccountingService, ConsolidationReportService } from '../../../src/domain/intercompany/IntercompanyServices';
+import { TransferId } from '../../../src/domain/intercompany/valueObjects/TransferId';
 
 describe('Intercompany Accounting Services', () => {
   it('TransferPricingService calculates correct price', () => {
@@ -21,6 +22,9 @@ describe('Intercompany Accounting Services', () => {
     const transfer = new IntercompanyTransfer(
       'TR1', 'T1', 'E1', 'E2', 'SKU1', 10, 1100, TransferStatus.DRAFT, 500
     );
+
+    expect(transfer.id).toBeInstanceOf(TransferId);
+    expect(transfer.id.getValue()).toBe('TR1');
 
     transfer.ship();
     const shipmentEntries = acctService.generateEntriesForShipment(transfer, 1000);

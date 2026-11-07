@@ -25,9 +25,13 @@ export interface TransferPricingRule {
   markupPercentage: number;
 }
 
+import { TransferId } from './valueObjects/TransferId';
+
 export class IntercompanyTransfer {
+  public readonly id: TransferId;
+
   constructor(
-    public id: string,
+    id: TransferId | string,
     public tenantId: string,
     public sourceEntityId: string,
     public destinationEntityId: string,
@@ -36,7 +40,11 @@ export class IntercompanyTransfer {
     public transferPriceCents: number,
     public status: TransferStatus,
     public tariffsCents: number = 0
-  ) {}
+  ) {
+    this.id = typeof id === 'string'
+      ? TransferId.create(id)
+      : (id || TransferId.create());
+  }
 
   public ship(): void {
     if (this.status !== TransferStatus.DRAFT) {
@@ -61,7 +69,7 @@ export class IntercompanyTransfer {
 }
 
 export interface IntercompanyJournalEntry {
-  transferId: string;
+  transferId: TransferId | string;
   entityId: string;
   debitAccount: string;
   creditAccount: string;
