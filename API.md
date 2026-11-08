@@ -992,6 +992,129 @@ Record inbound goods receipt against an active purchase order, updating inventor
 
 ---
 
+### 6. Create or Update Reorder Policy
+Define or update inventory replenishment thresholds, batch sizes, safety stock buffers, and automated dynamic forecasting flags for a specific SKU at a warehouse location.
+
+*   **URL**: `/api/reorder-policies`
+*   **Method**: `POST`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required)
+    *   `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Body**:
+        *   `sku` (string, Required): Unique product SKU code.
+        *   `locationId` (string, Required): Warehouse storage location or facility identifier.
+        *   `reorderPoint` (number, Required): Inventory count threshold that triggers replenishment (must be non-negative).
+        *   `reorderQuantity` (number, Required): Batch quantity to reorder when stock drops below threshold (must be greater than 0).
+        *   `safetyStock` (number, Required): Minimum safety buffer stock maintained against demand spikes (must be non-negative).
+        *   `dynamicRopEnabled` (boolean, Optional): Flag toggling continuous dynamic forecasting based on 30-day demand velocity and vendor lead time.
+*   **Request Body**:
+    ```json
+    {
+      "sku": "IPHONE-15-PRO-BLK",
+      "locationId": "LOC-A1",
+      "reorderPoint": 20,
+      "reorderQuantity": 50,
+      "safetyStock": 10,
+      "dynamicRopEnabled": true
+    }
+    ```
+*   **Success Response**: `200 OK`
+    ```json
+    {
+      "id": "e44c219a-9e12-4f36-963d-4c3dcfefd092",
+      "sku": "IPHONE-15-PRO-BLK",
+      "locationId": "LOC-A1",
+      "reorderPoint": 20,
+      "reorderQuantity": 50,
+      "safetyStock": 10,
+      "dynamicRopEnabled": true
+    }
+    ```
+*   **Error Responses**:
+    *   `400 Bad Request`: If domain validation fails (e.g. negative reorder point, negative safety stock, zero or negative reorder quantity).
+        ```json
+        { "error": "A domain error occurred while processing the request.", "type": "Error" }
+        ```
+    *   `500 Internal Server Error`: If persistent storage or internal errors occur.
+*   **Workflow**: Warehouse planners and inventory managers configure automated replenishment triggers per SKU and facility. When dynamic ROP is enabled, forecasting algorithms automatically adjust the reorder point based on historical velocity.
+
+---
+
+### 7. Get Reorder Policy
+Retrieve the active reorder policy settings and stock thresholds configured for a SKU at a specific location.
+
+*   **URL**: `/api/reorder-policies/:sku/:locationId`
+*   **Method**: `GET`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required)
+*   **Parameters**:
+    *   **Path**:
+        *   `sku` (string, Required): The product SKU identifier.
+        *   `locationId` (string, Required): The target warehouse location identifier.
+*   **Success Response**: `200 OK`
+    ```json
+    {
+      "id": "e44c219a-9e12-4f36-963d-4c3dcfefd092",
+      "sku": "IPHONE-15-PRO-BLK",
+      "locationId": "LOC-A1",
+      "reorderPoint": 20,
+      "reorderQuantity": 50,
+      "safetyStock": 10,
+      "dynamicRopEnabled": true
+    }
+    ```
+*   **Error Responses**:
+    *   `404 Not Found`: If no reorder policy exists for the requested SKU and location combination.
+        ```json
+        { "error": "Reorder policy not found" }
+        ```
+    *   `500 Internal Server Error`: If a retrieval failure occurs.
+*   **Workflow**: Logistics dashboards and automated inventory review jobs inspect current replenishment thresholds for stock replenishment planning.
+
+---
+
+### 8. Evaluate Reorder Policies
+Evaluate all active reorder policies across locations to detect stockout risks and automatically trigger draft replenishment purchase orders for depleted items.
+
+*   **URL**: `/api/reorder-policies/evaluate`
+*   **Method**: `POST`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required)
+*   **Parameters**:
+    *   **Query**:
+        *   `locationId` (string, Optional): Filter evaluations to a specific warehouse location.
+*   **Success Response**: `200 OK`
+    ```json
+    {
+      "results": [
+        {
+          "sku": "IPHONE-15-PRO-BLK",
+          "locationId": "LOC-A1",
+          "reorderPoint": 20,
+          "triggered": true,
+          "reason": ""
+        },
+        {
+          "sku": "IPAD-AIR-64GB",
+          "locationId": "LOC-A1",
+          "reorderPoint": 15,
+          "triggered": false,
+          "reason": "Open purchase order already exists to prevent duplicate ordering"
+        }
+      ]
+    }
+    ```
+*   **Error Responses**:
+    *   `400 Bad Request`: If query parameters are malformed (e.g. non-string `locationId`).
+        ```json
+        { "error": "Invalid locationId parameter" }
+        ```
+    *   `500 Internal Server Error`: If policy evaluation or purchase order generation fails.
+*   **Workflow**: Executed on a scheduled cron cadence or on demand by procurement teams. For each policy, calculates dynamic reorder points if enabled, compares current stock against the threshold, and automatically creates a new draft purchase order if replenishment is needed and no open PO is pending.
+
+---
+
 ## 📍 Warehouse Locations & WMS Routing
 
 ### 1. Create or Save Warehouse Location
