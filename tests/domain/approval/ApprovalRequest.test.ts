@@ -1,4 +1,5 @@
 import { ApprovalRequest, ApprovalRequestStatus, ApprovalDecisionRecord } from '../../../src/domain/approval/ApprovalRequest';
+import { ApprovalRequestId } from '../../../src/domain/approval/valueObjects/ApprovalRequestId';
 
 describe('ApprovalRequest', () => {
   const createRequest = (totalSteps: number, status = ApprovalRequestStatus.Pending, currentStep = 0) => {
@@ -96,7 +97,16 @@ describe('ApprovalRequest', () => {
     const req = ApprovalRequest.reconstruct(
       'id', 'tenant', 'wf', 'Type', 'ref', 'req', { a: 1 }, 2, ApprovalRequestStatus.Escalated, 1, [], new Date()
     );
-    expect(req.id).toBe('id');
+    expect(req.id.getValue()).toBe('id');
     expect(req.status).toBe(ApprovalRequestStatus.Escalated);
+  });
+
+  it('accepts ApprovalRequestId instance in constructor', () => {
+    const vo = ApprovalRequestId.create('req-vo-123');
+    const req = new ApprovalRequest(
+      vo, 'tenant', 'wf', 'Type', 'ref', 'req', {}, 1
+    );
+    expect(req.id).toBe(vo);
+    expect(req.id.getValue()).toBe('req-vo-123');
   });
 });

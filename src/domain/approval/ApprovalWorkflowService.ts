@@ -10,6 +10,7 @@
 import { PrismaClient } from '@prisma/client';
 import { ApprovalWorkflow, ApprovalWorkflowConfig } from './ApprovalWorkflow';
 import { ApprovalRequest, ApprovalRequestStatus, ApprovalDecisionRecord } from './ApprovalRequest';
+import { ApprovalRequestId } from './valueObjects/ApprovalRequestId';
 import crypto from 'node:crypto';
 import { DomainEventDispatcher } from '../events/DomainEventDispatcher';
 import { ApprovalRequestApprovedEvent, ApprovalRequestRejectedEvent } from './ApprovalEvents';
@@ -190,10 +191,12 @@ export class ApprovalWorkflowService {
       }
     };
 
+    const reqIdString = request.id instanceof ApprovalRequestId ? request.id.getValue() : String(request.id);
+
     if (request.status === ApprovalRequestStatus.Approved) {
       await dispatchEvent(
         new ApprovalRequestApprovedEvent(
-          request.id,
+          reqIdString,
           request.tenantId,
           request.referenceType,
           request.referenceId,
@@ -203,7 +206,7 @@ export class ApprovalWorkflowService {
     } else if (request.status === ApprovalRequestStatus.Rejected) {
       await dispatchEvent(
         new ApprovalRequestRejectedEvent(
-          request.id,
+          reqIdString,
           request.tenantId,
           request.referenceType,
           request.referenceId,
