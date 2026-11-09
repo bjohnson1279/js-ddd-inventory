@@ -181,3 +181,7 @@
 ## 2026-11-04 - Promise.all vs sequential execution for purely parallel tasks
 **Learning:** For distinct repository endpoints writing bulk objects on unrelated tables without transactional locking, wrapping them in an unbounded `Promise.all` can increase connection pool usage simultaneously in orchestrator services compared to awaiting sequentially, preventing potential connection deadlocks when many parallel workflows execute.
 **Action:** Always refactor arbitrary concurrent saves across differing repositories at the end of high-volume event processing loop use cases (like `ReceivePurchaseOrder`) into purely sequential saves (`await saveA(); await saveB();`).
+
+## 2024-10-21 - Chunked Concurrency Optimization in Fallback Sequential DB Lookups
+**Learning:** In fallback paths where batch DB fetching methods are unavailable, iterating arrays with sequential for...of loops prevents connection exhaustion but introduces a severe O(N) linear performance slowdown.
+**Action:** Always refactor purely sequential loop DB operations into chunked bounded concurrency loops (e.g. slice in chunks of 10 and map await Promise.all(chunk)). This balances database connection pool limits while preserving highly performant asynchronous query execution.
