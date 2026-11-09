@@ -1478,3 +1478,298 @@ Create or update delivery preferences for an individual user across notification
         { "error": "Failed to save preferences" }
         ```
 *   **Workflow**: Users customize their alert dispatch channels within account settings to control which events trigger in-app, email, or webhook notifications.
+
+---
+
+## ⚖️ Approval Workflows & Requests
+
+Configure multi-tier approval rules and submit decisions for operations that exceed risk or budget thresholds (e.g., purchase orders or inventory adjustments).
+
+### 1. List Approval Workflows
+Retrieve all approval workflow rules configured for the authenticated tenant.
+
+*   **URL**: `/api/approvals/workflows`
+*   **Method**: `GET`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Permission required: `approval:view`)
+*   **Parameters**: None
+*   **Success Response**: `200 OK`
+    ```json
+    [
+      {
+        "id": "wf_b8a90101-7b91-4e44-88aa-123456789abc",
+        "tenantId": "tenant-1",
+        "name": "High Value PO Approval",
+        "triggerEvent": "PO_CREATED",
+        "config": "{\"thresholds\":[{\"field\":\"totalAmount\",\"operator\":\">\",\"value\":10000}],\"steps\":[{\"approverRoles\":[\"finance_manager\"],\"requiredCount\":1,\"timeoutHours\":48}]}",
+        "isActive": true,
+        "createdAt": "2026-11-06T10:00:00.000Z",
+        "updatedAt": "2026-11-06T10:00:00.000Z"
+      }
+    ]
+    ```
+*   **Error Responses**:
+    *   `401 Unauthorized`: If the Bearer token is missing or invalid.
+    *   `403 Forbidden`: If the user lacks the `approval:view` permission.
+    *   `500 Internal Server Error`:
+        ```json
+        { "error": "Internal error message" }
+        ```
+*   **Workflow**: Used by administrative and finance consoles to review active and configured approval rules.
+
+---
+
+### 2. Create Approval Workflow
+Define a new multi-tier approval rule based on event triggers, evaluation thresholds, and approver roles.
+
+*   **URL**: `/api/approvals/workflows`
+*   **Method**: `POST`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Permission required: `approval:manage`)
+    *   `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Body**:
+        *   `name` (string, Required): Descriptive name of the workflow.
+        *   `triggerEvent` (string, Required): The event name that triggers evaluation (e.g. `"PO_CREATED"`).
+        *   `config` (object or string, Required): Rule definition containing `thresholds` (array of conditions) and `steps` (array of approval steps with `approverRoles`, `requiredCount`, and `timeoutHours`).
+        *   `isActive` (boolean, Optional): Whether the workflow is immediately active upon creation. Default is `true`.
+*   **Request Body**:
+    ```json
+    {
+      "name": "High Value PO Approval",
+      "triggerEvent": "PO_CREATED",
+      "config": {
+        "thresholds": [
+          { "field": "totalAmount", "operator": ">", "value": 10000 }
+        ],
+        "steps": [
+          {
+            "approverRoles": ["finance_manager"],
+            "requiredCount": 1,
+            "timeoutHours": 48
+          }
+        ]
+      },
+      "isActive": true
+    }
+    ```
+*   **Success Response**: `201 Created`
+    ```json
+    {
+      "id": "wf_b8a90101-7b91-4e44-88aa-123456789abc",
+      "tenantId": "tenant-1",
+      "name": "High Value PO Approval",
+      "triggerEvent": "PO_CREATED",
+      "config": "{\"thresholds\":[{\"field\":\"totalAmount\",\"operator\":\">\",\"value\":10000}],\"steps\":[{\"approverRoles\":[\"finance_manager\"],\"requiredCount\":1,\"timeoutHours\":48}]}",
+      "isActive": true
+    }
+    ```
+*   **Error Responses**:
+    *   `400 Bad Request`: If validation fails or workflow definition is invalid.
+        ```json
+        { "error": "Approval workflow must define at least one approval step." }
+        ```
+    *   `401 Unauthorized`: If the Bearer token is missing or invalid.
+    *   `403 Forbidden`: If the user lacks the `approval:manage` permission.
+*   **Workflow**: Configures governance guardrails ensuring critical domain operations require human review before completion.
+
+---
+
+### 3. Update Workflow Configuration
+Update the threshold and step configurations for an existing approval workflow.
+
+*   **URL**: `/api/approvals/workflows/:id`
+*   **Method**: `PUT`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Permission required: `approval:manage`)
+    *   `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Path**:
+        *   `id` (string, Required): The approval workflow identifier.
+    *   **Body**:
+        *   `config` (object or string, Required): Updated configuration object or stringified JSON containing `thresholds` and `steps`.
+*   **Request Body**:
+    ```json
+    {
+      "config": {
+        "thresholds": [
+          { "field": "totalAmount", "operator": ">=", "value": 15000 }
+        ],
+        "steps": [
+          {
+            "approverRoles": ["finance_director"],
+            "requiredCount": 1,
+            "timeoutHours": 72
+          }
+        ]
+      }
+    }
+    ```
+*   **Success Response**: `200 OK`
+    ```json
+    {
+      "id": "wf_b8a90101-7b91-4e44-88aa-123456789abc",
+      "tenantId": "tenant-1",
+      "name": "High Value PO Approval",
+      "triggerEvent": "PO_CREATED",
+      "config": "{\"thresholds\":[{\"field\":\"totalAmount\",\"operator\":\">=\",\"value\":15000}],\"steps\":[{\"approverRoles\":[\"finance_director\"],\"requiredCount\":1,\"timeoutHours\":72}]}",
+      "isActive": true
+    }
+    ```
+*   **Error Responses**:
+    *   `400 Bad Request`: If the workflow ID is not found or configuration is invalid.
+    *   `401 Unauthorized`: If the Bearer token is missing or invalid.
+    *   `403 Forbidden`: If the user lacks the `approval:manage` permission.
+*   **Workflow**: Modifies escalation tiers and decision thresholds without re-creating workflow entities.
+
+---
+
+### 4. Toggle Workflow Status
+Enable or disable an approval workflow.
+
+*   **URL**: `/api/approvals/workflows/:id/toggle`
+*   **Method**: `POST`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Permission required: `approval:manage`)
+*   **Parameters**:
+    *   **Path**:
+        *   `id` (string, Required): The approval workflow identifier.
+*   **Success Response**: `200 OK`
+    ```json
+    {
+      "id": "wf_b8a90101-7b91-4e44-88aa-123456789abc",
+      "tenantId": "tenant-1",
+      "name": "High Value PO Approval",
+      "isActive": false
+    }
+    ```
+*   **Error Responses**:
+    *   `400 Bad Request`: If the workflow record does not exist.
+        ```json
+        { "error": "Workflow not found" }
+        ```
+    *   `401 Unauthorized`: If the Bearer token is missing or invalid.
+    *   `403 Forbidden`: If the user lacks the `approval:manage` permission.
+*   **Workflow**: Temporarily pauses or reactivates workflow enforcement during policy changes or emergency operations.
+
+---
+
+### 5. List Pending Approval Requests
+List all pending approval requests awaiting sign-off for the authenticated tenant.
+
+*   **URL**: `/api/approvals/pending`
+*   **Method**: `GET`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Permission required: `approval:view`)
+*   **Parameters**: None
+*   **Success Response**: `200 OK`
+    ```json
+    [
+      {
+        "id": "req_550e8400-e29b-41d4-a716-446655440000",
+        "tenantId": "tenant-1",
+        "workflowId": "wf_b8a90101-7b91-4e44-88aa-123456789abc",
+        "referenceType": "PURCHASE_ORDER",
+        "referenceId": "po-123",
+        "requesterId": "usr_ops_01",
+        "status": "PENDING",
+        "currentStep": 0,
+        "payload": "{\"totalAmount\":12500}",
+        "workflow": {
+          "id": "wf_b8a90101-7b91-4e44-88aa-123456789abc",
+          "name": "High Value PO Approval"
+        },
+        "decisions": []
+      }
+    ]
+    ```
+*   **Error Responses**:
+    *   `401 Unauthorized`: If the Bearer token is missing or invalid.
+    *   `403 Forbidden`: If the user lacks the `approval:view` permission.
+    *   `500 Internal Server Error`: If fetching pending requests fails.
+*   **Workflow**: Queried by manager dashboards and inbox views to present tasks waiting for review.
+
+---
+
+### 6. Get Approval Request by ID
+Retrieve details and current decision history for a specific approval request.
+
+*   **URL**: `/api/approvals/:id`
+*   **Method**: `GET`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Permission required: `approval:view`)
+*   **Parameters**:
+    *   **Path**:
+        *   `id` (string, Required): The approval request identifier.
+*   **Success Response**: `200 OK`
+    ```json
+    {
+      "id": "req_550e8400-e29b-41d4-a716-446655440000",
+      "tenantId": "tenant-1",
+      "workflowId": "wf_b8a90101-7b91-4e44-88aa-123456789abc",
+      "referenceType": "PURCHASE_ORDER",
+      "referenceId": "po-123",
+      "requesterId": "usr_ops_01",
+      "status": "PENDING",
+      "currentStep": 0,
+      "payload": "{\"totalAmount\":12500}",
+      "workflow": {
+        "id": "wf_b8a90101-7b91-4e44-88aa-123456789abc",
+        "name": "High Value PO Approval"
+      },
+      "decisions": []
+    }
+    ```
+*   **Error Responses**:
+    *   `401 Unauthorized`: If the Bearer token is missing or invalid.
+    *   `403 Forbidden`: If the user lacks the `approval:view` permission.
+    *   `404 Not Found`: If the request record cannot be located.
+        ```json
+        { "error": "Not found" }
+        ```
+    *   `500 Internal Server Error`: If an unexpected database failure occurs.
+*   **Workflow**: Loaded when opening an approval request detail modal or approval review page.
+
+---
+
+### 7. Submit Approval Decision
+Record an approval decision (`APPROVE` or `REJECT`) on a pending approval request.
+
+*   **URL**: `/api/approvals/:id/decide`
+*   **Method**: `POST`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Permission required: `approval:manage`)
+    *   `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Path**:
+        *   `id` (string, Required): The approval request identifier.
+    *   **Body**:
+        *   `decision` (string, Required): Decision verdict (`"APPROVE"` or `"REJECT"`).
+        *   `notes` (string, Optional): Explanatory reason or feedback from the reviewer.
+*   **Request Body**:
+    ```json
+    {
+      "decision": "APPROVE",
+      "notes": "Budget verified and approved."
+    }
+    ```
+*   **Success Response**: `200 OK`
+    ```json
+    {
+      "id": "dec_33112233-4455-6677-8899-aabbccddeeff",
+      "requestId": "req_550e8400-e29b-41d4-a716-446655440000",
+      "stepIndex": 0,
+      "deciderId": "usr_mgr_01",
+      "decision": "APPROVED",
+      "notes": "Budget verified and approved.",
+      "decidedAt": "2026-11-06T11:00:00.000Z"
+    }
+    ```
+*   **Error Responses**:
+    *   `400 Bad Request`: If the request is not pending, or decision submission fails.
+        ```json
+        { "error": "Approval request is not pending" }
+        ```
+    *   `401 Unauthorized`: If the Bearer token is missing or invalid.
+    *   `403 Forbidden`: If the user lacks the `approval:manage` permission.
+*   **Workflow**: Triggered when a manager or reviewer signs off or rejects a request, advancing multi-step chains or resolving blocked business events.
