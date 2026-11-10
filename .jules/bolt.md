@@ -185,3 +185,6 @@
 ## 2024-10-21 - Chunked Concurrency Optimization in Fallback Sequential DB Lookups
 **Learning:** In fallback paths where batch DB fetching methods are unavailable, iterating arrays with sequential for...of loops prevents connection exhaustion but introduces a severe O(N) linear performance slowdown.
 **Action:** Always refactor purely sequential loop DB operations into chunked bounded concurrency loops (e.g. slice in chunks of 10 and map await Promise.all(chunk)). This balances database connection pool limits while preserving highly performant asynchronous query execution.
+## 2026-11-15 - Prisma createMany vs N+1 Loop in Seed/Setup Routines
+**Learning:** Iterating through predefined collections (such as system permissions in AuthController.setup) and checking existence via `findUnique` followed by `create` results in 2*N sequential database roundtrips (78 queries for 39 permissions), causing significant setup latency and connection contention.
+**Action:** Use Prisma's native `createMany({ data: items, skipDuplicates: true })` to insert the entire batch in a single database roundtrip, reducing query count and latency by ~98%.
