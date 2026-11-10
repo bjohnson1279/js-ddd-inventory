@@ -185,3 +185,7 @@
 ## 2024-10-21 - Chunked Concurrency Optimization in Fallback Sequential DB Lookups
 **Learning:** In fallback paths where batch DB fetching methods are unavailable, iterating arrays with sequential for...of loops prevents connection exhaustion but introduces a severe O(N) linear performance slowdown.
 **Action:** Always refactor purely sequential loop DB operations into chunked bounded concurrency loops (e.g. slice in chunks of 10 and map await Promise.all(chunk)). This balances database connection pool limits while preserving highly performant asynchronous query execution.
+
+## 2026-11-10 - Batching INSERT and UPDATE with UNNEST in Postgres Repositories
+**Learning:** In repository batch write operations such as `saveMany`, iterating over an array of entities and executing individual `INSERT` and `UPDATE` queries causes an N+1 query bottleneck and massive latency overhead.
+**Action:** Group entities into inserts and updates, and execute them via bulk queries using PostgreSQL `UNNEST(...)`. For optimistic concurrency control on updates, join with the unnested dataset and use `RETURNING` to detect concurrency mismatches in a single round-trip.
