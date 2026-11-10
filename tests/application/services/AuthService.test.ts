@@ -145,4 +145,19 @@ describe('AuthService Unit Tests', () => {
       expect(result).toBe(false);
     });
   });
+
+  describe('JWT_SECRET Environment Variable Requirement', () => {
+    it('should throw an error when JWT_SECRET is missing', () => {
+      const originalJwtSecret = process.env.JWT_SECRET;
+      delete process.env.JWT_SECRET;
+
+      expect(() => {
+        jest.isolateModules(() => {
+          require('../../../src/application/services/AuthService');
+        });
+      }).toThrow('JWT_SECRET environment variable is required for security.');
+
+      process.env.JWT_SECRET = originalJwtSecret;
+    });
+  });
 });

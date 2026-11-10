@@ -199,3 +199,8 @@
 **Vulnerability:** The `TenantProvisioner` used a custom SQL formatter fallback (when `pg-format` failed to load) utilizing `String.prototype.replace('%I', `"${val.replace(/"/g, '""')}"`)`.
 **Learning:** In JavaScript, when passing a string as the second argument to `replace()`, special replacement patterns (like `$$`, `$&`, `$1`) are interpolated by the JS engine. If an attacker controls the `val` parameter and passes a string like `$$test`, the `replace` function turns `$$` into `$`, resulting in incorrect formatting and potential breakage of escaping logic, leading to injection or syntax errors.
 **Prevention:** When substituting user-controlled or dynamically escaped strings via `String.prototype.replace()`, always use a replacer function (e.g., `replace(/%I/g, () => `"${val}"`)`) rather than a raw string replacement. This ensures the output is treated purely as literal characters without interpreting `$X` directives.
+
+## 2026-11-10 - Strictly Require JWT_SECRET Environment Variable in AuthService
+**Vulnerability:** `AuthService.ts` contained a conditional fallback to `'test-jwt-secret'` when `process.env.NODE_ENV === 'test'`.
+**Learning:** Having fallback secrets in production code—even guarded by test environment checks—can introduce risks if environment flags are misconfigured or leaked, and diverges from zero-fallback security invariants enforced in other controllers and middleware.
+**Prevention:** Strictly enforce that `JWT_SECRET` is defined across all environments by throwing an error if missing, and ensure test harnesses and test scripts explicitly provide `JWT_SECRET` in `process.env`.
