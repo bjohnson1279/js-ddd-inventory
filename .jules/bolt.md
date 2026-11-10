@@ -185,3 +185,7 @@
 ## 2024-10-21 - Chunked Concurrency Optimization in Fallback Sequential DB Lookups
 **Learning:** In fallback paths where batch DB fetching methods are unavailable, iterating arrays with sequential for...of loops prevents connection exhaustion but introduces a severe O(N) linear performance slowdown.
 **Action:** Always refactor purely sequential loop DB operations into chunked bounded concurrency loops (e.g. slice in chunks of 10 and map await Promise.all(chunk)). This balances database connection pool limits while preserving highly performant asynchronous query execution.
+
+## 2024-11-20 - Chunked Concurrency Optimization in Fallback Sequential DB Lookups
+**Learning:** In fallback paths where batch DB fetching methods are unavailable (like `findBySkus` missing), iterating arrays with sequential `for...of` loops prevents connection exhaustion but introduces a severe O(N) linear performance slowdown. Wrapping everything in `Promise.all` overwhelms the database.
+**Action:** Always refactor purely sequential loop DB operations into chunked bounded concurrency loops (e.g. slicing into chunks of 10 and mapping `await Promise.all(chunk)`). This balances database connection pool limits while preserving highly performant asynchronous query execution. Added comments to explain this optimization.
