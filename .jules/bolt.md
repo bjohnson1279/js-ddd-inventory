@@ -185,3 +185,7 @@
 ## 2024-10-21 - Chunked Concurrency Optimization in Fallback Sequential DB Lookups
 **Learning:** In fallback paths where batch DB fetching methods are unavailable, iterating arrays with sequential for...of loops prevents connection exhaustion but introduces a severe O(N) linear performance slowdown.
 **Action:** Always refactor purely sequential loop DB operations into chunked bounded concurrency loops (e.g. slice in chunks of 10 and map await Promise.all(chunk)). This balances database connection pool limits while preserving highly performant asynchronous query execution.
+
+## 2026-11-10 - Bulk Fetch Webhook Subscriptions to Prevent N+1 Queries
+**Learning:** In worker loops like `WebhookDeliveryWorker.processPendingDeliveries`, iterating over queued deliveries and querying subscriptions one-by-one with `findUnique` introduces an N+1 database roundtrip pattern.
+**Action:** Extract unique foreign keys (`subscriptionIds = Array.from(new Set(deliveries.map(d => d.subscriptionId)))`) and bulk fetch records via `findMany({ where: { id: { in: subscriptionIds } } })` into an in-memory Map prior to the loop.
