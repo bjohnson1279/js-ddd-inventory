@@ -38,10 +38,14 @@ export class CreateInventoryAudit {
       if (this.inventoryRepository.findBySkus) {
         inventoryItems = await this.inventoryRepository.findBySkus(skus, dto.locationId);
       } else {
-        for (const sku of skus) {
-          const item = await this.inventoryRepository.findBySku(sku, dto.locationId);
-          if (item) {
-            inventoryItems.push(item);
+        const CHUNK_SIZE = 10;
+        for (let i = 0; i < skus.length; i += CHUNK_SIZE) {
+          const chunk = skus.slice(i, i + CHUNK_SIZE);
+          const chunkResults = await Promise.all(chunk.map(sku => this.inventoryRepository.findBySku(sku, dto.locationId)));
+          for (const item of chunkResults) {
+            if (item) {
+              inventoryItems.push(item);
+            }
           }
         }
       }

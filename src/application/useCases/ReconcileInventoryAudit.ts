@@ -54,9 +54,11 @@ export class ReconcileInventoryAudit {
       inventoryItems = await this.inventoryRepository.findBySkus(skusToFetch, audit.locationId);
     } else if (skusToFetch.length > 0) {
       const results = [];
-      for (const sku of skusToFetch) {
-        const item = await this.inventoryRepository.findBySku(sku, audit.locationId);
-        results.push(item);
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < skusToFetch.length; i += CHUNK_SIZE) {
+        const chunk = skusToFetch.slice(i, i + CHUNK_SIZE);
+        const chunkResults = await Promise.all(chunk.map(sku => this.inventoryRepository.findBySku(sku, audit.locationId)));
+        results.push(...chunkResults);
       }
       inventoryItems = results.filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined);
     }
