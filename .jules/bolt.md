@@ -185,3 +185,7 @@
 ## 2024-10-21 - Chunked Concurrency Optimization in Fallback Sequential DB Lookups
 **Learning:** In fallback paths where batch DB fetching methods are unavailable, iterating arrays with sequential for...of loops prevents connection exhaustion but introduces a severe O(N) linear performance slowdown.
 **Action:** Always refactor purely sequential loop DB operations into chunked bounded concurrency loops (e.g. slice in chunks of 10 and map await Promise.all(chunk)). This balances database connection pool limits while preserving highly performant asynchronous query execution.
+
+## 2026-11-12 - Variant ID Deduplication in Batch Cost Layer Queries
+**Learning:** In kit disassembly workflows (`DisassembleKit`), kits containing multiple components or duplicated component variant lines caused redundant calls to cost layer repositories. Without deduplication, both batch queries and sequential fallback branches fetched the same variant's cost layers repeatedly.
+**Action:** Deduplicate variant IDs upfront via `Array.from(new Set(components.map(c => c.variantId)))`. Verify repository batch methods (`getActiveLayersByVariantIds`) handle both `Map` and object return structures, and ensure fallback sequential loops iterate over unique variant IDs to eliminate redundant database queries.
