@@ -10,6 +10,8 @@
  *   PENDING → EXPIRED (final timeout, no action)
  */
 
+import { ApprovalRequestId } from './valueObjects/ApprovalRequestId';
+
 export enum ApprovalRequestStatus {
   Pending = 'PENDING',
   Approved = 'APPROVED',
@@ -28,12 +30,13 @@ export interface ApprovalDecisionRecord {
 }
 
 export class ApprovalRequest {
+  public readonly id: ApprovalRequestId;
   private _status: ApprovalRequestStatus;
   private _currentStep: number;
   private _decisions: ApprovalDecisionRecord[];
 
   constructor(
-    public readonly id: string,
+    id: ApprovalRequestId | string,
     public readonly tenantId: string,
     public readonly workflowId: string,
     public readonly referenceType: string,
@@ -48,6 +51,9 @@ export class ApprovalRequest {
     public readonly createdAt: Date = new Date(),
     public readonly updatedAt: Date = new Date()
   ) {
+    this.id = typeof id === 'string'
+      ? ApprovalRequestId.create(id)
+      : (id || ApprovalRequestId.create());
     this._status = status;
     this._currentStep = currentStep;
     this._decisions = [...decisions];
@@ -148,7 +154,7 @@ export class ApprovalRequest {
    * Reconstructs an ApprovalRequest from persistence.
    */
   static reconstruct(
-    id: string,
+    id: ApprovalRequestId | string,
     tenantId: string,
     workflowId: string,
     referenceType: string,
