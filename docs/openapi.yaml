@@ -297,16 +297,46 @@ components:
     ReorderPolicy:
       type: object
       properties:
+        id:
+          type: string
         sku:
           type: string
         locationId:
           type: string
         reorderPoint:
           type: number
+        reorderQuantity:
+          type: number
         safetyStock:
           type: number
-        economicOrderQuantity:
+        dynamicRopEnabled:
+          type: boolean
+      required:
+      - id
+      - sku
+      - locationId
+      - reorderPoint
+      - reorderQuantity
+      - safetyStock
+      - dynamicRopEnabled
+    ReorderPolicyEvaluationResult:
+      type: object
+      properties:
+        sku:
+          type: string
+        locationId:
+          type: string
+        reorderPoint:
           type: number
+        triggered:
+          type: boolean
+        reason:
+          type: string
+      required:
+      - sku
+      - locationId
+      - reorderPoint
+      - triggered
     WebhookSubscription:
       type: object
       properties:
@@ -812,26 +842,104 @@ paths:
         '200':
           description: OK
   /api/reorder-policies:
-    get:
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: OK
-  /api/reorder-policies/save:
     post:
+      summary: Create or update reorder policy
+      description: Create or update stock replenishment thresholds and automated dynamic forecasting settings for a SKU at a warehouse location.
       security:
       - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - sku
+              - locationId
+              - reorderPoint
+              - reorderQuantity
+              - safetyStock
+              properties:
+                sku:
+                  type: string
+                locationId:
+                  type: string
+                reorderPoint:
+                  type: number
+                reorderQuantity:
+                  type: number
+                safetyStock:
+                  type: number
+                dynamicRopEnabled:
+                  type: boolean
       responses:
         '200':
-          description: OK
+          description: Reorder policy created or updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReorderPolicy'
+        '400':
+          description: Invalid input or domain validation failure
+        '500':
+          description: Internal server error
+  /api/reorder-policies/{sku}/{locationId}:
+    get:
+      summary: Get reorder policy by SKU and location
+      description: Retrieve the active replenishment policy and thresholds for a specific SKU and location combination.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: sku
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: locationId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Reorder policy details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReorderPolicy'
+        '404':
+          description: Reorder policy not found
+        '500':
+          description: Internal server error
   /api/reorder-policies/evaluate:
     post:
+      summary: Evaluate reorder policies
+      description: Evaluate replenishment triggers for all active reorder policies and automatically create draft purchase orders when stock levels breach reorder points.
       security:
       - bearerAuth: []
+      parameters:
+      - name: locationId
+        in: query
+        required: false
+        description: Filter evaluation to a specific warehouse location
+        schema:
+          type: string
       responses:
         '200':
-          description: OK
+          description: Evaluation results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReorderPolicyEvaluationResult'
+        '400':
+          description: Invalid query parameters
+        '500':
+          description: Internal server error
   /api/audits/create:
     post:
       security:
