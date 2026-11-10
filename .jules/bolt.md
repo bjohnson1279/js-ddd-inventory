@@ -185,3 +185,7 @@
 ## 2024-10-21 - Chunked Concurrency Optimization in Fallback Sequential DB Lookups
 **Learning:** In fallback paths where batch DB fetching methods are unavailable, iterating arrays with sequential for...of loops prevents connection exhaustion but introduces a severe O(N) linear performance slowdown.
 **Action:** Always refactor purely sequential loop DB operations into chunked bounded concurrency loops (e.g. slice in chunks of 10 and map await Promise.all(chunk)). This balances database connection pool limits while preserving highly performant asynchronous query execution.
+
+## 2026-11-10 - Parallelize Domain Event Persistence in InMemoryInventoryRepository
+**Learning:** Sequential loops awaiting outbox event persistence (`for (const event of events) await this.outboxRepository.save(event)`) inside repository `save()` calls introduce an N+1 async roundtrip overhead proportional to the number of emitted domain events.
+**Action:** Replace sequential awaiting of independent domain events in repository write methods with `await Promise.all(events.map(event => this.outboxRepository.save(event)))`, reducing latency from O(N) sequential event persistence roundtrips to concurrent O(1) execution.
