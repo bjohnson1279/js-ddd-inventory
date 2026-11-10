@@ -11,6 +11,110 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    ApprovalWorkflow:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        triggerEvent:
+          type: string
+        config:
+          oneOf:
+          - type: string
+          - type: object
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+      - id
+      - tenantId
+      - name
+      - triggerEvent
+      - config
+    ApprovalDecision:
+      type: object
+      properties:
+        id:
+          type: string
+        requestId:
+          type: string
+        stepIndex:
+          type: integer
+        deciderId:
+          type: string
+        decision:
+          type: string
+          enum:
+          - APPROVED
+          - REJECTED
+        notes:
+          type: string
+          nullable: true
+        decidedAt:
+          type: string
+          format: date-time
+      required:
+      - id
+      - requestId
+      - stepIndex
+      - deciderId
+      - decision
+    ApprovalRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        workflowId:
+          type: string
+        referenceType:
+          type: string
+        referenceId:
+          type: string
+        requesterId:
+          type: string
+        status:
+          type: string
+          enum:
+          - PENDING
+          - APPROVED
+          - REJECTED
+          - ESCALATED
+        currentStep:
+          type: integer
+        payload:
+          type: string
+        workflow:
+          $ref: '#/components/schemas/ApprovalWorkflow'
+        decisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApprovalDecision'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+      - id
+      - tenantId
+      - workflowId
+      - referenceType
+      - referenceId
+      - requesterId
+      - status
+      - currentStep
     Notification:
       type: object
       properties:
@@ -563,6 +667,247 @@ paths:
       responses:
         '200':
           description: OK
+  /api/approvals/workflows:
+    get:
+      summary: List approval workflows
+      description: Retrieve all configured approval workflows for the authenticated tenant.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: List of approval workflows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApprovalWorkflow'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+    post:
+      summary: Create approval workflow
+      description: Define a new multi-tier approval workflow rule.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              - triggerEvent
+              - config
+              properties:
+                name:
+                  type: string
+                  example: High Value PO Approval
+                triggerEvent:
+                  type: string
+                  example: PO_CREATED
+                config:
+                  oneOf:
+                  - type: object
+                  - type: string
+                  example:
+                    thresholds:
+                    - field: totalAmount
+                      operator: '>'
+                      value: 10000
+                    steps:
+                    - approverRoles:
+                      - finance_manager
+                      requiredCount: 1
+                      timeoutHours: 48
+                isActive:
+                  type: boolean
+                  default: true
+      responses:
+        '201':
+          description: Approval workflow created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalWorkflow'
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /api/approvals/workflows/{id}:
+    put:
+      summary: Update approval workflow configuration
+      description: Update the thresholds and steps configuration of an existing approval workflow.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Unique workflow identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - config
+              properties:
+                config:
+                  oneOf:
+                  - type: object
+                  - type: string
+                  example:
+                    thresholds:
+                    - field: totalAmount
+                      operator: '>='
+                      value: 15000
+                    steps:
+                    - approverRoles:
+                      - finance_director
+                      requiredCount: 1
+                      timeoutHours: 72
+      responses:
+        '200':
+          description: Approval workflow updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalWorkflow'
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /api/approvals/workflows/{id}/toggle:
+    post:
+      summary: Toggle approval workflow status
+      description: Enable or disable an existing approval workflow.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Unique workflow identifier
+      responses:
+        '200':
+          description: Approval workflow status toggled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalWorkflow'
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /api/approvals/pending:
+    get:
+      summary: List pending approval requests
+      description: Retrieve pending approval requests awaiting review for the authenticated tenant.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: List of pending approval requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApprovalRequest'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/approvals/{id}:
+    get:
+      summary: Get approval request by ID
+      description: Retrieve an approval request record and its associated decision history.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Unique approval request identifier
+      responses:
+        '200':
+          description: Approval request details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequest'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+  /api/approvals/{id}/decide:
+    post:
+      summary: Submit approval decision
+      description: Record an APPROVE or REJECT decision on a pending approval request.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Unique approval request identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - decision
+              properties:
+                decision:
+                  type: string
+                  enum:
+                  - APPROVE
+                  - REJECT
+                  example: APPROVE
+                notes:
+                  type: string
+                  example: Budget verified and approved.
+      responses:
+        '200':
+          description: Approval decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalDecision'
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /api/roles/permissions:
     get:
       summary: List system permissions
