@@ -185,3 +185,7 @@
 ## 2024-10-21 - Chunked Concurrency Optimization in Fallback Sequential DB Lookups
 **Learning:** In fallback paths where batch DB fetching methods are unavailable, iterating arrays with sequential for...of loops prevents connection exhaustion but introduces a severe O(N) linear performance slowdown.
 **Action:** Always refactor purely sequential loop DB operations into chunked bounded concurrency loops (e.g. slice in chunks of 10 and map await Promise.all(chunk)). This balances database connection pool limits while preserving highly performant asynchronous query execution.
+
+## 2026-11-10 - Concurrent Webhook Dispatch via Promise.all
+**Learning:** In worker loops handling outgoing I/O requests (such as HTTP webhook dispatches in `WebhookDeliveryWorker`), sequentially awaiting individual network requests causes cumulative latency and throughput bottlenecks proportional to remote server response times. Because delivery batches are already bounded (`take: 10`), each dispatch is independent and self-contained with its own try/catch error handling, retries, and database updates.
+**Action:** Replace sequential `for..of` loops over bounded external I/O batches with `await Promise.all(deliveries.map(async ...))` to dispatch HTTP requests concurrently, reducing overall batch latency from O(N * T) to ~O(max(T)) while keeping failure isolation intact.
