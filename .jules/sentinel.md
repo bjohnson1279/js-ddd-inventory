@@ -199,3 +199,8 @@
 **Vulnerability:** The `TenantProvisioner` used a custom SQL formatter fallback (when `pg-format` failed to load) utilizing `String.prototype.replace('%I', `"${val.replace(/"/g, '""')}"`)`.
 **Learning:** In JavaScript, when passing a string as the second argument to `replace()`, special replacement patterns (like `$$`, `$&`, `$1`) are interpolated by the JS engine. If an attacker controls the `val` parameter and passes a string like `$$test`, the `replace` function turns `$$` into `$`, resulting in incorrect formatting and potential breakage of escaping logic, leading to injection or syntax errors.
 **Prevention:** When substituting user-controlled or dynamically escaped strings via `String.prototype.replace()`, always use a replacer function (e.g., `replace(/%I/g, () => `"${val}"`)`) rather than a raw string replacement. This ensures the output is treated purely as literal characters without interpreting `$X` directives.
+
+## 2026-10-28 - Insecure JWT Secret Fallback in AuthService
+**Vulnerability:** `AuthService.ts` used a fallback string `'test-jwt-secret'` when `process.env.JWT_SECRET` was missing and `NODE_ENV === 'test'`.
+**Learning:** Permitting hardcoded cryptographic fallbacks in application code creates security risks if code is executed under incorrect environment settings or misconfigured deployments. Relying on default fallbacks weakens security posture and violates fail-fast configuration principles.
+**Prevention:** Strictly enforce the presence of cryptographic secrets such as `JWT_SECRET` across all environments without code-level fallback defaults, and inject mock secrets explicitly via test environment configurations.
