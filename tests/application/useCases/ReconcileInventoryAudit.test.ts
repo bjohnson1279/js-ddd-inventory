@@ -259,4 +259,43 @@ describe("ReconcileInventoryAudit Use Case", () => {
     expect(savedAudit).not.toBeNull();
     expect(savedAudit?.status).toBe(AuditStatus.Reconciled);
   });
+
+  it("should process gain with chunked active layer fetching when repository lacks getActiveLayersByVariantIds", async () => {
+    delete (costLayerRepository as any).getActiveLayersByVariantIds;
+    const sku = SKU.create("VAR-CHUNK");
+    const item = InventoryItem.create("inv-chunk", sku, locationId, Quantity.create(5));
+    await inventoryRepository.save(item);
+
+    const now = Date.now();
+    const l1 = new InventoryCostLayer("L-CHUNK", "VAR-CHUNK", tenantId, 5, 2000, new Date(now - 10000), "PO-CHUNK", locationId);
+    await costLayerRepository.save(l1);
+
+    const audit = await createUseCase.execute({
+      auditNumber: "AUD-CHUNK",
+      tenantId,
+      locationId,
+      variantIds: ["VAR-CHUNK"],
+    });
+
+    audit.start();
+    await auditRepository.save(audit);
+
+    await recordCountUseCase.execute({
+      auditId: audit.id,
+      variantId: "VAR-CHUNK",
+      countedQuantity: 8,
+    });
+
+    await completeUseCase.execute(audit.id);
+    await reconcileUseCase.execute(audit.id);
+
+    const updatedItem = await inventoryRepository.findBySku(sku, locationId);
+    expect(updatedItem?.quantity.getValue()).toBe(8);
+
+    const activeLayers = await costLayerRepository.getActiveLayers("VAR-CHUNK", "desc");
+    expect(activeLayers.length).toBe(2);
+    expect(activeLayers[0].purchaseOrderId).toBe(`AUDIT-${audit.id}`);
+    expect(activeLayers[0].remainingQuantity).toBe(3);
+    expect(activeLayers[0].unitCostCents).toBe(2000);
+  });
 });

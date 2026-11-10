@@ -117,9 +117,13 @@ export class ReconcileInventoryAudit {
           }
         }
       } else {
-        for (const variantId of uniqueVariantIds) {
-          const layers = await this.costLayerRepository.getActiveLayers(variantId, "desc");
-          activeLayersMap.set(variantId, layers);
+        const CHUNK_SIZE = 10;
+        for (let i = 0; i < uniqueVariantIds.length; i += CHUNK_SIZE) {
+          const chunk = uniqueVariantIds.slice(i, i + CHUNK_SIZE);
+          await Promise.all(chunk.map(async variantId => {
+            const layers = await this.costLayerRepository.getActiveLayers(variantId, "desc");
+            activeLayersMap.set(variantId, layers);
+          }));
         }
       }
     }

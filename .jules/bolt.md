@@ -185,3 +185,7 @@
 ## 2024-10-21 - Chunked Concurrency Optimization in Fallback Sequential DB Lookups
 **Learning:** In fallback paths where batch DB fetching methods are unavailable, iterating arrays with sequential for...of loops prevents connection exhaustion but introduces a severe O(N) linear performance slowdown.
 **Action:** Always refactor purely sequential loop DB operations into chunked bounded concurrency loops (e.g. slice in chunks of 10 and map await Promise.all(chunk)). This balances database connection pool limits while preserving highly performant asynchronous query execution.
+
+## 2026-11-05 - Chunked Bounded Concurrency for Active Layers Fallback in ReconcileInventoryAudit
+**Learning:** In `ReconcileInventoryAudit`, when the underlying `ICostLayerRepository` lacks `getActiveLayersByVariantIds` batch support, querying active layers sequentially in a `for...of` loop across unique variants with positive discrepancies introduces an O(N) sequential I/O latency bottleneck. Unbounded `Promise.all` risks database connection pool exhaustion.
+**Action:** Always use chunked bounded concurrency (`CHUNK_SIZE = 10` with `slice` and `Promise.all`) for fallback single-variant layer retrieval to achieve parallel query performance while strictly bounding connection pool concurrency.
