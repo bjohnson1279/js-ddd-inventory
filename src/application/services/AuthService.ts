@@ -194,7 +194,10 @@ export class AuthService implements IAuthService {
     if (!authHeader) {
       throw new Error('TOKEN_NOT_FOUND');
     }
-    const token = authHeader.replace(/^Bearer /, '');
+    if (!authHeader.startsWith('Bearer ')) {
+      throw new Error('TOKEN_INVALID');
+    }
+    const token = authHeader.substring(7);
     const payload = await this.verifyToken(token);
     if (!payload) {
       throw new Error('TOKEN_INVALID');
@@ -205,7 +208,14 @@ export class AuthService implements IAuthService {
 
 export const authenticateRequestMiddleware = async (request: any): Promise<{ tenantId?: string }> => {
   try {
-    let authHeaderValue = request.headers?.['authorization']?.replace(/^Bearer /, '');
+    const authHeader = request.headers?.['authorization'];
+    let authHeaderValue;
+    if (authHeader) {
+      if (!authHeader.startsWith('Bearer ')) {
+        throw new Error('TOKEN_INVALID');
+      }
+      authHeaderValue = authHeader.substring(7);
+    }
 
     if (!authHeaderValue && !request.query?.token) {
       throw new Error('TOKEN_NOT_FOUND');
