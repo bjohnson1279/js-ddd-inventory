@@ -146,6 +146,37 @@ describe('AuthService Unit Tests', () => {
     });
   });
 
+  describe('JWT_SECRET Environment Variable Requirement', () => {
+    const originalEnv = process.env;
+
+    beforeEach(() => {
+      jest.resetModules();
+      process.env = { ...originalEnv };
+    });
+
+    afterAll(() => {
+      process.env = originalEnv;
+    });
+
+    it('should throw an error on import if JWT_SECRET is unset in test environment', () => {
+      delete process.env.JWT_SECRET;
+      process.env.NODE_ENV = 'test';
+
+      expect(() => {
+        require('../../../src/application/services/AuthService');
+      }).toThrow('JWT_SECRET environment variable is required for security.');
+    });
+
+    it('should succeed on import if JWT_SECRET is set in test environment', () => {
+      process.env.JWT_SECRET = 'valid-test-secret';
+      process.env.NODE_ENV = 'test';
+
+      expect(() => {
+        require('../../../src/application/services/AuthService');
+      }).not.toThrow();
+    });
+  });
+
   describe('Authorization Header Validation', () => {
     describe('validateRequest', () => {
       it('should validate request with valid Bearer token header', async () => {

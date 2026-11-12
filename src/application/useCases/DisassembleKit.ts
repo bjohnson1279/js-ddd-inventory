@@ -85,19 +85,32 @@ export class DisassembleKit {
     let totalEstimatedComponentsCost = 0;
     const componentAvgCosts: { variantId: string; quantity: number; avgUnitCost: number }[] = [];
 
-    let activeLayersMap: Map<string, InventoryCostLayer[]>;
-    if (this.costLayerRepository.getActiveLayersByVariantIds) {
-      const variantIds = kitRecord.components.map((c: any) => c.variantId);
-      activeLayersMap = await this.costLayerRepository.getActiveLayersByVariantIds(variantIds, "asc");
-    } else {
-      activeLayersMap = new Map();
-      for (const component of kitRecord.components) {
-        try {
-          const layers = await this.costLayerRepository.getActiveLayers(component.variantId, "asc");
-          activeLayersMap.set(component.variantId, layers);
-        } catch (err) {
-          activeLayersMap.set(component.variantId, []);
+    let activeLayersMap = new Map<string, InventoryCostLayer[]>();
+    const uniqueVariantIds = Array.from(new Set<string>(kitRecord.components.map((c: any) => c.variantId)));
+
+    if ('getActiveLayersByVariantIds' in this.costLayerRepository && typeof (this.costLayerRepository as any).getActiveLayersByVariantIds === 'function') {
+      const result = await (this.costLayerRepository as any).getActiveLayersByVariantIds(uniqueVariantIds, "asc");
+      if (result instanceof Map) {
+        activeLayersMap = result;
+      } else if (result && typeof result === 'object') {
+        for (const [key, value] of Object.entries(result)) {
+          activeLayersMap.set(key, value as InventoryCostLayer[]);
         }
+      }
+    } else {
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < uniqueVariantIds.length; i += CHUNK_SIZE) {
+        const chunk = uniqueVariantIds.slice(i, i + CHUNK_SIZE);
+        await Promise.all(
+          chunk.map(async (variantId) => {
+            try {
+              const layers = await this.costLayerRepository.getActiveLayers(variantId, "asc");
+              activeLayersMap.set(variantId, layers);
+            } catch (err) {
+              activeLayersMap.set(variantId, []);
+            }
+          })
+        );
       }
     }
 

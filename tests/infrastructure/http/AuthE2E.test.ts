@@ -187,6 +187,12 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
       expect(inviteRes.body.temporaryPassword).toBeUndefined();
       const newUserId = inviteRes.body.userId;
 
+      // Verify that in-memory user record does not expose passwordHash
+      const { getInMemoryUser } = require("../../../src/infrastructure/http/controllers/AuthController");
+      const inMemoryBob = getInMemoryUser(newUserId);
+      expect(inMemoryBob).toBeDefined();
+      expect(inMemoryBob.passwordHash).toBeUndefined();
+
       // List users
       const listRes = await request((app as any).server)
         .get("/api/users")
