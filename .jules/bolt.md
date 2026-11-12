@@ -209,3 +209,7 @@
 ## 2026-11-10 - Parallelize Domain Event Persistence in InMemoryInventoryRepository
 **Learning:** Sequential loops awaiting outbox event persistence (`for (const event of events) await this.outboxRepository.save(event)`) inside repository `save()` calls introduce an N+1 async roundtrip overhead proportional to the number of emitted domain events.
 **Action:** Replace sequential awaiting of independent domain events in repository write methods with `await Promise.all(events.map(event => this.outboxRepository.save(event)))`, reducing latency from O(N) sequential event persistence roundtrips to concurrent O(1) execution.
+
+## 2026-11-10 - Batching Reorder Policy Saves in ReorderPolicyService
+**Learning:** In bulk evaluation services like `ReorderPolicyService.evaluatePolicies`, calculating dynamic reorder points inside a loop and sequentially awaiting single-record `reorderPolicyRepository.save(policy)` calls introduces an N+1 query write bottleneck with linear roundtrip database latency.
+**Action:** Accumulate updated policies during policy evaluation and persist them collectively after the loop via `batchSave(this.reorderPolicyRepository, policiesToSave)`, utilizing `saveMany` when supported by the repository.
