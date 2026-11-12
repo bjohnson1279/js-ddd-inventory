@@ -211,5 +211,43 @@ describe("CostLayerService", () => {
       expect(breakdowns[1].totalCostCents).toBe(10000);
       expect(layer1.remainingQuantity).toBe(5);
     });
+
+    it("should batch fetch active layers using getActiveLayersByVariantIds and avoid N+1 single queries", async () => {
+      const layerA = new InventoryCostLayer("LA", "VAR-A", "TENANT-1", 10, 1000, new Date(), "PO-1");
+      const layerB = new InventoryCostLayer("LB", "VAR-B", "TENANT-1", 10, 2000, new Date(), "PO-2");
+
+      const mockBatchRepo: ICostLayerRepository = {
+        getActiveLayers: jest.fn(),
+        getActiveLayersByVariantIds: jest.fn().mockResolvedValue(
+          new Map<string, InventoryCostLayer[]>([
+            ["VAR-A", [layerA]],
+            ["VAR-B", [layerB]],
+          ])
+        ),
+        save: jest.fn(),
+        saveMany: jest.fn(),
+      };
+
+      const batchService = new CostLayerService(mockBatchRepo);
+
+      const components = [
+        { variantId: "VAR-A", quantity: 2 },
+        { variantId: "VAR-B", quantity: 3 },
+        { variantId: "VAR-A", quantity: 1 },
+      ];
+
+      // Test calculateLayersBatch
+      const calcBreakdowns = await batchService.calculateLayersBatch(components);
+      expect(calcBreakdowns).toHaveLength(3);
+      expect(mockBatchRepo.getActiveLayersByVariantIds).toHaveBeenCalledTimes(1);
+      expect(mockBatchRepo.getActiveLayersByVariantIds).toHaveBeenCalledWith(["VAR-A", "VAR-B"]);
+      expect(mockBatchRepo.getActiveLayers).not.toHaveBeenCalled();
+
+      // Test consumeLayersBatch
+      const consumeBreakdowns = await batchService.consumeLayersBatch(components);
+      expect(consumeBreakdowns).toHaveLength(3);
+      expect(mockBatchRepo.getActiveLayersByVariantIds).toHaveBeenCalledTimes(2);
+      expect(mockBatchRepo.getActiveLayers).not.toHaveBeenCalled();
+    });
   });
 });
