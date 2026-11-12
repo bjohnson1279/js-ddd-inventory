@@ -213,3 +213,7 @@
 ## 2026-11-10 - Batching Reorder Policy Saves in ReorderPolicyService
 **Learning:** In bulk evaluation services like `ReorderPolicyService.evaluatePolicies`, calculating dynamic reorder points inside a loop and sequentially awaiting single-record `reorderPolicyRepository.save(policy)` calls introduces an N+1 query write bottleneck with linear roundtrip database latency.
 **Action:** Accumulate updated policies during policy evaluation and persist them collectively after the loop via `batchSave(this.reorderPolicyRepository, policiesToSave)`, utilizing `saveMany` when supported by the repository.
+
+## 2026-11-15 - Prisma createMany vs N+1 Loop in Seed/Setup Routines
+**Learning:** Iterating through predefined collections (such as system permissions in AuthController.setup) and checking existence via `findUnique` followed by `create` results in 2*N sequential database roundtrips (78 queries for 39 permissions), causing significant setup latency and connection contention.
+**Action:** Use Prisma's native `createMany({ data: items, skipDuplicates: true })` to insert the entire batch in a single database roundtrip, reducing query count and latency by ~98%.
