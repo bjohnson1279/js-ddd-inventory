@@ -1896,3 +1896,138 @@ Record an approval decision (`APPROVE` or `REJECT`) on a pending approval reques
     *   `401 Unauthorized`: If the Bearer token is missing or invalid.
     *   `403 Forbidden`: If the user lacks the `approval:manage` permission.
 *   **Workflow**: Triggered when a manager or reviewer signs off or rejects a request, advancing multi-step chains or resolving blocked business events.
+
+
+---
+
+## 🔄 Cycle Counting & ABC Classification
+
+Configure periodic stock verification schedules, generate blind physical audits based on ABC Pareto velocity rules, and compute item classification thresholds.
+
+### 1. Create Cycle Count Plan
+Define a recurring cycle count policy targeting items by ABC classification, recurrence interval, or warehouse zone.
+
+*   **URL**: `/api/cycle-count/plans`
+*   **Method**: `POST`
+*   **Headers**:
+    *   `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Body**:
+        *   `tenantId` (string, Required): The tenant identifier.
+        *   `name` (string, Required): Descriptive plan name (e.g., `"Daily A-Items"`).
+        *   `abcClassification` (string, Required): ABC velocity tier to audit (`"A"`, `"B"`, or `"C"`).
+        *   `frequencyDays` (number, Required): Recurrence interval in days between physical counts.
+        *   `zone` (string, Optional): Physical warehouse aisle or zone constraint.
+*   **Request Body**:
+    ```json
+    {
+      "tenantId": "tenant-1",
+      "name": "Daily A-Items",
+      "abcClassification": "A",
+      "frequencyDays": 30,
+      "zone": "ZONE-1"
+    }
+    ```
+*   **Success Response**: `201 Created`
+    ```json
+    {
+      "id": "ccp_550e8400-e29b-41d4-a716-446655440000",
+      "tenantId": "tenant-1",
+      "name": "Daily A-Items",
+      "abcClassification": "A",
+      "frequencyDays": 30,
+      "zone": "ZONE-1",
+      "isActive": true,
+      "createdAt": "2026-11-12T00:00:00.000Z"
+    }
+    ```
+*   **Error Responses**:
+    *   `500 Internal Server Error`: If plan creation fails due to validation or storage errors.
+        ```json
+        { "error": "Failed to create plan" }
+        ```
+*   **Workflow**: Warehouse supervisors define recurring auditing cadences ensuring high-value or fast-moving inventory tiers are regularly validated without full facility shutdowns.
+
+---
+
+### 2. Schedule Cycle Counts
+Evaluate active cycle count plans for a tenant and generate due blind audits based on elapsed days since last count.
+
+*   **URL**: `/api/cycle-count/schedule`
+*   **Method**: `POST`
+*   **Headers**:
+    *   `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Body**:
+        *   `tenantId` (string, Required): The tenant identifier.
+*   **Request Body**:
+    ```json
+    {
+      "tenantId": "tenant-1"
+    }
+    ```
+*   **Success Response**: `200 OK`
+    ```json
+    {
+      "scheduled": 1,
+      "audits": [
+        {
+          "id": "cca_b8a90101-7b91-4e44-88aa-123456789abc",
+          "tenantId": "tenant-1",
+          "name": "Audit based on Daily A-Items",
+          "status": "PENDING",
+          "abcClass": "A",
+          "zone": "ZONE-1",
+          "isBlindCount": true,
+          "createdAt": "2026-11-12T00:00:00.000Z"
+        }
+      ]
+    }
+    ```
+*   **Error Responses**:
+    *   `500 Internal Server Error`: If scheduling evaluation fails.
+        ```json
+        { "error": "Failed to schedule cycle counts" }
+        ```
+*   **Workflow**: Executed via background cron workers or warehouse managers at the start of each operational shift to produce blind counting work orders for floor workers.
+
+---
+
+### 3. ABC Classification & Frequency Recommendation
+Compute an item's ABC classification tier and recommended audit recurrence interval based on annual usage value against total organization inventory value.
+
+*   **URL**: `/api/cycle-count/classify`
+*   **Method**: `POST`
+*   **Headers**:
+    *   `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Body**:
+        *   `totalUsageValue` (number, Required): Total dollar consumption or movement value for the SKU.
+        *   `totalOrgValue` (number, Required): Total dollar valuation across the organization inventory base.
+        *   `thresholds` (object, Optional): Custom cumulative Pareto cutoffs.
+            *   `aThreshold` (number, Optional): Ratio cutoff for class A (defaults to `0.90`).
+            *   `bThreshold` (number, Optional): Ratio cutoff for class B (defaults to `0.70`).
+*   **Request Body**:
+    ```json
+    {
+      "totalUsageValue": 95000,
+      "totalOrgValue": 100000,
+      "thresholds": {
+        "aThreshold": 0.90,
+        "bThreshold": 0.70
+      }
+    }
+    ```
+*   **Success Response**: `200 OK`
+    ```json
+    {
+      "class": "A",
+      "frequencyDays": 30
+    }
+    ```
+*   **Error Responses**:
+    *   `500 Internal Server Error`: If classification calculation fails.
+        ```json
+        { "error": "Failed to classify" }
+        ```
+*   **Workflow**: Inventory analysts and automated jobs run classification to evaluate product velocity and assign recommended inspection intervals (30 days for Class A, 90 days for Class B, 180 days for Class C).
