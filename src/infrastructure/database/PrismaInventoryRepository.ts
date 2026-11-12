@@ -286,22 +286,26 @@ export class PrismaInventoryRepository implements IInventoryRepository {
           }
 
           if (itemsToUpdate.length > 0) {
-            for (const item of itemsToUpdate) {
+            const results = await Promise.all(
+              itemsToUpdate.map(item =>
+                tx.inventoryModel.updateMany({
+                  where: {
+                    id: item.id,
+                    version: item.version - 1
+                  },
+                  data: {
+                    quantity: item.quantity.getValue(),
+                    allocated: item.allocated.getValue(),
+                    inTransit: item.inTransit.getValue(),
+                    version: item.version
+                  }
+                })
+              )
+            );
 
-              const result = await tx.inventoryModel.updateMany({
-                where: {
-                  id: item.id,
-                  version: item.version - 1
-                },
-                data: {
-                  quantity: item.quantity.getValue(),
-                  allocated: item.allocated.getValue(),
-                  inTransit: item.inTransit.getValue(),
-                  version: item.version
-                }
-              });
-
-              if (result.count === 0) {
+            for (let j = 0; j < itemsToUpdate.length; j++) {
+              const item = itemsToUpdate[j];
+              if (results[j].count === 0) {
                 throw new ConcurrencyException(item.sku.getValue(), item.locationId);
               }
               const events = item.getDomainEvents();
@@ -342,22 +346,26 @@ export class PrismaInventoryRepository implements IInventoryRepository {
           }
 
           if (itemsToUpdate.length > 0) {
-            for (const item of itemsToUpdate) {
+            const results = await Promise.all(
+              itemsToUpdate.map(item =>
+                tx.inventoryModel.updateMany({
+                  where: {
+                    id: item.id,
+                    version: item.version - 1
+                  },
+                  data: {
+                    quantity: item.quantity.getValue(),
+                    allocated: item.allocated.getValue(),
+                    inTransit: item.inTransit.getValue(),
+                    version: item.version
+                  }
+                })
+              )
+            );
 
-              const result = await tx.inventoryModel.updateMany({
-                where: {
-                  id: item.id,
-                  version: item.version - 1
-                },
-                data: {
-                  quantity: item.quantity.getValue(),
-                  allocated: item.allocated.getValue(),
-                  inTransit: item.inTransit.getValue(),
-                  version: item.version
-                }
-              });
-
-              if (result.count === 0) {
+            for (let j = 0; j < itemsToUpdate.length; j++) {
+              const item = itemsToUpdate[j];
+              if (results[j].count === 0) {
                 throw new ConcurrencyException(item.sku.getValue(), item.locationId);
               }
             }

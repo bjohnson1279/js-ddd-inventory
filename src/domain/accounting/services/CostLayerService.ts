@@ -68,9 +68,19 @@ export class CostLayerService {
       activeLayersByVariant = await this.layers.getActiveLayersByVariantIds(variantIds);
     } else {
       activeLayersByVariant = new Map<string, InventoryCostLayer[]>();
-      for (const vId of variantIds) {
-        const layers = await this.layers.getActiveLayers(vId);
-        activeLayersByVariant.set(vId, layers);
+      // Optimization: Refactor sequential loop to bounded chunked concurrency to prevent O(N) slowdown
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < variantIds.length; i += CHUNK_SIZE) {
+        const chunk = variantIds.slice(i, i + CHUNK_SIZE);
+        const chunkResults = await Promise.all(
+          chunk.map(async (vId) => {
+            const layers = await this.layers.getActiveLayers(vId);
+            return { vId, layers };
+          })
+        );
+        for (const result of chunkResults) {
+          activeLayersByVariant.set(result.vId, result.layers);
+        }
       }
     }
 
@@ -119,9 +129,19 @@ export class CostLayerService {
       activeLayersByVariant = await this.layers.getActiveLayersByVariantIds(variantIds);
     } else {
       activeLayersByVariant = new Map<string, InventoryCostLayer[]>();
-      for (const vId of variantIds) {
-        const layers = await this.layers.getActiveLayers(vId);
-        activeLayersByVariant.set(vId, layers);
+      // Optimization: Refactor sequential loop to bounded chunked concurrency to prevent O(N) slowdown
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < variantIds.length; i += CHUNK_SIZE) {
+        const chunk = variantIds.slice(i, i + CHUNK_SIZE);
+        const chunkResults = await Promise.all(
+          chunk.map(async (vId) => {
+            const layers = await this.layers.getActiveLayers(vId);
+            return { vId, layers };
+          })
+        );
+        for (const result of chunkResults) {
+          activeLayersByVariant.set(result.vId, result.layers);
+        }
       }
     }
 
