@@ -11,6 +11,90 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    CycleCountPlan:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        abcClassification:
+          type: string
+          example: A
+        frequencyDays:
+          type: integer
+          example: 30
+        zone:
+          type: string
+          nullable: true
+          example: ZONE-1
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+      - id
+      - tenantId
+      - name
+      - abcClassification
+      - frequencyDays
+      - isActive
+    CycleCountAudit:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum:
+          - PENDING
+          - IN_PROGRESS
+          - COMPLETED
+          - CANCELLED
+        abcClass:
+          type: string
+          example: A
+        zone:
+          type: string
+          nullable: true
+          example: ZONE-1
+        isBlindCount:
+          type: boolean
+        assignedTo:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+      - id
+      - tenantId
+      - name
+      - status
+      - isBlindCount
+      - createdAt
+    ABCClassificationResult:
+      type: object
+      properties:
+        class:
+          type: string
+          enum:
+          - A
+          - B
+          - C
+        frequencyDays:
+          type: integer
+          example: 30
+      required:
+      - class
+      - frequencyDays
     ApprovalWorkflow:
       type: object
       properties:
@@ -1705,3 +1789,124 @@ paths:
       responses:
         '200':
           description: OK
+  /api/cycle-count/plans:
+    post:
+      summary: Create cycle count plan
+      description: Define a recurring cycle count policy targeting items by ABC classification, recurrence interval, or warehouse zone.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tenantId:
+                  type: string
+                  description: Tenant identifier
+                name:
+                  type: string
+                  description: Descriptive plan name
+                abcClassification:
+                  type: string
+                  description: ABC velocity tier
+                  example: A
+                frequencyDays:
+                  type: integer
+                  description: Recurrence interval in days
+                  example: 30
+                zone:
+                  type: string
+                  nullable: true
+                  description: Optional warehouse aisle or zone constraint
+                  example: ZONE-1
+              required:
+              - tenantId
+              - name
+              - abcClassification
+              - frequencyDays
+      responses:
+        '201':
+          description: Cycle count plan created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleCountPlan'
+        '500':
+          description: Failed to create plan
+  /api/cycle-count/schedule:
+    post:
+      summary: Schedule cycle counts
+      description: Evaluate active cycle count plans for a tenant and generate due blind audits based on elapsed days since last count.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tenantId:
+                  type: string
+                  description: Tenant identifier
+              required:
+              - tenantId
+      responses:
+        '200':
+          description: Due cycle counts generated and scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scheduled:
+                    type: integer
+                    description: Count of scheduled audits
+                  audits:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CycleCountAudit'
+                required:
+                - scheduled
+                - audits
+        '500':
+          description: Failed to schedule cycle counts
+  /api/cycle-count/classify:
+    post:
+      summary: Classify SKU using ABC analysis
+      description: Compute an item's ABC classification tier and recommended audit recurrence interval based on annual usage value against total organization inventory value.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                totalUsageValue:
+                  type: number
+                  description: Total dollar consumption or movement value for SKU
+                  example: 95000
+                totalOrgValue:
+                  type: number
+                  description: Total dollar valuation across organization inventory
+                  example: 100000
+                thresholds:
+                  type: object
+                  description: Optional custom cumulative Pareto cutoffs
+                  properties:
+                    aThreshold:
+                      type: number
+                      example: 0.90
+                    bThreshold:
+                      type: number
+                      example: 0.70
+              required:
+              - totalUsageValue
+              - totalOrgValue
+      responses:
+        '200':
+          description: ABC classification and recommended frequency
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ABCClassificationResult'
+        '500':
+          description: Failed to classify
