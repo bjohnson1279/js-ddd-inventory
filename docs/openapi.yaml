@@ -1537,11 +1537,104 @@ paths:
           description: OK
   /api/webhooks/subscriptions:
     get:
+      summary: List webhook subscriptions
       security:
       - bearerAuth: []
       responses:
         '200':
           description: OK
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+    post:
+      summary: Create webhook subscription
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - targetUrl
+              - secret
+              - eventTypes
+              properties:
+                targetUrl:
+                  type: string
+                secret:
+                  type: string
+                eventTypes:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /api/webhooks/subscriptions/{id}:
+    put:
+      summary: Update webhook subscription
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                targetUrl:
+                  type: string
+                secret:
+                  type: string
+                eventTypes:
+                  type: array
+                  items:
+                    type: string
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+    delete:
+      summary: Delete webhook subscription
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
   /api/webhooks/subscriptions/deliveries:
     get:
       security:

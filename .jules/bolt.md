@@ -186,6 +186,42 @@
 **Learning:** In fallback paths where batch DB fetching methods are unavailable, iterating arrays with sequential for...of loops prevents connection exhaustion but introduces a severe O(N) linear performance slowdown.
 **Action:** Always refactor purely sequential loop DB operations into chunked bounded concurrency loops (e.g. slice in chunks of 10 and map await Promise.all(chunk)). This balances database connection pool limits while preserving highly performant asynchronous query execution.
 
+## 2024-11-20 - Chunked Concurrency Optimization in Fallback Sequential DB Lookups
+**Learning:** In fallback paths where batch DB fetching methods (e.g. `findBySkus`, `getActiveLayersByVariantIds`) are unavailable, iterating arrays with sequential `for...of` loops prevents connection exhaustion but introduces a severe O(N) linear performance slowdown.
+**Action:** Always refactor purely sequential loop DB operations into chunked bounded concurrency loops (e.g. `slice` in chunks of 10 and map `await Promise.all(chunk)`). This balances database connection pool limits while preserving highly performant asynchronous query execution. This was applied to `ReceivePurchaseOrder`, `ReceiveRMA`, `DisassembleKit`, `ReconcileInventoryAudit`, and `CostLayerService`.
+
+## 2026-11-10 - Batch Fetching Active Cost Layers by Variant IDs to Eliminate N+1 Queries
+**Learning:** In batch cost calculation and consumption operations (`calculateLayersBatch`, `consumeLayersBatch`), fetching active cost layers for multiple variants using single-variant queries (`getActiveLayers`) in a loop results in an N+1 query anti-pattern, causing linear latency growth proportional to the number of distinct variants.
+**Action:** When prefetching active inventory cost layers across multiple variants, always check for and utilize `getActiveLayersByVariantIds` to fetch all active layers across all requested variants in a single database roundtrip, falling back to sequential execution only when the batch method is not implemented on the repository.
+
+## 2026-11-10 - Concurrency Optimization for Chunked Prisma Inventory Updates
+**Learning:** In bulk repository write methods (such as `saveMany` in `PrismaInventoryRepository`), executing `updateMany` queries inside a purely sequential `for...of` loop causes an N+1 query latency bottleneck within transactions. Because `updateMany` requires per-item predicates for optimistic concurrency version checks (`where: { id, version: version - 1 }`), queries cannot be combined into a single flat `updateMany` call.
+**Action:** Within each chunked batch in the transaction, execute the updates concurrently using `await Promise.all(...)` and inspect the returned `{ count }` array to verify version matches, reducing sequential roundtrips while preserving bounded concurrency and optimistic locking invariants.
+
+## 2026-11-10 - Batching INSERT and UPDATE with UNNEST in Postgres Repositories
+**Learning:** In repository batch write operations such as `saveMany`, iterating over an array of entities and executing individual `INSERT` and `UPDATE` queries causes an N+1 query bottleneck and massive latency overhead.
+**Action:** Group entities into inserts and updates, and execute them via bulk queries using PostgreSQL `UNNEST(...)`. For optimistic concurrency control on updates, join with the unnested dataset and use `RETURNING` to detect concurrency mismatches in a single round-trip.
+
+## 2026-11-10 - Bulk Fetch Webhook Subscriptions to Prevent N+1 Queries
+**Learning:** In worker loops like `WebhookDeliveryWorker.processPendingDeliveries`, iterating over queued deliveries and querying subscriptions one-by-one with `findUnique` introduces an N+1 database roundtrip pattern.
+**Action:** Extract unique foreign keys (`subscriptionIds = Array.from(new Set(deliveries.map(d => d.subscriptionId)))`) and bulk fetch records via `findMany({ where: { id: { in: subscriptionIds } } })` into an in-memory Map prior to the loop.
+
+## 2026-11-10 - Parallelize Domain Event Persistence in InMemoryInventoryRepository
+**Learning:** Sequential loops awaiting outbox event persistence (`for (const event of events) await this.outboxRepository.save(event)`) inside repository `save()` calls introduce an N+1 async roundtrip overhead proportional to the number of emitted domain events.
+**Action:** Replace sequential awaiting of independent domain events in repository write methods with `await Promise.all(events.map(event => this.outboxRepository.save(event)))`, reducing latency from O(N) sequential event persistence roundtrips to concurrent O(1) execution.
+
+## 2026-11-10 - Batching Reorder Policy Saves in ReorderPolicyService
+**Learning:** In bulk evaluation services like `ReorderPolicyService.evaluatePolicies`, calculating dynamic reorder points inside a loop and sequentially awaiting single-record `reorderPolicyRepository.save(policy)` calls introduces an N+1 query write bottleneck with linear roundtrip database latency.
+**Action:** Accumulate updated policies during policy evaluation and persist them collectively after the loop via `batchSave(this.reorderPolicyRepository, policiesToSave)`, utilizing `saveMany` when supported by the repository.
+
+## 2026-11-15 - Prisma createMany vs N+1 Loop in Seed/Setup Routines
+**Learning:** Iterating through predefined collections (such as system permissions in AuthController.setup) and checking existence via `findUnique` followed by `create` results in 2*N sequential database roundtrips (78 queries for 39 permissions), causing significant setup latency and connection contention.
+**Action:** Use Prisma's native `createMany({ data: items, skipDuplicates: true })` to insert the entire batch in a single database roundtrip, reducing query count and latency by ~98%.
+
+## 2026-11-12 - Variant ID Deduplication in Batch Cost Layer Queries
+**Learning:** In kit disassembly workflows (`DisassembleKit`), kits containing multiple components or duplicated component variant lines caused redundant calls to cost layer repositories. Without deduplication, both batch queries and sequential fallback branches fetched the same variant's cost layers repeatedly.
+**Action:** Deduplicate variant IDs upfront via `Array.from(new Set(components.map(c => c.variantId)))`. Verify repository batch methods (`getActiveLayersByVariantIds`) handle both `Map` and object return structures, and ensure fallback sequential loops iterate over unique variant IDs to eliminate redundant database queries.
+
 ## 2026-11-10 - Concurrent Webhook Dispatch via Promise.all
 **Learning:** In worker loops handling outgoing I/O requests (such as HTTP webhook dispatches in `WebhookDeliveryWorker`), sequentially awaiting individual network requests causes cumulative latency and throughput bottlenecks proportional to remote server response times. Because delivery batches are already bounded (`take: 10`), each dispatch is independent and self-contained with its own try/catch error handling, retries, and database updates.
 **Action:** Replace sequential `for..of` loops over bounded external I/O batches with `await Promise.all(deliveries.map(async ...))` to dispatch HTTP requests concurrently, reducing overall batch latency from O(N * T) to ~O(max(T)) while keeping failure isolation intact.

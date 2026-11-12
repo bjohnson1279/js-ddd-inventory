@@ -147,82 +147,86 @@ export class WebhookDeliveryWorker {
         data: { status: "Processing" },
       });
 
+      const subscriptionIds = Array.from(new Set(deliveries.map((d: any) => d.subscriptionId)));
+      const subscriptions = await prisma.webhookSubscriptionModel.findMany({
+        where: { id: { in: subscriptionIds } }
+      });
+      const subscriptionMap = new Map(subscriptions.map(s => [s.id, s]));
+
       await Promise.all(
         deliveries.map(async (delivery) => {
           try {
-            const subscription = await prisma.webhookSubscriptionModel.findUnique({
-              where: { id: delivery.subscriptionId }
-            });
+            const subscription = subscriptionMap.get(delivery.subscriptionId);
 
-            if (!subscription || !subscription.isActive) {
-              throw new Error(`Subscription ${delivery.subscriptionId} not found or inactive`);
-            }
-
-            // Calculate signature
-            const decryptedSecret = decrypt(subscription.secret);
-            const hmac = crypto.createHmac("sha256", decryptedSecret);
-            const signature = hmac.update(delivery.payload).digest("hex");
-
-            // Verify target URL is safe to prevent SSRF
-            if (!(await isSafeUrl(subscription.targetUrl))) {
-              throw new Error("Unsafe webhook target URL blocked");
-            }
-
-            // Send POST request
-            const response = await fetch(subscription.targetUrl, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Webhook-Signature-256": signature,
-                "X-Webhook-Event": delivery.eventType
-              },
-              body: delivery.payload
-            });
-
-            if (!response.ok) {
-              throw new Error(`HTTP Error Status: ${response.status}`);
-            }
-
-            // Mark as Success
-            await prisma.webhookDeliveryModel.update({
-              where: { id: delivery.id },
-              data: {
-                status: "Success",
-                attempts: delivery.attempts + 1,
-                processedAt: new Date()
-              }
-            });
-            Logger.info({ context: "WebhookDeliveryWorker", message: `[WebhookDeliveryWorker] Successfully delivered webhook ${delivery.id} to ${subscription.targetUrl}` });
-          } catch (err: any) {
-            const nextAttempts = delivery.attempts + 1;
-            const backoffMs = Math.min(Math.pow(2, nextAttempts) * 1000, 24 * 60 * 60 * 1000);
-            const nextAttemptAt = new Date(Date.now() + backoffMs);
-            const nextStatus = nextAttempts >= 5 ? "Failed" : "Pending";
-
-            Logger.error({ context: "WebhookDeliveryWorker", message: `[WebhookDeliveryWorker] Failed to deliver webhook ${delivery.id}:`, error: err.message });
-
-            await prisma.webhookDeliveryModel.update({
-              where: { id: delivery.id },
-              data: {
-                status: nextStatus,
-                attempts: nextAttempts,
-                lastError: err.message,
-                nextAttemptAt
-              }
-            });
-
-            // Broadcast webhook failure
-            const tenantId = delivery.tenantId || "tenant-1";
-            WebSocketManager.broadcastToTenant(tenantId, {
-              type: "webhook_failed",
-              id: delivery.id,
-              subscriptionId: delivery.subscriptionId,
-              eventType: delivery.eventType,
-              attempts: nextAttempts,
-              status: nextStatus,
-              lastError: err.message
-            });
+          if (!subscription || !subscription.isActive) {
+            throw new Error(`Subscription ${delivery.subscriptionId} not found or inactive`);
           }
+
+          // Calculate signature
+          const decryptedSecret = decrypt(subscription.secret);
+          const hmac = crypto.createHmac("sha256", decryptedSecret);
+          const signature = hmac.update(delivery.payload).digest("hex");
+
+          // Verify target URL is safe to prevent SSRF
+          if (!(await isSafeUrl(subscription.targetUrl))) {
+            throw new Error("Unsafe webhook target URL blocked");
+          }
+
+          // Send POST request
+          const response = await fetch(subscription.targetUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Webhook-Signature-256": signature,
+              "X-Webhook-Event": delivery.eventType
+            },
+            body: delivery.payload
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP Error Status: ${response.status}`);
+          }
+
+          // Mark as Success
+          await prisma.webhookDeliveryModel.update({
+            where: { id: delivery.id },
+            data: {
+              status: "Success",
+              attempts: delivery.attempts + 1,
+              processedAt: new Date()
+            }
+          });
+          Logger.info({ context: "WebhookDeliveryWorker", message: `[WebhookDeliveryWorker] Successfully delivered webhook ${delivery.id} to ${subscription.targetUrl}` });
+        } catch (err: any) {
+          const nextAttempts = delivery.attempts + 1;
+          const backoffMs = Math.min(Math.pow(2, nextAttempts) * 1000, 24 * 60 * 60 * 1000);
+          const nextAttemptAt = new Date(Date.now() + backoffMs);
+          const nextStatus = nextAttempts >= 5 ? "Failed" : "Pending";
+
+          Logger.error({ context: "WebhookDeliveryWorker", message: `[WebhookDeliveryWorker] Failed to deliver webhook ${delivery.id}:`, error: err.message });
+
+          await prisma.webhookDeliveryModel.update({
+            where: { id: delivery.id },
+            data: {
+              status: nextStatus,
+              attempts: nextAttempts,
+              lastError: err.message,
+              nextAttemptAt
+            }
+          });
+
+          // Broadcast webhook failure
+          const tenantId = delivery.tenantId || "tenant-1";
+          WebSocketManager.broadcastToTenant(tenantId, {
+            type: "webhook_failed",
+            id: delivery.id,
+            subscriptionId: delivery.subscriptionId,
+            eventType: delivery.eventType,
+            attempts: nextAttempts,
+            status: nextStatus,
+            lastError: err.message
+          });
+        }
         })
       );
     } catch (error) {
