@@ -20,6 +20,10 @@ export function addInMemoryUser(user: any) {
   inMemoryUsers.set(user.id, user);
 }
 
+export function getInMemoryUser(keyOrId: string) {
+  return inMemoryUsers.get(keyOrId);
+}
+
 export class AuthController {
   static async setup(request: any, reply: any) {
     try {
@@ -344,7 +348,6 @@ export class AuthController {
         id: userId,
         tenantId,
         email: normalizedEmail,
-        passwordHash,
         name: normalizedEmail.split("@")[0],
         active: true,
         userRoles: [{ role: { id: role, name: role } }]
