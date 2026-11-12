@@ -186,6 +186,14 @@
 **Learning:** In fallback paths where batch DB fetching methods are unavailable, iterating arrays with sequential for...of loops prevents connection exhaustion but introduces a severe O(N) linear performance slowdown.
 **Action:** Always refactor purely sequential loop DB operations into chunked bounded concurrency loops (e.g. slice in chunks of 10 and map await Promise.all(chunk)). This balances database connection pool limits while preserving highly performant asynchronous query execution.
 
+## 2024-11-20 - Chunked Concurrency Optimization in Fallback Sequential DB Lookups
+**Learning:** In fallback paths where batch DB fetching methods (e.g. `findBySkus`, `getActiveLayersByVariantIds`) are unavailable, iterating arrays with sequential `for...of` loops prevents connection exhaustion but introduces a severe O(N) linear performance slowdown.
+**Action:** Always refactor purely sequential loop DB operations into chunked bounded concurrency loops (e.g. `slice` in chunks of 10 and map `await Promise.all(chunk)`). This balances database connection pool limits while preserving highly performant asynchronous query execution. This was applied to `ReceivePurchaseOrder`, `ReceiveRMA`, `DisassembleKit`, `ReconcileInventoryAudit`, and `CostLayerService`.
+
+## 2026-11-10 - Batch Fetching Active Cost Layers by Variant IDs to Eliminate N+1 Queries
+**Learning:** In batch cost calculation and consumption operations (`calculateLayersBatch`, `consumeLayersBatch`), fetching active cost layers for multiple variants using single-variant queries (`getActiveLayers`) in a loop results in an N+1 query anti-pattern, causing linear latency growth proportional to the number of distinct variants.
+**Action:** When prefetching active inventory cost layers across multiple variants, always check for and utilize `getActiveLayersByVariantIds` to fetch all active layers across all requested variants in a single database roundtrip, falling back to sequential execution only when the batch method is not implemented on the repository.
+
 ## 2026-11-10 - Concurrency Optimization for Chunked Prisma Inventory Updates
 **Learning:** In bulk repository write methods (such as `saveMany` in `PrismaInventoryRepository`), executing `updateMany` queries inside a purely sequential `for...of` loop causes an N+1 query latency bottleneck within transactions. Because `updateMany` requires per-item predicates for optimistic concurrency version checks (`where: { id, version: version - 1 }`), queries cannot be combined into a single flat `updateMany` call.
 **Action:** Within each chunked batch in the transaction, execute the updates concurrently using `await Promise.all(...)` and inspect the returned `{ count }` array to verify version matches, reducing sequential roundtrips while preserving bounded concurrency and optimistic locking invariants.
