@@ -225,3 +225,7 @@
 ## 2026-11-10 - Concurrent Webhook Dispatch via Promise.all
 **Learning:** In worker loops handling outgoing I/O requests (such as HTTP webhook dispatches in `WebhookDeliveryWorker`), sequentially awaiting individual network requests causes cumulative latency and throughput bottlenecks proportional to remote server response times. Because delivery batches are already bounded (`take: 10`), each dispatch is independent and self-contained with its own try/catch error handling, retries, and database updates.
 **Action:** Replace sequential `for..of` loops over bounded external I/O batches with `await Promise.all(deliveries.map(async ...))` to dispatch HTTP requests concurrently, reducing overall batch latency from O(N * T) to ~O(max(T)) while keeping failure isolation intact.
+
+## 2026-11-05 - Chunked Bounded Concurrency for Active Layers Fallback in ReconcileInventoryAudit
+**Learning:** In `ReconcileInventoryAudit`, when the underlying `ICostLayerRepository` lacks `getActiveLayersByVariantIds` batch support, querying active layers sequentially in a `for...of` loop across unique variants with positive discrepancies introduces an O(N) sequential I/O latency bottleneck. Unbounded `Promise.all` risks database connection pool exhaustion.
+**Action:** Always use chunked bounded concurrency (`CHUNK_SIZE = 10` with `slice` and `Promise.all`) for fallback single-variant layer retrieval to achieve parallel query performance while strictly bounding connection pool concurrency.
