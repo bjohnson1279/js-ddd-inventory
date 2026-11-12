@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
+import { FastifyReply, FastifyPluginAsync } from "fastify";
 import { prisma } from "../../database/prisma";
 import { Logger } from "../../../infrastructure/logging/logger";
 import { AuthenticatedRequest } from "../middleware/auth";

@@ -5,6 +5,8 @@ import { DomainEventDispatcher } from "../../events/DomainEventDispatcher";
 import { ReorderPointReachedEvent } from "../../events/ReorderPointReachedEvent";
 import { SKU } from "../../valueObjects/SKU";
 import { Logger } from "../../../infrastructure/logging/logger";
+import { batchSave } from "../../../utils/batchSave";
+import { ReorderPolicy } from "../aggregates/ReorderPolicy";
 
 export class ReorderPolicyService {
   constructor(
@@ -47,6 +49,8 @@ export class ReorderPolicyService {
       }
     }
 
+    const policiesToSave: ReorderPolicy[] = [];
+
     for (const policy of policies) {
       let rop = policy.reorderPoint;
       if (policy.dynamicRopEnabled) {
@@ -60,7 +64,7 @@ export class ReorderPolicyService {
             tenantId
           );
           policy.updateReorderPoint(newRop);
-          await this.reorderPolicyRepository.save(policy);
+          policiesToSave.push(policy);
           rop = newRop;
         } catch (error) {
           Logger.error({ context: "ReorderPolicyService", message: `Error forecasting ROP for SKU ${policy.sku.getValue()}:`, error: error });
@@ -112,6 +116,10 @@ export class ReorderPolicyService {
         triggered,
         reason
       });
+    }
+
+    if (policiesToSave.length > 0) {
+      await batchSave(this.reorderPolicyRepository, policiesToSave);
     }
 
     return results;

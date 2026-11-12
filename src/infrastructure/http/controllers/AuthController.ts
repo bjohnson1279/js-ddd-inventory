@@ -122,12 +122,10 @@ export class AuthController {
             { id: "webhook:view", resource: "webhook", action: "view" }
           ];
 
-          for (const p of systemPermissions) {
-            const exists = await prisma.permissionModel.findUnique({ where: { id: p.id }});
-            if (!exists) {
-              await prisma.permissionModel.create({ data: p });
-            }
-          }
+          await prisma.permissionModel.createMany({
+            data: systemPermissions,
+            skipDuplicates: true
+          });
 
           const roleMappings: Record<string, string[]> = {
             "admin": systemPermissions.map(p => p.id),
