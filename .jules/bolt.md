@@ -201,3 +201,7 @@
 ## 2026-11-10 - Batching INSERT and UPDATE with UNNEST in Postgres Repositories
 **Learning:** In repository batch write operations such as `saveMany`, iterating over an array of entities and executing individual `INSERT` and `UPDATE` queries causes an N+1 query bottleneck and massive latency overhead.
 **Action:** Group entities into inserts and updates, and execute them via bulk queries using PostgreSQL `UNNEST(...)`. For optimistic concurrency control on updates, join with the unnested dataset and use `RETURNING` to detect concurrency mismatches in a single round-trip.
+
+## 2026-11-10 - Bulk Fetch Webhook Subscriptions to Prevent N+1 Queries
+**Learning:** In worker loops like `WebhookDeliveryWorker.processPendingDeliveries`, iterating over queued deliveries and querying subscriptions one-by-one with `findUnique` introduces an N+1 database roundtrip pattern.
+**Action:** Extract unique foreign keys (`subscriptionIds = Array.from(new Set(deliveries.map(d => d.subscriptionId)))`) and bulk fetch records via `findMany({ where: { id: { in: subscriptionIds } } })` into an in-memory Map prior to the loop.
