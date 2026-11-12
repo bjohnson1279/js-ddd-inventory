@@ -221,3 +221,7 @@
 ## 2026-11-12 - Variant ID Deduplication in Batch Cost Layer Queries
 **Learning:** In kit disassembly workflows (`DisassembleKit`), kits containing multiple components or duplicated component variant lines caused redundant calls to cost layer repositories. Without deduplication, both batch queries and sequential fallback branches fetched the same variant's cost layers repeatedly.
 **Action:** Deduplicate variant IDs upfront via `Array.from(new Set(components.map(c => c.variantId)))`. Verify repository batch methods (`getActiveLayersByVariantIds`) handle both `Map` and object return structures, and ensure fallback sequential loops iterate over unique variant IDs to eliminate redundant database queries.
+
+## 2026-11-10 - Concurrent Webhook Dispatch via Promise.all
+**Learning:** In worker loops handling outgoing I/O requests (such as HTTP webhook dispatches in `WebhookDeliveryWorker`), sequentially awaiting individual network requests causes cumulative latency and throughput bottlenecks proportional to remote server response times. Because delivery batches are already bounded (`take: 10`), each dispatch is independent and self-contained with its own try/catch error handling, retries, and database updates.
+**Action:** Replace sequential `for..of` loops over bounded external I/O batches with `await Promise.all(deliveries.map(async ...))` to dispatch HTTP requests concurrently, reducing overall batch latency from O(N * T) to ~O(max(T)) while keeping failure isolation intact.
