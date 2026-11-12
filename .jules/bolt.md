@@ -205,3 +205,7 @@
 ## 2026-11-10 - Bulk Fetch Webhook Subscriptions to Prevent N+1 Queries
 **Learning:** In worker loops like `WebhookDeliveryWorker.processPendingDeliveries`, iterating over queued deliveries and querying subscriptions one-by-one with `findUnique` introduces an N+1 database roundtrip pattern.
 **Action:** Extract unique foreign keys (`subscriptionIds = Array.from(new Set(deliveries.map(d => d.subscriptionId)))`) and bulk fetch records via `findMany({ where: { id: { in: subscriptionIds } } })` into an in-memory Map prior to the loop.
+
+## 2026-11-10 - Parallelize Domain Event Persistence in InMemoryInventoryRepository
+**Learning:** Sequential loops awaiting outbox event persistence (`for (const event of events) await this.outboxRepository.save(event)`) inside repository `save()` calls introduce an N+1 async roundtrip overhead proportional to the number of emitted domain events.
+**Action:** Replace sequential awaiting of independent domain events in repository write methods with `await Promise.all(events.map(event => this.outboxRepository.save(event)))`, reducing latency from O(N) sequential event persistence roundtrips to concurrent O(1) execution.

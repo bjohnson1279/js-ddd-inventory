@@ -91,9 +91,7 @@ export class InMemoryInventoryRepository implements IInventoryRepository {
     this.items.set(key, this.cloneItem(item));
     const events = item.getDomainEvents();
     if (this.outboxRepository) {
-      for (const event of events) {
-        await this.outboxRepository.save(event);
-      }
+      await Promise.all(events.map(event => this.outboxRepository!.save(event)));
     } else {
       await DomainEventDispatcher.dispatch(events);
     }
