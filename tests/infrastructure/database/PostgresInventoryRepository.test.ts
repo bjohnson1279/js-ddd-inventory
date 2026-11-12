@@ -278,7 +278,7 @@ describe("PostgresInventoryRepository", () => {
           return Promise.resolve({});
         }
         if (query.includes("UPDATE inventory_items")) {
-          return Promise.resolve({ rowCount: 1 });
+          return Promise.resolve({ rowCount: 1, rows: [{ id: "item-2" }] });
         }
         return Promise.resolve();
       });
@@ -294,10 +294,27 @@ describe("PostgresInventoryRepository", () => {
       expect(selectCall[1]).toEqual([["item-1", "item-2"]]);
 
       const insertCall = mockClient.query.mock.calls.find(call => call[0].includes("INSERT INTO"));
-      expect(insertCall[1]).toEqual(["item-1", "SKU-1", "loc-1", 10, 0, 0, 1, "shop-1"]);
+      expect(insertCall[1]).toEqual([
+        ["item-1"],
+        ["SKU-1"],
+        ["loc-1"],
+        [10],
+        [0],
+        [0],
+        [1],
+        ["shop-1"]
+      ]);
 
       const updateCall = mockClient.query.mock.calls.find(call => call[0].includes("UPDATE"));
-      expect(updateCall[1]).toEqual([20, 0, 0, 2, "shop-2", "item-2", 1]);
+      expect(updateCall[1]).toEqual([
+        ["item-2"],
+        [20],
+        [0],
+        [0],
+        [2],
+        ["shop-2"],
+        [1]
+      ]);
     });
 
     it("should throw ConcurrencyException and rollback on update if rowCount is 0", async () => {
@@ -316,7 +333,7 @@ describe("PostgresInventoryRepository", () => {
           return Promise.resolve({ rows: [{ id: "item-2", version: 1 }] });
         }
         if (query.includes("UPDATE inventory_items")) {
-          return Promise.resolve({ rowCount: 0 }); // Simulates concurrency failure
+          return Promise.resolve({ rowCount: 0, rows: [] }); // Simulates concurrency failure
         }
         return Promise.resolve();
       });

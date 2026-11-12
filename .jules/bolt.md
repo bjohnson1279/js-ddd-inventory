@@ -197,3 +197,7 @@
 ## 2026-11-10 - Concurrency Optimization for Chunked Prisma Inventory Updates
 **Learning:** In bulk repository write methods (such as `saveMany` in `PrismaInventoryRepository`), executing `updateMany` queries inside a purely sequential `for...of` loop causes an N+1 query latency bottleneck within transactions. Because `updateMany` requires per-item predicates for optimistic concurrency version checks (`where: { id, version: version - 1 }`), queries cannot be combined into a single flat `updateMany` call.
 **Action:** Within each chunked batch in the transaction, execute the updates concurrently using `await Promise.all(...)` and inspect the returned `{ count }` array to verify version matches, reducing sequential roundtrips while preserving bounded concurrency and optimistic locking invariants.
+
+## 2026-11-10 - Batching INSERT and UPDATE with UNNEST in Postgres Repositories
+**Learning:** In repository batch write operations such as `saveMany`, iterating over an array of entities and executing individual `INSERT` and `UPDATE` queries causes an N+1 query bottleneck and massive latency overhead.
+**Action:** Group entities into inserts and updates, and execute them via bulk queries using PostgreSQL `UNNEST(...)`. For optimistic concurrency control on updates, join with the unnested dataset and use `RETURNING` to detect concurrency mismatches in a single round-trip.
