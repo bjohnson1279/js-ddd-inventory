@@ -98,13 +98,19 @@ export class DisassembleKit {
         }
       }
     } else {
-      for (const variantId of uniqueVariantIds) {
-        try {
-          const layers = await this.costLayerRepository.getActiveLayers(variantId, "asc");
-          activeLayersMap.set(variantId, layers);
-        } catch (err) {
-          activeLayersMap.set(variantId, []);
-        }
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < uniqueVariantIds.length; i += CHUNK_SIZE) {
+        const chunk = uniqueVariantIds.slice(i, i + CHUNK_SIZE);
+        await Promise.all(
+          chunk.map(async (variantId) => {
+            try {
+              const layers = await this.costLayerRepository.getActiveLayers(variantId, "asc");
+              activeLayersMap.set(variantId, layers);
+            } catch (err) {
+              activeLayersMap.set(variantId, []);
+            }
+          })
+        );
       }
     }
 

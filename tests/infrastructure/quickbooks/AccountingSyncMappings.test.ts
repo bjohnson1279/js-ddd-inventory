@@ -128,4 +128,26 @@ describe("Accounting Sync Mapping Integration Tests", () => {
     expect(xeroMapping).not.toBeNull();
     expect(xeroMapping?.xeroJournalId).toBe("xero-remote-id");
   });
+
+  it("should throw an error if NETSUITE_ACCOUNT_ID or NETSUITE_TOKEN is missing", async () => {
+    const event = new JournalEntryCreatedEvent(
+      "journal-entry-999",
+      "tenant-456",
+      "Test Entry Note",
+      "2026-06-27",
+      []
+    );
+
+    delete process.env.NETSUITE_ACCOUNT_ID;
+    process.env.NETSUITE_TOKEN = "real-token";
+    await expect(syncJournalToNetSuite(event)).rejects.toThrow(
+      "Missing required NetSuite configuration: NETSUITE_ACCOUNT_ID and NETSUITE_TOKEN must be set."
+    );
+
+    process.env.NETSUITE_ACCOUNT_ID = "real-account";
+    delete process.env.NETSUITE_TOKEN;
+    await expect(syncJournalToNetSuite(event)).rejects.toThrow(
+      "Missing required NetSuite configuration: NETSUITE_ACCOUNT_ID and NETSUITE_TOKEN must be set."
+    );
+  });
 });

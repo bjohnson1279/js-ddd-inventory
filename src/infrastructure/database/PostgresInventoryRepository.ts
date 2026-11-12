@@ -167,41 +167,80 @@ export class PostgresInventoryRepository implements IInventoryRepository {
         }
       }
 
+      const itemsToInsert: InventoryItem[] = [];
+      const itemsToUpdate: InventoryItem[] = [];
+
       for (const item of items) {
-        const existingVersion = existingVersions.get(item.id);
-        if (existingVersion === undefined) {
-          const query = `
-            INSERT INTO inventory_items (id, sku, location_id, quantity, allocated, in_transit, version, shopify_inventory_item_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          `;
-          await client.query(query, [
-            item.id,
-            item.sku.getValue(),
-            item.locationId,
-            item.quantity.getValue(),
-            item.allocated.getValue(),
-            item.inTransit.getValue(),
-            item.version,
-            item.shopifyInventoryItemId
-          ]);
+        if (existingVersions.get(item.id) === undefined) {
+          itemsToInsert.push(item);
         } else {
-          const query = `
-            UPDATE inventory_items
-            SET quantity = $1, allocated = $2, in_transit = $3, version = $4, shopify_inventory_item_id = $5
-            WHERE id = $6 AND version = $7
-          `;
-          const res = await client.query(query, [
-            item.quantity.getValue(),
-            item.allocated.getValue(),
-            item.inTransit.getValue(),
-            item.version,
-            item.shopifyInventoryItemId,
-            item.id,
-            item.version - 1
-          ]);
-          if (res.rowCount === 0) {
-            throw new ConcurrencyException(item.sku.getValue(), item.locationId);
-          }
+          itemsToUpdate.push(item);
+        }
+      }
+
+      if (itemsToInsert.length > 0) {
+        const insertQuery = `
+          INSERT INTO inventory_items (id, sku, location_id, quantity, allocated, in_transit, version, shopify_inventory_item_id)
+          SELECT * FROM UNNEST(
+            $1::varchar[],
+            $2::varchar[],
+            $3::varchar[],
+            $4::int[],
+            $5::int[],
+            $6::int[],
+            $7::int[],
+            $8::varchar[]
+          )
+        `;
+        await client.query(insertQuery, [
+          itemsToInsert.map(i => i.id),
+          itemsToInsert.map(i => i.sku.getValue()),
+          itemsToInsert.map(i => i.locationId),
+          itemsToInsert.map(i => i.quantity.getValue()),
+          itemsToInsert.map(i => i.allocated.getValue()),
+          itemsToInsert.map(i => i.inTransit.getValue()),
+          itemsToInsert.map(i => i.version),
+          itemsToInsert.map(i => i.shopifyInventoryItemId ?? null)
+        ]);
+      }
+
+      if (itemsToUpdate.length > 0) {
+        const updateQuery = `
+          UPDATE inventory_items AS t
+          SET
+            quantity = v.quantity,
+            allocated = v.allocated,
+            in_transit = v.in_transit,
+            version = v.version,
+            shopify_inventory_item_id = v.shopify_inventory_item_id
+          FROM (
+            SELECT * FROM UNNEST(
+              $1::varchar[],
+              $2::int[],
+              $3::int[],
+              $4::int[],
+              $5::int[],
+              $6::varchar[],
+              $7::int[]
+            ) AS t(id, quantity, allocated, in_transit, version, shopify_inventory_item_id, expected_version)
+          ) AS v
+          WHERE t.id = v.id AND t.version = v.expected_version
+          RETURNING t.id
+        `;
+        const res = await client.query(updateQuery, [
+          itemsToUpdate.map(i => i.id),
+          itemsToUpdate.map(i => i.quantity.getValue()),
+          itemsToUpdate.map(i => i.allocated.getValue()),
+          itemsToUpdate.map(i => i.inTransit.getValue()),
+          itemsToUpdate.map(i => i.version),
+          itemsToUpdate.map(i => i.shopifyInventoryItemId ?? null),
+          itemsToUpdate.map(i => i.version - 1)
+        ]);
+
+        if (res.rowCount !== itemsToUpdate.length) {
+          const updatedIds = new Set((res.rows || []).map((r: any) => r.id));
+          const failedItem = itemsToUpdate.find(i => !updatedIds.has(i.id)) || itemsToUpdate[0];
+          throw new ConcurrencyException(failedItem.sku.getValue(), failedItem.locationId);
         }
       }
       await client.query('COMMIT');
