@@ -170,4 +170,97 @@ describe("DisassembleKit Use Case", () => {
     expect(mockInventoryRepo.findBySku).toHaveBeenCalled();
     expect(mockInvItem.dispatchStock).toHaveBeenCalled();
   });
+
+  it("should deduplicate variant IDs when calling getActiveLayersByVariantIds and support object returns", async () => {
+    // Arrange
+    (prisma.kitModel.findUnique as jest.Mock).mockResolvedValue({
+      sku: "KIT-MULTI",
+      components: [
+        { variantId: "COMP-A", quantity: 1 },
+        { variantId: "COMP-A", quantity: 2 },
+        { variantId: "COMP-B", quantity: 3 }
+      ]
+    });
+
+    const mockKitItem = {
+      quantity: { getValue: () => 10 },
+      dispatchStock: jest.fn(),
+      sku: { getValue: () => "KIT-MULTI" }
+    };
+    mockInventoryRepo.findBySku.mockResolvedValue(mockKitItem);
+    mockInventoryRepo.findBySkus.mockResolvedValue([]);
+
+    // Return object instead of Map to verify both contracts
+    mockCostLayerRepo.getActiveLayersByVariantIds.mockResolvedValue({
+      "COMP-A": [{ remainingQuantity: 10, unitCostCents: 500 }],
+      "COMP-B": [{ remainingQuantity: 5, unitCostCents: 1000 }]
+    });
+
+    const dto = {
+      tenantId: "tenant-1",
+      locationId: "loc-1",
+      kitSku: "KIT-MULTI",
+      quantity: 1,
+      actorId: "actor-1",
+      referenceId: "ref-1",
+    };
+
+    // Act
+    await disassembleKit.execute(dto);
+
+    // Assert: getActiveLayersByVariantIds called once with deduplicated variant IDs ["COMP-A", "COMP-B"]
+    expect(mockCostLayerRepo.getActiveLayersByVariantIds).toHaveBeenCalledTimes(1);
+    expect(mockCostLayerRepo.getActiveLayersByVariantIds).toHaveBeenCalledWith(["COMP-A", "COMP-B"], "asc");
+  });
+
+  it("should fall back to getActiveLayers sequentially with deduplicated variant IDs when getActiveLayersByVariantIds is not present", async () => {
+    // Create costLayerRepo without getActiveLayersByVariantIds
+    const customCostLayerRepo = {
+      getActiveLayers: jest.fn().mockResolvedValue([{ remainingQuantity: 5, unitCostCents: 200 }]),
+      save: jest.fn(),
+      saveMany: jest.fn(),
+    };
+
+    const customDisassembleKit = new DisassembleKit(
+      mockInventoryRepo,
+      customCostLayerRepo as any,
+      mockTenantConfigRepo,
+      mockJournalRepo
+    );
+    (customDisassembleKit as any).costLayerService.consumeFifoLayers = jest.fn().mockResolvedValue({ totalCostCents: 1000 });
+
+    (prisma.kitModel.findUnique as jest.Mock).mockResolvedValue({
+      sku: "KIT-FALLBACK",
+      components: [
+        { variantId: "COMP-F1", quantity: 1 },
+        { variantId: "COMP-F1", quantity: 2 },
+        { variantId: "COMP-F2", quantity: 1 }
+      ]
+    });
+
+    const mockKitItem = {
+      quantity: { getValue: () => 10 },
+      dispatchStock: jest.fn(),
+      sku: { getValue: () => "KIT-FALLBACK" }
+    };
+    mockInventoryRepo.findBySku.mockResolvedValue(mockKitItem);
+    mockInventoryRepo.findBySkus.mockResolvedValue([]);
+
+    const dto = {
+      tenantId: "tenant-1",
+      locationId: "loc-1",
+      kitSku: "KIT-FALLBACK",
+      quantity: 1,
+      actorId: "actor-1",
+      referenceId: "ref-1",
+    };
+
+    // Act
+    await customDisassembleKit.execute(dto);
+
+    // Assert: getActiveLayers called exactly once per unique variant ID (2 times, not 3)
+    expect(customCostLayerRepo.getActiveLayers).toHaveBeenCalledTimes(2);
+    expect(customCostLayerRepo.getActiveLayers).toHaveBeenCalledWith("COMP-F1", "asc");
+    expect(customCostLayerRepo.getActiveLayers).toHaveBeenCalledWith("COMP-F2", "asc");
+  });
 });

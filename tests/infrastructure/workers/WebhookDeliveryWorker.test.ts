@@ -50,6 +50,7 @@ describe("WebhookDeliveryWorker (Express)", () => {
     };
 
     (prisma.webhookDeliveryModel.findMany as jest.Mock).mockResolvedValue([mockDelivery]);
+    (prisma.webhookSubscriptionModel.findMany as jest.Mock).mockResolvedValue([mockSubscription]);
     (prisma.webhookSubscriptionModel.findUnique as jest.Mock).mockResolvedValue(mockSubscription);
     fetchSpy.mockResolvedValue({
       ok: true,
@@ -105,6 +106,7 @@ describe("WebhookDeliveryWorker (Express)", () => {
     };
 
     (prisma.webhookDeliveryModel.findMany as jest.Mock).mockResolvedValue([mockDelivery]);
+    (prisma.webhookSubscriptionModel.findMany as jest.Mock).mockResolvedValue([mockSubscription]);
     (prisma.webhookSubscriptionModel.findUnique as jest.Mock).mockResolvedValue(mockSubscription);
     fetchSpy.mockResolvedValue({
       ok: false,
@@ -119,6 +121,135 @@ describe("WebhookDeliveryWorker (Express)", () => {
         status: "Pending",
         attempts: 2,
         lastError: "HTTP Error Status: 404",
+        nextAttemptAt: expect.any(Date)
+      })
+    });
+  });
+
+  it("should bulk fetch subscriptions to prevent N+1 queries across multiple deliveries", async () => {
+    const mockDeliveries = [
+      {
+        id: "delivery-1",
+        subscriptionId: "sub-1",
+        eventType: "StockUpdated",
+        payload: JSON.stringify({ sku: "SKU-1", quantity: 5 }),
+        attempts: 0
+      },
+      {
+        id: "delivery-2",
+        subscriptionId: "sub-2",
+        eventType: "StockUpdated",
+        payload: JSON.stringify({ sku: "SKU-2", quantity: 15 }),
+        attempts: 0
+      },
+      {
+        id: "delivery-3",
+        subscriptionId: "sub-1",
+        eventType: "StockUpdated",
+        payload: JSON.stringify({ sku: "SKU-3", quantity: 20 }),
+        attempts: 0
+      }
+    ];
+
+    const mockSubscriptions = [
+      {
+        id: "sub-1",
+        isActive: true,
+        targetUrl: "https://example.com/webhook-1",
+        secret: encrypt("secret-1")
+      },
+      {
+        id: "sub-2",
+        isActive: true,
+        targetUrl: "https://example.com/webhook-2",
+        secret: encrypt("secret-2")
+      }
+    ];
+
+    (prisma.webhookDeliveryModel.findMany as jest.Mock).mockResolvedValue(mockDeliveries);
+    (prisma.webhookSubscriptionModel.findMany as jest.Mock).mockResolvedValue(mockSubscriptions);
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      status: 200
+    } as any);
+
+    await WebhookDeliveryWorker.processPendingDeliveries();
+
+    expect(prisma.webhookSubscriptionModel.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.webhookSubscriptionModel.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ["sub-1", "sub-2"] } }
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it("should process multiple deliveries concurrently and handle mixed success/failure", async () => {
+    const mockDelivery1 = {
+      id: "delivery-multi-1",
+      subscriptionId: "sub-multi-1",
+      eventType: "StockUpdated",
+      payload: JSON.stringify({ sku: "SKU-1", quantity: 5 }),
+      attempts: 0
+    };
+
+    const mockDelivery2 = {
+      id: "delivery-multi-2",
+      subscriptionId: "sub-multi-2",
+      eventType: "StockUpdated",
+      payload: JSON.stringify({ sku: "SKU-2", quantity: 0 }),
+      attempts: 1
+    };
+
+    const mockSubscription1 = {
+      id: "sub-multi-1",
+      isActive: true,
+      targetUrl: "https://example.com/multi-success",
+      secret: encrypt("multi-secret-1")
+    };
+
+    const mockSubscription2 = {
+      id: "sub-multi-2",
+      isActive: true,
+      targetUrl: "https://example.com/multi-fail",
+      secret: encrypt("multi-secret-2")
+    };
+
+    (prisma.webhookDeliveryModel.findMany as jest.Mock).mockResolvedValue([mockDelivery1, mockDelivery2]);
+    (prisma.webhookSubscriptionModel.findMany as jest.Mock).mockResolvedValue([mockSubscription1, mockSubscription2]);
+    (prisma.webhookSubscriptionModel.findUnique as jest.Mock).mockImplementation(async (args: any) => {
+      if (args.where.id === "sub-multi-1") return mockSubscription1;
+      if (args.where.id === "sub-multi-2") return mockSubscription2;
+      return null;
+    });
+
+    fetchSpy.mockImplementation(async (url: any) => {
+      if (url === "https://example.com/multi-success") {
+        return { ok: true, status: 200 } as any;
+      }
+      return { ok: false, status: 500 } as any;
+    });
+
+    await WebhookDeliveryWorker.processPendingDeliveries();
+
+    expect(prisma.webhookDeliveryModel.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["delivery-multi-1", "delivery-multi-2"] } },
+      data: { status: "Processing" }
+    });
+
+    expect(prisma.webhookDeliveryModel.update).toHaveBeenCalledWith({
+      where: { id: "delivery-multi-1" },
+      data: expect.objectContaining({
+        status: "Success",
+        attempts: 1,
+        processedAt: expect.any(Date)
+      })
+    });
+
+    expect(prisma.webhookDeliveryModel.update).toHaveBeenCalledWith({
+      where: { id: "delivery-multi-2" },
+      data: expect.objectContaining({
+        status: "Pending",
+        attempts: 2,
+        lastError: "HTTP Error Status: 500",
         nextAttemptAt: expect.any(Date)
       })
     });

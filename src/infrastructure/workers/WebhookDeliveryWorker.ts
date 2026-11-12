@@ -147,11 +147,16 @@ export class WebhookDeliveryWorker {
         data: { status: "Processing" },
       });
 
-      for (const delivery of deliveries) {
-        try {
-          const subscription = await prisma.webhookSubscriptionModel.findUnique({
-            where: { id: delivery.subscriptionId }
-          });
+      const subscriptionIds = Array.from(new Set(deliveries.map((d: any) => d.subscriptionId)));
+      const subscriptions = await prisma.webhookSubscriptionModel.findMany({
+        where: { id: { in: subscriptionIds } }
+      });
+      const subscriptionMap = new Map(subscriptions.map(s => [s.id, s]));
+
+      await Promise.all(
+        deliveries.map(async (delivery) => {
+          try {
+            const subscription = subscriptionMap.get(delivery.subscriptionId);
 
           if (!subscription || !subscription.isActive) {
             throw new Error(`Subscription ${delivery.subscriptionId} not found or inactive`);
@@ -222,7 +227,8 @@ export class WebhookDeliveryWorker {
             lastError: err.message
           });
         }
-      }
+        })
+      );
     } catch (error) {
       Logger.error({ context: "WebhookDeliveryWorker", message: "Error in background worker loop:", error: error });
     } finally {
