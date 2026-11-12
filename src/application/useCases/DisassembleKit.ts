@@ -91,12 +91,22 @@ export class DisassembleKit {
       activeLayersMap = await this.costLayerRepository.getActiveLayersByVariantIds(variantIds, "asc");
     } else {
       activeLayersMap = new Map();
-      for (const component of kitRecord.components) {
-        try {
-          const layers = await this.costLayerRepository.getActiveLayers(component.variantId, "asc");
-          activeLayersMap.set(component.variantId, layers);
-        } catch (err) {
-          activeLayersMap.set(component.variantId, []);
+      // Optimization: Refactor sequential loop to bounded chunked concurrency to prevent O(N) slowdown
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < kitRecord.components.length; i += CHUNK_SIZE) {
+        const chunk = kitRecord.components.slice(i, i + CHUNK_SIZE);
+        const chunkResults = await Promise.all(
+          chunk.map(async (component: any) => {
+            try {
+              const layers = await this.costLayerRepository.getActiveLayers(component.variantId, "asc");
+              return { variantId: component.variantId, layers };
+            } catch (err) {
+              return { variantId: component.variantId, layers: [] };
+            }
+          })
+        );
+        for (const result of chunkResults) {
+          activeLayersMap.set(result.variantId, result.layers);
         }
       }
     }
@@ -144,10 +154,17 @@ export class DisassembleKit {
     if ('findBySkus' in this.inventoryRepository && typeof (this.inventoryRepository as any).findBySkus === 'function') {
       inventoryItems = await (this.inventoryRepository as any).findBySkus(skusToFetch, locationId);
     } else {
-      for (const sku of skusToFetch) {
-        const item = await this.inventoryRepository.findBySku(sku, locationId);
-        if (item) {
-          inventoryItems.push(item);
+      // Optimization: Refactor sequential loop to bounded chunked concurrency to prevent O(N) slowdown
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < skusToFetch.length; i += CHUNK_SIZE) {
+        const chunk = skusToFetch.slice(i, i + CHUNK_SIZE);
+        const chunkResults = await Promise.all(
+          chunk.map(sku => this.inventoryRepository.findBySku(sku, locationId))
+        );
+        for (const item of chunkResults) {
+          if (item) {
+            inventoryItems.push(item);
+          }
         }
       }
     }
