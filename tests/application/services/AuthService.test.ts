@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
-import { AuthService } from '../../../src/application/services/AuthService';
+import { AuthService, authenticateRequestMiddleware } from '../../../src/application/services/AuthService';
 
 describe('AuthService Unit Tests', () => {
   const dummyPrisma: any = {
@@ -174,6 +174,100 @@ describe('AuthService Unit Tests', () => {
       expect(() => {
         require('../../../src/application/services/AuthService');
       }).not.toThrow();
+    });
+  });
+
+  describe('Authorization Header Validation', () => {
+    describe('validateRequest', () => {
+      it('should validate request with valid Bearer token header', async () => {
+        const authService = new AuthService(dummyPrisma);
+        const token = await authService.createToken({ tenantId: 'tenant-abc' });
+
+        const result = await authService.validateRequest({
+          authorization: `Bearer ${token}`,
+        });
+        expect(result.tenantId).toBe('tenant-abc');
+
+        const resultUpper = await authService.validateRequest({
+          Authorization: `Bearer ${token}`,
+        });
+        expect(resultUpper.tenantId).toBe('tenant-abc');
+      });
+
+      it('should throw TOKEN_NOT_FOUND when authorization header is missing', async () => {
+        const authService = new AuthService(dummyPrisma);
+        await expect(authService.validateRequest({})).rejects.toThrow('TOKEN_NOT_FOUND');
+      });
+
+      it('should throw TOKEN_INVALID when authorization header does not start with Bearer ', async () => {
+        const authService = new AuthService(dummyPrisma);
+        const token = await authService.createToken({ tenantId: 'tenant-abc' });
+
+        await expect(authService.validateRequest({ authorization: token })).rejects.toThrow('TOKEN_INVALID');
+        await expect(authService.validateRequest({ authorization: `Basic ${token}` })).rejects.toThrow('TOKEN_INVALID');
+        await expect(authService.validateRequest({ authorization: `bearer ${token}` })).rejects.toThrow('TOKEN_INVALID');
+      });
+    });
+
+    describe('authenticateRequestMiddleware', () => {
+      it('should authenticate request with valid Bearer header', async () => {
+        const authService = new AuthService(dummyPrisma);
+        const token = await authService.createToken({ tenantId: 'tenant-xyz' });
+
+        const req = {
+          prisma: dummyPrisma,
+          headers: {
+            authorization: `Bearer ${token}`,
+          },
+        };
+
+        const result = await authenticateRequestMiddleware(req);
+        expect(result.tenantId).toBe('tenant-xyz');
+      });
+
+      it('should authenticate request with query token when header is absent', async () => {
+        const authService = new AuthService(dummyPrisma);
+        const token = await authService.createToken({ tenantId: 'tenant-query' });
+
+        const req = {
+          prisma: dummyPrisma,
+          headers: {},
+          query: {
+            token,
+          },
+        };
+
+        const result = await authenticateRequestMiddleware(req);
+        expect(result.tenantId).toBe('tenant-query');
+      });
+
+      it('should reject with TOKEN_INVALID when authorization header lacks Bearer prefix', async () => {
+        const authService = new AuthService(dummyPrisma);
+        const token = await authService.createToken({ tenantId: 'tenant-xyz' });
+
+        const req = {
+          prisma: dummyPrisma,
+          headers: {
+            authorization: token,
+          },
+        };
+
+        await expect(authenticateRequestMiddleware(req)).rejects.toMatchObject({
+          message: expect.stringContaining('TOKEN_INVALID'),
+        });
+      });
+
+      it('should reject with TOKEN_NOT_FOUND when neither header nor query token is present', async () => {
+        const req = {
+          prisma: dummyPrisma,
+          headers: {},
+          query: {},
+        };
+
+        await expect(authenticateRequestMiddleware(req)).rejects.toMatchObject({
+          message: expect.stringContaining('TOKEN_NOT_FOUND'),
+        });
+      });
     });
   });
 });
