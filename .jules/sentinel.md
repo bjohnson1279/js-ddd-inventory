@@ -204,3 +204,8 @@
 **Vulnerability:** `src/application/eventHandlers/SyncJournalToNetSuite.ts` defaulted missing `NETSUITE_ACCOUNT_ID` and `NETSUITE_TOKEN` environment variables to `"mock"`, allowing the event handler to proceed with pseudo-mock credentials.
 **Learning:** Hardcoded credential fallbacks mask deployment misconfigurations and allow unauthenticated or unauthorized integration attempts against external accounting systems. If credentials are not configured, the handler must fail fast and loudly by throwing an error.
 **Prevention:** Require external service credentials strictly at runtime without fallback defaults, throwing an explicit error whenever required integration configuration is missing.
+
+## 2026-10-28 - Insecure JWT Secret Fallback in AuthService
+**Vulnerability:** `AuthService.ts` used a fallback string `'test-jwt-secret'` when `process.env.JWT_SECRET` was missing and `NODE_ENV === 'test'`.
+**Learning:** Permitting hardcoded cryptographic fallbacks in application code creates security risks if code is executed under incorrect environment settings or misconfigured deployments. Relying on default fallbacks weakens security posture and violates fail-fast configuration principles.
+**Prevention:** Strictly enforce the presence of cryptographic secrets such as `JWT_SECRET` across all environments without code-level fallback defaults, and inject mock secrets explicitly via test environment configurations.
