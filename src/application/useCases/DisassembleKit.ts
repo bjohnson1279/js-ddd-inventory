@@ -85,29 +85,32 @@ export class DisassembleKit {
     let totalEstimatedComponentsCost = 0;
     const componentAvgCosts: { variantId: string; quantity: number; avgUnitCost: number }[] = [];
 
-    let activeLayersMap: Map<string, InventoryCostLayer[]>;
-    if (this.costLayerRepository.getActiveLayersByVariantIds) {
-      const variantIds = kitRecord.components.map((c: any) => c.variantId);
-      activeLayersMap = await this.costLayerRepository.getActiveLayersByVariantIds(variantIds, "asc");
+    let activeLayersMap = new Map<string, InventoryCostLayer[]>();
+    const uniqueVariantIds = Array.from(new Set<string>(kitRecord.components.map((c: any) => c.variantId)));
+
+    if ('getActiveLayersByVariantIds' in this.costLayerRepository && typeof (this.costLayerRepository as any).getActiveLayersByVariantIds === 'function') {
+      const result = await (this.costLayerRepository as any).getActiveLayersByVariantIds(uniqueVariantIds, "asc");
+      if (result instanceof Map) {
+        activeLayersMap = result;
+      } else if (result && typeof result === 'object') {
+        for (const [key, value] of Object.entries(result)) {
+          activeLayersMap.set(key, value as InventoryCostLayer[]);
+        }
+      }
     } else {
-      activeLayersMap = new Map();
-      // Optimization: Refactor sequential loop to bounded chunked concurrency to prevent O(N) slowdown
       const CHUNK_SIZE = 10;
-      for (let i = 0; i < kitRecord.components.length; i += CHUNK_SIZE) {
-        const chunk = kitRecord.components.slice(i, i + CHUNK_SIZE);
-        const chunkResults = await Promise.all(
-          chunk.map(async (component: any) => {
+      for (let i = 0; i < uniqueVariantIds.length; i += CHUNK_SIZE) {
+        const chunk = uniqueVariantIds.slice(i, i + CHUNK_SIZE);
+        await Promise.all(
+          chunk.map(async (variantId) => {
             try {
-              const layers = await this.costLayerRepository.getActiveLayers(component.variantId, "asc");
-              return { variantId: component.variantId, layers };
+              const layers = await this.costLayerRepository.getActiveLayers(variantId, "asc");
+              activeLayersMap.set(variantId, layers);
             } catch (err) {
-              return { variantId: component.variantId, layers: [] };
+              activeLayersMap.set(variantId, []);
             }
           })
         );
-        for (const result of chunkResults) {
-          activeLayersMap.set(result.variantId, result.layers);
-        }
       }
     }
 
@@ -154,17 +157,10 @@ export class DisassembleKit {
     if ('findBySkus' in this.inventoryRepository && typeof (this.inventoryRepository as any).findBySkus === 'function') {
       inventoryItems = await (this.inventoryRepository as any).findBySkus(skusToFetch, locationId);
     } else {
-      // Optimization: Refactor sequential loop to bounded chunked concurrency to prevent O(N) slowdown
-      const CHUNK_SIZE = 10;
-      for (let i = 0; i < skusToFetch.length; i += CHUNK_SIZE) {
-        const chunk = skusToFetch.slice(i, i + CHUNK_SIZE);
-        const chunkResults = await Promise.all(
-          chunk.map(sku => this.inventoryRepository.findBySku(sku, locationId))
-        );
-        for (const item of chunkResults) {
-          if (item) {
-            inventoryItems.push(item);
-          }
+      for (const sku of skusToFetch) {
+        const item = await this.inventoryRepository.findBySku(sku, locationId);
+        if (item) {
+          inventoryItems.push(item);
         }
       }
     }

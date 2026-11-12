@@ -217,3 +217,7 @@
 ## 2026-11-15 - Prisma createMany vs N+1 Loop in Seed/Setup Routines
 **Learning:** Iterating through predefined collections (such as system permissions in AuthController.setup) and checking existence via `findUnique` followed by `create` results in 2*N sequential database roundtrips (78 queries for 39 permissions), causing significant setup latency and connection contention.
 **Action:** Use Prisma's native `createMany({ data: items, skipDuplicates: true })` to insert the entire batch in a single database roundtrip, reducing query count and latency by ~98%.
+
+## 2026-11-12 - Variant ID Deduplication in Batch Cost Layer Queries
+**Learning:** In kit disassembly workflows (`DisassembleKit`), kits containing multiple components or duplicated component variant lines caused redundant calls to cost layer repositories. Without deduplication, both batch queries and sequential fallback branches fetched the same variant's cost layers repeatedly.
+**Action:** Deduplicate variant IDs upfront via `Array.from(new Set(components.map(c => c.variantId)))`. Verify repository batch methods (`getActiveLayersByVariantIds`) handle both `Map` and object return structures, and ensure fallback sequential loops iterate over unique variant IDs to eliminate redundant database queries.
