@@ -200,6 +200,11 @@
 **Learning:** In JavaScript, when passing a string as the second argument to `replace()`, special replacement patterns (like `$$`, `$&`, `$1`) are interpolated by the JS engine. If an attacker controls the `val` parameter and passes a string like `$$test`, the `replace` function turns `$$` into `$`, resulting in incorrect formatting and potential breakage of escaping logic, leading to injection or syntax errors.
 **Prevention:** When substituting user-controlled or dynamically escaped strings via `String.prototype.replace()`, always use a replacer function (e.g., `replace(/%I/g, () => `"${val}"`)`) rather than a raw string replacement. This ensures the output is treated purely as literal characters without interpreting `$X` directives.
 
+## 2026-11-10 - Hardcoded Mock Credentials Fallback in NetSuite Event Handler
+**Vulnerability:** `src/application/eventHandlers/SyncJournalToNetSuite.ts` defaulted missing `NETSUITE_ACCOUNT_ID` and `NETSUITE_TOKEN` environment variables to `"mock"`, allowing the event handler to proceed with pseudo-mock credentials.
+**Learning:** Hardcoded credential fallbacks mask deployment misconfigurations and allow unauthenticated or unauthorized integration attempts against external accounting systems. If credentials are not configured, the handler must fail fast and loudly by throwing an error.
+**Prevention:** Require external service credentials strictly at runtime without fallback defaults, throwing an explicit error whenever required integration configuration is missing.
+
 ## 2026-10-28 - Insecure JWT Secret Fallback in AuthService
 **Vulnerability:** `AuthService.ts` used a fallback string `'test-jwt-secret'` when `process.env.JWT_SECRET` was missing and `NODE_ENV === 'test'`.
 **Learning:** Permitting hardcoded cryptographic fallbacks in application code creates security risks if code is executed under incorrect environment settings or misconfigured deployments. Relying on default fallbacks weakens security posture and violates fail-fast configuration principles.

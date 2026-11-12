@@ -58,6 +58,38 @@ export class PrismaReorderPolicyRepository implements IReorderPolicyRepository {
     });
   }
 
+  async saveMany(policies: ReorderPolicy[]): Promise<void> {
+    if (policies.length === 0) return;
+
+    await this.prisma.$transaction(
+      policies.map((policy) =>
+        this.prisma.reorderPolicyModel.upsert({
+          where: {
+            sku_locationId: {
+              sku: policy.sku.getValue(),
+              locationId: policy.locationId
+            }
+          },
+          update: {
+            reorderPoint: policy.reorderPoint,
+            reorderQuantity: policy.reorderQuantity,
+            safetyStock: policy.safetyStock,
+            dynamicRopEnabled: policy.dynamicRopEnabled
+          },
+          create: {
+            id: policy.id,
+            sku: policy.sku.getValue(),
+            locationId: policy.locationId,
+            reorderPoint: policy.reorderPoint,
+            reorderQuantity: policy.reorderQuantity,
+            safetyStock: policy.safetyStock,
+            dynamicRopEnabled: policy.dynamicRopEnabled
+          }
+        })
+      )
+    );
+  }
+
   async findAllByLocation(locationId: string): Promise<ReorderPolicy[]> {
     const records = await this.prisma.reorderPolicyModel.findMany({ where: { locationId } });
     return records.map(record => this.mapToDomain(record));
