@@ -5,8 +5,12 @@ import crypto from "crypto";
 import { Logger } from "../../infrastructure/logging/logger";
 
 export const syncJournalToNetSuite = async (event: JournalEntryCreatedEvent): Promise<void> => {
-  const accountId = process.env.NETSUITE_ACCOUNT_ID || "mock";
-  const token = process.env.NETSUITE_TOKEN || "mock";
+  const accountId = process.env.NETSUITE_ACCOUNT_ID;
+  const token = process.env.NETSUITE_TOKEN;
+
+  if (!accountId || !token) {
+    throw new Error("Missing required NetSuite configuration: NETSUITE_ACCOUNT_ID and NETSUITE_TOKEN must be set.");
+  }
 
   try {
     const existing = await prisma.netsuiteJournalMappingModel.findUnique({
