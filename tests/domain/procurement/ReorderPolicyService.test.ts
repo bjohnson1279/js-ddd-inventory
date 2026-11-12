@@ -112,4 +112,58 @@ describe("ReorderPolicyService", () => {
     expect(results[0].triggered).toBe(true);
     expect(results[0].reorderPoint).toBe(15);
   });
+
+  it("should batch save updated policies using saveMany when available", async () => {
+    const policy1 = new ReorderPolicy("p-1", SKU.create("SKU-1"), "warehouse-1", 5, 20, 2, true);
+    const policy2 = new ReorderPolicy("p-2", SKU.create("SKU-2"), "warehouse-1", 5, 20, 2, true);
+    await reorderPolicyRepo.save(policy1);
+    await reorderPolicyRepo.save(policy2);
+
+    const saveManySpy = jest.spyOn(reorderPolicyRepo, "saveMany");
+    const saveSpy = jest.spyOn(reorderPolicyRepo, "save");
+
+    const mockForecaster = {
+      forecastReorderPoint: jest.fn().mockResolvedValue(25)
+    };
+    const mockInventoryRepo = {
+      findBySku: jest.fn().mockResolvedValue(null)
+    };
+
+    await service.evaluatePolicies("tenant-1", mockForecaster, mockInventoryRepo);
+
+    expect(saveManySpy).toHaveBeenCalledTimes(1);
+    expect(saveManySpy).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ reorderPoint: 25 }),
+      expect.objectContaining({ reorderPoint: 25 })
+    ]));
+    // save should not have been called inside the loop during evaluation
+    expect(saveSpy).not.toHaveBeenCalled();
+
+    const updated1 = await reorderPolicyRepo.findBySkuAndLocation(SKU.create("SKU-1"), "warehouse-1");
+    const updated2 = await reorderPolicyRepo.findBySkuAndLocation(SKU.create("SKU-2"), "warehouse-1");
+    expect(updated1?.reorderPoint).toBe(25);
+    expect(updated2?.reorderPoint).toBe(25);
+  });
+
+  it("should fall back to sequential save if saveMany is not supported by repository", async () => {
+    const policy1 = new ReorderPolicy("p-1", SKU.create("SKU-1"), "warehouse-1", 5, 20, 2, true);
+    await reorderPolicyRepo.save(policy1);
+
+    // Override saveMany to undefined to simulate a repository without saveMany
+    (reorderPolicyRepo as any).saveMany = undefined;
+    const saveSpy = jest.spyOn(reorderPolicyRepo, "save");
+
+    const mockForecaster = {
+      forecastReorderPoint: jest.fn().mockResolvedValue(30)
+    };
+    const mockInventoryRepo = {
+      findBySku: jest.fn().mockResolvedValue(null)
+    };
+
+    await service.evaluatePolicies("tenant-1", mockForecaster, mockInventoryRepo);
+
+    expect(saveSpy).toHaveBeenCalledTimes(1);
+    const updated = await reorderPolicyRepo.findBySkuAndLocation(SKU.create("SKU-1"), "warehouse-1");
+    expect(updated?.reorderPoint).toBe(30);
+  });
 });

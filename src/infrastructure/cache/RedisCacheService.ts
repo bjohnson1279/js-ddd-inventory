@@ -1,13 +1,13 @@
 import { Logger } from "../logging/logger";
 
-interface CacheEntry {
-  value: any;
+interface CacheEntry<T = unknown> {
+  value: T;
   expiresAt: number;
 }
 
 export class RedisCacheService {
   private static instance: RedisCacheService;
-  private memoryCache: Map<string, CacheEntry> = new Map();
+  private memoryCache: Map<string, CacheEntry<unknown>> = new Map();
   private hits: number = 0;
   private misses: number = 0;
   private invalidations: number = 0;
@@ -21,7 +21,7 @@ export class RedisCacheService {
     return RedisCacheService.instance;
   }
 
-  public get<T = any>(key: string): T | null {
+  public get<T = unknown>(key: string): T | null {
     const entry = this.memoryCache.get(key);
     if (!entry) {
       this.misses++;
@@ -36,7 +36,7 @@ export class RedisCacheService {
     return entry.value as T;
   }
 
-  public set(key: string, value: any, ttlSeconds: number = 300): void {
+  public set<T = unknown>(key: string, value: T, ttlSeconds: number = 300): void {
     const expiresAt = Date.now() + ttlSeconds * 1000;
     this.memoryCache.set(key, { value, expiresAt });
   }

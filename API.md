@@ -791,6 +791,154 @@ Monitor transactional outbox event relay status and reprocess failed messages.
 
 ---
 
+### 3. Create Webhook Subscription
+Register a new outbound webhook endpoint to receive real-time domain event notifications.
+
+*   **URL**: `/api/webhooks/subscriptions`
+*   **Method**: `POST`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Role required: `admin`)
+    *   `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Body**:
+        *   `targetUrl` (string, Required): The destination HTTPS URL that receives webhook payloads.
+        *   `secret` (string, Required): Shared secret string used for signing payloads.
+        *   `eventTypes` (array of strings, Required): List of domain event names to subscribe to (e.g., `["StockDepletedEvent", "InventoryReceived"]`).
+*   **Request Body**:
+    ```json
+    {
+      "targetUrl": "https://erp.example.com/webhooks/inventory",
+      "secret": "whsec_live_abcdef1234567890",
+      "eventTypes": ["StockDepletedEvent", "JournalEntryCreatedEvent"]
+    }
+    ```
+*   **Success Response**: `201 Created`
+    ```json
+    {
+      "id": "e81f1568-ff7d-401b-9b29-9d1d030b9b36",
+      "tenantId": "tenant-1",
+      "targetUrl": "https://erp.example.com/webhooks/inventory",
+      "secret": "encrypted_secret_data",
+      "eventTypes": ["StockDepletedEvent", "JournalEntryCreatedEvent"],
+      "isActive": true,
+      "createdAt": "2026-11-06T15:00:00.000Z",
+      "updatedAt": "2026-11-06T15:00:00.000Z"
+    }
+    ```
+*   **Error Responses**:
+    *   `400 Bad Request`: If `targetUrl`, `secret`, or `eventTypes` is missing or invalid.
+        ```json
+        { "error": "Missing or invalid parameters" }
+        ```
+    *   `401 Unauthorized`: If the Bearer token is missing or invalid.
+    *   `403 Forbidden`: If the user lacks the `admin` role.
+    *   `500 Internal Server Error`: If an unexpected database failure occurs.
+*   **Workflow**: Configures outbound event webhooks to alert external third-party services when domain events are dispatched.
+
+---
+
+### 4. List Webhook Subscriptions
+Retrieve all active and inactive webhook subscriptions configured for the current tenant.
+
+*   **URL**: `/api/webhooks/subscriptions`
+*   **Method**: `GET`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Role required: `admin`)
+*   **Parameters**: None
+*   **Success Response**: `200 OK`
+    ```json
+    [
+      {
+        "id": "e81f1568-ff7d-401b-9b29-9d1d030b9b36",
+        "tenantId": "tenant-1",
+        "targetUrl": "https://erp.example.com/webhooks/inventory",
+        "secret": "encrypted_secret_data",
+        "eventTypes": ["StockDepletedEvent", "JournalEntryCreatedEvent"],
+        "isActive": true,
+        "createdAt": "2026-11-06T15:00:00.000Z",
+        "updatedAt": "2026-11-06T15:00:00.000Z"
+      }
+    ]
+    ```
+*   **Error Responses**:
+    *   `401 Unauthorized`: If the Bearer token is missing or invalid.
+    *   `403 Forbidden`: If the user lacks the `admin` role.
+    *   `500 Internal Server Error`: If an unexpected database failure occurs.
+*   **Workflow**: Used by admin dashboards to inspect and monitor active webhook integrations.
+
+---
+
+### 5. Update Webhook Subscription
+Modify an existing webhook subscription target URL, secret, subscribed events, or active status.
+
+*   **URL**: `/api/webhooks/subscriptions/:id`
+*   **Method**: `PUT`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Role required: `admin`)
+    *   `Content-Type: application/json` (Required)
+*   **Parameters**:
+    *   **Path**:
+        *   `id` (string, Required): The webhook subscription identifier.
+    *   **Body**:
+        *   `targetUrl` (string, Optional): Updated HTTPS endpoint URL.
+        *   `secret` (string, Optional): New shared secret for HMAC signature generation.
+        *   `eventTypes` (array of strings, Optional): Updated array of subscribed event names.
+        *   `isActive` (boolean, Optional): Flag to enable or disable webhook delivery.
+*   **Request Body**:
+    ```json
+    {
+      "targetUrl": "https://erp.example.com/webhooks/v2/inventory",
+      "isActive": true
+    }
+    ```
+*   **Success Response**: `200 OK`
+    ```json
+    {
+      "id": "e81f1568-ff7d-401b-9b29-9d1d030b9b36",
+      "tenantId": "tenant-1",
+      "targetUrl": "https://erp.example.com/webhooks/v2/inventory",
+      "secret": "encrypted_secret_data",
+      "eventTypes": ["StockDepletedEvent", "JournalEntryCreatedEvent"],
+      "isActive": true,
+      "createdAt": "2026-11-06T15:00:00.000Z",
+      "updatedAt": "2026-11-06T15:30:00.000Z"
+    }
+    ```
+*   **Error Responses**:
+    *   `401 Unauthorized`: If the Bearer token is missing or invalid.
+    *   `403 Forbidden`: If the user lacks the `admin` role.
+    *   `404 Not Found`: If the webhook subscription does not exist or belongs to another tenant.
+        ```json
+        { "error": "Webhook subscription not found" }
+        ```
+    *   `500 Internal Server Error`: If an unexpected database failure occurs.
+*   **Workflow**: Updates webhook settings, rotates webhook secrets, or temporarily pauses delivery.
+
+---
+
+### 6. Delete Webhook Subscription
+Remove a webhook subscription permanently.
+
+*   **URL**: `/api/webhooks/subscriptions/:id`
+*   **Method**: `DELETE`
+*   **Headers**:
+    *   `Authorization: Bearer <token>` (Required, Role required: `admin`)
+*   **Parameters**:
+    *   **Path**:
+        *   `id` (string, Required): The webhook subscription identifier.
+*   **Success Response**: `204 No Content`
+*   **Error Responses**:
+    *   `401 Unauthorized`: If the Bearer token is missing or invalid.
+    *   `403 Forbidden`: If the user lacks the `admin` role.
+    *   `404 Not Found`: If the webhook subscription does not exist or belongs to another tenant.
+        ```json
+        { "error": "Webhook subscription not found" }
+        ```
+    *   `500 Internal Server Error`: If an unexpected database failure occurs.
+*   **Workflow**: Decommissions deprecated webhook endpoints so events are no longer dispatched.
+
+---
+
 ## 🔒 Compliance Ledger (Audit Trails)
 
 ### 1. Fetch Compliance Audit Logs

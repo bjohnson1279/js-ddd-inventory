@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply, FastifyPluginAsync } from "fastify";
+import { FastifyReply, FastifyPluginAsync } from "fastify";
 import { DispatchStock } from "../../../application/useCases/DispatchStock";
 import { ShopifyWebhookSecurity } from "../../shopify/ShopifyWebhookSecurity";
 import { IInventoryRepository } from "../../../domain/repositories/IInventoryRepository";
