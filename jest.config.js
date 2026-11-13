@@ -16,7 +16,7 @@ module.exports = {
   ],
   coverageReporters: ['text', 'json-summary', 'lcov', 'cobertura'],
   coverageThreshold: {
-    global: { statements: 45, branches: 35, functions: 45, lines: 45 },
+    global: { statements: 79, branches: 62, functions: 81, lines: 80 },
     './src/application/useCases/ReceiveStock.ts': { statements: 100, branches: 100, functions: 100, lines: 100 },
     './src/application/useCases/DispatchStock.ts': { statements: 100, branches: 95, functions: 100, lines: 100 },
   },
