@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -62,4 +65,14 @@ jobs:
         COMPLIANCE_PRIVATE_KEY: test_key
         SHOPIFY_API_SECRET: fake_secret
         JWT_SECRET: test
-      run: npm test
+      run: npm test -- --ci --coverage
+
+    - name: Upload express-coverage
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: express-coverage
+        path: |
+          coverage/
+        if-no-files-found: error
+        retention-days: 14
