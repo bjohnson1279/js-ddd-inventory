@@ -43,11 +43,9 @@ export class ReceiveStock {
       item = InventoryItem.create(Date.now().toString(), sku, locationId, Quantity.create(0));
     }
 
-    item.receiveStock(quantityToAdd);
-
-    await this.inventoryRepository.save(item);
-
-    // If cost layer repository and product repository are provided, create cost layer
+    // Resolve receipt metadata before mutating inventory: invalid catalog references
+    // must not leave a successful stock write behind a rejected receipt.
+    let layer: InventoryCostLayer | undefined;
     if (this.costLayerRepository && this.productRepository && unitCostCents !== undefined) {
       const product = await this.productRepository.findBySku(sku);
       if (!product) {
@@ -59,7 +57,7 @@ export class ReceiveStock {
       }
 
       const layerId = crypto.randomUUID();
-      const layer = new InventoryCostLayer(
+      layer = new InventoryCostLayer(
         layerId,
         variant.id,
         tenantId || "default-tenant",
@@ -71,6 +69,11 @@ export class ReceiveStock {
         lotNumber,
         expirationDate
       );
+    }
+
+    item.receiveStock(quantityToAdd);
+    await this.inventoryRepository.save(item);
+    if (layer && this.costLayerRepository) {
       await this.costLayerRepository.save(layer);
     }
 
