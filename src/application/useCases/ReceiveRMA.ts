@@ -16,8 +16,12 @@ import { CostLayerService } from "../../domain/accounting/services/CostLayerServ
 import { batchSave } from "../../utils/batchSave";
 import { AccountingJournalService } from "../../domain/accounting/services/AccountingJournalService";
 import { AccountingMethod } from "../../domain/accounting/enums/AccountingMethod";
+import { CostingMethod } from "../../domain/accounting/enums/CostingMethod";
+import { TenantAccountingConfig } from "../../domain/accounting/valueObjects/TenantAccountingConfig";
 import { SerialNumber } from "../../domain/serial/valueObjects/SerialNumber";
 import { SerializedItem } from "../../domain/serial/aggregates/SerializedItem";
+import { prisma } from "../../infrastructure/database/prisma";
+import { RedisCacheService } from "../../infrastructure/cache/RedisCacheService";
 
 export interface ReceiveRMAItemDTO {
   variantId: string;
@@ -58,17 +62,27 @@ export class ReceiveRMA {
       throw new Error(`RMA with ID ${dto.rmaId} not found.`);
     }
 
-    const config = await this.tenantConfigRepository.findByTenantId(rma.tenantId);
+    let config = await this.tenantConfigRepository.findByTenantId(rma.tenantId);
     if (!config) {
-      throw new Error(`Tenant config not found for tenant ${rma.tenantId}.`);
+      config = new TenantAccountingConfig(AccountingMethod.Accrual, CostingMethod.FIFO, "USD", "01-01");
     }
+
+    const variantToSku = new Map<string, string>();
+    try {
+      const variants = await prisma.productVariantModel.findMany({
+        where: { id: { in: dto.items.map((i) => i.variantId) } },
+      });
+      for (const v of variants) {
+        variantToSku.set(v.id, v.sku);
+      }
+    } catch {}
 
     // Pre-fetch all required inventory items to avoid N+1 queries during update
     const skusByLocation = new Map<string, Set<string>>();
     for (const item of dto.items) {
       const targetLoc = item.disposition === RMADisposition.Quarantine ? `${rma.locationId}-quarantine` : rma.locationId;
       if (!skusByLocation.has(targetLoc)) skusByLocation.set(targetLoc, new Set());
-      skusByLocation.get(targetLoc)!.add(item.variantId);
+      skusByLocation.get(targetLoc)!.add(variantToSku.get(item.variantId) || item.variantId);
     }
 
     const preFetchedItems = new Map<string, InventoryItem>();
@@ -139,7 +153,7 @@ export class ReceiveRMA {
           : rma.locationId;
 
       // 2. Increment stock level
-      const sku = SKU.create(item.variantId);
+      const sku = SKU.create(variantToSku.get(item.variantId) || item.variantId);
       const key = targetLocationId + '|' + sku.getValue();
       // Fetch from accumulated map first, then DB (if not already pre-fetched)
       let invItem = inventoryItemsToSave.get(key) || preFetchedItems.get(key) || null;
@@ -257,5 +271,6 @@ export class ReceiveRMA {
     }
 
     await this.rmaRepository.save(rma);
+    RedisCacheService.getInstance().invalidatePattern(`stock:${rma.tenantId}:*`);
   }
 }

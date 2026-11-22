@@ -54,8 +54,9 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
       const JWT_SECRET = process.env.JWT_SECRET || "dummy_test_secret";
       const token = jwt.sign({ actorId: "alice", role: "admin", tenantId: "tenant-acme" }, JWT_SECRET);
       const listRes = await request((app as any).server).get("/api/users").set("Authorization", `Bearer ${token}`);
-      if (listRes.body && Array.isArray(listRes.body.users)) {
-        user = listRes.body.users.find((u: any) => u.email === "alice@acme.com");
+      const listArr = Array.isArray(listRes.body) ? listRes.body : listRes.body?.users;
+      if (Array.isArray(listArr)) {
+        user = listArr.find((u: any) => u.email === "alice@acme.com");
       }
     }
 
@@ -199,8 +200,9 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
         .set("Authorization", `Bearer ${adminToken}`);
 
       expect(listRes.status).toBe(200);
-      expect(listRes.body.users).toHaveLength(2); // Admin + Bob
-      const bobRecord = listRes.body.users.find((u: any) => u.email === "bob@acme.com");
+      const usersList = Array.isArray(listRes.body) ? listRes.body : listRes.body.users;
+      expect(usersList).toHaveLength(2); // Admin + Bob
+      const bobRecord = usersList.find((u: any) => u.email === "bob@acme.com");
       expect(bobRecord).toBeDefined();
       expect(bobRecord.role).toBe("viewer");
 
@@ -219,7 +221,8 @@ describe("Authentication & Multi-Tenant RBAC E2E Tests", () => {
       const listRes2 = await request((app as any).server)
         .get("/api/users")
         .set("Authorization", `Bearer ${adminToken}`);
-      const updatedBob = listRes2.body.users.find((u: any) => u.email === "bob@acme.com");
+      const listArr2 = Array.isArray(listRes2.body) ? listRes2.body : listRes2.body.users;
+      const updatedBob = listArr2.find((u: any) => u.email === "bob@acme.com");
       expect(updatedBob.role).toBe("accountant");
     });
 

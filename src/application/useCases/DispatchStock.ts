@@ -7,6 +7,7 @@ import { ReorderPolicyService } from "../../domain/procurement/services/ReorderP
 import { IDispatchRecordRepository, DispatchRecord } from "../../domain/repositories/IDispatchRecordRepository";
 import { ICostLayerRepository } from "../../domain/repositories/ICostLayerRepository";
 import { IProductRepository } from "../../domain/repositories/IProductRepository";
+import { InventoryCostLayer } from "../../domain/accounting/entities/InventoryCostLayer";
 
 export class DispatchStock {
   constructor(
@@ -34,43 +35,40 @@ export class DispatchStock {
       throw new Error("Item not found in inventory");
     }
 
-    item.dispatchStock(quantityToSubtract);
-
-    await this.inventoryRepository.save(item);
-
-    // Consume cost layers and record lot-specific dispatches
+    // Read and validate the requested lot before changing stock or consuming layers.
+    let activeLayers: InventoryCostLayer[] | undefined;
     if (this.costLayerRepository && this.productRepository) {
       const product = await this.productRepository.findBySku(sku);
       if (product) {
         const variant = product.findVariantBySku(skuStr);
         if (variant) {
-          const activeLayers = await this.costLayerRepository.getActiveLayers(variant.id, "expiration_date ASC");
-          const targetLayers = lotNumber
-            ? activeLayers.filter((l) => l.lotNumber === lotNumber)
-            : activeLayers;
-
-          let remaining = amount;
-          for (const layer of targetLayers) {
-            if (remaining <= 0) break;
-            const consumed = layer.consume(remaining);
-            remaining -= consumed;
-
-            if (this.dispatchRecordRepository && consumed > 0) {
-              await this.dispatchRecordRepository.save(
-                new DispatchRecord("", skuStr, locationId, consumed, new Date(), layer.lotNumber)
-              );
-            }
-          }
-
-          if (remaining > 0 && lotNumber) {
+          activeLayers = await this.costLayerRepository.getActiveLayers(variant.id, "expiration_date ASC");
+          if (lotNumber && activeLayers.filter(layer => layer.lotNumber === lotNumber)
+            .reduce((available, layer) => available + layer.remainingQuantity, 0) < amount) {
             throw new Error(`Insufficient stock in lot ${lotNumber} to dispatch ${amount} units.`);
           }
-
-          const costRepo = this.costLayerRepository;
-          await batchSave(costRepo, activeLayers);
         }
       }
-    } else {
+    }
+
+    item.dispatchStock(quantityToSubtract);
+    await this.inventoryRepository.save(item);
+
+    if (activeLayers && this.costLayerRepository) {
+      const targetLayers = lotNumber ? activeLayers.filter(layer => layer.lotNumber === lotNumber) : activeLayers;
+      let remaining = amount;
+      for (const layer of targetLayers) {
+        if (remaining <= 0) break;
+        const consumed = layer.consume(remaining);
+        remaining -= consumed;
+        if (this.dispatchRecordRepository && consumed > 0) {
+          await this.dispatchRecordRepository.save(
+            new DispatchRecord("", skuStr, locationId, consumed, new Date(), layer.lotNumber)
+          );
+        }
+      }
+      await batchSave(this.costLayerRepository, activeLayers);
+    } else if (!this.costLayerRepository || !this.productRepository) {
       // Record historical dispatch for velocity tracking and demand forecasting
       if (this.dispatchRecordRepository) {
         await this.dispatchRecordRepository.save(

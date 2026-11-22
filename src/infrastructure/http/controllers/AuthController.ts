@@ -314,7 +314,7 @@ export class AuthController {
         }
       }
 
-      return reply.status(200).send({ users });
+      return reply.status(200).send(users);
     } catch (error: any) {
       Logger.error({ context: "AuthController", message: "An error occurred", error: error });
       return reply.status(500).send({ error: "Internal server error" });

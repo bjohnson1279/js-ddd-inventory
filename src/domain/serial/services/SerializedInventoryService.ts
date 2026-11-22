@@ -39,6 +39,15 @@ export class SerializedInventoryService {
     return item;
   }
 
+  private async resolveSku(variantIdOrSku: string): Promise<SKU> {
+    try {
+      const { prisma } = await import("../../../infrastructure/database/prisma");
+      const v = await (prisma as any).productVariantModel?.findUnique({ where: { id: variantIdOrSku } }).catch(() => null);
+      if (v?.sku) return SKU.create(v.sku);
+    } catch { /* ignore */ }
+    return SKU.create(variantIdOrSku);
+  }
+
   public async receive(
     serialNumber: SerialNumber,
     tenantId: string,
@@ -50,7 +59,7 @@ export class SerializedInventoryService {
 
     item.receive(location, actorId, purchaseOrderId);
 
-    const sku = SKU.create(item.variantId);
+    const sku = await this.resolveSku(item.variantId);
     let invItem = await this.inventoryRepository.findBySku(sku, item.locationId);
     if (!invItem) {
       invItem = InventoryItem.create(
@@ -77,7 +86,7 @@ export class SerializedInventoryService {
 
     item.sell(saleId, actorId);
 
-    const sku = SKU.create(item.variantId);
+    const sku = await this.resolveSku(item.variantId);
     let invItem = await this.inventoryRepository.findBySku(sku, item.locationId);
     if (!invItem) {
       invItem = InventoryItem.create(
@@ -118,7 +127,7 @@ export class SerializedInventoryService {
 
     item.restock(actorId, returnId);
 
-    const sku = SKU.create(item.variantId);
+    const sku = await this.resolveSku(item.variantId);
     let invItem = await this.inventoryRepository.findBySku(sku, item.locationId);
     if (!invItem) {
       invItem = InventoryItem.create(

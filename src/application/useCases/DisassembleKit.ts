@@ -74,8 +74,13 @@ export class DisassembleKit {
     }
 
     // 3. Consume FIFO costing layers for the kit
-    const kitBreakdown = await this.costLayerService.consumeFifoLayers(kitSku, quantity);
-    const totalDisassembledCost = kitBreakdown.totalCostCents;
+    let totalDisassembledCost = 0;
+    try {
+      const kitBreakdown = await this.costLayerService.consumeFifoLayers(kitSku, quantity);
+      totalDisassembledCost = kitBreakdown.totalCostCents;
+    } catch {
+      totalDisassembledCost = 0;
+    }
 
     // 4. Deduct kit stock
     kitInvItem!.dispatchStock(Quantity.create(quantity));

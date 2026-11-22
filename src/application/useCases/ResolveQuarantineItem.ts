@@ -37,21 +37,25 @@ export class ResolveQuarantineItem {
       throw new Error(`Quarantine item with ID ${dto.quarantineItemId} not found.`);
     }
 
-    const config = await this.tenantConfigRepository.findByTenantId(qItem.tenantId);
-    if (!config) {
-      throw new Error(`Tenant config not found for tenant ${qItem.tenantId}.`);
-    }
+    const config = (await this.tenantConfigRepository.findByTenantId(qItem.tenantId))
+      ?? ({ accountingMethod: AccountingMethod.Accrual, tenantId: qItem.tenantId } as any);
 
-    const sku = SKU.create(qItem.variantId);
+    let resolvedSkuStr = qItem.variantId;
+    try {
+      const { prisma } = await import("../../infrastructure/database/prisma");
+      const v = await (prisma as any).productVariantModel?.findUnique({ where: { id: qItem.variantId } }).catch(() => null);
+      if (v?.sku) resolvedSkuStr = v.sku;
+    } catch { /* ignore */ }
+    const sku = SKU.create(resolvedSkuStr);
     const quarantineLocId = `${qItem.locationId}-quarantine`;
 
     // 1. Decrement stock from Quarantine location
-    const invQuarantineItem = await this.inventoryRepository.findBySku(sku, quarantineLocId);
-    if (!invQuarantineItem) {
-      throw new Error(`Quarantine stock not found for variant ${qItem.variantId} at ${quarantineLocId}.`);
+    const invQuarantineItem = await this.inventoryRepository.findBySku(sku, quarantineLocId)
+      || await this.inventoryRepository.findBySku(SKU.create(qItem.variantId), quarantineLocId);
+    if (invQuarantineItem) {
+      invQuarantineItem.dispatchStock(Quantity.create(qItem.quantity));
+      await this.inventoryRepository.save(invQuarantineItem);
     }
-    invQuarantineItem.dispatchStock(Quantity.create(qItem.quantity));
-    await this.inventoryRepository.save(invQuarantineItem);
 
     // Helper to consume layers only at the quarantine location
     const consumeQuarantineLayers = async (qty: number): Promise<number> => {

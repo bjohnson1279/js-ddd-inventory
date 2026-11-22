@@ -6,6 +6,7 @@ import { ICostLayerRepository } from "../../../domain/repositories/ICostLayerRep
 import { ITenantConfigRepository } from "../../../domain/repositories/ITenantConfigRepository";
 import { IJournalRepository } from "../../../domain/repositories/IJournalRepository";
 import { Logger } from "../../../infrastructure/logging/logger";
+import { RedisCacheService } from "../../../infrastructure/cache/RedisCacheService";
 
 export class QuarantineController {
   static async resolve(request: any, reply: any) {
@@ -28,6 +29,8 @@ export class QuarantineController {
         quarantineItemId: (request.params as any).id,
         resolution: (request.body as any).resolution,
       });
+
+      RedisCacheService.getInstance().flush();
 
       reply.status(200).send({ message: "Quarantine item resolved successfully" });
     } catch (error: any) {

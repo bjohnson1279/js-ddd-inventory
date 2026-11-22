@@ -6,11 +6,14 @@ import { InventoryCostLayer } from "../../domain/accounting/entities/InventoryCo
 import { SKU } from "../../domain/valueObjects/SKU";
 import { Quantity } from "../../domain/valueObjects/Quantity";
 import { InventoryItem } from "../../domain/aggregates/InventoryItem";
+import { prisma } from "../../infrastructure/database/prisma";
+import { RedisCacheService } from "../../infrastructure/cache/RedisCacheService";
 import crypto from "crypto";
 
 export interface ReceivePurchaseOrderItemDTO {
   variantId: string;
-  quantityReceived: number;
+  quantityReceived?: number;
+  quantity?: number;
 }
 
 export interface ReceivePurchaseOrderDTO {
@@ -36,8 +39,19 @@ export class ReceivePurchaseOrder {
     // Optimization: Index purchase order items by variantId to prevent O(N*M) nested lookups
     const poItemsMap = new Map(po.items.map((i) => [i.variantId, i]));
 
+    // Resolve variantId -> SKU so stock is updated under the product's SKU
+    const variantToSku = new Map<string, string>();
+    try {
+      const variants = await prisma.productVariantModel.findMany({
+        where: { id: { in: dto.items.map(i => i.variantId) } },
+      });
+      for (const v of variants) {
+        variantToSku.set(v.id, v.sku);
+      }
+    } catch {}
+
     // Optimization: Bulk pre-fetch inventory items to avoid N+1 queries.
-    const skusToFetch = dto.items.map(i => SKU.create(i.variantId));
+    const skusToFetch = dto.items.map(i => SKU.create(variantToSku.get(i.variantId) || i.variantId));
 
     const preFetchedItems = new Map<string, InventoryItem>();
     const preFetchedKeys = new Set<string>();
@@ -77,11 +91,12 @@ export class ReceivePurchaseOrder {
         throw new Error(`Item ${item.variantId} not found in purchase order ${po.purchaseOrderNumber}.`);
       }
 
+      const qtyReceived = item.quantityReceived ?? item.quantity ?? 0;
       // 1. Update PO received quantity & state
-      po.receiveItems(item.variantId, item.quantityReceived);
+      po.receiveItems(item.variantId, qtyReceived);
 
       // 2. Receive physical stock safely without N+1 queries
-      const sku = SKU.create(item.variantId);
+      const sku = SKU.create(variantToSku.get(item.variantId) || item.variantId);
       let invItem = inventoryItemsToSave.get(sku.getValue()) || preFetchedItems.get(sku.getValue()) || null;
       if (!invItem && !preFetchedKeys.has(sku.getValue())) {
         invItem = await this.inventoryRepository.findBySku(sku, po.locationId);
@@ -96,7 +111,7 @@ export class ReceivePurchaseOrder {
         );
       }
 
-      invItem.receiveStock(Quantity.create(item.quantityReceived));
+      invItem.receiveStock(Quantity.create(qtyReceived));
       inventoryItemsToSave.set(sku.getValue(), invItem);
 
       // 3. Prepare Cost Layer
@@ -105,7 +120,7 @@ export class ReceivePurchaseOrder {
         layerId,
         item.variantId,
         po.tenantId,
-        item.quantityReceived,
+        qtyReceived,
         poItem.unitCostCents,
         new Date(),
         po.id,
@@ -118,5 +133,6 @@ export class ReceivePurchaseOrder {
     await batchSave(this.inventoryRepository, Array.from(inventoryItemsToSave.values()));
     await batchSave(this.costLayerRepository, costLayers);
     await this.poRepository.save(po);
+    RedisCacheService.getInstance().invalidatePattern(`stock:${po.tenantId}:*`);
   }
 }

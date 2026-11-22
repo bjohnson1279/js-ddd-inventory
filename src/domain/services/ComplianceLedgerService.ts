@@ -28,21 +28,33 @@ export class ComplianceLedgerService {
     const privateKey = this.getPrivateKey();
     const payloadStr = JSON.stringify(payload);
     
-    // Find the latest ledger entry to chain
-    let lastEntry: any = null;
+    // Find the latest ledger entry globally for unique sequenceNumber, and per-tenant for previousHash chaining
+    let globalLast: any = null;
+    let tenantLast: any = null;
     try {
-      lastEntry = await prisma.complianceLedgerModel.findFirst({
+      globalLast = await prisma.complianceLedgerModel.findFirst({
+        orderBy: { sequenceNumber: "desc" }
+      });
+      tenantLast = await prisma.complianceLedgerModel.findFirst({
+        where: { tenantId },
         orderBy: { sequenceNumber: "desc" }
       });
     } catch (e) {
       if (inMemoryLedger.length > 0) {
-        lastEntry = inMemoryLedger[inMemoryLedger.length - 1];
+        globalLast = inMemoryLedger[inMemoryLedger.length - 1];
+        const tenantEntries = inMemoryLedger.filter(entry => entry.tenantId === tenantId);
+        if (tenantEntries.length > 0) {
+          tenantLast = tenantEntries[tenantEntries.length - 1];
+        }
       }
     }
 
-    const sequenceNumber = lastEntry ? lastEntry.sequenceNumber + 1 : 1;
-    const previousHash = lastEntry ? lastEntry.hash : "0000000000000000000000000000000000000000000000000000000000000000";
-    const timestamp = new Date();
+    const sequenceNumber = globalLast ? globalLast.sequenceNumber + 1 : 1;
+    const previousHash = tenantLast ? tenantLast.hash : "0000000000000000000000000000000000000000000000000000000000000000";
+    let timestamp = new Date();
+    if (tenantLast && tenantLast.timestamp && timestamp.getTime() <= new Date(tenantLast.timestamp).getTime()) {
+      timestamp = new Date(new Date(tenantLast.timestamp).getTime() + 1);
+    }
 
     // Compute SHA-256 hash of the block contents
     const hashInput = `${sequenceNumber}|${tenantId}|${eventType}|${payloadStr}|${timestamp.toISOString()}|${previousHash}`;
@@ -216,7 +228,9 @@ export class ComplianceLedgerService {
     }
 
     const cutoffDate = timestampStr ? new Date(timestampStr) : new Date();
-    const filteredEntries = entries.filter(e => new Date(e.timestamp) <= cutoffDate);
+    const filteredEntries = timestampStr
+      ? entries.filter(e => new Date(e.timestamp) <= cutoffDate)
+      : entries;
 
     const stockLevels: Record<string, any> = {};
     const binConfigurations: Record<string, any> = {};
@@ -231,8 +245,9 @@ export class ComplianceLedgerService {
       const eventType = entry.eventType || "";
 
       // Stock levels reconstruction
-      if (p.sku) {
-        const loc = p.locationId || "LOC-DEFAULT";
+      const hasExplicitStockEvents = filteredEntries.some(e => e.eventType === "StockReceived" || e.eventType === "StockDispatched");
+      if (p.sku && !(hasExplicitStockEvents && eventType === "STOCK_ADJUSTED")) {
+        const loc = p.locationId || "default";
         const key = `${p.sku}@${loc}`;
         if (!stockLevels[key]) {
           stockLevels[key] = { sku: p.sku, locationId: loc, quantity: 0 };
