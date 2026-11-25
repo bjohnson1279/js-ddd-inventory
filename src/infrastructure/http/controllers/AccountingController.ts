@@ -9,9 +9,126 @@ import { AccountingMethod } from "../../../domain/accounting/enums/AccountingMet
 import { CostingMethod } from "../../../domain/accounting/enums/CostingMethod";
 import { DomainException } from "../../../domain/exceptions/DomainException";
 import { Logger } from "../../../infrastructure/logging/logger";
+import { JournalEntry } from "../../../domain/accounting/aggregates/JournalEntry";
+import { AccountCode } from "../../../domain/accounting/valueObjects/AccountCode";
+import { AccountCategory } from "../../../domain/accounting/enums/AccountCategory";
+import { DebitCredit } from "../../../domain/accounting/enums/DebitCredit";
+import { prisma } from "../../database/prisma";
 import crypto from "crypto";
 
 export class AccountingController {
+  static async createJournal(request: any, reply: any) {
+    try {
+      const journalRepo = (request.server as any).journalRepository as IJournalRepository;
+      const { tenantId, description, date, method, referenceId, lines } = request.body || {};
+      if (!description || !Array.isArray(lines) || lines.length < 2) {
+        return reply.status(400).send({ error: "Journal entry requires description and at least 2 lines." });
+      }
+      let totalDebit = 0;
+      let totalCredit = 0;
+      const entry = new JournalEntry(
+        crypto.randomUUID(),
+        tenantId || request.tenantId || "DEFAULT",
+        date ? new Date(date) : new Date(),
+        description,
+        referenceId || null,
+        (method as AccountingMethod) || AccountingMethod.Accrual
+      );
+      for (const l of lines) {
+        const amountCents = Number(l.amountCents);
+        const type = String(l.type || "").toLowerCase();
+        if (!Number.isInteger(amountCents) || amountCents <= 0 || (type !== "debit" && type !== "credit")) {
+          return reply.status(400).send({ error: "Invalid journal line amount or type." });
+        }
+        if (type === "debit") totalDebit += amountCents;
+        else totalCredit += amountCents;
+        const code = String(l.accountCode || l.account || "1000");
+        const account = new AccountCode(code, `Account ${code}`, AccountCategory.Asset);
+        entry.addLine(account, amountCents, type === "debit" ? DebitCredit.Debit : DebitCredit.Credit, l.memo || "");
+      }
+      if (totalDebit !== totalCredit) {
+        return reply.status(400).send({ error: `Unbalanced journal entry: debit ${totalDebit} != credit ${totalCredit}` });
+      }
+      await journalRepo.save(entry);
+      reply.status(201).send({
+        id: entry.id,
+        tenantId: entry.tenantId,
+        description: entry.description,
+        lines: entry.lines.map((l) => ({
+          id: l.id,
+          accountCode: l.account.code,
+          amountCents: l.amountCents,
+          type: l.type,
+        })),
+      });
+    } catch (error: any) {
+      if (error instanceof DomainException) {
+        return reply.status(400).send({ error: error.message });
+      }
+      Logger.error({ context: "AccountingController", message: "Failed to create journal:", error });
+      reply.status(500).send({ error: "Internal server error" });
+    }
+  }
+
+  static async getValuationReport(request: any, reply: any) {
+    try {
+      const locationId = (request.query?.locationId as string) || "default";
+      const methodRaw = String(request.query?.method || "FIFO").toUpperCase();
+      const method = methodRaw === "WEIGHTED_AVERAGE_COST" ? "WAC" : methodRaw;
+
+      const items = await prisma.inventoryModel.findMany({
+        where: { locationId, quantity: { gt: 0 } },
+      });
+      const results: any[] = [];
+      for (const item of items) {
+        const variant = await prisma.productVariantModel.findUnique({ where: { sku: item.sku } });
+        if (!variant) continue;
+        const layers = await prisma.inventoryCostLayerModel.findMany({
+          where: { variantId: variant.id },
+          orderBy: { receivedAt: "asc" },
+        });
+        const activeLayers = layers.filter((l: any) => l.remainingQuantity > 0);
+        const totalReceivedQty = layers.reduce((s: number, l: any) => s + l.originalQuantity, 0);
+        const dispatchedQty = Math.max(0, totalReceivedQty - item.quantity);
+
+        let totalValueCents = 0;
+        const activeTotalQty = activeLayers.reduce((s: number, l: any) => s + l.remainingQuantity, 0);
+
+        if (activeTotalQty === item.quantity && method === "FIFO") {
+          totalValueCents = activeLayers.reduce((s: number, l: any) => s + l.remainingQuantity * l.unitCostCents, 0);
+        } else if (layers.length > 0) {
+          // Compute exact remaining carrying value under FIFO, LIFO, or WAC
+          if (method === "WAC") {
+            const totalInitVal = layers.reduce((s: number, l: any) => s + l.originalQuantity * l.unitCostCents, 0);
+            totalValueCents = totalReceivedQty > 0 ? Math.round((totalInitVal * item.quantity) / totalReceivedQty) : 0;
+          } else {
+            const ordered = method === "LIFO" ? [...layers].reverse() : [...layers];
+            let toConsume = dispatchedQty;
+            const remainingSlices: { qty: number; unitCost: number }[] = [];
+            for (const l of ordered) {
+              const take = Math.min(toConsume, l.originalQuantity);
+              toConsume -= take;
+              const rem = l.originalQuantity - take;
+              if (rem > 0) remainingSlices.push({ qty: rem, unitCost: l.unitCostCents });
+            }
+            totalValueCents = remainingSlices.reduce((s, r) => s + r.qty * r.unitCost, 0);
+          }
+        }
+        results.push({
+          sku: item.sku,
+          locationId,
+          totalQuantity: item.quantity,
+          totalValueCents,
+          unitCostCents: item.quantity > 0 ? Math.round(totalValueCents / item.quantity) : 0,
+        });
+      }
+      reply.status(200).send(results);
+    } catch (error: any) {
+      Logger.error({ context: "AccountingController", message: "Failed valuation report:", error });
+      reply.status(500).send({ error: "Internal server error" });
+    }
+  }
+
   static async getLedger(request: any, reply: any) {
     try {
       const journalRepo = (request.server as any).journalRepository as IJournalRepository;

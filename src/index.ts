@@ -162,7 +162,7 @@ const allowedOrigins = parseAllowedOrigins(process.env.FRONTEND_URL);
 app.register(fastifyHelmet);
 
 app.register(fastifyRateLimit, {
-  max: 100,
+  max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10) || 100,
   timeWindow: '1 minute'
 });
 
@@ -305,8 +305,97 @@ export const setupApp = (
   app.register(rebalanceRoutes, { prefix: '/api/rebalance' });
   app.register(integrationRoutes, { prefix: '/api/integrations' });
   app.register(cycleCountRouter, { prefix: '/api/cycle-count' });
+  app.register(cycleCountRouter, { prefix: '/api/cycle-counts' });
   app.register(supplierPortalRouter, { prefix: '/api/supplier' });
   app.register(intercompanyRouter, { prefix: '/api/intercompany' });
+
+  // Catalog Products & Variants endpoints
+  app.post("/api/catalog/products", async (request: any, reply: any) => {
+    try {
+      const { id, name } = request.body || {};
+      if (!name) return reply.status(400).send({ error: "Product name is required" });
+      const productId = id || crypto.randomUUID();
+      await prisma.productModel.upsert({
+        where: { id: productId },
+        update: { name },
+        create: { id: productId, name },
+      });
+      reply.status(201).send({ id: productId, name, variants: [] });
+    } catch (err: unknown) {
+      reply.status(500).send({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  app.post("/api/catalog/products/:productId/variants", async (request: any, reply: any) => {
+    try {
+      const { productId } = request.params || {};
+      const { id, sku, attributes, weightGrams, volumeCubicMeters } = request.body || {};
+      if (!sku) return reply.status(400).send({ error: "Variant SKU is required" });
+      const variantId = id || crypto.randomUUID();
+      const safeAttributes = Array.isArray(attributes) && attributes.length > 0
+        ? attributes
+        : [{ name: "default", value: "standard" }];
+      const variant = await prisma.productVariantModel.upsert({
+        where: { sku },
+        update: {
+          productId,
+          attributes: JSON.stringify(safeAttributes),
+          weightGrams: weightGrams ?? null,
+          volumeCubicMeters: volumeCubicMeters ?? null,
+        },
+        create: {
+          id: variantId,
+          productId,
+          sku,
+          attributes: JSON.stringify(safeAttributes),
+          weightGrams: weightGrams ?? null,
+          volumeCubicMeters: volumeCubicMeters ?? null,
+        },
+      });
+      reply.status(201).send({
+        id: variant.id,
+        productId: variant.productId,
+        sku: variant.sku,
+        attributes: attributes || [],
+      });
+    } catch (err: unknown) {
+      reply.status(500).send({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  app.get("/api/catalog/products", async (_request: any, reply: any) => {
+    try {
+      const products = await prisma.productModel.findMany({
+        include: { variants: true },
+      });
+      reply.status(200).send(
+        products.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          variants: (p.variants || []).map((v: any) => ({
+            id: v.id,
+            sku: v.sku,
+            attributes: (() => { try { return JSON.parse(v.attributes); } catch { return []; } })(),
+          })),
+        }))
+      );
+    } catch (err: unknown) {
+      reply.status(500).send({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  app.get("/api/webhooks/deliveries", async (request: any, reply: any) => {
+    try {
+      const tenantId = (request as AuthenticatedRequest).tenantId || (request.query as any)?.tenantId;
+      const deliveries = await prisma.webhookDeliveryModel.findMany({
+        where: tenantId ? { tenantId } : undefined,
+        orderBy: { createdAt: "desc" },
+      });
+      reply.status(200).send(deliveries);
+    } catch (err: unknown) {
+      reply.status(500).send({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
 
   // Tier-2 Distributed Cache Management Endpoints
   app.get("/api/admin/cache/stats", { preHandler: [requireRole(["admin"])] }, (request: any, reply: any) => {
@@ -590,12 +679,33 @@ export const setupApp = (
   });
 
 
-  app.post("/api/fulfillment/drop-ship", { preHandler: [requireRole(["admin", "warehouse_operator"])] }, (request: any, reply: any) => {
+  app.post("/api/fulfillment/drop-ship", { preHandler: [requireRole(["admin", "warehouse_operator"])] }, async (request: any, reply: any) => {
     try {
       const { orderId, variantId, quantity, supplierId } = request.body;
+      const tenantId = (request as AuthenticatedRequest).tenantId || "DEFAULT";
+      const poId = crypto.randomUUID();
+      await prisma.purchaseOrderModel.create({
+        data: {
+          id: poId,
+          purchaseOrderNumber: `DS-${poId.slice(0, 8).toUpperCase()}`,
+          vendorId: supplierId,
+          tenantId,
+          locationId: "default",
+          status: "SENT",
+          items: {
+            create: [{
+              id: crypto.randomUUID(),
+              variantId,
+              quantity: Number(quantity),
+              unitCostCents: 0,
+              receivedQuantity: 0,
+            }],
+          },
+        },
+      });
       reply.send({
         status: "SUCCESS",
-        dropShipPoId: require("crypto").randomUUID(),
+        dropShipPoId: poId,
         orderId,
         variantId,
         quantity,

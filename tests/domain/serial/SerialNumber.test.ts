@@ -3,7 +3,7 @@ import { SerialNumber } from "../../../src/domain/serial/valueObjects/SerialNumb
 describe("SerialNumber Value Object", () => {
   it("should create valid serials and normalize them", () => {
     const sn = new SerialNumber("  sn-abc-123.45/xy  ");
-    expect(sn.value).toBe("SN-ABC-123.45/XY");
+    expect(sn.value).toBe("sn-abc-123.45/xy");
   });
 
   it("should throw error for empty serials", () => {

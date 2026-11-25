@@ -13,25 +13,45 @@ import { BarcodeSource } from "../../../domain/barcode/enums/BarcodeSource";
 import { DomainException } from "../../../domain/exceptions/DomainException";
 import { WebSocketManager } from "../../websocket/WebSocketManager";
 import { Logger } from "../../../infrastructure/logging/logger";
+import { RedisCacheService } from "../../cache/RedisCacheService";
 
 
 export class BarcodeController {
   static async assign(request: any, reply: any) {
     try {
       const barcodeRepo = (request.server as any).barcodeRepository as IBarcodeRepository;
-      const { variantId, symbology, barcodeValue, source, isPrimary } =
+      const { variantId, sku, symbology, barcodeValue, source, isPrimary, makePrimary } =
         (request.body as any);
 
-      if (!variantId || !symbology || !barcodeValue || !source) {
+      const targetId = sku || variantId;
+      if (!targetId || !symbology || !barcodeValue || !source) {
         return reply
           .status(400)
           .send({ error: "Missing required assignment fields." });
       }
 
-      const set = await barcodeRepo.findSetForVariant(variantId);
-      const barcode = new Barcode(symbology as BarcodeSymbology, barcodeValue);
+      const symbologyMap: Record<string, BarcodeSymbology> = {
+        code128: BarcodeSymbology.CODE_128,
+        code_128: BarcodeSymbology.CODE_128,
+        ean13: BarcodeSymbology.EAN_13,
+        ean_13: BarcodeSymbology.EAN_13,
+        upca: BarcodeSymbology.UPC_A,
+        upc_a: BarcodeSymbology.UPC_A,
+        qr: BarcodeSymbology.QR,
+      };
+      const normalizedSymbology = symbologyMap[String(symbology).toLowerCase()] || (symbology as BarcodeSymbology);
+      const sourceMap: Record<string, BarcodeSource> = {
+        manual: BarcodeSource.Internal,
+        internal: BarcodeSource.Internal,
+        supplier: BarcodeSource.Supplier,
+        gs1: BarcodeSource.GS1,
+      };
+      const normalizedSource = sourceMap[String(source).toLowerCase()] || (source as BarcodeSource);
 
-      set.assign(barcode, source as BarcodeSource, isPrimary || false);
+      const set = await barcodeRepo.findSetForVariant(targetId);
+      const barcode = new Barcode(normalizedSymbology, barcodeValue);
+
+      set.assign(barcode, normalizedSource, Boolean(isPrimary ?? makePrimary ?? false));
       await barcodeRepo.saveSet(set);
 
       reply
@@ -108,8 +128,25 @@ export class BarcodeController {
         }
       }
 
-      // Broadcast via WebSocket to the tenant
+      // If context is POS and payload has amount, deduct stock for the resolved SKU/variant
       const tenantId = (request as any).tenantId || "tenant-1";
+      if (String(context).toLowerCase() === "pos" && payload && Number(payload.amount) > 0) {
+        const loc = payload.locationId || "default";
+        const amount = Number(payload.amount);
+        let resolvedSku = variantId;
+        try {
+          const variant = await prisma.productVariantModel.findUnique({ where: { id: variantId } });
+          if (variant?.sku) resolvedSku = variant.sku;
+        } catch {}
+        await prisma.inventoryModel.updateMany({
+          where: { sku: resolvedSku, locationId: loc },
+          data: { quantity: { decrement: amount }, version: { increment: 1 } },
+        });
+        RedisCacheService.getInstance().invalidatePattern(`stock:${tenantId}:*`);
+        handled = true;
+      }
+
+      // Broadcast via WebSocket to the tenant
       WebSocketManager.broadcastToTenant(tenantId, {
         type: "barcode_scanned",
         rawScan,

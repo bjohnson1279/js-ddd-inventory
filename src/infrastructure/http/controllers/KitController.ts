@@ -10,6 +10,7 @@ import { AssembleKit } from "../../../application/useCases/AssembleKit";
 import { DisassembleKit } from "../../../application/useCases/DisassembleKit";
 import { AutoRetryDecorator } from "../../../application/decorators/AutoRetryDecorator";
 import { Logger } from "../../../infrastructure/logging/logger";
+import { RedisCacheService } from "../../cache/RedisCacheService";
 
 const inMemoryKits = new Map<string, any>();
 export function getInMemoryKit(sku: string) { return inMemoryKits.get(sku); }
@@ -33,15 +34,24 @@ export class KitController {
       }
 
       const id = crypto.randomUUID();
+      const resolvedComponents: any[] = [];
+      for (const c of components) {
+        let resolvedSku = c.variantId;
+        try {
+          const variant = await prisma.productVariantModel.findUnique({ where: { id: c.variantId } });
+          if (variant?.sku) resolvedSku = variant.sku;
+        } catch {}
+        resolvedComponents.push({
+          id: crypto.randomUUID(),
+          variantId: resolvedSku,
+          quantity: c.quantity,
+        });
+      }
       const kitData = {
         id,
         sku,
         name,
-        components: components.map((c: any) => ({
-          id: crypto.randomUUID(),
-          variantId: c.variantId,
-          quantity: c.quantity,
-        })),
+        components: resolvedComponents,
       };
       inMemoryKits.set(sku, kitData);
 
@@ -125,6 +135,7 @@ export class KitController {
       const service = new InventoryService(inventoryRepo, reorderPolicyService);
 
       await service.decrementForKitSale(kit, quantity, saleId, actorId);
+      RedisCacheService.getInstance().invalidatePattern(`stock:${(request as any).tenantId || "*"}:*`);
 
       reply
         .status(200)
@@ -193,6 +204,7 @@ export class KitController {
         actorId,
         referenceId
       });
+      RedisCacheService.getInstance().invalidatePattern(`stock:${tenantId}:*`);
 
       reply.status(200).send({ message: `Successfully assembled ${quantity} units of Kit ${kitSku}.` });
     } catch (error: any) {
@@ -231,6 +243,7 @@ export class KitController {
         actorId,
         referenceId
       });
+      RedisCacheService.getInstance().invalidatePattern(`stock:${tenantId}:*`);
 
       reply.status(200).send({ message: `Successfully disassembled ${quantity} units of Kit ${kitSku}.` });
     } catch (error: any) {

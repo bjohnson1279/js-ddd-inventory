@@ -12,5 +12,12 @@ module.exports = {
     'src/**/*.ts',
     '!src/**/*.d.ts',
     '!src/index.ts',
+    '!src/**/__tests__/**',
   ],
+  coverageReporters: ['text', 'json-summary', 'lcov', 'cobertura'],
+  coverageThreshold: {
+    global: { statements: 79, branches: 62, functions: 81, lines: 80 },
+    './src/application/useCases/ReceiveStock.ts': { statements: 100, branches: 100, functions: 100, lines: 100 },
+    './src/application/useCases/DispatchStock.ts': { statements: 100, branches: 95, functions: 100, lines: 100 },
+  },
 };

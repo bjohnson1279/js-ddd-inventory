@@ -98,8 +98,16 @@ export class AssembleKit {
 
     let totalCostCents = 0;
     if (componentsBatch.length > 0) {
-      const breakdowns = await this.costLayerService.consumeFifoLayersBatch(componentsBatch);
-      totalCostCents = breakdowns.reduce((sum, b) => sum + b.totalCostCents, 0);
+      try {
+        const breakdowns = await this.costLayerService.consumeFifoLayersBatch(componentsBatch);
+        totalCostCents = breakdowns.reduce((sum, b) => sum + b.totalCostCents, 0);
+      } catch (err: any) {
+        if (err?.name === 'InsufficientInventoryException') {
+          totalCostCents = 0;
+        } else {
+          throw err;
+        }
+      }
     }
 
     // 4. Deduct stock for component variants

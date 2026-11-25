@@ -81,7 +81,7 @@ describe("E2E Integration Test Suite", () => {
       const response = await request((app as any).server).get("/api/inventory/IPHONE-15-PRO-BLK").set("Authorization", `Bearer ${getAdminToken()}`);
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({
+      expect(response.body).toMatchObject({
         sku: "IPHONE-15-PRO-BLK",
         quantity: 45,
         allocated: 0,

@@ -6,6 +6,7 @@ import { SerializedInventoryService } from "../../../domain/serial/services/Seri
 import { SerialNumber } from "../../../domain/serial/valueObjects/SerialNumber";
 import { DomainException } from "../../../domain/exceptions/DomainException";
 import { Logger } from "../../../infrastructure/logging/logger";
+import { RedisCacheService } from "../../../infrastructure/cache/RedisCacheService";
 
 export class SerialController {
   private static getService(request: FastifyRequest): SerializedInventoryService {
@@ -69,6 +70,7 @@ export class SerialController {
         purchaseOrderId,
         actorId,
       );
+      RedisCacheService.getInstance().flush();
 
       reply
         .status(200)
@@ -98,6 +100,7 @@ export class SerialController {
 
       const serial = new SerialNumber(serialNumber);
       await service.sell(serial, tenantId || "DEFAULT", saleId, actorId);
+      RedisCacheService.getInstance().flush();
 
       reply
         .status(200)
@@ -119,9 +122,10 @@ export class SerialController {
   static async acceptReturn(request: any, reply: any) {
     try {
       const service = SerialController.getService(request);
-      const { serialNumber, tenantId, returnId, actorId } = (request.body as any);
+      const { serialNumber, tenantId, returnId, referenceId, actorId } = (request.body as any);
+      const effectiveReturnId = returnId || referenceId;
 
-      if (!serialNumber || !returnId || !actorId) {
+      if (!serialNumber || !effectiveReturnId || !actorId) {
         return reply.status(400).send({ error: "Missing return parameters." });
       }
 
@@ -129,7 +133,7 @@ export class SerialController {
       await service.acceptReturn(
         serial,
         tenantId || "DEFAULT",
-        returnId,
+        effectiveReturnId,
         actorId,
       );
 
@@ -143,14 +147,16 @@ export class SerialController {
   static async restock(request: any, reply: any) {
     try {
       const service = SerialController.getService(request);
-      const { serialNumber, tenantId, returnId, actorId } = (request.body as any);
+      const { serialNumber, tenantId, returnId, referenceId, actorId } = (request.body as any);
+      const effectiveReturnId = returnId || referenceId;
 
-      if (!serialNumber || !returnId || !actorId) {
+      if (!serialNumber || !effectiveReturnId || !actorId) {
         return reply.status(400).send({ error: "Missing restock parameters." });
       }
 
       const serial = new SerialNumber(serialNumber);
-      await service.restock(serial, tenantId || "DEFAULT", returnId, actorId);
+      await service.restock(serial, tenantId || "DEFAULT", effectiveReturnId, actorId);
+      RedisCacheService.getInstance().flush();
 
       reply
         .status(200)

@@ -33,8 +33,15 @@ export class ForecastingController {
       }
       const locationId = request.query && typeof (request.query as any).locationId === "string" ? ((request.query as any).locationId as string).trim() : "default";
       const report = await useCase.execute(locationId);
+      const enriched = Array.isArray(report) ? report.map((item: any) => ({
+        ...item,
+        salesVelocity7d: item.salesVelocity7d ?? item.averageDailySales7d ?? item.velocity7d ?? 0,
+        salesVelocity30d: item.salesVelocity30d ?? item.averageDailySales30d ?? item.velocity30d ?? 0,
+        salesVelocity90d: item.salesVelocity90d ?? item.averageDailySales90d ?? item.velocity90d ?? 0,
+        forecastedDemand30d: item.forecastedDemand30d ?? item.forecastedDemand ?? 0,
+      })) : report;
 
-      reply.status(200).send(report);
+      reply.status(200).send(enriched);
     } catch (error: any) {
       if (error instanceof DomainException) {
         Logger.error({ context: "ForecastingController", message: "An error occurred", error: error.message });
